@@ -35,17 +35,15 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.main.MainActivity
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithSource
 import eu.kanade.tachiyomi.util.lang.chop
 import eu.kanade.tachiyomi.util.system.isServiceRunning
 import eu.kanade.tachiyomi.util.system.notification
 import eu.kanade.tachiyomi.util.system.notificationManager
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
@@ -320,14 +318,20 @@ class LibraryUpdateService(
 
     private fun updateChapters(mangaToAdd: List<LibraryManga>, startId: Int) {
         addManga(mangaToAdd)
-
+        val handler = CoroutineExceptionHandler { _, exception ->
+            Timber.e(exception)
+            stopSelf(startId)
+        }
         if (job == null) {
-            job = GlobalScope.launch(Dispatchers.IO, CoroutineStart.DEFAULT) {
+            job = GlobalScope.launch(handler) {
                 updateChaptersJob()
-                mangaToUpdate.clear()
-                categoryIds.clear()
-                stopSelf(startId)
             }
+        }
+
+        job?.invokeOnCompletion {
+            mangaToUpdate.clear()
+            categoryIds.clear()
+            stopSelf(startId)
         }
     }
 
@@ -346,7 +350,7 @@ class LibraryUpdateService(
         var hasDownloads = false
 
         while (count < mangaToUpdate.size) {
-            if (job?.isCancelled == true || job == null) break
+            if (job?.isCancelled == true) break
             val manga = mangaToUpdate[count]
             showProgressNotification(manga, count++, mangaToUpdate.size)
             val source = sourceManager.get(manga.source) as? HttpSource ?: continue

@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.setting
 import android.app.Dialog
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.preference.PreferenceScreen
@@ -16,8 +17,8 @@ import eu.kanade.tachiyomi.data.updater.UpdateResult
 import eu.kanade.tachiyomi.data.updater.UpdaterService
 import eu.kanade.tachiyomi.ui.base.controller.DialogController
 import eu.kanade.tachiyomi.ui.main.ChangelogDialogController
-import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.lang.toTimestampString
+import eu.kanade.tachiyomi.util.system.toast
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
@@ -81,7 +82,7 @@ class SettingsAboutController : SettingsController() {
             else
                 BuildConfig.VERSION_NAME
 
-            if (isUpdaterEnabled) {
+            if (isUpdaterEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 onClick { checkVersion() }
             }
         }

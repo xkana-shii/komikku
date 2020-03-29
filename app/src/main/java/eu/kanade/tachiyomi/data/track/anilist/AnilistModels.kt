@@ -7,7 +7,7 @@ import eu.kanade.tachiyomi.data.track.TrackManager
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 data class ALManga(
         val media_id: Int,
@@ -58,22 +58,22 @@ data class ALUserManga(
     fun toTrackStatus() = when (list_status) {
         "CURRENT" -> Anilist.READING
         "COMPLETED" -> Anilist.COMPLETED
-        "PAUSED" -> Anilist.ON_HOLD
+        "PAUSED" -> Anilist.PAUSED
         "DROPPED" -> Anilist.DROPPED
         "PLANNING" -> Anilist.PLANNING
         "REPEATING" -> Anilist.REPEATING
-        else -> throw NotImplementedError("Unknown status")
+        else -> Anilist.READING
     }
 }
 
 fun Track.toAnilistStatus() = when (status) {
     Anilist.READING -> "CURRENT"
     Anilist.COMPLETED -> "COMPLETED"
-    Anilist.ON_HOLD -> "PAUSED"
+    Anilist.PAUSED -> "PAUSED"
     Anilist.DROPPED -> "DROPPED"
     Anilist.PLANNING -> "PLANNING"
     Anilist.REPEATING -> "REPEATING"
-    else -> throw NotImplementedError("Unknown status")
+    else -> "CURRENT"
 }
 
 private val preferences: PreferencesHelper by injectLazy()

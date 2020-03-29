@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi
 
+import android.os.Build
 import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
@@ -63,6 +64,8 @@ object Migrations {
             }
             if (oldVersion < 54)
                 DownloadProvider(context).renameChaapters()
+            if (oldVersion < 61 && Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+                UpdaterJob.cancelTask()
             return true
         }
         return false
