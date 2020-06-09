@@ -40,6 +40,25 @@ class WebViewActivity : BaseWebViewActivity() {
 
             supportActionBar?.subtitle = url
 
+            // Debug mode (chrome://inspect/#devices)
+            if (BuildConfig.DEBUG && 0 != applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) {
+                WebView.setWebContentsDebuggingEnabled(true)
+            }
+
+            binding.webview.settings.javaScriptEnabled = true
+            binding.webview.settings.domStorageEnabled = true
+
+            binding.webview.webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    binding.progressBar.visible()
+                    binding.progressBar.progress = newProgress
+                    if (newProgress == 100) {
+                        binding.progressBar.invisible()
+                    }
+                    super.onProgressChanged(view, newProgress)
+                }
+            }
+
             binding.webview.webViewClient = object : WebViewClientCompat() {
                 override fun shouldOverrideUrlCompat(view: WebView, url: String): Boolean {
                     view.loadUrl(url)
