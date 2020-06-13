@@ -65,6 +65,11 @@ class WebViewActivity : BaseWebViewActivity() {
                     return true
                 }
 
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    invalidateOptionsMenu()
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     invalidateOptionsMenu()
@@ -72,18 +77,9 @@ class WebViewActivity : BaseWebViewActivity() {
                     supportActionBar?.subtitle = url
                     binding.swipeRefresh.isEnabled = true
                     binding.swipeRefresh.isRefreshing = false
-                }
-
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    invalidateOptionsMenu()
-                }
-
-                override fun onPageCommitVisible(view: WebView?, url: String?) {
-                    super.onPageCommitVisible(view, url)
 
                     // Reset to top when page refreshes
-                    binding.nestedView.scrollTo(0, 0)
+                    view?.scrollTo(0, 0)
                 }
             }
 
