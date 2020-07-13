@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.system.WebViewClientCompat
 import eu.kanade.tachiyomi.util.system.isOutdated
+import eu.kanade.tachiyomi.util.system.setDefaultSettings
 import eu.kanade.tachiyomi.util.system.toast
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
@@ -84,7 +85,7 @@ class CloudflareInterceptor(private val context: Context) : Interceptor {
         handler.post {
             val webview = WebView(context)
             webView = webview
-            webview.settings.javaScriptEnabled = true
+            webview.setDefaultSettings()
 
             // Avoid set empty User-Agent, Chromium WebView will reset to default if empty
             webview.settings.userAgentString = request.header("User-Agent")

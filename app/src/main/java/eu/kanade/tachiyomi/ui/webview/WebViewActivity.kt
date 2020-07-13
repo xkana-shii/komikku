@@ -15,6 +15,7 @@ import eu.kanade.tachiyomi.util.system.WebViewClientCompat
 import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.getResourceColor
 import eu.kanade.tachiyomi.util.system.openInBrowser
+import eu.kanade.tachiyomi.util.system.setDefaultSettings
 import eu.kanade.tachiyomi.util.system.toast
 import uy.kohesive.injekt.injectLazy
 
@@ -38,15 +39,14 @@ class WebViewActivity : BaseWebViewActivity() {
             }
             headers["X-Requested-With"] = WebViewUtil.REQUESTED_WITH
 
+            binding.webview.setDefaultSettings()
+
             supportActionBar?.subtitle = url
 
             // Debug mode (chrome://inspect/#devices)
             if (BuildConfig.DEBUG && 0 != applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) {
                 WebView.setWebContentsDebuggingEnabled(true)
             }
-
-            binding.webview.settings.javaScriptEnabled = true
-            binding.webview.settings.domStorageEnabled = true
 
             binding.webview.webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
