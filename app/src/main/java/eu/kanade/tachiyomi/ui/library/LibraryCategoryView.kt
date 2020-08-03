@@ -83,7 +83,7 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
 
     // EXH -->
     private var initialLoadHandle: LoadingHandle? = null
-    lateinit var scope2: CoroutineScope
+    private lateinit var supervisorScope: CoroutineScope
 
     private fun newScope() = object : CoroutineScope {
         override val coroutineContext = SupervisorJob() + Dispatchers.Main
@@ -144,7 +144,7 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
         adapter.isLongPressDragEnabled = sortingMode == LibrarySort.DRAG_AND_DROP
 
         // EXH -->
-        scope2 = newScope()
+        supervisorScope = newScope()
         initialLoadHandle = controller.loaderManager.openProgressBar()
         // EXH <--
 
@@ -155,7 +155,7 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe {
                 // EXH -->
-                scope2.launch {
+                supervisorScope.launch {
                     val handle = controller.loaderManager.openProgressBar()
                     try {
                         // EXH <--
@@ -171,7 +171,7 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
         subscriptions += controller.libraryMangaRelay
             .subscribe {
                 // EXH -->
-                scope2.launch {
+                supervisorScope.launch {
                     try {
                         // EXH <--
                         onNextLibraryManga(this, it)
@@ -237,7 +237,7 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
     fun unsubscribe() {
         subscriptions.clear()
         // EXH -->
-        scope2.cancel()
+        supervisorScope.cancel()
         controller.loaderManager.closeProgressBar(initialLoadHandle)
         // EXH <--
     }

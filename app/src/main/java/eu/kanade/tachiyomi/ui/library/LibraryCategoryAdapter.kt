@@ -59,11 +59,11 @@ class LibraryCategoryAdapter(view: LibraryCategoryView, val controller: LibraryC
      *
      * @param list the list to set.
      */
-    suspend fun setItems(cScope: CoroutineScope, list: List<LibraryItem>) {
+    suspend fun setItems(scope: CoroutineScope, list: List<LibraryItem>) {
         // A copy of manga always unfiltered.
         mangas = list.toList()
 
-        performFilter(cScope)
+        performFilter(scope)
     }
 
     /**
@@ -79,12 +79,12 @@ class LibraryCategoryAdapter(view: LibraryCategoryView, val controller: LibraryC
     // Note that we cannot use FlexibleAdapter's built in filtering system as we cannot cancel it
     //   (well technically we can cancel it by invoking filterItems again but that doesn't work when
     //    we want to perform a no-op filter)
-    suspend fun performFilter(cScope: CoroutineScope) {
+    suspend fun performFilter(scope: CoroutineScope) {
         lastFilterJob?.cancel()
         if (mangas.isNotEmpty() && searchText.isNotBlank()) {
             val savedSearchText = searchText
 
-            val job = cScope.launch(Dispatchers.IO) {
+            val job = scope.launch(Dispatchers.IO) {
                 val newManga = try {
                     // Prepare filter object
                     val parsedQuery = searchEngine.parseQuery(savedSearchText)
@@ -135,11 +135,11 @@ class LibraryCategoryAdapter(view: LibraryCategoryView, val controller: LibraryC
                                 // Check if this manga even has metadata
                                 if (mangaWithMetaIds.binarySearch(mangaId) < 0) {
                                     // No meta? Filter using title
-                                    item.filter(savedSearchText)
-                                } else false
+                                    item.filter(savedSearchText to true)
+                                } else item.filter(savedSearchText to false)
                             } else true
                         } else {
-                            item.filter(savedSearchText)
+                            item.filter(savedSearchText to true)
                         }
                     }.toList()
                 } catch (e: Exception) {
