@@ -37,6 +37,7 @@ class WebViewActivity : BaseWebViewActivity() {
             val url = intent.extras!!.getString(URL_KEY) ?: return
             var headers = mutableMapOf<String, String>()
 
+            var headers = mutableMapOf<String, String>()
             val source = sourceManager.get(intent.extras!!.getLong(SOURCE_KEY)) as? HttpSource
             if (source != null) {
                 headers = source.headers.toMultimap().mapValues { it.value.getOrNull(0) ?: "" }.toMutableMap()
@@ -66,9 +67,7 @@ class WebViewActivity : BaseWebViewActivity() {
 
             binding.webview.webViewClient = object : WebViewClientCompat() {
                 override fun shouldOverrideUrlCompat(view: WebView, url: String): Boolean {
-                    val android_browser: MutableMap<String, String> = HashMap()
-                    android_browser["X-Requested-With"] = "com.android.browser"
-                    view.loadUrl(url,android_browser)
+                    view.loadUrl(url, headers)
                     return true
                 }
 
