@@ -23,6 +23,8 @@ open class BaseWebViewActivity : BaseActivity<WebviewActivityBinding>() {
 
     internal var bundle: Bundle? = null
 
+    internal var isRefreshing: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -41,6 +43,8 @@ open class BaseWebViewActivity : BaseActivity<WebviewActivityBinding>() {
             finish()
             return
         }
+
+        title = intent.extras?.getString(TITLE_KEY)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -89,5 +93,10 @@ open class BaseWebViewActivity : BaseActivity<WebviewActivityBinding>() {
     fun refreshPage() {
         binding.swipeRefresh.isRefreshing = true
         binding.webview.reload()
+        isRefreshing = true
+    }
+
+    companion object {
+        const val TITLE_KEY = "title_key"
     }
 }
