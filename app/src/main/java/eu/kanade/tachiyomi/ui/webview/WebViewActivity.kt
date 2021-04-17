@@ -95,8 +95,10 @@ class WebViewActivity : BaseWebViewActivity() {
     }
 
     override fun onDestroy() {
-        binding.webview?.destroy()
         super.onDestroy()
+
+        // Binding sometimes isn't actually instantiated yet somehow
+        binding?.webview?.destroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
