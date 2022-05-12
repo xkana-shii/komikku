@@ -11,6 +11,7 @@
         android:layout_height="match_parent"
         android:choiceMode="multipleChoice"
         android:clipToPadding="false"
+        android:paddingBottom="@dimen/fab_list_padding"
         tools:listitem="@layout/categories_item" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
