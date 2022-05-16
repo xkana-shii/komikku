@@ -11,12 +11,12 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import eu.kanade.tachiyomi.data.database.DatabaseHelper
 import eu.kanade.tachiyomi.data.track.TrackManager
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.util.concurrent.TimeUnit
 
 class DelayedTrackingUpdateJob(context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
@@ -32,7 +32,7 @@ class DelayedTrackingUpdateJob(context: Context, workerParams: WorkerParameters)
                 db.getTracks(manga).executeAsBlocking()
                     .find { track -> track.id == it.trackId }
                     ?.also { track ->
-                        track.last_chapter_read = it.lastChapterRead
+                        track.last_chapter_read = it.lastChapterRead.toInt()
                     }
             }
 
@@ -40,7 +40,7 @@ class DelayedTrackingUpdateJob(context: Context, workerParams: WorkerParameters)
                 try {
                     val service = trackManager.getService(track.sync_id)
                     if (service != null && service.isLogged) {
-                        service.update(track, true)
+                        service.update(track)
                         db.insertTrack(track).executeAsBlocking()
                     }
                 } catch (e: Exception) {

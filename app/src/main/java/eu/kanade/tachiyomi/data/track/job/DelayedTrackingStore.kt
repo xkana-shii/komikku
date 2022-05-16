@@ -37,7 +37,7 @@ class DelayedTrackingStore(context: Context) {
                 DelayedTrackingItem(
                     trackId = it.key.toLong(),
                     mangaId = mangaId.toLong(),
-                    lastChapterRead = lastChapterRead.toFloat(),
+                    lastChapterRead = lastChapterRead.toFloat()
                 )
             }
     }
@@ -45,6 +45,6 @@ class DelayedTrackingStore(context: Context) {
     data class DelayedTrackingItem(
         val trackId: Long,
         val mangaId: Long,
-        val lastChapterRead: Float,
+        val lastChapterRead: Float
     )
 }

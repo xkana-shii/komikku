@@ -35,7 +35,8 @@ import exh.util.defaultReaderType
 import java.io.File
 import java.util.Date
 import java.util.concurrent.TimeUnit
-import rx.Completable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import rx.Observable
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
@@ -53,7 +54,7 @@ class ReaderPresenter(
     private val downloadManager: DownloadManager = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val preferences: PreferencesHelper = Injekt.get(),
-    private val delayedTrackingStore: DelayedTrackingStore = Injekt.get(),
+    private val delayedTrackingStore: DelayedTrackingStore = Injekt.get()
 ) : BasePresenter<ReaderActivity>() {
 
     /**
@@ -643,7 +644,7 @@ class ReaderPresenter(
                         async {
                             runCatching {
                                 if (context.isOnline()) {
-                                    service.update(track, true)
+                                    service.update(track)
                                     db.insertTrack(track).executeAsBlocking()
                                 } else {
                                     delayedTrackingStore.addItem(track)
@@ -651,12 +652,14 @@ class ReaderPresenter(
                                 }
                             }
                         }
+                    } else {
+                        null
                     }
-                )
-            }
-            .onErrorComplete()
-            .subscribeOn(Schedulers.io())
-            .subscribe()
+                }
+                .awaitAll()
+                .mapNotNull { it.fold(onSuccess = { null }, onFailure = { it }) }
+                .forEach { Timber.i(it) }
+        }
     }
 
     /**
