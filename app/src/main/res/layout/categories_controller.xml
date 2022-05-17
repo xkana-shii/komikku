@@ -10,15 +10,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:choiceMode="multipleChoice"
-        android:paddingBottom="@dimen/fab_list_padding"
         android:clipToPadding="false"
+        android:paddingBottom="@dimen/fab_list_padding"
         tools:listitem="@layout/categories_item" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         app:layout_anchor="@id/recycler"
         style="@style/Theme.Widget.FAB"
-        app:srcCompat="@drawable/ic_add_24dp" />
+        app:srcCompat="@drawable/ic_add_24dp"
+        tools:ignore="ContentDescription" />
 
     <eu.kanade.tachiyomi.widget.EmptyView
         android:id="@+id/empty_view"
