@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <changelog bulletedList="true">
+    <changelogversion versionName="v8.6.8-AZ" changeDate="">
+        <changelogtext>Literally 1984, removed library refresh times below 12 hours. The Tachiyomi people required this.</changelogtext>
+        <changelogtext>tracker updates now queue up when offline and update on reconnect</changelogtext>
+        <changelogtext>added new extension installation system. There's an "update all" button now</changelogtext>
+        <changelogtext>some minor visual/ui bugfixes (thanks KraXen72)</changelogtext>
+    </changelogversion>
     <changelogversion versionName="v8.6.6-AZ" changeDate="">
         <changelogtext>fixed nhentai</changelogtext>
         <changelogtext>fixed swipe gestures in the reader (Thanks KraXen72)</changelogtext>
