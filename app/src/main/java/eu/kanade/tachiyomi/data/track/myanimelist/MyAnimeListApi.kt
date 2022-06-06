@@ -350,7 +350,7 @@ class MyAnimeListApi(private val client: OkHttpClient, interceptor: MyAnimeListI
             .toInt()
 
         private fun Element.searchSummary() = select("div.pt4")
-            .first()
+            .first()!!
             .ownText()!!
 
         private fun Element.searchPublishingStatus() = if (select(TD).last()!!.text() == "-") "Publishing" else "Finished"
