@@ -288,7 +288,7 @@ class EightMuses :
             val builtPrefix = if (prefix.isBlank()) "> " else "$prefix > "
 
             out + contents.albums.flatMap { ele ->
-                fetchAndParseChapterList(builtPrefix + ele.selectFirst(".title-text").text(), ele.attr("href"))
+                fetchAndParseChapterList(builtPrefix + ele.selectFirst(".title-text")!!.text(), ele.attr("href"))
             }
         }
     }
@@ -328,7 +328,7 @@ class EightMuses :
 
             val breadcrumbs = input.selectFirst(".top-menu-breadcrumb > ol")
 
-            title = breadcrumbs.selectFirst("li:nth-last-child(1) > a").text()
+            title = breadcrumbs!!.selectFirst("li:nth-last-child(1) > a")!!.text()
 
             thumbnailUrl = parseSelf(input).let { it.albums + it.images }.firstOrNull()
                 ?.selectFirst(".lazyload")
@@ -339,7 +339,7 @@ class EightMuses :
             tags.clear()
             tags += RaisedTag(
                 EightMusesSearchMetadata.ARTIST_NAMESPACE,
-                breadcrumbs.selectFirst("li:nth-child(2) > a").text(),
+                breadcrumbs!!.selectFirst("li:nth-child(2) > a")!!.text(),
                 EightMusesSearchMetadata.TAG_TYPE_DEFAULT
             )
             tags += input.select(".album-tags a").map {

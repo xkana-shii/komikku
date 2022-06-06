@@ -53,21 +53,21 @@ class Pururin(delegate: HttpSource) :
     }
 
     override fun parseIntoMetadata(metadata: PururinSearchMetadata, input: Document) {
-        val selfLink = input.select("[itemprop=name]").last().parent()
-        val parsedSelfLink = Uri.parse(selfLink.attr("href")).pathSegments
+        val selfLink = input.select("[itemprop=name]").last()!!.parent()
+        val parsedSelfLink = Uri.parse(selfLink!!.attr("href")).pathSegments
 
         with(metadata) {
             prId = parsedSelfLink[parsedSelfLink.lastIndex - 1].toIntOrNull()
             prShortLink = parsedSelfLink.last()
 
             val contentWrapper = input.selectFirst(".content-wrapper")
-            title = contentWrapper.selectFirst(".title h1").text()
-            altTitle = contentWrapper.selectFirst(".alt-title")?.text()
+            title = contentWrapper!!.selectFirst(".title h1")!!.text()
+            altTitle = contentWrapper!!.selectFirst(".alt-title")?.text()
 
-            thumbnailUrl = "https:" + input.selectFirst(".cover-wrapper v-lazy-image").attr("src")
+            thumbnailUrl = "https:" + input.selectFirst(".cover-wrapper v-lazy-image")!!.attr("src")
 
             tags.clear()
-            contentWrapper.select(".table-gallery-info > tbody > tr").forEach { ele ->
+            contentWrapper!!.select(".table-gallery-info > tbody > tr").forEach { ele ->
                 val key = ele.child(0).text().toLowerCase()
                 val value = ele.child(1)
                 when (key) {
@@ -78,8 +78,8 @@ class Pururin(delegate: HttpSource) :
                         fileSize = split.last().removeSuffix(")").trim()
                     }
                     "ratings" -> {
-                        ratingCount = value.selectFirst("[itemprop=ratingCount]").attr("content").toIntOrNull()
-                        averageRating = value.selectFirst("[itemprop=ratingValue]").attr("content").toDoubleOrNull()
+                        ratingCount = value.selectFirst("[itemprop=ratingCount]")!!.attr("content").toIntOrNull()
+                        averageRating = value.selectFirst("[itemprop=ratingValue]")!!.attr("content").toDoubleOrNull()
                     }
                     "uploader" -> {
                         uploaderDisp = value.text()

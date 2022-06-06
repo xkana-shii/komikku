@@ -53,7 +53,7 @@ class PervEden(override val id: Long, val pvLang: PervEdenLang) :
         val manga = SManga.create()
         manga.thumbnail_url = "http:" + element.select(".hottestImage > img").attr("data-src")
 
-        val titleElement = element.getElementsByClass("hottestInfo").first().child(0)
+        val titleElement = element.getElementsByClass("hottestInfo").first()!!.child(0)
         manga.url = titleElement.attr("href")
         manga.title = titleElement.text()
 
@@ -94,10 +94,10 @@ class PervEden(override val id: Long, val pvLang: PervEdenLang) :
     override fun latestUpdatesFromElement(element: Element): SManga {
         val manga = SManga.create()
         val header = element.getElementsByClass("manga_tooltop_header").first()
-        val titleElement = header.child(0)
+        val titleElement = header!!.child(0)
         manga.url = titleElement.attr("href")
         manga.title = titleElement.text().trim()
-        manga.thumbnail_url = "https:" + header.parent().selectFirst(".mangaImage img").attr("tmpsrc")
+        manga.thumbnail_url = "https:" + header!!.parent()!!.selectFirst(".mangaImage img")!!.attr("tmpsrc")
         return manga
     }
 
@@ -165,7 +165,7 @@ class PervEden(override val id: Long, val pvLang: PervEdenLang) :
             val newAltTitles = mutableListOf<String>()
             tags.clear()
             var inStatus: String? = null
-            rightBoxElement.childNodes().forEach {
+            rightBoxElement!!.childNodes().forEach {
                 if (it is Element && it.tagName().toLowerCase() == "h4") {
                     inStatus = it.text().trim()
                 } else {
@@ -232,8 +232,8 @@ class PervEden(override val id: Long, val pvLang: PervEdenLang) :
     override fun chapterFromElement(element: Element) = SChapter.create().apply {
         val linkElement = element.getElementsByClass("chapterLink").first()
 
-        setUrlWithoutDomain(linkElement.attr("href"))
-        name = "Chapter " + linkElement.getElementsByTag("b").text()
+        setUrlWithoutDomain(linkElement!!.attr("href"))
+        name = "Chapter " + linkElement!!.getElementsByTag("b").text()
 
         ChapterRecognition.parseChapterNumber(
             this,
@@ -243,16 +243,16 @@ class PervEden(override val id: Long, val pvLang: PervEdenLang) :
         )
 
         try {
-            date_upload = DATE_FORMAT.parse(element.getElementsByClass("chapterDate").first().text().trim())!!.time
+            date_upload = DATE_FORMAT.parse(element.getElementsByClass("chapterDate").first()!!.text().trim())!!.time
         } catch (ignored: Exception) {
         }
     }
 
-    override fun pageListParse(document: Document) = document.getElementById("pageSelect").getElementsByTag("option").map {
+    override fun pageListParse(document: Document) = document.getElementById("pageSelect")!!.getElementsByTag("option").map {
         Page(it.attr("data-page").toInt() - 1, baseUrl + it.attr("value"))
     }
 
-    override fun imageUrlParse(document: Document) = "http:" + document.getElementById("mainImg").attr("src")!!
+    override fun imageUrlParse(document: Document) = "http:" + document.getElementById("mainImg")!!.attr("src")!!
 
     override fun getFilterList() = FilterList(
         AuthorFilter(),

@@ -100,12 +100,12 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
 
             tags.clear()
 
-            thumbnailUrl = "https:" + input.selectFirst(".cover img").attr("src")
+            thumbnailUrl = "https:" + input.selectFirst(".cover img")!!.attr("src")
 
             val galleryElement = input.selectFirst(".gallery")
 
-            title = galleryElement.selectFirst("h1").text()
-            artists = galleryElement.select("h2 a").map { it.text() }
+            title = galleryElement!!.selectFirst("h1")!!.text()
+            artists = galleryElement!!.select("h2 a").map { it.text() }
             tags += artists.map { RaisedTag("artist", it, TAG_TYPE_VIRTUAL) }
 
             input.select(".gallery-info tr").forEach {
@@ -147,7 +147,7 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
             }
 
             uploadDate = try {
-                DATE_FORMAT.parse(input.selectFirst(".gallery-info .date").text())!!.time
+                DATE_FORMAT.parse(input.selectFirst(".gallery-info .date")!!.text())!!.time
             } catch (e: Exception) {
                 null
             }
@@ -305,13 +305,13 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
         val doc = response.asJsoup()
         return SManga.create().apply {
             val titleElement = doc.selectFirst("h1")
-            title = titleElement.text()
+            title = titleElement!!.text()
             thumbnail_url = "https:" + if (prefs.eh_hl_useHighQualityThumbs().get()) {
-                doc.selectFirst("img").attr("srcset").substringBefore(' ')
+                doc.selectFirst("img")!!.attr("srcset").substringBefore(' ')
             } else {
-                doc.selectFirst("img").attr("src")
+                doc.selectFirst("img")!!.attr("src")
             }
-            url = titleElement.child(0).attr("href")
+            url = titleElement.child(0)!!.attr("href")
 
             // TODO Parse tags and stuff
         }

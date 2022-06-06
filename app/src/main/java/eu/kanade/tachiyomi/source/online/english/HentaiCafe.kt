@@ -60,9 +60,9 @@ class HentaiCafe(delegate: HttpSource) :
             url = input.location()
             title = input.select("h3").text()
             val contentElement = input.select(".entry-content").first()
-            thumbnailUrl = contentElement.child(0).child(0).attr("src")
+            thumbnailUrl = contentElement!!.child(0).child(0).attr("src")
 
-            fun filterableTagsOfType(type: String) = contentElement.select("a")
+            fun filterableTagsOfType(type: String) = contentElement!!.select("a")
                 .filter { "$baseUrl/hc.fyi/$type/" in it.attr("href") }
                 .map { it.text() }
 

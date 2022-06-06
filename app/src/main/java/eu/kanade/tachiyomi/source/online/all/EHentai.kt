@@ -109,7 +109,7 @@ class EHentai(
             val column2 = it.selectFirst(".gl3e, .gl2c")
             val linkElement = it.selectFirst(".gl3c > a, .gl2e > div > a")
 
-            val favElement = column2.children().find { it.attr("style").startsWith("border-color") }
+            val favElement = column2!!.children().find { it.attr("style").startsWith("border-color") }
 
             ParsedManga(
                 fav = FAVORITES_BORDER_HEX_COLORS.indexOf(
@@ -117,10 +117,10 @@ class EHentai(
                 ),
                 manga = Manga.create(id).apply {
                     // Get title
-                    title = thumbnailElement.attr("title")
-                    url = EHentaiSearchMetadata.normalizeUrl(linkElement.attr("href"))
+                    title = thumbnailElement!!.attr("title")
+                    url = EHentaiSearchMetadata.normalizeUrl(linkElement!!.attr("href"))
                     // Get image
-                    thumbnail_url = thumbnailElement.attr("src")
+                    thumbnail_url = thumbnailElement!!.attr("src")
 
                     // TODO Parse genre + uploader + tags
                 }
@@ -174,7 +174,7 @@ class EHentai(
 
                         val parentLink = doc!!.select("#gdd .gdt1").find { el ->
                             el.text().toLowerCase() == "parent:"
-                        }!!.nextElementSibling().selectFirst("a")?.attr("href")
+                        }!!.nextElementSibling()!!.selectFirst("a")?.attr("href")
 
                         if (parentLink != null) {
                             updateHelper.parentLookupTable.put(
@@ -202,12 +202,12 @@ class EHentai(
             // Build chapter for root gallery
             val self = SChapter.create().apply {
                 url = EHentaiSearchMetadata.normalizeUrl(d.location())
-                name = "v1: " + d.selectFirst("#gn").text()
+                name = "v1: " + d.selectFirst("#gn")!!.text()
                 chapter_number = 1f
                 date_upload = EX_DATE_FORMAT.parse(
                     d.select("#gdd .gdt1").find { el ->
                         el.text().toLowerCase() == "posted:"
-                    }!!.nextElementSibling().text()
+                    }!!.nextElementSibling()!!.text()
                 ).time
             }
             // Build and append the rest of the galleries
@@ -421,7 +421,7 @@ class EHentai(
                 select("#gdd tr").forEach {
                     val left = it.select(".gdt1").text().nullIfBlank()?.trim()
                     val rightElement = it.selectFirst(".gdt2")
-                    val right = rightElement.text().nullIfBlank()?.trim()
+                    val right = rightElement!!.text().nullIfBlank()?.trim()
                     if (left != null && right != null) {
                         ignore {
                             when (
@@ -433,7 +433,7 @@ class EHentai(
                                 // Example JP gallery: https://exhentai.org/g/1375385/03519d541b/
                                 // Parent is older variation of the gallery
                                 "parent" -> parent = if (!right.equals("None", true)) {
-                                    rightElement.child(0).attr("href")
+                                    rightElement!!.child(0).attr("href")
                                 } else null
                                 "visible" -> visible = right.nullIfBlank()
                                 "language" -> {
@@ -510,7 +510,7 @@ class EHentai(
 
     fun realImageUrlParse(response: Response, page: Page): String {
         with(response.asJsoup()) {
-            val currentImage = getElementById("img").attr("src")
+            val currentImage = getElementById("img")!!.attr("src")
             // Each press of the retry button will choose another server
             select("#loadfail").attr("onclick").nullIfBlank()?.let {
                 page.url = addParam(page.url, "nl", it.substring(it.indexOf('\'') + 1 until it.lastIndexOf('\'')))

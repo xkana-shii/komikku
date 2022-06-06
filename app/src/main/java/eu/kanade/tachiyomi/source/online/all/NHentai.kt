@@ -159,10 +159,10 @@ class NHentai(context: Context) : HttpSource(), LewdSource<NHentaiSearchMetadata
             SManga.create().apply {
                 url = it.attr("href")
 
-                title = it.selectFirst(".caption").text()
+                title = it.selectFirst(".caption")!!.text()
 
                 // last() is a hack to ignore the lazy-loader placeholder image on the front page
-                thumbnail_url = it.select("img").last().attr("src")
+                thumbnail_url = it.select("img").last()!!.attr("src")
                 // In some pages, the thumbnail url does not include the protocol
                 if (!thumbnail_url!!.startsWith("https:")) thumbnail_url = "https:$thumbnail_url"
             }

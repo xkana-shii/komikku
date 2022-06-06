@@ -84,13 +84,13 @@ class HBrowse : HttpSource(), LewdSource<HBrowseSearchMetadata, Document>, UrlIm
     private fun parseListing(response: Response): MangasPage {
         val doc = response.asJsoup()
         val main = doc.selectFirst("#main")
-        val items = main.select(".thumbTable > tbody")
+        val items = main!!.select(".thumbTable > tbody")
         val manga = items.map { mangaEle ->
             SManga.create().apply {
                 val thumbElement = mangaEle.selectFirst(".thumbImg")
-                url = "/" + thumbElement.parent().attr("href").split("/").dropBlank().first()
-                title = thumbElement.parent().attr("title").substringAfter('\'').substringBeforeLast('\'')
-                thumbnail_url = baseUrl + thumbElement.attr("src")
+                url = "/" + thumbElement!!.parent()!!.attr("href").split("/").dropBlank().first()
+                title = thumbElement!!.parent()!!.attr("title").substringAfter('\'').substringBeforeLast('\'')
+                thumbnail_url = baseUrl + thumbElement!!.attr("src")
             }
         }
 
@@ -362,7 +362,7 @@ class HBrowse : HttpSource(), LewdSource<HBrowseSearchMetadata, Document>, UrlIm
     override fun chapterListParse(response: Response): List<SChapter> {
         return parseIntoTables(response.asJsoup())["read manga online"]?.map { (key, value) ->
             SChapter.create().apply {
-                url = value.selectFirst(".listLink").attr("href")
+                url = value.selectFirst(".listLink")!!.attr("href")
 
                 name = key
             }
