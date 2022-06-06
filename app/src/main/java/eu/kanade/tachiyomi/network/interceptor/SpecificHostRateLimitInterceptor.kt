@@ -1,11 +1,11 @@
 package eu.kanade.tachiyomi.network.interceptor
 
 import android.os.SystemClock
+import java.util.concurrent.TimeUnit
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
-import java.util.concurrent.TimeUnit
 
 /**
  * An OkHttp interceptor that handles given url host's rate limiting.
