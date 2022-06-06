@@ -382,6 +382,9 @@ class MangaInfoController(private val fromSource: Boolean = false) :
                 SManga.ONGOING -> R.string.ongoing
                 SManga.COMPLETED -> R.string.completed
                 SManga.LICENSED -> R.string.licensed
+		SManga.PUBLISHING_FINISHED -> R.string.publishing_finished
+		SManga.CANCELLED -> R.string.cancelled
+		SManga.ON_HIATUS -> R.string.on_hiatus
                 else -> R.string.unknown
             }
         )
