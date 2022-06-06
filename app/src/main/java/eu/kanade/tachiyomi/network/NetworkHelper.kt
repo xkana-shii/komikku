@@ -3,6 +3,8 @@ package eu.kanade.tachiyomi.network
 import android.content.Context
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
+import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import exh.log.maybeInjectEHLogger
 import java.io.File
 import java.net.InetAddress
