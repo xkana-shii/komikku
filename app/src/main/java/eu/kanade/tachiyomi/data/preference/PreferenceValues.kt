@@ -17,6 +17,7 @@ object PreferenceValues {
         default,
         blue,
         smoothie,
+        fumo,
     }
 
     // Keys are lowercase to match legacy string values
