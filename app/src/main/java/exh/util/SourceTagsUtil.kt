@@ -57,7 +57,7 @@ class SourceTagsUtil {
                 } else {
                     tag
                 }
-                ).substringBefore(':', missingDelimiterValue = "").trimOrNull(),
+                ).substringBefore(':', missingDelimiterValue = "").trim(),
             tag.substringAfter(':', missingDelimiterValue = tag).trim(),
             if (tag.startsWith("-")) TAG_TYPE_EXCLUDE else TAG_TYPE_DEFAULT
         )
