@@ -35,8 +35,7 @@ import exh.util.defaultReaderType
 import java.io.File
 import java.util.Date
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import rx.Completable
 import rx.Observable
 import rx.Subscription
 import rx.android.schedulers.AndroidSchedulers
@@ -364,6 +363,7 @@ class ReaderPresenter(
         // Save last page read and mark as read if needed
         selectedChapter.chapter.last_page_read = page.index
         if (selectedChapter.pages?.lastIndex == page.index) {
+            Timber.d("Finished reading ${selectedChapter.chapter.url}")
             selectedChapter.chapter.read = true
             updateTrackChapterRead(selectedChapter)
             enqueueDeleteReadChapters(selectedChapter)
@@ -632,34 +632,38 @@ class ReaderPresenter(
         val trackManager = Injekt.get<TrackManager>()
         val context = Injekt.get<Application>()
 
-        launchIO {
-            db.getTracks(manga).executeAsBlocking()
-                .mapNotNull { track ->
-                    val service = trackManager.getService(track.sync_id)
-                    if (service != null && service.isLogged && chapterRead > track.last_chapter_read) {
-                        track.last_chapter_read = chapterRead
+        db.getTracks(manga).asRxSingle()
+            .flatMapCompletable { trackList ->
+                Completable.concat(
+                    trackList.map { track ->
+                        val service = trackManager.getService(track.sync_id)
+                        if (service != null && service.isLogged && chapterRead > track.last_chapter_read) {
+                            track.last_chapter_read = chapterRead
 
-                        // We want these to execute even if the presenter is destroyed and leaks
-                        // for a while. The view can still be garbage collected.
-                        async {
-                            runCatching {
-//                                if (context.isOnline()) {
-                                    service.update(track)
-                                    db.insertTrack(track).executeAsBlocking()
-//                                } else {
-//                                    delayedTrackingStore.addItem(track)
-//                                    DelayedTrackingUpdateJob.setupTask(context)
-//                                }
+                            // We want these to execute even if the presenter is destroyed and leaks
+                            // for a while. The view can still be garbage collected.
+                            if (context.isOnline()) {
+                                Timber.d("Tracking ONLINE")
+                                Observable.defer { service.update(track) }
+                                    .map { db.insertTrack(track).executeAsBlocking() }
+                                    .toCompletable()
+                                    .onErrorComplete()
+                            } else {
+                                Timber.d("Tracking OFFLINE")
+                                Observable.defer { delayedTrackingStore.addItem(track) }
+                                    .map { DelayedTrackingUpdateJob.setupTask(context) }
+                                    .toCompletable()
+                                    .onErrorComplete()
                             }
+                        } else {
+                            Completable.complete()
                         }
-                    } else {
-                        null
                     }
-                }
-                .awaitAll()
-                .mapNotNull { it.fold(onSuccess = { null }, onFailure = { it }) }
-                .forEach { Timber.i(it) }
-        }
+                )
+            }
+            .onErrorComplete()
+            .subscribeOn(Schedulers.io())
+            .subscribe()
     }
 
     /**

@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.track.job
 import android.content.Context
 import androidx.core.content.edit
 import eu.kanade.tachiyomi.data.database.models.Track
+import rx.Observable
 import timber.log.Timber
 
 class DelayedTrackingStore(context: Context) {
@@ -12,7 +13,7 @@ class DelayedTrackingStore(context: Context) {
      */
     private val preferences = context.getSharedPreferences("tracking_queue", Context.MODE_PRIVATE)
 
-    fun addItem(track: Track) {
+    fun addItem(track: Track): Observable<Track> {
         val trackId = track.id.toString()
         val (_, lastChapterRead) = preferences.getString(trackId, "0:0.0")!!.split(":")
         if (track.last_chapter_read > lastChapterRead.toFloat()) {
@@ -22,6 +23,7 @@ class DelayedTrackingStore(context: Context) {
                 putString(trackId, value)
             }
         }
+        return Observable.just(track)
     }
 
     fun clear() {
