@@ -643,13 +643,13 @@ class ReaderPresenter(
                         // for a while. The view can still be garbage collected.
                         async {
                             runCatching {
-                                if (context.isOnline()) {
+//                                if (context.isOnline()) {
                                     service.update(track)
                                     db.insertTrack(track).executeAsBlocking()
-                                } else {
-                                    delayedTrackingStore.addItem(track)
-                                    DelayedTrackingUpdateJob.setupTask(context)
-                                }
+//                                } else {
+//                                    delayedTrackingStore.addItem(track)
+//                                    DelayedTrackingUpdateJob.setupTask(context)
+//                                }
                             }
                         }
                     } else {
