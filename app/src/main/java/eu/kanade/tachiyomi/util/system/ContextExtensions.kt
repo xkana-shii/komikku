@@ -296,12 +296,17 @@ fun Context.isPackageInstalled(packageName: String): Boolean {
 }
 
 fun Context.isOnline(): Boolean {
-    val networkCapabilities = connectivityManager.activeNetwork ?: return false
-    val actNw = connectivityManager.getNetworkCapabilities(networkCapabilities) ?: return false
-    val maxTransport = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 -> NetworkCapabilities.TRANSPORT_LOWPAN
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> NetworkCapabilities.TRANSPORT_WIFI_AWARE
-        else -> NetworkCapabilities.TRANSPORT_VPN
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val networkCapabilities = connectivityManager.activeNetwork ?: return false
+        val actNw = connectivityManager.getNetworkCapabilities(networkCapabilities) ?: return false
+        val maxTransport = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 -> NetworkCapabilities.TRANSPORT_LOWPAN
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> NetworkCapabilities.TRANSPORT_WIFI_AWARE
+            else -> NetworkCapabilities.TRANSPORT_VPN
+        }
+        return (NetworkCapabilities.TRANSPORT_CELLULAR..maxTransport).any(actNw::hasTransport)
+    } else {
+        val networkInfo = connectivityManager.activeNetworkInfo ?: return false
+        return networkInfo.isConnected()
     }
-    return (NetworkCapabilities.TRANSPORT_CELLULAR..maxTransport).any(actNw::hasTransport)
 }
