@@ -2,12 +2,17 @@ package eu.kanade.tachiyomi.ui.webview
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.isInvisible
+import androidx.core.view.isVisible
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -50,10 +55,10 @@ class WebViewActivity : BaseWebViewActivity() {
 
             binding.webview.webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    binding.progressBar.visible()
+                    binding.progressBar.isVisible = true
                     binding.progressBar.progress = newProgress
                     if (newProgress == 100) {
-                        binding.progressBar.invisible()
+                        binding.progressBar.isInvisible = true
                     }
                     super.onProgressChanged(view, newProgress)
                 }
