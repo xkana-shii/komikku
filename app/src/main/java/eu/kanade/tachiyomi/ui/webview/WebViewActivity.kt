@@ -36,7 +36,6 @@ class WebViewActivity : BaseWebViewActivity() {
 
         if (bundle == null) {
             val url = intent.extras!!.getString(URL_KEY) ?: return
-            var headers = mutableMapOf<String, String>()
 
             var headers = mutableMapOf<String, String>()
             val source = sourceManager.get(intent.extras!!.getLong(SOURCE_KEY)) as? HttpSource
