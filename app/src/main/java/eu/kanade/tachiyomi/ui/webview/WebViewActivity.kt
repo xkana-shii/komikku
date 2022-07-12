@@ -14,6 +14,7 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.system.WebViewClientCompat
@@ -22,11 +23,13 @@ import eu.kanade.tachiyomi.util.system.getResourceColor
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.setDefaultSettings
 import eu.kanade.tachiyomi.util.system.toast
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import uy.kohesive.injekt.injectLazy
 
 class WebViewActivity : BaseWebViewActivity() {
 
     private val sourceManager by injectLazy<SourceManager>()
+    private val network: NetworkHelper by injectLazy()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,6 +129,7 @@ class WebViewActivity : BaseWebViewActivity() {
             R.id.action_web_refresh -> refreshPage()
             R.id.action_web_share -> shareWebpage()
             R.id.action_web_browser -> openInBrowser()
+            R.id.action_clear_cookies -> clearCookies()
         }
         return super.onOptionsItemSelected(item)
     }
@@ -144,6 +148,11 @@ class WebViewActivity : BaseWebViewActivity() {
 
     private fun openInBrowser() {
         openInBrowser(binding.webview.url ?: return)
+    }
+
+    private fun clearCookies() {
+        val url = binding.webview.url!!
+        val cleared = network.cookieManager.remove(url.toHttpUrl())
     }
 
     companion object {
