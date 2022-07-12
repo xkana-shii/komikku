@@ -41,7 +41,6 @@ class WebViewActivity : BaseWebViewActivity() {
                 headers = source.headers.toMultimap().mapValues { it.value.getOrNull(0) ?: "" }.toMutableMap()
                 binding.webview.settings.userAgentString = source.headers["User-Agent"]
             }
-            headers["X-Requested-With"] = WebViewUtil.REQUESTED_WITH
 
             binding.webview.setDefaultSettings()
 

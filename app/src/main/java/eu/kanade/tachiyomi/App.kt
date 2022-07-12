@@ -134,6 +134,23 @@ open class App : Application(), LifecycleObserver {
         }
     }
 
+    override fun getPackageName(): String {
+        try {
+            // Override the value passed as X-Requested-With in WebView requests
+            val stackTrace = Thread.currentThread().stackTrace
+            for (element in stackTrace) {
+                if ("org.chromium.base.BuildInfo".equals(element.className, ignoreCase = true)) {
+                    if ("getAll".equals(element.methodName, ignoreCase = true)) {
+                        return WebViewUtil.SPOOF_PACKAGE_NAME
+                    }
+                    break
+                }
+            }
+        } catch (e: Exception) {
+        }
+        return super.getPackageName()
+    }
+
     protected open fun setupNotificationChannels() {
         Notifications.createChannels(this)
     }
