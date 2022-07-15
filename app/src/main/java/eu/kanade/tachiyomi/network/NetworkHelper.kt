@@ -70,4 +70,8 @@ open class NetworkHelper(context: Context) {
         .addInterceptor(CloudflareInterceptor(context))
         .maybeInjectEHLogger()
         .build()
+
+    val defaultUserAgent by lazy {
+        preferences.defaultUserAgent().get()
+    }
 }

@@ -260,4 +260,6 @@ object PreferenceKeys {
     const val startReadingButton = "start_reading_button"
 
     const val extensionRepos = "extension_repos"
+
+    const val defaultUserAgent = "default_user_agent"
 }

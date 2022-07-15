@@ -89,7 +89,7 @@ class CloudflareInterceptor(private val context: Context) : Interceptor {
 
             // Avoid set empty User-Agent, Chromium WebView will reset to default if empty
             webview.settings.userAgentString = request.header("User-Agent")
-                ?: HttpSource.DEFAULT_USERAGENT
+                ?: networkHelper.defaultUserAgent
 
             webview.webViewClient = object : WebViewClientCompat() {
                 override fun onPageFinished(view: WebView, url: String) {
