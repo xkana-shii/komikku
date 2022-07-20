@@ -130,6 +130,8 @@ fun ChipGroup.setChipsExtended(items: List<String>?, onClick: (item: String) -> 
                 } else {
                     search = wrapTag(parsed.first, parsed.second.substringBefore('|').trim())
                 }
+            } else {
+                search = wrapTag(search)
             }
             setOnClickListener { onClick(search) }
             setOnLongClickListener {
@@ -143,6 +145,12 @@ fun ChipGroup.setChipsExtended(items: List<String>?, onClick: (item: String) -> 
 }
 
 private fun parseTag(tag: String) = tag.substringBefore(':').trim() to tag.substringAfter(':').trim()
+
+private fun wrapTag(tag: String) = if (tag.contains(' ')) {
+    "\"$tag$\""
+} else {
+    "$tag$"
+}
 
 private fun wrapTag(namespace: String, tag: String) = if (tag.contains(' ')) {
     "$namespace:\"$tag$\""
