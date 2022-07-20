@@ -147,9 +147,9 @@ fun ChipGroup.setChipsExtended(items: List<String>?, onClick: (item: String) -> 
 private fun parseTag(tag: String) = tag.substringBefore(':').trim() to tag.substringAfter(':').trim()
 
 private fun wrapTag(tag: String) = if (tag.contains(' ')) {
-    "\"$tag$\""
+    "\"$tag\""
 } else {
-    "$tag$"
+    "$tag"
 }
 
 private fun wrapTag(namespace: String, tag: String) = if (tag.contains(' ')) {
