@@ -47,7 +47,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/ic_more_vert_24dp"
-        app:tint="?attr/colorOnPrimary" />
+        app:tint="?android:attr/textColorPrimary" />
 
     <TextView
         android:id="@+id/download_text"
