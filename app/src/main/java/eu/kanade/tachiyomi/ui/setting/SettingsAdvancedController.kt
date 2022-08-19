@@ -166,15 +166,15 @@ class SettingsAdvancedController : SettingsController() {
                 }
             }
         }
-        preference {
-            key = "pref_reset_user_agent"
-            titleRes = R.string.pref_reset_user_agent_string
+        if (preferences.defaultUserAgent().isSet()) {
+            preference {
+                key = "pref_reset_user_agent"
+                titleRes = R.string.pref_reset_user_agent_string
 
-            visibleIf(preferences.defaultUserAgent()) { it != preferences.defaultUserAgent().defaultValue }
-
-            onClick {
-                preferences.defaultUserAgent().delete()
-                activity?.toast(R.string.requires_app_restart)
+                onClick {
+                    preferences.defaultUserAgent().delete()
+                    activity?.toast(R.string.requires_app_restart)
+                }
             }
         }
 
