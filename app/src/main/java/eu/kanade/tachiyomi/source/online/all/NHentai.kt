@@ -26,6 +26,7 @@ import exh.metadata.metadata.NHentaiSearchMetadata
 import exh.metadata.metadata.NHentaiSearchMetadata.Companion.TAG_TYPE_DEFAULT
 import exh.metadata.metadata.base.RaisedTag
 import exh.util.urlImportFetchSearchManga
+import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -39,6 +40,10 @@ class NHentai(context: Context) : HttpSource(), LewdSource<NHentaiSearchMetadata
     override val metaClass = NHentaiSearchMetadata::class
 
     override val client: OkHttpClient = network.cloudflareClient.newBuilder().build()
+
+    override fun headersBuilder(): Headers.Builder =
+        super.headersBuilder()
+            .set("User-Agent", USER_AGENT)
 
     override fun fetchPopularManga(page: Int): Observable<MangasPage> {
         // TODO There is currently no way to get the most popular mangas
@@ -322,5 +327,7 @@ class NHentai(context: Context) : HttpSource(), LewdSource<NHentaiSearchMetadata
             Pair("Japanese", " japanese"),
             Pair("Chinese", " chinese")
         )
+
+        private const val USER_AGENT = "Mozilla/5.0 (X11; U; Linux armv7l like Android; en-us) AppleWebKit/531.2+ (KHTML, like Gecko) Version/5.0 Safari/533.2+ Kindle/3.0+"
     }
 }

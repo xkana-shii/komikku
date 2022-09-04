@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <changelog bulletedList="true">
+    <changelogversion versionName="v8.7.2-AZ" changeDate="">
+        <changelogtext>add ability to change user agent in advanced settings</changelogtext>
+        <changelogtext>fix some small issues with the light theme</changelogtext>
+        <changelogtext>fix searching of tags containing spaces when tapping chips</changelogtext>
+        <changelogtext>update default UA for nH (now bypasses cloudflare)</changelogtext>
+    </changelogversion>
     <changelogversion versionName="v8.7.1-AZ" changeDate="">
         <changelogtext>Update webview (Fixes some cloudflare issues)</changelogtext>
         <changelogtext>Fix the library search issue with tags containing "-" (searching "x-ray" no longer searches for "x -ray")</changelogtext>
