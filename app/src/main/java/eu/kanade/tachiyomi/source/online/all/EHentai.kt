@@ -133,9 +133,14 @@ class EHentai(
         val hasNextPage = if (parsedLocation == null ||
             !parsedLocation.queryParameterNames.contains(REVERSE_PARAM)
         ) {
-            select("a[onclick=return false]").last()?.let {
-                it.text() == ">"
-            } ?: false
+            select("a[onclick=return false]").last()
+                ?.let {
+                    it.text() == ">"
+                }
+                ?: select(".searchnav >div > a")
+                    .find { it.attr("href").contains("next") }
+                    ?.let { true }
+                ?: false
         } else {
             parsedLocation.queryParameter(REVERSE_PARAM)!!.toBoolean()
         }
@@ -327,7 +332,11 @@ class EHentai(
     fun exGet(url: String, page: Int? = null, additionalHeaders: Headers? = null, cache: Boolean = true): Request {
         return GET(
             page?.let {
-                addParam(url, "page", Integer.toString(page - 1))
+                if (page > 1 && exh) {
+                    addParam(url, "next", Integer.toString(page))
+                } else {
+                    addParam(url, "page", Integer.toString(page))
+                }
             } ?: url,
             additionalHeaders?.let {
                 val headers = headers.newBuilder()

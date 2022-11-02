@@ -11,7 +11,7 @@ import rx.Observable
 abstract class Pager(var currentPage: Int = 1) {
 
     var hasNextPage = true
-        private set
+        protected set
 
     protected val results: PublishRelay<Pair<Int, List<SManga>>> = PublishRelay.create()
 
@@ -21,7 +21,7 @@ abstract class Pager(var currentPage: Int = 1) {
 
     abstract fun requestNext(): Observable<MangasPage>
 
-    fun onPageReceived(mangasPage: MangasPage) {
+    open fun onPageReceived(mangasPage: MangasPage) {
         val page = currentPage
         currentPage++
         hasNextPage = mangasPage.hasNextPage && mangasPage.mangas.isNotEmpty()
