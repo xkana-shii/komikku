@@ -335,7 +335,7 @@ class EHentai(
                 if (page > 1 && exh) {
                     addParam(url, "next", Integer.toString(page))
                 } else {
-                    addParam(url, "page", Integer.toString(page))
+                    addParam(url, "page", Integer.toString(page - 1))
                 }
             } ?: url,
             additionalHeaders?.let {
@@ -561,7 +561,7 @@ class EHentai(
             }
             // Next page
 
-            page++
+            page = parsed.first.lastOrNull()?.manga?.url?.let { EHentaiSearchMetadata.galleryId(it) }?.toInt() ?: 0
         } while (parsed.second)
 
         return Pair(result as List<ParsedManga>, favNames!!)
