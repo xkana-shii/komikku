@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.source.browse
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
+import exh.EH_SOURCE_ID
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
@@ -32,7 +33,11 @@ open class ExhPager(val source: CatalogueSource, val query: String, val filters:
 
     override fun onPageReceived(mangasPage: MangasPage) {
         val page = currentPage
-        currentPage = urlToId(mangasPage.mangas.lastOrNull()?.url)
+        if (query.isBlank() && filters.isEmpty() && source.id == EH_SOURCE_ID) {
+            currentPage++
+        } else {
+            currentPage = urlToId(mangasPage.mangas.lastOrNull()?.url)
+        }
         hasNextPage = mangasPage.hasNextPage && mangasPage.mangas.isNotEmpty()
         results.call(Pair(page, mangasPage.mangas))
     }

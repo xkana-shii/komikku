@@ -332,7 +332,7 @@ class EHentai(
     fun exGet(url: String, page: Int? = null, additionalHeaders: Headers? = null, cache: Boolean = true): Request {
         return GET(
             page?.let {
-                if (page > 1 && exh) {
+                if (page > 1) {
                     addParam(url, "next", Integer.toString(page))
                 } else {
                     addParam(url, "page", Integer.toString(page - 1))
