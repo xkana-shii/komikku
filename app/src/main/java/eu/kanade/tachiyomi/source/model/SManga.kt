@@ -21,6 +21,8 @@ interface SManga : Serializable {
 
     var thumbnail_url: String?
 
+    var update_strategy: UpdateStrategy
+
     var initialized: Boolean
 
     fun copyFrom(other: SManga) {
@@ -51,6 +53,8 @@ interface SManga : Serializable {
         }
 
         status = other.status
+
+        update_strategy = other.update_strategy
 
         if (!initialized) {
             initialized = other.initialized

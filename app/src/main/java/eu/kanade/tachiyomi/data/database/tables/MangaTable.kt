@@ -42,6 +42,8 @@ object MangaTable {
 
     const val COL_COVER_LAST_MODIFIED = "cover_last_modified"
 
+    const val COL_UPDATE_STRATEGY = "update_strategy"
+
     val createTableQuery: String
         get() =
             """CREATE TABLE $TABLE(
@@ -62,6 +64,7 @@ object MangaTable {
             $COL_CHAPTER_FLAGS INTEGER NOT NULL,
             $COL_COVER_LAST_MODIFIED LONG NOT NULL,
             $COL_DATE_ADDED LONG NOT NULL
+            $COL_UPDATE_STRATEGY INTEGER AS UpdateStrategy NOT NULL DEFAULT 0
             )"""
 
     val createUrlIndexQuery: String
@@ -86,4 +89,7 @@ object MangaTable {
             "FROM $TABLE INNER JOIN ${ChapterTable.TABLE} " +
             "ON $TABLE.$COL_ID = ${ChapterTable.TABLE}.${ChapterTable.COL_MANGA_ID} " +
             "GROUP BY $TABLE.$COL_ID)"
+
+    val addUpdateStrategy: String
+        get() = "ALTER TABLE $TABLE ADD COLUMN $COL_UPDATE_STRATEGY INTEGER NOT NULL DEFAULT 0"
 }

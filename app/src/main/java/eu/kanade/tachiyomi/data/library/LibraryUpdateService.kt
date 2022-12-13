@@ -24,6 +24,7 @@ import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.toSChapter
 import eu.kanade.tachiyomi.source.model.toSManga
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithSource
 import eu.kanade.tachiyomi.util.lang.runAsObservable
 import eu.kanade.tachiyomi.util.prepUpdateCover
@@ -244,6 +245,8 @@ class LibraryUpdateService(
         if (target == Target.CHAPTERS && preferences.updateOnlyNonCompleted()) {
             listToUpdate = listToUpdate.filter { it.status != SManga.COMPLETED }
         }
+
+	listToUpdate = listToUpdate.filter { it.update_strategy != UpdateStrategy.FETCH_ONCE }
 
         return listToUpdate
     }

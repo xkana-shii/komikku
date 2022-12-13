@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.data.database.models.ChapterImpl
 import eu.kanade.tachiyomi.data.database.models.Manga
 import eu.kanade.tachiyomi.data.database.models.MangaImpl
 import eu.kanade.tachiyomi.data.database.models.TrackImpl
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
@@ -36,6 +37,7 @@ data class BackupManga(
     @ProtoNumber(100) var favorite: Boolean = true,
     @ProtoNumber(101) var chapterFlags: Int = 0,
     @ProtoNumber(102) var history: List<BackupHistory> = emptyList(),
+    @ProtoNumber(105) var updateStrategy: UpdateStrategy = UpdateStrategy.ALWAYS_UPDATE,
     // SY specific values
     @ProtoNumber(601) var flatMetadata: BackupFlatMetadata? = null
 ) {
@@ -54,6 +56,7 @@ data class BackupManga(
             date_added = this@BackupManga.dateAdded
             viewer = this@BackupManga.viewer
             chapter_flags = this@BackupManga.chapterFlags
+            update_strategy = this@BackupManga.updateStrategy
         }
     }
 
@@ -85,6 +88,7 @@ data class BackupManga(
                 dateAdded = manga.date_added,
                 viewer = manga.viewer,
                 chapterFlags = manga.chapter_flags
+                updateStrategy = manga.update_strategy,
             )
         }
     }
