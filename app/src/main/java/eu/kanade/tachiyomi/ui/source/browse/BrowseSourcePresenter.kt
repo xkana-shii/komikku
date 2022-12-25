@@ -33,8 +33,7 @@ import eu.kanade.tachiyomi.ui.source.filter.TriStateSectionItem
 import eu.kanade.tachiyomi.util.lang.launchIO
 import eu.kanade.tachiyomi.util.lang.launchUI
 import eu.kanade.tachiyomi.util.removeCovers
-import exh.EH_SOURCE_ID
-import exh.EXH_SOURCE_ID
+import exh.isEhBasedSource
 import exh.savedsearches.EXHSavedSearch
 import exh.savedsearches.JsonSavedSearch
 import java.lang.RuntimeException
@@ -289,7 +288,7 @@ open class BrowseSourcePresenter(
     }
 
     open fun createPager(query: String, filters: FilterList): Pager {
-        return if (source.id in listOf(EXH_SOURCE_ID, EH_SOURCE_ID)) { ExhPager(source, query, filters) } else { SourcePager(source, query, filters) }
+        return if (source.isEhBasedSource()) { ExhPager(source, query, filters) } else { SourcePager(source, query, filters) }
     }
 
     private fun FilterList.toItems(): List<IFlexible<*>> {
