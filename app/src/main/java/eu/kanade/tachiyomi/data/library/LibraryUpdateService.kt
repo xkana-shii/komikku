@@ -246,7 +246,7 @@ class LibraryUpdateService(
             listToUpdate = listToUpdate.filter { it.status != SManga.COMPLETED }
         }
 
-	listToUpdate = listToUpdate.filter { it.update_strategy != UpdateStrategy.FETCH_ONCE }
+	listToUpdate = listToUpdate.filter { it.update_strategy != UpdateStrategy.ONLY_FETCH_ONCE }
 
         return listToUpdate
     }
