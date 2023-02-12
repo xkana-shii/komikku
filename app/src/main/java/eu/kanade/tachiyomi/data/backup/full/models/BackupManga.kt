@@ -87,8 +87,8 @@ data class BackupManga(
                 source = manga.source,
                 dateAdded = manga.date_added,
                 viewer = manga.viewer,
-                chapterFlags = manga.chapter_flags
-                updateStrategy = manga.update_strategy,
+                chapterFlags = manga.chapter_flags,
+                updateStrategy = manga.update_strategy
             )
         }
     }

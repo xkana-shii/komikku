@@ -92,7 +92,7 @@ interface BaseMangaGetResolver {
         cover_last_modified = cursor.getLong(cursor.getColumnIndex(COL_COVER_LAST_MODIFIED))
         date_added = cursor.getLong(cursor.getColumnIndex(COL_DATE_ADDED))
         update_strategy = cursor.getInt(cursor.getColumnIndex(COL_UPDATE_STRATEGY)).let(
-            updateStrategyAdapter::decode,
+            updateStrategyAdapter::decode
         )
     }
 }
