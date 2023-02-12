@@ -475,7 +475,7 @@ class MangaInfoController(private val fromSource: Boolean = false) :
 
         val source = presenter.source as? HttpSource ?: return
         try {
-            val url = source.getMangaUrl(presenter.manga))
+            val url = source.getMangaUrl(presenter.manga)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, url)
