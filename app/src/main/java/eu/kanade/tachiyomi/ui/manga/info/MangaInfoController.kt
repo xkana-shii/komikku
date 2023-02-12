@@ -457,7 +457,7 @@ class MangaInfoController(private val fromSource: Boolean = false) :
         val source = presenter.source as? HttpSource ?: return
 
         val url = try {
-            source.mangaDetailsRequest(presenter.manga).url.toString()
+            source.getMangaUrl(presenter.manga.toSManga())
         } catch (e: Exception) {
             return
         }
@@ -475,7 +475,7 @@ class MangaInfoController(private val fromSource: Boolean = false) :
 
         val source = presenter.source as? HttpSource ?: return
         try {
-            val url = source.mangaDetailsRequest(presenter.manga).url.toString()
+            val url = source.getMangaUrl(presenter.manga.toSManga())
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, url)
