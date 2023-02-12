@@ -240,7 +240,7 @@ class ExtensionManager(
                 mutInstalledExtensions[index] = installedExt.copy(isRedundant = true)
                 changed = true
             } else if (availableExt != null) {
-                val hasUpdate = availableExt.versionCode > installedExt.versionCode
+                val hasUpdate = availableExt.versionCode > installedExt.versionCode || availableExt.libVersion > installedExt.libVersion
                 if (installedExt.hasUpdate != hasUpdate) {
                     mutInstalledExtensions[index] = installedExt.copy(hasUpdate = hasUpdate)
                     changed = true
