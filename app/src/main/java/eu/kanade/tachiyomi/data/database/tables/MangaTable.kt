@@ -64,7 +64,7 @@ object MangaTable {
             $COL_CHAPTER_FLAGS INTEGER NOT NULL,
             $COL_COVER_LAST_MODIFIED LONG NOT NULL,
             $COL_DATE_ADDED LONG NOT NULL,
-            $COL_UPDATE_STRATEGY INTEGER AS UpdateStrategy NOT NULL DEFAULT 0
+            $COL_UPDATE_STRATEGY INTEGER NOT NULL DEFAULT 0
             )"""
 
     val createUrlIndexQuery: String
