@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.source.online.all
 
 import android.net.Uri
 import android.os.Build
+import android.util.Log
+import app.cash.quickjs.QuickJs
 import com.github.salomonbrys.kotson.array
 import com.github.salomonbrys.kotson.get
 import com.github.salomonbrys.kotson.string
@@ -29,6 +31,7 @@ import exh.metadata.metadata.base.RaisedTag
 import exh.util.urlImportFetchSearchManga
 import java.text.SimpleDateFormat
 import java.util.Locale
+import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -42,6 +45,8 @@ import uy.kohesive.injekt.injectLazy
  * Man, I hate this source :(
  */
 class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImportableSource {
+    override fun headersBuilder(): Headers.Builder = super.headersBuilder().add("Referer", "$BASE_URL/")
+
     private val prefs: PreferencesHelper by injectLazy()
 
     override val id = HITOMI_SOURCE_ID
@@ -100,15 +105,15 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
 
             tags.clear()
 
-            thumbnailUrl = "https:" + input.selectFirst(".cover img")!!.attr("src")
+            thumbnailUrl = "https:" + input.selectFirst("source")!!.attr("data-srcset").substringBefore(' ')
 
-            val galleryElement = input.selectFirst(".gallery")
+            val galleryElement = input.selectFirst("div")
 
             title = galleryElement!!.selectFirst("h1")!!.text()
-            artists = galleryElement!!.select("h2 a").map { it.text() }
+            artists = galleryElement!!.select(".artist-list a").map { it.text() }
             tags += artists.map { RaisedTag("artist", it, TAG_TYPE_VIRTUAL) }
 
-            input.select(".gallery-info tr").forEach {
+            input.select(".dj-desc tr").forEach {
                 val content = it.child(1)
                 when (it.child(0).text().toLowerCase()) {
                     "group" -> {
@@ -128,7 +133,7 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
                     "language" -> {
                         language = content.selectFirst("a")?.attr("href")?.split('-')?.get(1)
                         language?.let {
-                            tags += RaisedTag("language", it, TAG_TYPE_VIRTUAL)
+                            tags += RaisedTag("language", it.substringBefore("."), TAG_TYPE_VIRTUAL)
                         }
                     }
                     "characters" -> {
@@ -147,7 +152,7 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
             }
 
             uploadDate = try {
-                DATE_FORMAT.parse(input.selectFirst(".gallery-info .date")!!.text())!!.time
+                DATE_FORMAT.parse(input.selectFirst(".date")!!.text())!!.time
             } catch (e: Exception) {
                 null
             }
@@ -307,9 +312,9 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
             val titleElement = doc.selectFirst("h1")
             title = titleElement!!.text()
             thumbnail_url = "https:" + if (prefs.eh_hl_useHighQualityThumbs().get()) {
-                doc.selectFirst("img")!!.attr("srcset").substringBefore(' ')
+                doc.selectFirst("source")!!.attr("data-srcset").substringBefore(' ')
             } else {
-                doc.selectFirst("img")!!.attr("src")
+                doc.selectFirst("img")!!.attr("data-src")
             }
             url = titleElement.child(0)!!.attr("href")
 
@@ -323,6 +328,10 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
      *
      * @param manga the manga to be updated.
      */
+    override fun mangaDetailsRequest(manga: SManga): Request {
+        return GET(LTN_BASE_URL + "/galleryblock/" + manga.url.substringAfterLast("-"))
+    }
+
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return client.newCall(mangaDetailsRequest(manga))
             .asObservableSuccess()
@@ -377,31 +386,29 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
         val json = JsonParser.parseString(str.removePrefix("var galleryinfo = "))
         return json["files"].array.mapIndexed { index, jsonElement ->
             val hash = jsonElement["hash"].string
-            val ext = if (jsonElement["haswebp"].string == "0") jsonElement["name"].string.split('.').last() else "webp"
-            val path = if (jsonElement["haswebp"].string == "0") "images" else "webp"
-            val hashPath1 = hash.takeLast(1)
-            val hashPath2 = hash.takeLast(3).take(2)
             Page(
                 index,
-                "",
-                "https://${subdomainFromGalleryId(hashPath2)}a.hitomi.la/$path/$hashPath1/$hashPath2/$hash.$ext"
+                hash
             )
         }
     }
 
-    // https://ltn.hitomi.la/common.js
-    private fun subdomainFromGalleryId(pathSegment: String): Char {
-        var numberOfFrontends = 3
-        val b = 16
-        var g = Integer.parseInt(pathSegment, b)
-        if (g < 0x30) {
-            numberOfFrontends = 2
-        }
-        if (g < 0x09) {
-            g = 1
-        }
+    override fun fetchImageUrl(page: Page): Observable<String> {
+        val ggUrl = "$LTN_BASE_URL/gg.js"
+        val commonUrl = "$LTN_BASE_URL/common.js"
 
-        return (97 + g.rem(numberOfFrontends)).toChar()
+        val ggJS = client.newCall(GET(ggUrl, headers)).execute().body!!.string().substringAfter("'use strict';")
+        val commonJS = client.newCall(GET(commonUrl, headers)).execute().body!!.string().substringAfter("navigator.userAgent);").substringBefore("function show_loading()")
+
+        val hashJS = "url_from_url_from_hash('', {'hash':'${page.url}'}, 'webp', undefined, 'a');"
+
+        QuickJs.create().use {
+            it.evaluate(ggJS)
+            it.evaluate(commonJS)
+            val imgurl = it.evaluate(hashJS).toString()
+            Log.d("hitomi", imgurl)
+            return Observable.just(imgurl)
+        }
     }
 
     /**
@@ -410,16 +417,6 @@ class Hitomi : HttpSource(), LewdSource<HitomiSearchMetadata, Document>, UrlImpo
      * @param response the response from the site.
      */
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
-
-    override fun imageRequest(page: Page): Request {
-        val request = super.imageRequest(page)
-        val hlId = request.url.pathSegments.let {
-            it[it.lastIndex - 1]
-        }
-        return request.newBuilder()
-            .header("Referer", "$BASE_URL/reader/$hlId.html")
-            .build()
-    }
 
     override val matchingHosts = listOf(
         "hitomi.la"
