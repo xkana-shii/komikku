@@ -65,6 +65,10 @@ class WebViewActivity : BaseWebViewActivity() {
 
             binding.webview.webViewClient = object : WebViewClientCompat() {
                 override fun shouldOverrideUrlCompat(view: WebView, url: String): Boolean {
+                    if (url.startsWith("blob:http")) {
+                        return false
+                    }
+
                     view.loadUrl(url, headers)
                     return true
                 }
