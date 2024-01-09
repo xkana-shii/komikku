@@ -26,7 +26,6 @@ internal class ExtensionGithubApi {
             val response = service.getRepo()
             parseResponse(response)
         } /* SY --> */ + preferences.extensionRepos().get().flatMap {
-
             if (it.endsWith(".json")) {
                 val response = service.getRepo(it)
                 parseResponse(response, it)
@@ -107,6 +106,6 @@ internal class ExtensionGithubApi {
 
     companion object {
         const val BASE_URL = "https://raw.githubusercontent.com/"
-        const val REPO_URL_PREFIX = "${BASE_URL}tachiyomiorg/tachiyomi-extensions/repo/"
+        const val REPO_URL_PREFIX = "${BASE_URL}tachiyomiorg/extensions/repo/"
     }
 }
