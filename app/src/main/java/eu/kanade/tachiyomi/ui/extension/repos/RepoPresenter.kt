@@ -57,7 +57,7 @@ class RepoPresenter(
         }
 
         // Do not allow invalid formats
-        if (!name.matches(repoRegex)) {
+        if (!name.matches(repoRegex) && !name.matches(urlRegex)) {
             Observable.just(Unit).subscribeFirst({ view, _ -> view.onRepoInvalidNameError() })
             return
         }
@@ -86,5 +86,7 @@ class RepoPresenter(
     companion object {
         val repoRegex =
             """^[a-zA-Z-_.]*?\/[a-zA-Z-_.]*?$""".toRegex()
+        val urlRegex =
+            """^https://.*/index\.min\.json$""".toRegex()
     }
 }
