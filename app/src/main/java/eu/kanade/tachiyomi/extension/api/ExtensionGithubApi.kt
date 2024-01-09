@@ -93,7 +93,7 @@ internal class ExtensionGithubApi {
     }
 
     fun getApkUrl(extension: Extension.Available): String {
-        return /* SY --> */ "${extension.repoUrl}apk/${extension.apkName}" /* SY <-- */
+        return /* SY --> */ "${extension.repoUrl.substringBeforeLast("index.min.json")}apk/${extension.apkName}" /* SY <-- */
     }
 
     // SY -->
