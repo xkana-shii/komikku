@@ -26,9 +26,15 @@ internal class ExtensionGithubApi {
             val response = service.getRepo()
             parseResponse(response)
         } /* SY --> */ + preferences.extensionRepos().get().flatMap {
-            val url = "$BASE_URL$it/repo/"
-            val response = service.getRepo("${url}index.min.json")
-            parseResponse(response, url)
+
+            if (it.endsWith(".json")) {
+                val response = service.getRepo(it)
+                parseResponse(response, it)
+            } else {
+                val url = "$BASE_URL$it/repo/"
+                val response = service.getRepo("${url}index.min.json")
+                parseResponse(response, url)
+            }
         }
         // SY <--
     }
