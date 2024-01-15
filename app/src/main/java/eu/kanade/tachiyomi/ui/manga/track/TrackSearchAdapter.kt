@@ -8,18 +8,10 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.glide.GlideApp
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
+import eu.kanade.tachiyomi.databinding.TrackSearchItemBinding
 import eu.kanade.tachiyomi.util.view.gone
 import eu.kanade.tachiyomi.util.view.inflate
 import java.util.ArrayList
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_cover
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_start
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_start_result
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_status
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_status_result
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_summary
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_title
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_type
-import kotlinx.android.synthetic.main.track_search_item.view.track_search_type_result
 
 class TrackSearchAdapter(context: Context) :
     ArrayAdapter<TrackSearch>(context, R.layout.track_search_item, ArrayList<TrackSearch>()) {
@@ -49,38 +41,38 @@ class TrackSearchAdapter(context: Context) :
     }
 
     class TrackSearchHolder(private val view: View) {
-
+        private val binding = TrackSearchItemBinding.bind(view)
         fun onSetValues(track: TrackSearch) {
-            view.track_search_title.text = track.title
-            view.track_search_summary.text = track.summary
-            GlideApp.with(view.context).clear(view.track_search_cover)
+            binding.trackSearchTitle.text = track.title
+            binding.trackSearchSummary.text = track.summary
+            GlideApp.with(view.context).clear(binding.trackSearchCover)
             if (!track.cover_url.isEmpty()) {
                 GlideApp.with(view.context)
                     .load(track.cover_url)
                     .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                     .centerCrop()
-                    .into(view.track_search_cover)
+                    .into(binding.trackSearchCover)
             }
 
             if (track.publishing_status.isBlank()) {
-                view.track_search_status.gone()
-                view.track_search_status_result.gone()
+                binding.trackSearchStatus.gone()
+                binding.trackSearchStatusResult.gone()
             } else {
-                view.track_search_status_result.text = track.publishing_status.capitalize()
+                binding.trackSearchStatusResult.text = track.publishing_status.capitalize()
             }
 
             if (track.publishing_type.isBlank()) {
-                view.track_search_type.gone()
-                view.track_search_type_result.gone()
+                binding.trackSearchType.gone()
+                binding.trackSearchTypeResult.gone()
             } else {
-                view.track_search_type_result.text = track.publishing_type.capitalize()
+                binding.trackSearchTypeResult.text = track.publishing_type.capitalize()
             }
 
             if (track.start_date.isBlank()) {
-                view.track_search_start.gone()
-                view.track_search_start_result.gone()
+                binding.trackSearchStart.gone()
+                binding.trackSearchStartResult.gone()
             } else {
-                view.track_search_start_result.text = track.start_date
+                binding.trackSearchStartResult.text = track.start_date
             }
         }
     }

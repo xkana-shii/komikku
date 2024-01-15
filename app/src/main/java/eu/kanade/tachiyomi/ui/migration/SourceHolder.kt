@@ -1,32 +1,30 @@
 package eu.kanade.tachiyomi.ui.migration
 
 import android.view.View
+import eu.kanade.tachiyomi.databinding.SourceMainControllerCardItemBinding
 import eu.kanade.tachiyomi.source.icon
 import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
 import eu.kanade.tachiyomi.ui.base.holder.SlicedHolder
 import eu.kanade.tachiyomi.util.view.gone
 import io.github.mthli.slice.Slice
-import kotlinx.android.synthetic.main.source_main_controller_card_item.card
-import kotlinx.android.synthetic.main.source_main_controller_card_item.image
-import kotlinx.android.synthetic.main.source_main_controller_card_item.source_browse
-import kotlinx.android.synthetic.main.source_main_controller_card_item.source_latest
-import kotlinx.android.synthetic.main.source_main_controller_card_item.title
 
 class SourceHolder(view: View, override val adapter: SourceAdapter) :
     BaseFlexibleViewHolder(view, adapter),
     SlicedHolder {
 
-    override val slice = Slice(card).apply {
+    private val binding = SourceMainControllerCardItemBinding.bind(view)
+
+    override val slice = Slice(binding.card).apply {
         setColor(adapter.cardBackground)
     }
 
     override val viewToSlice: View
-        get() = card
+        get() = binding.card
 
     init {
-        source_browse.gone()
-        source_latest.text = "All"
-        source_latest.setOnClickListener {
+        binding.sourceBrowse.gone()
+        binding.sourceLatest.text = "All"
+        binding.sourceLatest.setOnClickListener {
             adapter.allClickListener?.onAllClick(bindingAdapterPosition)
         }
     }
@@ -36,11 +34,11 @@ class SourceHolder(view: View, override val adapter: SourceAdapter) :
         setCardEdges(item)
 
         // Set source name
-        title.text = source.name
+        binding.title.text = source.name
 
         // Set source icon
         itemView.post {
-            image.setImageDrawable(source.icon())
+            binding.image.setImageDrawable(source.icon())
         }
     }
 }

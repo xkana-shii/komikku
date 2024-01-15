@@ -7,13 +7,9 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.glide.GlideApp
 import eu.kanade.tachiyomi.data.glide.toMangaThumbnail
+import eu.kanade.tachiyomi.databinding.UpdatesItemBinding
 import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
 import eu.kanade.tachiyomi.util.system.getResourceColor
-import kotlinx.android.synthetic.main.updates_item.chapter_menu
-import kotlinx.android.synthetic.main.updates_item.chapter_title
-import kotlinx.android.synthetic.main.updates_item.download_text
-import kotlinx.android.synthetic.main.updates_item.manga_cover
-import kotlinx.android.synthetic.main.updates_item.manga_title
 
 /**
  * Holder that contains chapter item
@@ -28,6 +24,8 @@ import kotlinx.android.synthetic.main.updates_item.manga_title
 class UpdatesHolder(private val view: View, private val adapter: UpdatesAdapter) :
     BaseFlexibleViewHolder(view, adapter) {
 
+    private val binding = UpdatesItemBinding.bind(view)
+
     private var readColor = view.context.getResourceColor(R.attr.colorOnSurface, 0.38f)
     private var unreadColor = view.context.getResourceColor(R.attr.colorOnSurface)
 
@@ -40,8 +38,8 @@ class UpdatesHolder(private val view: View, private val adapter: UpdatesAdapter)
         // We need to post a Runnable to show the popup to make sure that the PopupMenu is
         // correctly positioned. The reason being that the view may change position before the
         // PopupMenu is shown.
-        chapter_menu.setOnClickListener { it.post { showPopupMenu(it) } }
-        manga_cover.setOnClickListener {
+        binding.chapterMenu.setOnClickListener { it.post { showPopupMenu(it) } }
+        binding.mangaCover.setOnClickListener {
             adapter.coverClickListener.onCoverClick(bindingAdapterPosition)
         }
     }
@@ -55,26 +53,26 @@ class UpdatesHolder(private val view: View, private val adapter: UpdatesAdapter)
         this.item = item
 
         // Set chapter title
-        chapter_title.text = item.chapter.name
+        binding.chapterTitle.text = item.chapter.name
 
         // Set manga title
-        manga_title.text = item.manga.title
+        binding.mangaTitle.text = item.manga.title
 
         // Set cover
-        GlideApp.with(itemView.context).clear(manga_cover)
+        GlideApp.with(itemView.context).clear(binding.mangaCover)
         GlideApp.with(itemView.context)
             .load(item.manga.toMangaThumbnail())
             .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
             .circleCrop()
-            .into(manga_cover)
+            .into(binding.mangaCover)
 
         // Check if chapter is read and set correct color
         if (item.chapter.read) {
-            chapter_title.setTextColor(readColor)
-            manga_title.setTextColor(readColor)
+            binding.chapterTitle.setTextColor(readColor)
+            binding.mangaTitle.setTextColor(readColor)
         } else {
-            chapter_title.setTextColor(unreadColor)
-            manga_title.setTextColor(unreadColor)
+            binding.chapterTitle.setTextColor(unreadColor)
+            binding.mangaTitle.setTextColor(unreadColor)
         }
 
         // Set chapter status
@@ -86,7 +84,7 @@ class UpdatesHolder(private val view: View, private val adapter: UpdatesAdapter)
      *
      * @param status download status
      */
-    fun notifyStatus(status: Int) = with(download_text) {
+    fun notifyStatus(status: Int) = with(binding.downloadText) {
         when (status) {
             Download.QUEUE -> setText(R.string.chapter_queued)
             Download.DOWNLOADING -> setText(R.string.chapter_downloading)

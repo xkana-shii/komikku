@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.source
 
 import android.view.View
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.databinding.SourceMainControllerCardItemBinding
 import eu.kanade.tachiyomi.source.LocalSource
 import eu.kanade.tachiyomi.source.icon
 import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
@@ -9,35 +10,31 @@ import eu.kanade.tachiyomi.ui.base.holder.SlicedHolder
 import eu.kanade.tachiyomi.util.view.gone
 import eu.kanade.tachiyomi.util.view.visible
 import io.github.mthli.slice.Slice
-import kotlinx.android.synthetic.main.source_main_controller_card_item.card
-import kotlinx.android.synthetic.main.source_main_controller_card_item.image
-import kotlinx.android.synthetic.main.source_main_controller_card_item.source_browse
-import kotlinx.android.synthetic.main.source_main_controller_card_item.source_latest
-import kotlinx.android.synthetic.main.source_main_controller_card_item.title
-
 class SourceHolder(view: View, override val adapter: SourceAdapter, val showButtons: Boolean) :
     BaseFlexibleViewHolder(view, adapter),
     SlicedHolder {
 
-    override val slice = Slice(card).apply {
+    private val binding = SourceMainControllerCardItemBinding.bind(view)
+
+    override val slice = Slice(binding.card).apply {
         setColor(adapter.cardBackground)
     }
 
     override val viewToSlice: View
-        get() = card
+        get() = binding.card
 
     init {
-        source_browse.setOnClickListener {
+        binding.sourceBrowse.setOnClickListener {
             adapter.browseClickListener.onBrowseClick(bindingAdapterPosition)
         }
 
-        source_latest.setOnClickListener {
+        binding.sourceLatest.setOnClickListener {
             adapter.latestClickListener.onLatestClick(bindingAdapterPosition)
         }
 
         if (!showButtons) {
-            source_browse.gone()
-            source_latest.gone()
+            binding.sourceBrowse.gone()
+            binding.sourceLatest.gone()
         }
     }
 
@@ -46,22 +43,22 @@ class SourceHolder(view: View, override val adapter: SourceAdapter, val showButt
         setCardEdges(item)
 
         // Set source name
-        title.text = source.name
+        binding.title.text = source.name
 
         // Set source icon
         itemView.post {
             val icon = source.icon()
             when {
-                icon != null -> image.setImageDrawable(icon)
-                item.source.id == LocalSource.ID -> image.setImageResource(R.mipmap.ic_local_source)
+                icon != null -> binding.image.setImageDrawable(icon)
+                item.source.id == LocalSource.ID -> binding.image.setImageResource(R.mipmap.ic_local_source)
             }
         }
 
-        source_browse.setText(R.string.browse)
+        binding.sourceBrowse.setText(R.string.browse)
         if (source.supportsLatest && showButtons) {
-            source_latest.visible()
+            binding.sourceLatest.visible()
         } else {
-            source_latest.gone()
+            binding.sourceLatest.gone()
         }
     }
 }

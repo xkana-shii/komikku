@@ -3,14 +3,10 @@ package eu.kanade.tachiyomi.ui.source.globalsearch
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import eu.kanade.tachiyomi.data.database.models.Manga
+import eu.kanade.tachiyomi.databinding.GlobalSearchControllerCardBinding
 import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
 import eu.kanade.tachiyomi.util.view.gone
 import eu.kanade.tachiyomi.util.view.visible
-import kotlinx.android.synthetic.main.global_search_controller_card.more
-import kotlinx.android.synthetic.main.global_search_controller_card.progress
-import kotlinx.android.synthetic.main.global_search_controller_card.recycler
-import kotlinx.android.synthetic.main.global_search_controller_card.source_card
-import kotlinx.android.synthetic.main.global_search_controller_card.title
 
 /**
  * Holder that binds the [GlobalSearchItem] containing catalogue cards.
@@ -21,6 +17,7 @@ import kotlinx.android.synthetic.main.global_search_controller_card.title
 class GlobalSearchHolder(view: View, val adapter: GlobalSearchAdapter) :
     BaseFlexibleViewHolder(view, adapter) {
 
+    private val binding = GlobalSearchControllerCardBinding.bind(view)
     /**
      * Adapter containing manga from search results.
      */
@@ -30,10 +27,10 @@ class GlobalSearchHolder(view: View, val adapter: GlobalSearchAdapter) :
 
     init {
         // Set layout horizontal.
-        recycler.layoutManager = LinearLayoutManager(view.context, LinearLayoutManager.HORIZONTAL, false)
-        recycler.adapter = mangaAdapter
+        binding.recycler.layoutManager = LinearLayoutManager(view.context, LinearLayoutManager.HORIZONTAL, false)
+        binding.recycler.adapter = mangaAdapter
 
-        more.setOnClickListener {
+        binding.more.setOnClickListener {
             val item = adapter.getItem(bindingAdapterPosition)
             if (item != null) {
                 adapter.moreClickListener.onMoreClick(item.source)
@@ -54,19 +51,19 @@ class GlobalSearchHolder(view: View, val adapter: GlobalSearchAdapter) :
         val langSuffix = if (source.lang.isNotEmpty()) " (${source.lang})" else ""
 
         // Set Title with country code if available.
-        title.text = titlePrefix + source.name + langSuffix
+        binding.title.text = titlePrefix + source.name + langSuffix
 
         when {
             results == null -> {
-                progress.visible()
+                binding.progress.visible()
                 showHolder()
             }
             results.isEmpty() -> {
-                progress.gone()
+                binding.progress.gone()
                 hideHolder()
             }
             else -> {
-                progress.gone()
+                binding.progress.gone()
                 showHolder()
             }
         }
@@ -103,14 +100,14 @@ class GlobalSearchHolder(view: View, val adapter: GlobalSearchAdapter) :
     }
 
     private fun showHolder() {
-        title.visible()
-        source_card.visible()
-        more.visible() // EXH
+        binding.title.visible()
+        binding.sourceCard.visible()
+        binding.more.visible() // EXH
     }
 
     private fun hideHolder() {
-        title.gone()
-        source_card.gone()
-        more.gone() // EXH
+        binding.title.gone()
+        binding.sourceCard.gone()
+        binding.more.gone() // EXH
     }
 }
