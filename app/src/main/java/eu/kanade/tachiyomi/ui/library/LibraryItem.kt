@@ -17,6 +17,8 @@ import eu.kanade.tachiyomi.data.database.models.LibraryManga
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.preference.PreferenceValues.DisplayMode
 import eu.kanade.tachiyomi.data.track.TrackManager
+import eu.kanade.tachiyomi.databinding.SourceComfortableGridItemBinding
+import eu.kanade.tachiyomi.databinding.SourceCompactGridItemBinding
 import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.widget.AutofitRecyclerView
 import exh.isNamespaceSource
@@ -24,8 +26,6 @@ import exh.metadata.metadata.base.RaisedTag
 import exh.util.SourceTagsUtil.Companion.TAG_TYPE_EXCLUDE
 import exh.util.SourceTagsUtil.Companion.getRaisedTags
 import exh.util.SourceTagsUtil.Companion.parseTag
-import kotlinx.android.synthetic.main.source_compact_grid_item.view.card
-import kotlinx.android.synthetic.main.source_compact_grid_item.view.gradient
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -60,9 +60,10 @@ class LibraryItem(val manga: LibraryManga, private val libraryDisplayMode: Prefe
             DisplayMode.COMPACT_GRID -> {
                 val parent = adapter.recyclerView as AutofitRecyclerView
                 val coverHeight = parent.itemWidth / 3 * 4
+                val binding = SourceCompactGridItemBinding.bind(view)
                 view.apply {
-                    card.layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, coverHeight)
-                    gradient.layoutParams = FrameLayout.LayoutParams(
+                    binding.card.layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, coverHeight)
+                    binding.gradient.layoutParams = FrameLayout.LayoutParams(
                         MATCH_PARENT, coverHeight / 2, Gravity.BOTTOM
                     )
                 }
@@ -71,8 +72,9 @@ class LibraryItem(val manga: LibraryManga, private val libraryDisplayMode: Prefe
             DisplayMode.COMFORTABLE_GRID -> {
                 val parent = adapter.recyclerView as AutofitRecyclerView
                 val coverHeight = parent.itemWidth / 3 * 4
+                val binding = SourceComfortableGridItemBinding.bind(view)
                 view.apply {
-                    card.layoutParams = ConstraintLayout.LayoutParams(
+                    binding.card.layoutParams = ConstraintLayout.LayoutParams(
                         MATCH_PARENT, coverHeight
                     )
                 }

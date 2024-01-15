@@ -2,9 +2,8 @@ package eu.kanade.tachiyomi.ui.category
 
 import android.view.View
 import eu.kanade.tachiyomi.data.database.models.Category
+import eu.kanade.tachiyomi.databinding.CategoriesItemBinding
 import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
-import kotlinx.android.synthetic.main.categories_item.reorder
-import kotlinx.android.synthetic.main.categories_item.title
 
 /**
  * Holder used to display category items.
@@ -14,8 +13,9 @@ import kotlinx.android.synthetic.main.categories_item.title
  */
 class CategoryHolder(view: View, val adapter: CategoryAdapter) : BaseFlexibleViewHolder(view, adapter) {
 
+    private val binding = CategoriesItemBinding.bind(view)
     init {
-        setDragHandleView(reorder)
+        setDragHandleView(binding.reorder)
     }
 
     /**
@@ -25,7 +25,7 @@ class CategoryHolder(view: View, val adapter: CategoryAdapter) : BaseFlexibleVie
      */
     fun bind(category: Category) {
         // DON'T capitalize category names
-        title.text = category.name // .capitalize()
+        binding.title.text = category.name // .capitalize()
     }
 
     /**

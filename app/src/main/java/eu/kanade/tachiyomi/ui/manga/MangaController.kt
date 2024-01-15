@@ -25,6 +25,7 @@ import eu.kanade.tachiyomi.source.online.AnimeSource
 import eu.kanade.tachiyomi.ui.base.controller.RxController
 import eu.kanade.tachiyomi.ui.base.controller.TabbedController
 import eu.kanade.tachiyomi.ui.base.controller.requestPermissionsSafe
+import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.chapter.ChaptersController
 import eu.kanade.tachiyomi.ui.manga.chapter.ChaptersPresenter
 import eu.kanade.tachiyomi.ui.manga.info.MangaInfoController
@@ -32,7 +33,6 @@ import eu.kanade.tachiyomi.ui.manga.track.TrackController
 import eu.kanade.tachiyomi.ui.source.SourceController
 import eu.kanade.tachiyomi.util.system.toast
 import java.util.Date
-import kotlinx.android.synthetic.main.main_activity.tabs
 import rx.Subscription
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -138,7 +138,8 @@ class MangaController : RxController<MangaControllerBinding>, TabbedController {
     override fun onChangeStarted(handler: ControllerChangeHandler, type: ControllerChangeType) {
         super.onChangeStarted(handler, type)
         if (type.isEnter) {
-            activity?.tabs?.setupWithViewPager(binding.mangaPager)
+            val activity = activity as MainActivity?
+            activity?.binding?.tabs?.setupWithViewPager(binding.mangaPager)
             trackingIconSubscription = trackingIconRelay.subscribe { setTrackingIconInternal(it) }
         }
     }
@@ -168,7 +169,9 @@ class MangaController : RxController<MangaControllerBinding>, TabbedController {
     }
 
     private fun setTrackingIconInternal(visible: Boolean) {
-        val tab = activity?.tabs?.getTabAt(TRACK_CONTROLLER) ?: return
+        val activity = activity as MainActivity?
+
+        val tab = activity?.binding?.tabs?.getTabAt(TRACK_CONTROLLER) ?: return
         val drawable = if (visible) {
             VectorDrawableCompat.create(resources!!, R.drawable.ic_done_white_18dp, null)
         } else {

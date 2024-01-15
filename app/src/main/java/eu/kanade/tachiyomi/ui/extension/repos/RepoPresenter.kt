@@ -35,7 +35,7 @@ class RepoPresenter(
         super.onCreate(savedState)
 
         preferences.extensionRepos().asFlow().onEach { repos ->
-            this.repos = repos.toList().sortedBy { it.toLowerCase() }
+            this.repos = repos.toList().sortedBy { it.lowercase() }
 
             Observable.just(this.repos)
                 .map { it.map(::RepoItem) }

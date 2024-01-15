@@ -15,6 +15,7 @@ import eu.kanade.tachiyomi.data.database.models.Manga
 import eu.kanade.tachiyomi.data.library.LibraryUpdateService
 import eu.kanade.tachiyomi.data.preference.PreferenceValues.DisplayMode
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.databinding.LibraryCategoryBinding
 import eu.kanade.tachiyomi.ui.category.CategoryAdapter
 import eu.kanade.tachiyomi.util.lang.plusAssign
 import eu.kanade.tachiyomi.util.lang.removeArticles
@@ -23,7 +24,6 @@ import eu.kanade.tachiyomi.util.view.inflate
 import eu.kanade.tachiyomi.widget.AutofitRecyclerView
 import exh.ui.LoadingHandle
 import java.util.concurrent.TimeUnit
-import kotlinx.android.synthetic.main.library_category.view.swipe_refresh
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -90,15 +90,15 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
     }
     // EXH <--
 
-    fun onCreate(controller: LibraryController) {
+    fun onCreate(controller: LibraryController, binding: LibraryCategoryBinding) {
         this.controller = controller
 
         recycler = if (preferences.libraryDisplayMode().get() == DisplayMode.LIST) {
-            (swipe_refresh.inflate(R.layout.library_list_recycler) as RecyclerView).apply {
+            (binding.swipeRefresh.inflate(R.layout.library_list_recycler) as RecyclerView).apply {
                 layoutManager = LinearLayoutManager(context)
             }
         } else {
-            (swipe_refresh.inflate(R.layout.library_grid_recycler) as AutofitRecyclerView).apply {
+            (binding.swipeRefresh.inflate(R.layout.library_grid_recycler) as AutofitRecyclerView).apply {
                 spanCount = controller.mangaPerRow
             }
         }
@@ -107,27 +107,27 @@ class LibraryCategoryView @JvmOverloads constructor(context: Context, attrs: Att
 
         recycler.setHasFixedSize(true)
         recycler.adapter = adapter
-        swipe_refresh.addView(recycler)
+        binding.swipeRefresh.addView(recycler)
 
         recycler.scrollStateChanges()
             .onEach {
                 // Disable swipe refresh when view is not at the top
                 val firstPos = (recycler.layoutManager as LinearLayoutManager)
                     .findFirstCompletelyVisibleItemPosition()
-                swipe_refresh.isEnabled = firstPos <= 0
+                binding.swipeRefresh.isEnabled = firstPos <= 0
             }
             .launchIn(scope)
 
         // Double the distance required to trigger sync
-        swipe_refresh.setDistanceToTriggerSync((2 * 64 * resources.displayMetrics.density).toInt())
-        swipe_refresh.refreshes()
+        binding.swipeRefresh.setDistanceToTriggerSync((2 * 64 * resources.displayMetrics.density).toInt())
+        binding.swipeRefresh.refreshes()
             .onEach {
                 if (LibraryUpdateService.start(context, category)) {
                     context.toast(R.string.updating_category)
                 }
 
                 // It can be a very long operation, so we disable swipe refresh and show a toast.
-                swipe_refresh.isRefreshing = false
+                binding.swipeRefresh.isRefreshing = false
             }
             .launchIn(scope)
     }

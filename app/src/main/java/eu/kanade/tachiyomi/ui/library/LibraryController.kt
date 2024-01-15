@@ -54,8 +54,6 @@ import exh.favorites.FavoritesIntroDialog
 import exh.favorites.FavoritesSyncStatus
 import exh.ui.LoaderManager
 import java.util.concurrent.TimeUnit
-import kotlinx.android.synthetic.main.main_activity.drawer
-import kotlinx.android.synthetic.main.main_activity.tabs
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
@@ -224,7 +222,8 @@ class LibraryController(
     override fun onChangeStarted(handler: ControllerChangeHandler, type: ControllerChangeType) {
         super.onChangeStarted(handler, type)
         if (type.isEnter) {
-            activity?.tabs?.setupWithViewPager(binding.libraryPager)
+            val activity = activity as MainActivity?
+            activity?.binding?.tabs?.setupWithViewPager(binding.libraryPager)
             presenter.subscribeLibrary()
         }
     }
@@ -313,7 +312,8 @@ class LibraryController(
         // Delay the scroll position to allow the view to be properly measured.
         view.post {
             if (isAttached) {
-                activity?.tabs?.setScrollPosition(binding.libraryPager.currentItem, 0f, true)
+                val activity = activity as MainActivity?
+                activity?.binding?.tabs?.setScrollPosition(binding.libraryPager.currentItem, 0f, true)
             }
         }
 
@@ -440,7 +440,8 @@ class LibraryController(
         when (item.itemId) {
             R.id.action_search -> expandActionViewFromInteraction = true
             R.id.action_filter -> {
-                navView?.let { activity?.drawer?.openDrawer(GravityCompat.END) }
+                val activity = activity as MainActivity?
+                navView?.let { activity?.binding?.drawer?.openDrawer(GravityCompat.END) }
             }
             R.id.action_update_library -> {
                 activity?.let {
