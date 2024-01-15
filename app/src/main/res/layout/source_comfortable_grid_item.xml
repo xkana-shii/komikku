@@ -28,15 +28,6 @@
                 tools:ignore="ContentDescription"
                 tools:src="@mipmap/ic_launcher" />
 
-            <View
-                android:id="@+id/gradient"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
-                android:background="@drawable/gradient_shape"
-                android:visibility="gone"
-                tools:visibility="gone" />
-
             <FrameLayout
                 android:id="@+id/play_layout"
                 android:layout_width="50dp"

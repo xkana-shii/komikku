@@ -24,9 +24,9 @@ import eu.kanade.tachiyomi.util.view.visibleIf
 class LibraryListHolder(
     private val view: View,
     adapter: FlexibleAdapter<IFlexible<RecyclerView.ViewHolder>>
-) : LibraryHolder(view, adapter) {
+) : LibraryHolder<SourceListItemBinding>(view, adapter) {
 
-    val binding = SourceListItemBinding.bind(view)
+    override val binding = SourceListItemBinding.bind(view)
 
     /**
      * Method called from [LibraryCategoryAdapter.onBindViewHolder]. It updates the data for this

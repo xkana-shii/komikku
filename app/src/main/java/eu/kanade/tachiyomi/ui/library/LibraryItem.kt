@@ -30,7 +30,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class LibraryItem(val manga: LibraryManga, private val libraryDisplayMode: Preference<DisplayMode>) :
-    AbstractFlexibleItem<LibraryHolder>(), IFilterable<Pair<String, Boolean>> {
+    AbstractFlexibleItem<LibraryHolder<*>>(), IFilterable<Pair<String, Boolean>> {
 
     private val sourceManager: SourceManager = Injekt.get()
     private val trackManager: TrackManager = Injekt.get()
@@ -55,7 +55,7 @@ class LibraryItem(val manga: LibraryManga, private val libraryDisplayMode: Prefe
         }
     }
 
-    override fun createViewHolder(view: View, adapter: FlexibleAdapter<IFlexible<RecyclerView.ViewHolder>>): LibraryHolder {
+    override fun createViewHolder(view: View, adapter: FlexibleAdapter<IFlexible<RecyclerView.ViewHolder>>): LibraryHolder<*> {
         return when (libraryDisplayMode.get()) {
             DisplayMode.COMPACT_GRID -> {
                 val parent = adapter.recyclerView as AutofitRecyclerView
@@ -88,7 +88,7 @@ class LibraryItem(val manga: LibraryManga, private val libraryDisplayMode: Prefe
 
     override fun bindViewHolder(
         adapter: FlexibleAdapter<IFlexible<RecyclerView.ViewHolder>>,
-        holder: LibraryHolder,
+        holder: LibraryHolder<*>,
         position: Int,
         payloads: List<Any?>?
     ) {

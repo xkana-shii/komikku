@@ -40,6 +40,7 @@ import eu.kanade.tachiyomi.ui.base.controller.NucleusController
 import eu.kanade.tachiyomi.ui.base.controller.SecondaryDrawerController
 import eu.kanade.tachiyomi.ui.base.controller.withFadeTransaction
 import eu.kanade.tachiyomi.ui.library.ChangeMangaCategoriesDialog
+import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaController
 import eu.kanade.tachiyomi.ui.source.SourceController
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
@@ -54,7 +55,6 @@ import eu.kanade.tachiyomi.widget.AutofitRecyclerView
 import eu.kanade.tachiyomi.widget.EmptyView
 import exh.savedsearches.EXHSavedSearch
 import kotlinx.android.parcel.Parcelize
-import kotlinx.android.synthetic.main.main_activity.drawer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -183,7 +183,9 @@ open class BrowseSourceController(bundle: Bundle) :
         this.navView = navView
         navView.setFilters(presenter.filterItems)
 
-        drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END)
+        val activity = activity as MainActivity?
+
+        activity?.binding?.drawer?.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END)
 
         // EXH -->
         navView.setSavedSearches(presenter.loadSearches())
@@ -409,7 +411,7 @@ open class BrowseSourceController(bundle: Bundle) :
             R.id.action_compact_grid -> setDisplayMode(DisplayMode.COMPACT_GRID)
             R.id.action_comfortable_grid -> setDisplayMode(DisplayMode.COMFORTABLE_GRID)
             R.id.action_list -> setDisplayMode(DisplayMode.LIST)
-            R.id.action_set_filter -> navView?.let { activity?.drawer?.openDrawer(GravityCompat.END) }
+            R.id.action_set_filter -> navView?.let { (activity as MainActivity?)?.binding?.drawer?.openDrawer(GravityCompat.END) }
             R.id.action_open_in_web_view -> openInWebView()
             R.id.action_local_source_help -> openLocalSourceHelpGuide()
         }
@@ -604,13 +606,13 @@ open class BrowseSourceController(bundle: Bundle) :
      * @param manga the manga to find.
      * @return the holder of the manga or null if it's not bound.
      */
-    private fun getHolder(manga: Manga): SourceHolder? {
+    private fun getHolder(manga: Manga): SourceHolder<*>? {
         val adapter = adapter ?: return null
 
         adapter.allBoundViewHolders.forEach { holder ->
             val item = adapter.getItem(holder.bindingAdapterPosition) as? SourceItem
             if (item != null && item.manga.id!! == manga.id!!) {
-                return holder as SourceHolder
+                return holder as SourceHolder<*>
             }
         }
 

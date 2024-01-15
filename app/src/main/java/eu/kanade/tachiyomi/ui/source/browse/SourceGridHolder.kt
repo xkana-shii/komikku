@@ -8,11 +8,8 @@ import eu.kanade.tachiyomi.data.database.models.Manga
 import eu.kanade.tachiyomi.data.glide.GlideApp
 import eu.kanade.tachiyomi.data.glide.toMangaThumbnail
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.databinding.SourceCompactGridItemBinding
 import eu.kanade.tachiyomi.widget.StateImageViewTarget
-import kotlinx.android.synthetic.main.source_compact_grid_item.card
-import kotlinx.android.synthetic.main.source_compact_grid_item.progress
-import kotlinx.android.synthetic.main.source_compact_grid_item.thumbnail
-import kotlinx.android.synthetic.main.source_compact_grid_item.title
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -25,8 +22,9 @@ import uy.kohesive.injekt.api.get
  * @constructor creates a new catalogue holder.
  */
 open class SourceGridHolder(private val view: View, private val adapter: FlexibleAdapter<*>) :
-    SourceHolder(view, adapter) {
+    SourceHolder<SourceCompactGridItemBinding>(view, adapter) {
 
+    override val binding = SourceCompactGridItemBinding.bind(view)
     private val preferences: PreferencesHelper = Injekt.get()
 
     /**
@@ -37,31 +35,31 @@ open class SourceGridHolder(private val view: View, private val adapter: Flexibl
      */
     override fun onSetValues(manga: Manga) {
         // Set manga title
-        title.text = manga.title
+        binding.title.text = manga.title
 
         // Set alpha of thumbnail.
-        thumbnail.alpha = if (manga.favorite) 0.3f else 1.0f
+        binding.thumbnail.alpha = if (manga.favorite) 0.3f else 1.0f
 
         setImage(manga)
     }
 
     override fun setImage(manga: Manga) {
         // Setting this via XML doesn't work
-        card.clipToOutline = true
-        card.radius = TypedValue.applyDimension(
+        binding.card.clipToOutline = true
+        binding.card.radius = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
             preferences.eh_library_corner_radius().get().toFloat(),
             view.context.resources.displayMetrics
         )
 
-        GlideApp.with(view.context).clear(thumbnail)
+        GlideApp.with(view.context).clear(binding.thumbnail)
         if (!manga.thumbnail_url.isNullOrEmpty()) {
             GlideApp.with(view.context)
                 .load(manga.toMangaThumbnail())
                 .diskCacheStrategy(DiskCacheStrategy.DATA)
                 .centerCrop()
                 .placeholder(android.R.color.transparent)
-                .into(StateImageViewTarget(thumbnail, progress))
+                .into(StateImageViewTarget(binding.thumbnail, binding.progress))
         }
     }
 }

@@ -4,7 +4,6 @@ import android.util.TypedValue
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
-import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import eu.davidea.flexibleadapter.FlexibleAdapter
 import eu.davidea.flexibleadapter.items.IFlexible
@@ -33,9 +32,9 @@ import uy.kohesive.injekt.api.get
 open class LibraryGridHolder(
     private val view: View,
     adapter: FlexibleAdapter<IFlexible<RecyclerView.ViewHolder>>
-) : LibraryHolder(view, adapter) {
+) : LibraryHolder<SourceCompactGridItemBinding>(view, adapter) {
 
-    open val binding: ViewBinding = SourceCompactGridItemBinding.bind(view)
+    override val binding = SourceCompactGridItemBinding.bind(view)
 
     private val preferences: PreferencesHelper = Injekt.get()
 
@@ -43,12 +42,11 @@ open class LibraryGridHolder(
 
     // SY -->
     init {
-        val binding = binding as SourceCompactGridItemBinding?
-        binding?.playLayout?.clicks()
-            ?.onEach {
+        binding.playLayout.clicks()
+            .onEach {
                 playButtonClicked()
             }
-            ?.launchIn((adapter as LibraryCategoryAdapter).controller.scope)
+            .launchIn((adapter as LibraryCategoryAdapter).controller.scope)
     }
     // SY <--
 
@@ -104,7 +102,7 @@ open class LibraryGridHolder(
     }
 
     // SY -->
-    fun playButtonClicked() {
+    private fun playButtonClicked() {
         manga?.let { (adapter as LibraryCategoryAdapter).controller.startReading(it, (adapter as LibraryCategoryAdapter)) }
     }
     // SY <--
