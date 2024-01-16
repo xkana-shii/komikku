@@ -21,6 +21,8 @@ import com.tfcporciuncula.flow.Preference
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.database.DatabaseHelper
 import eu.kanade.tachiyomi.data.preference.PreferenceKeys
+import eu.kanade.tachiyomi.databinding.EhDialogCategoriesBinding
+import eu.kanade.tachiyomi.databinding.EhDialogLanguagesBinding
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.util.preference.defaultValue
 import eu.kanade.tachiyomi.util.preference.entriesRes
@@ -50,67 +52,6 @@ import exh.util.await
 import exh.util.trans
 import humanize.Humanize
 import java.util.Date
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.artist_cg_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.asian_porn_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.cosplay_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.doujinshi_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.game_cg_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.image_set_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.manga_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.misc_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.non_h_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_categories.view.western_checkbox
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.chinese_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.chinese_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.chinese_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.dutch_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.dutch_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.dutch_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.english_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.english_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.english_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.french_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.french_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.french_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.german_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.german_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.german_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.hungarian_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.hungarian_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.hungarian_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.italian_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.italian_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.italian_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.japanese_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.japanese_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.japanese_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.korean_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.korean_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.korean_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.not_available_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.not_available_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.not_available_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.other_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.other_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.other_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.polish_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.polish_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.polish_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.portuguese_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.portuguese_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.portuguese_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.russian_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.russian_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.russian_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.spanish_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.spanish_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.spanish_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.thai_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.thai_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.thai_translated
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.vietnamese_original
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.vietnamese_rewrite
-import kotlinx.android.synthetic.main.eh_dialog_languages.view.vietnamese_translated
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.launchIn
@@ -316,26 +257,27 @@ class SettingsEhController : SettingsController() {
                         .customView(R.layout.eh_dialog_languages, scrollable = true)
                         .positiveButton(android.R.string.ok) {
                             val customView = it.view.contentLayout.customView!!
+                            val binding = EhDialogLanguagesBinding.bind(customView)
 
                             val languages = with(customView) {
                                 listOfNotNull(
-                                    "${japanese_original.isChecked}*${japanese_translated.isChecked}*${japanese_rewrite.isChecked}",
-                                    "${english_original.isChecked}*${english_translated.isChecked}*${english_rewrite.isChecked}",
-                                    "${chinese_original.isChecked}*${chinese_translated.isChecked}*${chinese_rewrite.isChecked}",
-                                    "${dutch_original.isChecked}*${dutch_translated.isChecked}*${dutch_rewrite.isChecked}",
-                                    "${french_original.isChecked}*${french_translated.isChecked}*${french_rewrite.isChecked}",
-                                    "${german_original.isChecked}*${german_translated.isChecked}*${german_rewrite.isChecked}",
-                                    "${hungarian_original.isChecked}*${hungarian_translated.isChecked}*${hungarian_rewrite.isChecked}",
-                                    "${italian_original.isChecked}*${italian_translated.isChecked}*${italian_rewrite.isChecked}",
-                                    "${korean_original.isChecked}*${korean_translated.isChecked}*${korean_rewrite.isChecked}",
-                                    "${polish_original.isChecked}*${polish_translated.isChecked}*${polish_rewrite.isChecked}",
-                                    "${portuguese_original.isChecked}*${portuguese_translated.isChecked}*${portuguese_rewrite.isChecked}",
-                                    "${russian_original.isChecked}*${russian_translated.isChecked}*${russian_rewrite.isChecked}",
-                                    "${spanish_original.isChecked}*${spanish_translated.isChecked}*${spanish_rewrite.isChecked}",
-                                    "${thai_original.isChecked}*${thai_translated.isChecked}*${thai_rewrite.isChecked}",
-                                    "${vietnamese_original.isChecked}*${vietnamese_translated.isChecked}*${vietnamese_rewrite.isChecked}",
-                                    "${not_available_original.isChecked}*${not_available_translated.isChecked}*${not_available_rewrite.isChecked}",
-                                    "${other_original.isChecked}*${other_translated.isChecked}*${other_rewrite.isChecked}"
+                                    "${binding.japaneseOriginal.isChecked}*${binding.japaneseTranslated.isChecked}*${binding.japaneseRewrite.isChecked}",
+                                    "${binding.englishOriginal.isChecked}*${binding.englishTranslated.isChecked}*${binding.englishRewrite.isChecked}",
+                                    "${binding.chineseOriginal.isChecked}*${binding.chineseTranslated.isChecked}*${binding.chineseRewrite.isChecked}",
+                                    "${binding.dutchOriginal.isChecked}*${binding.dutchTranslated.isChecked}*${binding.dutchRewrite.isChecked}",
+                                    "${binding.frenchOriginal.isChecked}*${binding.frenchTranslated.isChecked}*${binding.frenchRewrite.isChecked}",
+                                    "${binding.germanOriginal.isChecked}*${binding.germanTranslated.isChecked}*${binding.germanRewrite.isChecked}",
+                                    "${binding.hungarianOriginal.isChecked}*${binding.hungarianTranslated.isChecked}*${binding.hungarianRewrite.isChecked}",
+                                    "${binding.italianOriginal.isChecked}*${binding.italianTranslated.isChecked}*${binding.italianRewrite.isChecked}",
+                                    "${binding.koreanOriginal.isChecked}*${binding.koreanTranslated.isChecked}*${binding.koreanRewrite.isChecked}",
+                                    "${binding.polishOriginal.isChecked}*${binding.polishTranslated.isChecked}*${binding.polishRewrite.isChecked}",
+                                    "${binding.portugueseOriginal.isChecked}*${binding.portugueseTranslated.isChecked}*${binding.portugueseRewrite.isChecked}",
+                                    "${binding.russianOriginal.isChecked}*${binding.russianTranslated.isChecked}*${binding.russianRewrite.isChecked}",
+                                    "${binding.spanishOriginal.isChecked}*${binding.spanishTranslated.isChecked}*${binding.spanishRewrite.isChecked}",
+                                    "${binding.thaiOriginal.isChecked}*${binding.thaiTranslated.isChecked}*${binding.thaiRewrite.isChecked}",
+                                    "${binding.vietnameseOriginal.isChecked}*${binding.vietnameseTranslated.isChecked}*${binding.vietnameseRewrite.isChecked}",
+                                    "${binding.notAvailableOriginal.isChecked}*${binding.notAvailableTranslated.isChecked}*${binding.notAvailableRewrite.isChecked}",
+                                    "${binding.otherOriginal.isChecked}*${binding.otherTranslated.isChecked}*${binding.otherRewrite.isChecked}"
                                 ).joinToString("\n")
                             }
 
@@ -345,6 +287,7 @@ class SettingsEhController : SettingsController() {
                         }
                         .show {
                             val customView = this.view.contentLayout.customView!!
+                            val binding = EhDialogLanguagesBinding.bind(customView)
                             val settingsLanguages = preferences.eh_settingsLanguages().get().split("\n")
 
                             val japanese = settingsLanguages[0].split("*").map { it.toBoolean() }
@@ -367,77 +310,73 @@ class SettingsEhController : SettingsController() {
                             val other = settingsLanguages[16].split("*").map { it.toBoolean() }
 
                             with(customView) {
-                                japanese_original.isChecked = japanese[0]
-                                japanese_translated.isChecked = japanese[1]
-                                japanese_rewrite.isChecked = japanese[2]
+                                binding.japaneseOriginal.isChecked = japanese[0]
+                                binding.japaneseTranslated.isChecked = japanese[1]
+                                binding.japaneseRewrite.isChecked = japanese[2]
 
-                                japanese_original.isChecked = japanese[0]
-                                japanese_translated.isChecked = japanese[1]
-                                japanese_rewrite.isChecked = japanese[2]
+                                binding.englishOriginal.isChecked = english[0]
+                                binding.englishTranslated.isChecked = english[1]
+                                binding.englishRewrite.isChecked = english[2]
 
-                                english_original.isChecked = english[0]
-                                english_translated.isChecked = english[1]
-                                english_rewrite.isChecked = english[2]
+                                binding.chineseOriginal.isChecked = chinese[0]
+                                binding.chineseTranslated.isChecked = chinese[1]
+                                binding.chineseRewrite.isChecked = chinese[2]
 
-                                chinese_original.isChecked = chinese[0]
-                                chinese_translated.isChecked = chinese[1]
-                                chinese_rewrite.isChecked = chinese[2]
+                                binding.dutchOriginal.isChecked = dutch[0]
+                                binding.dutchTranslated.isChecked = dutch[1]
+                                binding.dutchRewrite.isChecked = dutch[2]
 
-                                dutch_original.isChecked = dutch[0]
-                                dutch_translated.isChecked = dutch[1]
-                                dutch_rewrite.isChecked = dutch[2]
+                                binding.frenchOriginal.isChecked = french[0]
+                                binding.frenchTranslated.isChecked = french[1]
+                                binding.frenchRewrite.isChecked = french[2]
 
-                                french_original.isChecked = french[0]
-                                french_translated.isChecked = french[1]
-                                french_rewrite.isChecked = french[2]
+                                binding.germanOriginal.isChecked = german[0]
+                                binding.germanTranslated.isChecked = german[1]
+                                binding.germanRewrite.isChecked = german[2]
 
-                                german_original.isChecked = german[0]
-                                german_translated.isChecked = german[1]
-                                german_rewrite.isChecked = german[2]
+                                binding.hungarianOriginal.isChecked = hungarian[0]
+                                binding.hungarianTranslated.isChecked = hungarian[1]
+                                binding.hungarianRewrite.isChecked = hungarian[2]
 
-                                hungarian_original.isChecked = hungarian[0]
-                                hungarian_translated.isChecked = hungarian[1]
-                                hungarian_rewrite.isChecked = hungarian[2]
+                                binding.italianOriginal.isChecked = italian[0]
+                                binding.italianTranslated.isChecked = italian[1]
+                                binding.italianRewrite.isChecked = italian[2]
 
-                                italian_original.isChecked = italian[0]
-                                italian_translated.isChecked = italian[1]
-                                italian_rewrite.isChecked = italian[2]
+                                binding.koreanOriginal.isChecked = korean[0]
+                                binding.koreanTranslated.isChecked = korean[1]
+                                binding.koreanRewrite.isChecked = korean[2]
 
-                                korean_original.isChecked = korean[0]
-                                korean_translated.isChecked = korean[1]
-                                korean_rewrite.isChecked = korean[2]
+                                binding.polishOriginal.isChecked = polish[0]
+                                binding.polishTranslated.isChecked = polish[1]
+                                binding.polishRewrite.isChecked = polish[2]
 
-                                polish_original.isChecked = polish[0]
-                                polish_translated.isChecked = polish[1]
-                                polish_rewrite.isChecked = polish[2]
+                                binding.portugueseOriginal.isChecked = portuguese[0]
+                                binding.portugueseTranslated.isChecked = portuguese[1]
+                                binding.portugueseRewrite.isChecked = portuguese[2]
 
-                                portuguese_original.isChecked = portuguese[0]
-                                portuguese_translated.isChecked = portuguese[1]
-                                portuguese_rewrite.isChecked = portuguese[2]
+                                binding.russianOriginal.isChecked = russian[0]
+                                binding.russianTranslated.isChecked = russian[1]
+                                binding.russianRewrite.isChecked = russian[2]
 
-                                russian_original.isChecked = russian[0]
-                                russian_translated.isChecked = russian[1]
-                                russian_rewrite.isChecked = russian[2]
+                                binding.spanishOriginal.isChecked = spanish[0]
+                                binding.spanishTranslated.isChecked = spanish[1]
+                                binding.spanishRewrite.isChecked = spanish[2]
 
-                                spanish_original.isChecked = spanish[0]
-                                spanish_translated.isChecked = spanish[1]
-                                spanish_rewrite.isChecked = spanish[2]
+                                binding.thaiOriginal.isChecked = thai[0]
+                                binding.thaiTranslated.isChecked = thai[1]
+                                binding.thaiRewrite.isChecked = thai[2]
 
-                                thai_original.isChecked = thai[0]
-                                thai_translated.isChecked = thai[1]
-                                thai_rewrite.isChecked = thai[2]
+                                binding.vietnameseOriginal.isChecked = vietnamese[0]
+                                binding.vietnameseTranslated.isChecked = vietnamese[1]
+                                binding.vietnameseRewrite.isChecked = vietnamese[2]
 
-                                vietnamese_original.isChecked = vietnamese[0]
-                                vietnamese_translated.isChecked = vietnamese[1]
-                                vietnamese_rewrite.isChecked = vietnamese[2]
+                                binding.notAvailableOriginal.isChecked = notAvailable[0]
+                                binding.notAvailableTranslated.isChecked = notAvailable[1]
+                                binding.notAvailableRewrite.isChecked = notAvailable[2]
 
-                                not_available_original.isChecked = notAvailable[0]
-                                not_available_translated.isChecked = notAvailable[1]
-                                not_available_rewrite.isChecked = notAvailable[2]
-
-                                other_original.isChecked = other[0]
-                                other_translated.isChecked = other[1]
-                                other_rewrite.isChecked = other[2]
+                                binding.otherOriginal.isChecked = other[0]
+                                binding.otherTranslated.isChecked = other[1]
+                                binding.otherRewrite.isChecked = other[2]
                             }
                         }
                 }
@@ -454,20 +393,21 @@ class SettingsEhController : SettingsController() {
                         .customView(R.layout.eh_dialog_categories, scrollable = true)
                         .positiveButton {
                             val customView = it.view.contentLayout.customView!!
+                            val binding = EhDialogCategoriesBinding.bind(customView)
 
                             with(customView) {
                                 preferences.eh_EnabledCategories().set(
                                     listOf(
-                                        (!doujinshi_checkbox.isChecked).toString(),
-                                        (!manga_checkbox.isChecked).toString(),
-                                        (!artist_cg_checkbox.isChecked).toString(),
-                                        (!game_cg_checkbox.isChecked).toString(),
-                                        (!western_checkbox.isChecked).toString(),
-                                        (!non_h_checkbox.isChecked).toString(),
-                                        (!image_set_checkbox.isChecked).toString(),
-                                        (!cosplay_checkbox.isChecked).toString(),
-                                        (!asian_porn_checkbox.isChecked).toString(),
-                                        (!misc_checkbox.isChecked).toString()
+                                        (!binding.doujinshiCheckbox.isChecked).toString(),
+                                        (!binding.mangaCheckbox.isChecked).toString(),
+                                        (!binding.artistCgCheckbox.isChecked).toString(),
+                                        (!binding.gameCgCheckbox.isChecked).toString(),
+                                        (!binding.westernCheckbox.isChecked).toString(),
+                                        (!binding.nonHCheckbox.isChecked).toString(),
+                                        (!binding.imageSetCheckbox.isChecked).toString(),
+                                        (!binding.cosplayCheckbox.isChecked).toString(),
+                                        (!binding.asianPornCheckbox.isChecked).toString(),
+                                        (!binding.miscCheckbox.isChecked).toString()
                                     ).joinToString(",")
                                 )
                             }
@@ -476,19 +416,20 @@ class SettingsEhController : SettingsController() {
                         }
                         .show {
                             val customView = this.view.contentLayout.customView!!
+                            val binding = EhDialogCategoriesBinding.bind(customView)
 
                             with(customView) {
                                 val list = preferences.eh_EnabledCategories().get().split(",").map { !it.toBoolean() }
-                                doujinshi_checkbox.isChecked = list[0]
-                                manga_checkbox.isChecked = list[1]
-                                artist_cg_checkbox.isChecked = list[2]
-                                game_cg_checkbox.isChecked = list[3]
-                                western_checkbox.isChecked = list[4]
-                                non_h_checkbox.isChecked = list[5]
-                                image_set_checkbox.isChecked = list[6]
-                                cosplay_checkbox.isChecked = list[7]
-                                asian_porn_checkbox.isChecked = list[8]
-                                misc_checkbox.isChecked = list[9]
+                                binding.doujinshiCheckbox.isChecked = list[0]
+                                binding.mangaCheckbox.isChecked = list[1]
+                                binding.artistCgCheckbox.isChecked = list[2]
+                                binding.gameCgCheckbox.isChecked = list[3]
+                                binding.westernCheckbox.isChecked = list[4]
+                                binding.nonHCheckbox.isChecked = list[5]
+                                binding.imageSetCheckbox.isChecked = list[6]
+                                binding.cosplayCheckbox.isChecked = list[7]
+                                binding.asianPornCheckbox.isChecked = list[8]
+                                binding.miscCheckbox.isChecked = list[9]
                             }
                         }
                 }
