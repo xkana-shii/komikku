@@ -36,7 +36,7 @@ import exh.metadata.metadata.EHentaiSearchMetadata
 import exh.metadata.metadata.EHentaiSearchMetadata.Companion.EH_GENRE_NAMESPACE
 import exh.metadata.metadata.EHentaiSearchMetadata.Companion.TAG_TYPE_LIGHT
 import exh.metadata.metadata.EHentaiSearchMetadata.Companion.TAG_TYPE_NORMAL
-import exh.metadata.metadata.base.RaisedSearchMetadata.Companion.TAG_TYPE_VIRTUAL
+import exh.metadata.metadata.RaisedSearchMetadata.Companion.TAG_TYPE_VIRTUAL
 import exh.metadata.metadata.base.RaisedTag
 import exh.metadata.nullIfBlank
 import exh.metadata.parseHumanReadableByteCount
@@ -105,11 +105,13 @@ class EHentai(
             // Do not parse header and ads
             it.selectFirst("th") == null && it.selectFirst(".itd") == null
         }.map {
-            val thumbnailElement = it.selectFirst(".gl1e img, .gl2c .glthumb img")
-            val column2 = it.selectFirst(".gl3e, .gl2c")
-            val linkElement = it.selectFirst(".gl3c > a, .gl2e > div > a")
+            val thumbnailElement = it.selectFirst(".gl1e img, .gl2c .glthumb img")!!
+            val column2 = it.selectFirst(".gl3e, .gl2c")!!
+            val linkElement = it.selectFirst(".gl3c > a, .gl2e > div > a")!!
 
-            val favElement = column2!!.children().find { it.attr("style").startsWith("border-color") }
+            XLog.d(linkElement.attr("href"))
+
+            val favElement = column2.children().find { it.attr("style").startsWith("border-color") }
 
             ParsedManga(
                 fav = FAVORITES_BORDER_HEX_COLORS.indexOf(
@@ -117,10 +119,11 @@ class EHentai(
                 ),
                 manga = Manga.create(id).apply {
                     // Get title
-                    title = thumbnailElement!!.attr("title")
-                    url = EHentaiSearchMetadata.normalizeUrl(linkElement!!.attr("href"))
+                    title = thumbnailElement.attr("title")
+
+                    url = EHentaiSearchMetadata.normalizeUrl(linkElement.attr("href"))
                     // Get image
-                    thumbnail_url = thumbnailElement!!.attr("src")
+                    thumbnail_url = thumbnailElement.attr("src")
 
                     // TODO Parse genre + uploader + tags
                 }

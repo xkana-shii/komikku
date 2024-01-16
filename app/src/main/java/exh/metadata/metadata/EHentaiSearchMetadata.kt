@@ -6,7 +6,6 @@ import eu.kanade.tachiyomi.source.model.SManga
 import exh.metadata.EX_DATE_FORMAT
 import exh.metadata.ONGOING_SUFFIX
 import exh.metadata.humanReadableByteCount
-import exh.metadata.metadata.base.RaisedSearchMetadata
 import exh.plusAssign
 import java.util.Date
 import kotlinx.serialization.Serializable

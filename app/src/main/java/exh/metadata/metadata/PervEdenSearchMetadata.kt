@@ -4,7 +4,6 @@ import android.net.Uri
 import eu.kanade.tachiyomi.source.model.SManga
 import exh.PERV_EDEN_EN_SOURCE_ID
 import exh.PERV_EDEN_IT_SOURCE_ID
-import exh.metadata.metadata.base.RaisedSearchMetadata
 import exh.metadata.metadata.base.RaisedTitle
 import exh.plusAssign
 import kotlinx.serialization.Serializable

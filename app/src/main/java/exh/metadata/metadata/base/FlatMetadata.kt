@@ -2,13 +2,13 @@ package exh.metadata.metadata.base
 
 import com.pushtorefresh.storio.operations.PreparedOperation
 import eu.kanade.tachiyomi.data.database.DatabaseHelper
+import exh.metadata.metadata.RaisedSearchMetadata
 import exh.metadata.sql.models.SearchMetadata
 import exh.metadata.sql.models.SearchTag
 import exh.metadata.sql.models.SearchTitle
 import kotlin.reflect.KClass
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.serializer
 import rx.Completable
 import rx.Single

@@ -17,7 +17,7 @@ import eu.kanade.tachiyomi.util.chapter.ChapterRecognition
 import exh.metadata.metadata.PervEdenLang
 import exh.metadata.metadata.PervEdenSearchMetadata
 import exh.metadata.metadata.PervEdenSearchMetadata.Companion.TAG_TYPE_DEFAULT
-import exh.metadata.metadata.base.RaisedSearchMetadata.Companion.TAG_TYPE_VIRTUAL
+import exh.metadata.metadata.RaisedSearchMetadata.Companion.TAG_TYPE_VIRTUAL
 import exh.metadata.metadata.base.RaisedTag
 import exh.util.UriFilter
 import exh.util.UriGroup

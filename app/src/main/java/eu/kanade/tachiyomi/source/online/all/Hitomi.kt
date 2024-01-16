@@ -26,7 +26,7 @@ import exh.metadata.metadata.HitomiSearchMetadata
 import exh.metadata.metadata.HitomiSearchMetadata.Companion.BASE_URL
 import exh.metadata.metadata.HitomiSearchMetadata.Companion.LTN_BASE_URL
 import exh.metadata.metadata.HitomiSearchMetadata.Companion.TAG_TYPE_DEFAULT
-import exh.metadata.metadata.base.RaisedSearchMetadata.Companion.TAG_TYPE_VIRTUAL
+import exh.metadata.metadata.RaisedSearchMetadata.Companion.TAG_TYPE_VIRTUAL
 import exh.metadata.metadata.base.RaisedTag
 import exh.util.urlImportFetchSearchManga
 import java.text.SimpleDateFormat

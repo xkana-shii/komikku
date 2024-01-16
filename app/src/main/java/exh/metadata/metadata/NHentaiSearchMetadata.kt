@@ -4,7 +4,6 @@ import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.source.model.SManga
 import exh.metadata.EX_DATE_FORMAT
 import exh.metadata.ONGOING_SUFFIX
-import exh.metadata.metadata.base.RaisedSearchMetadata
 import exh.metadata.nullIfBlank
 import exh.plusAssign
 import java.util.Date
