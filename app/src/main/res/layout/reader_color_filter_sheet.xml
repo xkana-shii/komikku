@@ -31,7 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <include layout="@layout/reader_color_filter"/>
+        <include android:id="@+id/included_reader_color_filter" layout="@layout/reader_color_filter"/>
 
     </androidx.core.widget.NestedScrollView>
 

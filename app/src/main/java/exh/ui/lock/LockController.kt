@@ -15,7 +15,6 @@ import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.databinding.ActivityLockBinding
 import eu.kanade.tachiyomi.ui.base.controller.NucleusController
 import exh.util.dpToPx
-import kotlinx.android.synthetic.main.activity_lock.view.swirl_container
 import uy.kohesive.injekt.injectLazy
 
 class LockController : NucleusController<ActivityLockBinding, LockPresenter>() {
@@ -94,7 +93,7 @@ class LockController : NucleusController<ActivityLockBinding, LockPresenter>() {
                     val bgColor = resolvColor(android.R.attr.colorBackground)
                     // Disable elevation if lock color is same as background color
                     if (lockColor == bgColor) {
-                        this@with.swirl_container.cardElevation = 0f
+                        binding.swirlContainer.cardElevation = 0f
                     }
                     setState(SwirlView.State.OFF, true)
                 }

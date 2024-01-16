@@ -9,8 +9,6 @@ import eu.kanade.tachiyomi.databinding.EhFragmentBatchAddBinding
 import eu.kanade.tachiyomi.ui.base.controller.NucleusController
 import eu.kanade.tachiyomi.util.lang.combineLatest
 import eu.kanade.tachiyomi.util.lang.plusAssign
-import kotlinx.android.synthetic.main.eh_fragment_batch_add.view.galleries_box
-import kotlinx.android.synthetic.main.eh_fragment_batch_add.view.progress_log
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import reactivecircus.flowbinding.android.view.clicks
@@ -118,6 +116,12 @@ class BatchAddController : NucleusController<EhFragmentBatchAddBinding, BatchAdd
             binding.btnAddGalleries
         )
 
+    private val View.progressLog
+        get() = binding.progressLog
+
+    private val View.galleriesBox
+        get() = binding.galleriesBox
+
     private var List<View>.visibility: Int
         get() = throw UnsupportedOperationException()
         set(v) { forEach { it.visibility = v } }
@@ -126,14 +130,14 @@ class BatchAddController : NucleusController<EhFragmentBatchAddBinding, BatchAdd
         target?.apply {
             progressViews.visibility = View.VISIBLE
             inputViews.visibility = View.GONE
-        }?.progress_log?.text = ""
+        }?.progressLog?.text = ""
     }
 
     private fun hideProgress(target: View? = view) {
         target?.apply {
             progressViews.visibility = View.GONE
             inputViews.visibility = View.VISIBLE
-        }?.galleries_box?.setText("", TextView.BufferType.EDITABLE)
+        }?.galleriesBox?.setText("", TextView.BufferType.EDITABLE)
     }
 
     private fun formatProgress(progress: Int, total: Int) = "$progress/$total"

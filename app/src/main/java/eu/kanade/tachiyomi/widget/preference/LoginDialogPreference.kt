@@ -6,14 +6,14 @@ import android.view.View
 import androidx.annotation.StringRes
 import com.afollestad.materialdialogs.MaterialDialog
 import com.afollestad.materialdialogs.customview.customView
+import com.afollestad.materialdialogs.customview.getCustomView
 import com.bluelinelabs.conductor.ControllerChangeHandler
 import com.bluelinelabs.conductor.ControllerChangeType
 import com.dd.processbutton.iml.ActionProcessButton
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.databinding.PrefAccountLoginBinding
 import eu.kanade.tachiyomi.ui.base.controller.DialogController
-import kotlinx.android.synthetic.main.pref_account_login.view.login
-import kotlinx.android.synthetic.main.pref_account_login.view.username_label
 import rx.Subscription
 import uy.kohesive.injekt.injectLazy
 
@@ -27,6 +27,8 @@ abstract class LoginDialogPreference(
     var v: View? = null
         private set
 
+    protected lateinit var binding: PrefAccountLoginBinding
+
     val preferences: PreferencesHelper by injectLazy()
 
     var requestSubscription: Subscription? = null
@@ -35,6 +37,8 @@ abstract class LoginDialogPreference(
         var dialog = MaterialDialog(activity!!)
             .customView(R.layout.pref_account_login)
             .negativeButton(android.R.string.cancel)
+
+        binding = PrefAccountLoginBinding.bind(dialog.getCustomView())
 
         if (titleRes != null) {
             dialog = dialog.title(text = activity!!.getString(titleRes, titleFormatArgs))
@@ -48,11 +52,11 @@ abstract class LoginDialogPreference(
     fun onViewCreated(view: View) {
         v = view.apply {
             if (usernameLabelRes != null) {
-                username_label.hint = context.getString(usernameLabelRes)
+                binding.usernameLabel.hint = context.getString(usernameLabelRes)
             }
 
-            login.setMode(ActionProcessButton.Mode.ENDLESS)
-            login.setOnClickListener { checkLogin() }
+            binding.login.setMode(ActionProcessButton.Mode.ENDLESS)
+            binding.login.setOnClickListener { checkLogin() }
 
             setCredentialsOnView(this)
         }
