@@ -83,6 +83,7 @@ class InterceptActivity : BaseActivity<EhActivityInterceptBinding>() {
                             .onDismiss { onBackPressed() }
                             .show()
                     }
+                    else -> {}
                 }
             }
     }

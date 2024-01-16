@@ -2,6 +2,7 @@ plugins {
     id("com.android.application") version BuildPluginsVersion.AGP apply false
     id("com.android.library") version BuildPluginsVersion.AGP apply false
     kotlin("android") version BuildPluginsVersion.KOTLIN apply false
+    //id("org.jetbrains.kotlin.plugin.parcelize") version BuildPluginsVersion.KOTLIN
     id("org.jlleitschuh.gradle.ktlint") version BuildPluginsVersion.KTLINT
     id("com.github.ben-manes.versions") version BuildPluginsVersion.VERSIONS_PLUGIN
 }
@@ -15,7 +16,6 @@ allprojects {
         maven { setUrl("https://oss.sonatype.org/content/repositories/snapshots/") }
         maven { setUrl("https://dl.bintray.com/ibm-cloud-sdks/ibm-cloud-sdk-repo") }
         maven { setUrl("https://plugins.gradle.org/m2/") }
-        jcenter()
     }
 }
 
@@ -44,7 +44,7 @@ buildscript {
         classpath("com.github.ben-manes:gradle-versions-plugin:0.28.0")
         classpath("com.github.zellius:android-shortcut-gradle-plugin:0.1.2")
         classpath("com.google.gms:google-services:4.3.5")
-        classpath("com.google.android.gms:oss-licenses-plugin:0.10.2")
+        classpath("com.google.android.gms:oss-licenses-plugin:0.10.6")
         classpath(kotlin("serialization", version = "1.4.21"))
         // Realm (EH)
         classpath("io.realm:realm-gradle-plugin:7.0.1")
@@ -56,6 +56,7 @@ buildscript {
     }
     repositories {
         google()
+        mavenCentral()
         jcenter()
         //maven { setUrl("https://maven.fabric.io/public") }
     }

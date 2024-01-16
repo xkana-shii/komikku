@@ -127,6 +127,7 @@ class LibraryNavigationView @JvmOverloads constructor(context: Context, attrs: A
                 completed -> preferences.filterCompleted().set(item.state)
                 tracked -> preferences.filterTracked().set(item.state)
                 lewd -> preferences.filterLewd().set(item.state)
+                else -> {}
             }
 
             adapter.notifyItemChanged(item)
@@ -234,6 +235,7 @@ class LibraryNavigationView @JvmOverloads constructor(context: Context, attrs: A
             when (item) {
                 downloadBadge -> preferences.downloadBadge().set((item.checked))
                 unreadBadge -> preferences.unreadBadge().set((item.checked))
+                else -> {}
             }
             adapter.notifyItemChanged(item)
         }
@@ -256,6 +258,7 @@ class LibraryNavigationView @JvmOverloads constructor(context: Context, attrs: A
             item.checked = !item.checked
             when (item) {
                 startReadingButton -> preferences.startReadingButton().set((item.checked))
+                else -> {}
             }
             adapter.notifyItemChanged(item)
         }
