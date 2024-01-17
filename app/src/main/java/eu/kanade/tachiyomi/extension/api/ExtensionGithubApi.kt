@@ -7,8 +7,6 @@ import eu.kanade.tachiyomi.extension.model.LoadResult
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
 import exh.source.BlacklistedSources
 import java.util.Date
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
@@ -22,20 +20,20 @@ internal class ExtensionGithubApi {
     suspend fun findExtensions(): List<Extension.Available> {
         val service: ExtensionGithubService = ExtensionGithubService.create()
 
-        return withContext(Dispatchers.IO) {
-            val response = service.getRepo()
-            parseResponse(response)
-        } /* SY --> */ + preferences.extensionRepos().get().flatMap {
-            if (it.endsWith(".json")) {
-                val response = service.getRepo(it)
-                parseResponse(response, it)
-            } else {
-                val url = "$BASE_URL$it/repo/"
-                val response = service.getRepo("${url}index.min.json")
-                parseResponse(response, url)
+        return preferences.extensionRepos().get().flatMap {
+            try {
+                if (it.endsWith(".json")) {
+                    val response = service.getRepo(it)
+                    parseResponse(response, it)
+                } else {
+                    val url = "$BASE_URL$it/repo/"
+                    val response = service.getRepo("${url}index.min.json")
+                    parseResponse(response, url)
+                }
+            } catch (e: Exception) {
+                emptyList()
             }
         }
-        // SY <--
     }
 
     suspend fun checkForUpdates(context: Context): List<Extension.Installed> {
@@ -68,7 +66,7 @@ internal class ExtensionGithubApi {
         return extensionsWithUpdate
     }
 
-    private fun parseResponse(json: JsonArray /* SY --> */, repoUrl: String = REPO_URL_PREFIX /* SY <-- */): List<Extension.Available> {
+    private fun parseResponse(json: JsonArray, repoUrl: String): List<Extension.Available> {
         return json
             .filter { element ->
                 val versionName = element.jsonObject["version"]!!.jsonPrimitive.content
@@ -93,19 +91,16 @@ internal class ExtensionGithubApi {
     }
 
     fun getApkUrl(extension: Extension.Available): String {
-        return /* SY --> */ "${extension.repoUrl.substringBeforeLast("index.min.json")}apk/${extension.apkName}" /* SY <-- */
+        return "${extension.repoUrl.substringBeforeLast("index.min.json")}apk/${extension.apkName}"
     }
 
-    // SY -->
     private fun Extension.isBlacklisted(
         blacklistEnabled: Boolean = preferences.eh_enableSourceBlacklist().get()
     ): Boolean {
         return pkgName in BlacklistedSources.BLACKLISTED_EXTENSIONS && blacklistEnabled
     }
-    // SY <--
 
     companion object {
         const val BASE_URL = "https://raw.githubusercontent.com/"
-        const val REPO_URL_PREFIX = "${BASE_URL}tachiyomiorg/extensions/repo/"
     }
 }

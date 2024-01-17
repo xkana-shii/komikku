@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.api
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import eu.kanade.tachiyomi.network.NetworkHelper
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import okhttp3.MediaType.Companion.toMediaType
@@ -16,6 +17,7 @@ import uy.kohesive.injekt.injectLazy
 interface ExtensionGithubService {
 
     companion object {
+        @OptIn(ExperimentalSerializationApi::class)
         fun create(): ExtensionGithubService {
             val network: NetworkHelper by injectLazy()
             val adapter = Retrofit.Builder()
@@ -28,8 +30,6 @@ interface ExtensionGithubService {
         }
     }
 
-    // SY -->
     @GET
-    suspend fun getRepo(@Url url: String = "${ExtensionGithubApi.REPO_URL_PREFIX}index.min.json"): JsonArray
-    // SY <--
+    suspend fun getRepo(@Url url: String): JsonArray
 }

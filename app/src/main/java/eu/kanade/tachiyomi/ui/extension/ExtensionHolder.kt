@@ -5,7 +5,6 @@ import androidx.core.view.isVisible
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.glide.GlideApp
 import eu.kanade.tachiyomi.databinding.ExtensionCardItemBinding
-import eu.kanade.tachiyomi.extension.api.ExtensionGithubApi
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
 import eu.kanade.tachiyomi.ui.base.holder.BaseFlexibleViewHolder
@@ -67,43 +66,41 @@ class ExtensionHolder(view: View, override val adapter: ExtensionAdapter) :
         val extension = item.extension
 
         val installStep = item.installStep
-        setText(
-            when (installStep) {
-                InstallStep.Pending -> context.getString(R.string.ext_pending)
-                InstallStep.Downloading -> context.getString(R.string.ext_downloading)
-                InstallStep.Installing -> context.getString(R.string.ext_installing)
-                InstallStep.Installed -> context.getString(R.string.ext_installed)
-                InstallStep.Error -> context.getString(R.string.action_retry)
-                InstallStep.Idle -> {
-                    when (extension) {
-                        is Extension.Installed -> {
-                            when {
-                                extension.hasUpdate -> {
-                                    context.getString(R.string.ext_update)
-                                }
-                                extension.isObsolete -> {
-                                    setTextColor(context.getResourceColor(R.attr.colorError))
-                                    context.getString(R.string.ext_obsolete)
-                                }
-                                extension.isUnofficial -> {
-                                    setTextColor(context.getResourceColor(R.attr.colorError))
-                                    context.getString(R.string.ext_unofficial)
-                                }
-                                extension.isRedundant -> {
-                                    setTextColor(context.getResourceColor(R.attr.colorError))
-                                    context.getString(R.string.ext_redundant)
-                                }
-                                else -> {
-                                    context.getString(R.string.ext_details).plusRepo(extension)
-                                }
+        text = when (installStep) {
+            InstallStep.Pending -> context.getString(R.string.ext_pending)
+            InstallStep.Downloading -> context.getString(R.string.ext_downloading)
+            InstallStep.Installing -> context.getString(R.string.ext_installing)
+            InstallStep.Installed -> context.getString(R.string.ext_installed)
+            InstallStep.Error -> context.getString(R.string.action_retry)
+            InstallStep.Idle -> {
+                when (extension) {
+                    is Extension.Installed -> {
+                        when {
+                            extension.hasUpdate -> {
+                                context.getString(R.string.ext_update)
+                            }
+                            extension.isObsolete -> {
+                                setTextColor(context.getResourceColor(R.attr.colorError))
+                                context.getString(R.string.ext_obsolete)
+                            }
+                            extension.isUnofficial -> {
+                                setTextColor(context.getResourceColor(R.attr.colorError))
+                                context.getString(R.string.ext_unofficial)
+                            }
+                            extension.isRedundant -> {
+                                setTextColor(context.getResourceColor(R.attr.colorError))
+                                context.getString(R.string.ext_redundant)
+                            }
+                            else -> {
+                                context.getString(R.string.ext_details).plusRepo(extension)
                             }
                         }
-                        is Extension.Untrusted -> context.getString(R.string.ext_trust)
-                        is Extension.Available -> context.getString(R.string.ext_install)
                     }
+                    is Extension.Untrusted -> context.getString(R.string.ext_trust)
+                    is Extension.Available -> context.getString(R.string.ext_install)
                 }
             }
-        )
+        }
 
         val isIdle = installStep == InstallStep.Idle || installStep == InstallStep.Error
         binding.cancelButton.isVisible = !isIdle
@@ -115,7 +112,6 @@ class ExtensionHolder(view: View, override val adapter: ExtensionAdapter) :
     private fun String.plusRepo(extension: Extension): String {
         return if (extension is Extension.Available) {
             when (extension.repoUrl) {
-                ExtensionGithubApi.REPO_URL_PREFIX -> this
                 else -> {
                     this + if (this.isEmpty()) {
                         ""
