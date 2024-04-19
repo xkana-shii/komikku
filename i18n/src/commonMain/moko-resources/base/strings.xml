@@ -208,6 +208,7 @@
     <string name="pref_category_reader">Reader</string>
     <string name="pref_category_downloads">Downloads</string>
     <string name="pref_category_tracking">Tracking</string>
+    <string name="pref_category_connections">Connections</string>
     <string name="pref_category_advanced">Advanced</string>
     <string name="pref_category_about">About</string>
 
@@ -531,7 +532,34 @@
     <string name="enhanced_services">Enhanced trackers</string>
     <string name="enhanced_services_not_installed">Available but source not installed: %s</string>
     <string name="enhanced_tracking_info">Provides enhanced features for specific sources. Entries are automatically tracked when added to your library.</string>
-    <string name="track_activity_name">Tracker login</string>
+    <string name="action_track">Track</string>
+    <string name="track_activity_name">Tracker login</string>  
+
+    <!-- Connections section -->
+    <string name="special_services">Special Services</string>
+    <string name="general_categories">Categories</string>
+    <string name="pref_connections_summary">Discord, more to come..</string>
+    <string name="connections_info">Special Services that are unique to Tachiyomi and enhance the way you use the app</string>
+    <string name="connections_discord">Discord</string>
+    <string name="connections_discord_info">This Discord Service works through token logging. Use at your own risk. Your token is stored locally and Tachiyomi does not share it anywhere else</string>
+    <string name="pref_discord_rpc">Discord Rich Presence</string>
+    <string name="pref_enable_discord_rpc">Enable Discord Rich Presence</string>
+    <string name="show_chapters_titles_title">Show Chapters</string>
+    <string name="show_chapters_titles_subtitle">Show which chapter you are reading</string>
+    <string name="pref_discord_status">Discord Status</string>
+    <string name="pref_discord_dnd">⛔ Do Not Disturb</string>
+    <string name="pref_discord_idle">🌙 Idle</string>
+    <string name="pref_discord_online">🟢 Online</string>
+    <string name="pref_category_discord_incognito">RPC Incognito</string>
+    <string name="pref_discord_incognito">Discord Incognito mode</string>
+    <string name="pref_discord_incognito_summary">Overridden when Incognito Mode is enabled</string>
+    <string name="pref_discord_incognito_categories_details">Entries in included categories will not be displayed in Discord</string>
+
+    <!-- Discord section -->
+    <string name="browsing">Browsing</string>
+    <string name="scrolling">Scrolling through</string>
+    <string name="messing">Messing around with</string>
+    <string name="comic">Comic</string>
 
       <!-- Browse section -->
     <string name="pref_hide_in_library_items">Hide entries already in library</string>
