@@ -43,6 +43,7 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.util.ifSourcesLoaded
+import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
@@ -63,6 +64,10 @@ import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
 import eu.kanade.tachiyomi.source.ConfigurableSource
+import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
+import eu.kanade.tachiyomi.data.connections.discord.DiscordScreen
+import eu.kanade.tachiyomi.data.connections.discord.ReaderData
+import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -256,6 +261,12 @@ class MangaScreen(
                     )
                 }
                 .launchIn(this)
+
+            DiscordRPCService.setScreen(context, DiscordScreen.LIBRARY, ReaderData(
+                incognitoMode = Injekt.get<BasePreferences>().incognitoMode().get(),
+                mangaId = successState.manga.id,
+                chapterTitle = successState.manga.title,
+            ))
         }
         // SY <--
 
