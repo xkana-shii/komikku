@@ -88,7 +88,6 @@ import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
-import eu.kanade.tachiyomi.source.isNsfw
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -1554,16 +1553,17 @@ class ReaderActivity : BaseActivity() {
         if (connectionsPreferences.enableDiscordRPC().get()) {
             viewModel.viewModelScope.launchIO {
                 if (!exitingReader) {
+                    val currentChapter = viewModel.state.value.currentChapter?.chapter
                     DiscordRPCService.setReaderActivity(
                         context = this@ReaderActivity,
                         ReaderData(
-                            incognitoMode = viewModel.currentSource.isNsfw() || viewModel.incognitoMode,
+                            incognitoMode = viewModel.incognitoMode,    // viewModel.currentSource.isNsfw()
                             mangaId = viewModel.manga?.id,
-                            mangaTitle = viewModel.manga?.ogTitle,
+                            mangaTitle = viewModel.manga?.title,
                             thumbnailUrl = viewModel.manga?.thumbnailUrl,
-                            chapterNumber = Pair(viewModel.state.value.currentChapter?.chapter?.chapter_number ?: -1f, viewModel.getChapters().size),
-                            chapterTitle = if(connectionsPreferences.useChapterTitles().get()) viewModel.state.value.currentChapter?.chapter?.name
-                                            else viewModel.state.value.currentChapter?.chapter?.chapter_number.toString(),
+                            chapterNumber = Pair(currentChapter?.chapter_number ?: -1f, viewModel.getChapters().size),
+                            chapterTitle = if(connectionsPreferences.useChapterTitles().get()) currentChapter?.name
+                                            else currentChapter?.chapter_number.toString(),
                         ),
                     )
                 } else {
