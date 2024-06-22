@@ -9,6 +9,7 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.compose.ui.util.fastAny
 import eu.kanade.domain.connections.service.ConnectionsPreferences
+import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
@@ -100,7 +101,7 @@ class DiscordRPCService : Service() {
 
         internal var lastUsedScreen = DiscordScreen.APP
             set(value) {
-                field = if (value == DiscordScreen.COMIC || value == DiscordScreen.WEBVIEW) field else value
+                field = if (value == DiscordScreen.MANGA || value == DiscordScreen.WEBVIEW) field else value
             }
 
         internal suspend fun setScreen(
@@ -160,7 +161,12 @@ class DiscordRPCService : Service() {
                 when {
                     discordIncognito -> null
                     connectionsPreferences.useChapterTitles().get() -> it
-                    else -> null
+                    else -> readerData.chapterNumber.let {
+                        context.resources.getString(
+                            R.string.display_mode_chapter,
+                            formatChapterNumber(it.first.toDouble()),
+                        ) + "/${it.second}"
+                    }
                 }
             }
 
@@ -184,7 +190,7 @@ class DiscordRPCService : Service() {
 
                 setScreen(
                     context = context,
-                    discordScreen = DiscordScreen.COMIC,
+                    discordScreen = DiscordScreen.MANGA,
                     readerData = ReaderData(
                         mangaTitle = mangaTitle,
                         chapterTitle = chapterTitle,
