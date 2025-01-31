@@ -90,7 +90,7 @@ class DiscordRPCService : Service() {
             }
         }
 
-        fun stop(context: Context, delay: Long = 5000L) {
+        fun stop(context: Context, delay: Long = 30000L) {
             handler.postDelayed(
                 { context.stopService(Intent(context, DiscordRPCService::class.java)) },
                 delay,
