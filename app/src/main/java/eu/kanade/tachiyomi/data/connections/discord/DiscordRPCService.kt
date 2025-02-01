@@ -117,7 +117,7 @@ class DiscordRPCService : Service() {
 
             val details = readerData.mangaTitle ?: context.resources.getString(discordScreen.details)
 
-            val state = readerData.chapterTitle ?: context.resources.getString(discordScreen.state)
+            val state = if (readerData.incognitoMode) context.resources.getString(R.string.comic) else readerData.chapterTitle ?: context.resources.getString(discordScreen.state)
 
             val imageUrl = readerData.thumbnailUrl ?: discordScreen.imageUrl
 
