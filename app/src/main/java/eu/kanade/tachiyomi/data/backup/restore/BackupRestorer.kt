@@ -186,23 +186,29 @@ class BackupRestorer(
         backupCategories: List<BackupCategory>,
     ) = launch {
         mangaRestorer.sortByNew(backupMangas)
-            .forEach {
+            .let { backupMangas ->
+                val restoredMangas = mangaRestorer.restoreMangas(backupMangas)
+                backupMangas.mapNotNull { backupManga ->
+                    val restoredManga = restoredMangas.find { restoredManga ->
+                        restoredManga.url == backupManga.url && restoredManga.source == backupManga.source
+                    }
+                    if (restoredManga == null) return@mapNotNull null
+                    backupManga to restoredManga
+                }
+            }
+            .forEach { (backupManga, restoredManga) ->
                 ensureActive()
 
                 try {
-                    mangaRestorer.restore(it, backupCategories)
+                    mangaRestorer.restore(backupManga, restoredManga, backupCategories)
                 } catch (e: Exception) {
-                    val sourceName = sourceMapping[it.source] ?: it.source.toString()
-                    errors.add(Date() to "${it.title} [$sourceName]: ${e.message}")
+                    val sourceName = sourceMapping[backupManga.source] ?: backupManga.source.toString()
+                    errors.add(Date() to "${backupManga.title} [$sourceName]: ${e.message}")
                 }
 
                 restoreProgress += 1
-                with(notifier) {
-                    showRestoreProgress(it.title, restoreProgress, restoreAmount, isSync)
-                        // KMK -->
-                        .show(Notifications.ID_RESTORE_PROGRESS)
-                    // KMK <--
-                }
+                notifier.showRestoreProgress(backupManga.title, restoreProgress, restoreAmount, isSync)
+                    .show(Notifications.ID_RESTORE_PROGRESS)
             }
     }
 
