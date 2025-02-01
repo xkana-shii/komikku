@@ -175,7 +175,7 @@ class DiscordRPCService : Service() {
                 val client = networkService.client
                 val response = if (!discordIncognito) {
                     try {
-                        client.newCall(GET("https://kizzy-api.vercel.app/image?url=${readerData.thumbnailUrl}")).execute()
+                        client.newCall(GET("https://kizzy-api.cjjdxhdjd.workers.dev/image?url=${readerData.thumbnailUrl}")).execute()
                     } catch (e: Throwable) {
                         null
                     }
