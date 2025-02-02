@@ -198,6 +198,10 @@ class BackupRestorer(
             }
             .also { backup2restored ->
                 mangaRestorer.restoreCategoriesBulk(backup2restored, backupCategories)
+
+                backup2restored.map { (backupManga, restoredManga) ->
+                    restoredManga to backupManga.chapters
+                }.also { mangaRestorer.restoreChaptersBulk(it) }
             }
             .forEach { (backupManga, restoredManga) ->
                 ensureActive()
