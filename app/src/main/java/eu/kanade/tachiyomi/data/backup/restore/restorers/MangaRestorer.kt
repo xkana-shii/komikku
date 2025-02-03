@@ -125,7 +125,6 @@ class MangaRestorer(
                 manga = restoredManga,
                 // SY -->
                 mergedMangaReferences = backupManga.mergedMangaReferences,
-                customManga = backupManga.getCustomMangaInfo(),
                 // SY <--
             )
 
@@ -383,12 +382,10 @@ class MangaRestorer(
         manga: Manga,
         // SY -->
         mergedMangaReferences: List<BackupMergedMangaReference>,
-        customManga: CustomMangaInfo?,
         // SY <--
     ): Manga {
         // SY -->
         restoreMergedMangaReferencesForManga(manga.id, mergedMangaReferences)
-        restoreEditedInfo(customManga?.copy(id = manga.id))
         // SY <--
 
         return manga
@@ -613,9 +610,14 @@ class MangaRestorer(
             .let { insertFlatMetadata.await(it) }
     }
 
-    private fun restoreEditedInfo(mangaJson: CustomMangaInfo?) {
-        mangaJson ?: return
-        setCustomMangaInfo.set(mangaJson)
+    fun restoreEditedInfoBulk(
+        backups: List<Pair<BackupManga, Manga>>,
+    ) {
+        backups
+            .mapNotNull { (backupManga, manga) ->
+                backupManga.getCustomMangaInfo()?.copy(id = manga.id)
+            }
+            .let { setCustomMangaInfo.set(it) }
     }
 
     private fun BackupManga.getCustomMangaInfo(): CustomMangaInfo? {
