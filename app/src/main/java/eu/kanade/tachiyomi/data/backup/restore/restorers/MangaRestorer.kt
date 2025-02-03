@@ -14,7 +14,6 @@ import exh.source.MERGED_SOURCE_ID
 import exh.util.nullIfEmpty
 import tachiyomi.data.DatabaseHandler
 import tachiyomi.data.UpdateStrategyColumnAdapter
-import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -23,7 +22,6 @@ import tachiyomi.domain.history.interactor.GetHistoryByMangaId
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetAllManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
-import tachiyomi.domain.manga.interactor.GetMangaByUrlAndSourceId
 import tachiyomi.domain.manga.interactor.InsertFlatMetadata
 import tachiyomi.domain.manga.interactor.SetCustomMangaInfo
 import tachiyomi.domain.manga.model.CustomMangaInfo
@@ -43,7 +41,6 @@ class MangaRestorer(
 
     private val handler: DatabaseHandler = Injekt.get(),
     private val getCategories: GetCategories = Injekt.get(),
-    private val getMangaByUrlAndSourceId: GetMangaByUrlAndSourceId = Injekt.get(),
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
     private val getTracks: GetTracks = Injekt.get(),
@@ -120,14 +117,6 @@ class MangaRestorer(
         restoredManga: Manga,
     ) {
         handler.await(inTransaction = true) {
-
-            restoreMangaDetails(
-                manga = restoredManga,
-                // SY -->
-                mergedMangaReferences = backupManga.mergedMangaReferences,
-                // SY <--
-            )
-
             if (isSync) {
                 mangasQueries.resetIsSyncing()
                 chaptersQueries.resetIsSyncing()
@@ -378,19 +367,6 @@ class MangaRestorer(
         updateManga.awaitUpdateFetchInterval(mangas, now, currentFetchWindow)
     }
 
-    private suspend fun restoreMangaDetails(
-        manga: Manga,
-        // SY -->
-        mergedMangaReferences: List<BackupMergedMangaReference>,
-        // SY <--
-    ): Manga {
-        // SY -->
-        restoreMergedMangaReferencesForManga(manga.id, mergedMangaReferences)
-        // SY <--
-
-        return manga
-    }
-
     /**
      * Restores the categories a manga is in.
      * Only if [backupCategories] is provided and user chooses to restore it.
@@ -543,55 +519,58 @@ class MangaRestorer(
      * @param mergeMangaId the merge manga for the references
      * @param backupMergedMangaReferences the list of backup manga references for the merged manga
      */
-    private suspend fun restoreMergedMangaReferencesForManga(
-        mergeMangaId: Long,
-        backupMergedMangaReferences: List<BackupMergedMangaReference>,
+    suspend fun restoreMergedMangaReferencesForMangaBulk(
+        backups: List<Pair<Long, List<BackupMergedMangaReference>>>,
     ) {
         // Get merged manga references from file and from db
         val dbMergedMangaReferences = handler.awaitList {
             mergedQueries.selectAll(MergedMangaMapper::map)
         }
 
+        val dbMangas = getAllManga.await()
+            .groupBy { it.source }
+            .toList()
+            .associate { it.first to it.second.associateBy { manga -> manga.url } }
+
         // Iterate over them
-        backupMergedMangaReferences
-            // KMK -->
-            .map { EXHMigrations.migrateBackupMergedMangaReference(it) }
-            // KMK <--
+        backups
+            .map { (mergeMangaId, backupMergedMangaReferences, EXHMigrations.migrateBackupMergedMangaReference(it))
             .forEach { backupMergedMangaReference ->
                 // If the backupMergedMangaReference isn't in the db,
                 // remove the id and insert a new backupMergedMangaReference
                 // Store the inserted id in the backupMergedMangaReference
-                if (dbMergedMangaReferences.none {
-                        backupMergedMangaReference.mergeUrl == it.mergeUrl &&
-                            backupMergedMangaReference.mangaUrl == it.mangaUrl
+                val mergedMangaReferences = backupMergedMangaReferences.mapNotNull { backupMergedMangaReference ->
+                    if (dbMergedMangaReferences.none {
+                            backupMergedMangaReference.mergeUrl == it.mergeUrl &&
+                                backupMergedMangaReference.mangaUrl == it.mangaUrl
+                        }
+                    ) {
+                        // Let the db assign the id
+                        val mergedManga = dbMangas[backupMergedMangaReference.mangaSourceId]
+                            ?.get(backupMergedMangaReference.mangaUrl)
+                            ?: return@mapNotNull null
+                        mergedManga to backupMergedMangaReference.getMergedMangaReference()
+                    } else {
+                        return@mapNotNull null
                     }
-                ) {
-                    // Let the db assign the id
-                    // KMK -->
-                    val mergedManga = handler.awaitList {
-                        // KMK <--
-                        mangasQueries.getMangaByUrlAndSource(
-                            backupMergedMangaReference.mangaUrl,
-                            backupMergedMangaReference.mangaSourceId,
-                            MangaMapper::mapManga,
-                        )
-                        // KMK -->
-                    }.firstOrNull()
-                        // KMK <--
-                        ?: return@forEach
-                    backupMergedMangaReference.getMergedMangaReference().run {
-                        handler.await {
+                }
+                mergeMangaId to mergedMangaReferences
+            }
+            .run {
+                handler.await(true) {
+                    forEach { (mergeMangaId, mergedMangaReferences) ->
+                        mergedMangaReferences.forEach { (mergedManga, ref) ->
                             mergedQueries.insert(
-                                infoManga = isInfoManga,
-                                getChapterUpdates = getChapterUpdates,
-                                chapterSortMode = chapterSortMode.toLong(),
-                                chapterPriority = chapterPriority.toLong(),
-                                downloadChapters = downloadChapters,
+                                infoManga = ref.isInfoManga,
+                                getChapterUpdates = ref.getChapterUpdates,
+                                chapterSortMode = ref.chapterSortMode.toLong(),
+                                chapterPriority = ref.chapterPriority.toLong(),
+                                downloadChapters = ref.downloadChapters,
                                 mergeId = mergeMangaId,
-                                mergeUrl = mergeUrl,
+                                mergeUrl = ref.mergeUrl,
                                 mangaId = mergedManga.id,
-                                mangaUrl = mangaUrl,
-                                mangaSource = mangaSourceId,
+                                mangaUrl = ref.mangaUrl,
+                                mangaSource = ref.mangaSourceId,
                             )
                         }
                     }
