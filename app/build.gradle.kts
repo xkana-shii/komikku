@@ -15,13 +15,6 @@ plugins {
     id("com.github.ben-manes.versions")
 }
 
-if (gradle.startParameter.taskRequests.toString().contains("Standard")) {
-    pluginManager.apply {
-        apply(libs.plugins.google.services.get().pluginId)
-        apply(libs.plugins.firebase.crashlytics.get().pluginId)
-    }
-}
-
 val supportedAbis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 
 android {
@@ -30,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "app.komikku"
 
-        versionCode = 73
+        versionCode = 72
         versionName = "1.13.0"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
@@ -68,6 +61,7 @@ android {
             versionNameSuffix = "-${getCommitCount()}"
             applicationIdSuffix = ".debug"
             isPseudoLocalesEnabled = true
+            buildConfigField("boolean", "INCLUDE_UPDATER", "true")
         }
         create("releaseTest") {
             applicationIdSuffix = ".rt"
@@ -121,6 +115,8 @@ android {
         // Signed, dev build with Android Studio if it's not a debug build
         create("dev") {
             dimension = "default"
+            // Default signing for dev flavor, would be overridden by buildTypes config
+            signingConfig = signingConfigs.getByName("preview")
         }
     }
 
@@ -301,11 +297,6 @@ dependencies {
     // Logging
     implementation(libs.timber)
     implementation(libs.logcat)
-
-    // Crash reports/analytics
-    "standardImplementation"(platform(libs.firebase.bom))
-    "standardImplementation"(libs.firebase.analytics)
-    "standardImplementation"(libs.firebase.crashlytics)
 
     // Shizuku
     implementation(libs.bundles.shizuku)
