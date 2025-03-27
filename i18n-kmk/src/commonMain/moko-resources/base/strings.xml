@@ -15,12 +15,12 @@
     <string name="action_show_hidden_categories">Show hidden categories</string>
     <string name="action_panorama_cover">Panorama cover</string>
     <!-- Reader -->
-      <!-- Reader Actions -->
+    <!-- Reader Actions -->
     <string name="action_copy_to_clipboard_first_page">Copy first page to clipboard</string>
     <string name="action_copy_to_clipboard_second_page">Copy second page to clipboard</string>
     <string name="action_copy_to_clipboard_combined_page">Copy combined page to clipboard</string>
     <!-- Preferences -->
-      <!-- Appearance section -->
+    <!-- Appearance section -->
     <string name="pref_custom_theme_style">Custom theme style</string>
     <string name="pref_manga_info">Manga Info</string>
     <string name="pref_theme_cover_based">Theme based on cover</string>
@@ -76,7 +76,7 @@
     <string name="extensions_page_need_refresh">Refresh extension page to update list.</string>
     <string name="extensions_page_more">More extensions...</string>
     <!-- Extension repos -->
-      <!-- Downloads section -->
+    <!-- Downloads section -->
     <string name="download_cache_renew_interval">Download cache renew interval</string>
     <string name="download_cache_renew_interval_manual">Manual</string>
     <string name="download_cache_renew_interval_1hour">1 hour</string>
@@ -131,14 +131,6 @@
     <string name="related_mangas_more">More like these...</string>
     <string name="saved_searches_add_feed">Saved Searches (Hold to add to Feed)</string>
     <string name="saved_searches_delete">Saved Searches (Hold to delete)</string>
-    <!-- Error Screen -->
-    <string name="option_label_library_update_errors">Library update errors</string>
-    <string name="label_library_update_errors">Library update errors (%d)</string>
-    <string name="info_empty_library_update_errors">You have no library update errors.</string>
-    <string name="action_scroll_to_top">Scroll to top</string>
-    <string name="action_scroll_to_bottom">Scroll to bottom</string>
-    <string name="action_scroll_to_previous">Scroll to previous</string>
-    <string name="action_scroll_to_next">Scroll to next</string>
     <!-- Feed Tab -->
     <string name="too_many_in_feed">Too many sources in your feed, cannot add more than 20</string>
     <string name="action_sort_feed">Sort feeds</string>
