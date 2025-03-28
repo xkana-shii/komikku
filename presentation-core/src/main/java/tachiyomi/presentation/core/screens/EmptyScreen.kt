@@ -43,6 +43,7 @@ fun EmptyScreen(
     // KMK -->
     help: @Composable (() -> Unit)? = null,
     // KMK <--
+    happyFace: Boolean = false,
 ) {
     EmptyScreen(
         message = stringResource(stringRes),
@@ -51,6 +52,7 @@ fun EmptyScreen(
         // KMK -->
         help = help,
         // KMK <--
+        happyFace = happyFace,
     )
 }
 
@@ -62,8 +64,9 @@ fun EmptyScreen(
     // KMK -->
     help: @Composable (() -> Unit)? = null,
     // KMK <--
+    happyFace: Boolean = false,
 ) {
-    val face = remember { getRandomErrorFace() }
+    val face = remember { getRandomFace(happyFace) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -127,6 +130,16 @@ private val ErrorFaces = listOf(
     "(¬_¬)",
 )
 
-private fun getRandomErrorFace(): String {
-    return ErrorFaces[Random.nextInt(ErrorFaces.size)]
+private val HappyFaces = listOf(
+    "ヽ(＾Д＾)ﾉ",
+    "≧◡≦",
+    "＾ω＾",
+    "＾▽＾",
+    "(◕‿◕)",
+    "◠‿◠",
+)
+private fun getRandomFace(happyFace: Boolean): String {
+    val faces = if (happyFace) HappyFaces else ErrorFaces
+
+    return faces[Random.nextInt(faces.size)]
 }
