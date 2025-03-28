@@ -545,15 +545,15 @@ class LibraryScreenModel(
                 filterUnread = it[7] as TriState,
                 filterStarted = it[8] as TriState,
                 filterBookmarked = it[9] as TriState,
-                filterCompleted = it[10] as TriState,
-                filterIntervalCustom = it[11] as TriState,
+                filterFillermarked = it[10] as TriState,
+                filterCompleted = it[11] as TriState,
+                filterIntervalCustom = it[12] as TriState,
                 // SY -->
-                filterLewd = it[12] as TriState,
+                filterLewd = it[13] as TriState,
                 // SY <--
                 // KMK -->
-                sourceBadge = it[13] as Boolean,
-                useLangIcon = it[14] as Boolean,
-                filterFillermarked = it[15] as TriState,
+                sourceBadge = it[14] as Boolean,
+                useLangIcon = it[15] as Boolean,
                 // KMK <--
             )
         }
