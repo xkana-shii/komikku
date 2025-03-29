@@ -185,7 +185,7 @@ private fun UpdatesAppBar(
     // KMK <--
     modifier: Modifier = Modifier,
     hasFailedUpdates: Boolean,
-    ) {
+) {
     val warningIconTint = MaterialTheme.colorScheme.error
     AppBar(
         modifier = modifier,
