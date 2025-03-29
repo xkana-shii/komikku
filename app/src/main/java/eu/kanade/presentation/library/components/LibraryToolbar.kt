@@ -1,6 +1,5 @@
 package eu.kanade.presentation.library.components
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
@@ -88,7 +87,6 @@ private fun LibraryRegularToolbar(
     // SY <--
     scrollBehavior: TopAppBarScrollBehavior?,
 ) {
-    val pillAlpha = if (isSystemInDarkTheme()) 0.12f else 0.08f
     SearchToolbar(
         titleContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -101,7 +99,8 @@ private fun LibraryRegularToolbar(
                 if (title.numberOfManga != null) {
                     Pill(
                         text = "${title.numberOfManga}",
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = pillAlpha),
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                         fontSize = 14.sp,
                     )
                 }
