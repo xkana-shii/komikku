@@ -1,67 +1,20 @@
-name: Debug Builder
+name: Debug Builder (Nightly)
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_number:
-        description: 'Build Number (e.g., debug-123)'
-        required: true
-        default: 'debug-0'
+  push:
+    branches:
+      - master  # Or your main development branch
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  prepare-build:
-    runs-on: 'ubuntu-24.04'
-    outputs:
-      VERSION_TAG: ${{ steps.get_tag.outputs.VERSION_TAG }}
-      CURRENT_SHA: ${{ steps.current_commit.outputs.CURRENT_SHA }}
-      ARTIFACTS_PREFIX: ${{ steps.prepare_env.outputs.ARTIFACTS_PREFIX }}
-      BUILD_TYPE_NAME: ${{ steps.prepare_env.outputs.BUILD_TYPE_NAME }}
-      TAG_NAME: ${{ steps.prepare_env.outputs.TAG_NAME }}
-    steps:
-      - name: Get tag name
-        id: get_tag
-        run: |
-          set -x
-          echo "VERSION_TAG=${GITHUB_REF/refs\/heads\//}"
-          echo "VERSION_TAG=${GITHUB_REF/refs\/heads\//}" >> $GITHUB_OUTPUT
-
-      - name: Clone Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-
-      - name: Current commit
-        id: current_commit
-        run: |
-          set -e
-          current_sha=$(git rev-parse --short HEAD)
-          echo "CURRENT_SHA=$current_sha"
-          echo "CURRENT_SHA=$current_sha" >> $GITHUB_OUTPUT
-
-      - name: Prepare env
-        id: prepare_env
-        run: |
-          set -e
-          artifacts_prefix=debug/app
-          build_type_name=Debug
-          tag_name=${{ github.event.inputs.build_number }}
-          echo "TAG_NAME=$tag_name"
-          echo "TAG_NAME=$tag_name" >> $GITHUB_OUTPUT
-          echo "ARTIFACTS_PREFIX=$artifacts_prefix"
-          echo "ARTIFACTS_PREFIX=$artifacts_prefix" >> $GITHUB_OUTPUT
-          echo "BUILD_TYPE_NAME=$build_type_name"
-          echo "BUILD_TYPE_NAME=$build_type_name" >> $GITHUB_OUTPUT
-
   build-app:
     runs-on: 'ubuntu-24.04'
-    needs: prepare-build
     if: github.repository == 'komikku-app/komikku'
     steps:
-      - name: Clone Repository (${{ needs.prepare-build.outputs.VERSION_TAG }} - ${{ needs.prepare-build.outputs.TAG_NAME }})
+      - name: Clone Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
@@ -87,67 +40,6 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          path: "**/*.apk"
-          retention-days: 1
-
-  release-app:
-    runs-on: 'ubuntu-24.04'
-    needs:
-      - prepare-build
-      - build-app
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
-        with:
-          merge-multiple: true
-
-      - name: Get SHA & clean up build artifacts
-        id: get_sha
-        run: |
-          set -e
-          mv app/build/outputs/apk/${{ needs.prepare-build.outputs.ARTIFACTS_PREFIX }}-universal-debug-unsigned.apk Komikku-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-          sha=`sha256sum Komikku-${{ needs.prepare-build.outputs.TAG_NAME }}.apk | awk '{ print $1 }'`
-          echo "APK_UNIVERSAL_SHA=$sha" >> $GITHUB_OUTPUT
-
-          mv app/build/outputs/apk/${{ needs.prepare-build.outputs.ARTIFACTS_PREFIX }}-arm64-v8a-debug-unsigned.apk Komikku-arm64-v8a-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-          sha=`sha256sum Komikku-arm64-v8a-${{ needs.prepare-build.outputs.TAG_NAME }}.apk | awk '{ print $1 }'`
-          echo "APK_ARM64_V8A_SHA=$sha" >> $GITHUB_OUTPUT
-
-          mv app/build/outputs/apk/${{ needs.prepare-build.outputs.ARTIFACTS_PREFIX }}-armeabi-v7a-debug-unsigned.apk Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-          sha=`sha256sum Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.TAG_NAME }}.apk | awk '{ print $1 }'`
-          echo "APK_ARMEABI_V7A_SHA=$sha" >> $GITHUB_OUTPUT
-
-          mv app/build/outputs/apk/${{ needs.prepare-build.outputs.ARTIFACTS_PREFIX }}-x86-debug-unsigned.apk Komikku-x86-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-          sha=`sha256sum Komikku-x86-${{ needs.prepare-build.outputs.TAG_NAME }}.apk | awk '{ print $1 }'`
-          echo "APK_X86_SHA=$sha" >> $GITHUB_OUTPUT
-
-          mv app/build/outputs/apk/${{ needs.prepare-build.outputs.ARTIFACTS_PREFIX }}-x86_64-debug-unsigned.apk Komikku-x86_64-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-          sha=`sha256sum Komikku-x86_64-${{ needs.prepare-build.outputs.TAG_NAME }}.apk | awk '{ print $1 }'`
-          echo "APK_X86_64_SHA=$sha" >> $GITHUB_OUTPUT
-
-      - name: Create release
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
-        with:
-          tag_name: ${{ needs.prepare-build.outputs.TAG_NAME }}
-          name: Komikku Debug ${{ needs.prepare-build.outputs.TAG_NAME }}
-          body: |
-            ### Checksums
-
-            | Variant | SHA-256 |
-            | ------- | ------- |
-            | Universal | ${{ steps.get_sha.outputs.APK_UNIVERSAL_SHA }} |
-            | arm64-v8a | ${{ steps.get_sha.outputs.APK_ARM64_V8A_SHA }} |
-            | armeabi-v7a | ${{ steps.get_sha.outputs.APK_ARMEABI_V7A_SHA }} |
-            | x86 | ${{ steps.get_sha.outputs.APK_X86_SHA }} |
-            | x86_64 | ${{ steps.get_sha.outputs.APK_X86_64_SHA }} |
-
-            ### If you are unsure which apk to download then go with `Komikku-${{ needs.prepare-build.outputs.TAG_NAME }}.apk`
-          files: |
-            Komikku-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-            Komikku-arm64-v8a-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-            Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-            Komikku-x86-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-            Komikku-x86_64-${{ needs.prepare-build.outputs.TAG_NAME }}.apk
-          draft: true
-          prerelease: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          name: debug-builds
+          path: "**/app-debug.apk" # Upload only the apk file.
+          retention-days: 1 # Adjust retention as needed.
