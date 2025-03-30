@@ -61,7 +61,7 @@ jobs:
 
       - name: Build app
         if: github.repository != github.event.pull_request.head.repo.full_name
-        run: ./gradlew assemblePreview
+        run: ./gradlew assemblePreviews
 
       - name: Run unit tests
         run: ./gradlew testReleaseUnitTest
