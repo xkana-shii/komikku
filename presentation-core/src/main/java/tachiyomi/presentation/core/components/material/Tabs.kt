@@ -11,7 +11,6 @@ import tachiyomi.presentation.core.components.Pill
 
 @Composable
 fun TabText(text: String, badgeCount: Int? = null) {
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
