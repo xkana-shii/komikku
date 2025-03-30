@@ -31,6 +31,7 @@ object NotificationHandler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
+
     /**
      * Returns [PendingIntent] that starts a download activity.
      *

@@ -21,10 +21,10 @@ import androidx.work.workDataOf
 import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.toSManga
-import eu.kanade.tachiyomi.R
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.model.toDomainTrack
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
@@ -670,7 +670,6 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         private const val TAG = "LibraryUpdate"
         private const val WORK_NAME_AUTO = "LibraryUpdate-auto"
         private const val WORK_NAME_MANUAL = "LibraryUpdate-manual"
-
 
         /**
          * Key for category to update.
