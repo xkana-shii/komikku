@@ -37,9 +37,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Dependency Review
-        uses: actions/dependency-review-action@3b139cfc5fae8b618d3eae3675e383bb1769c019 # v4.5.0
-
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@d156388eb19639ec20ade50009f3d199ce1e2808 # v4.1.0
 
@@ -49,6 +46,22 @@ jobs:
           java-version: 17
           distribution: temurin
 
+      - name: Write google-services.json
+        if: github.repository == github.event.pull_request.head.repo.full_name
+        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
+        with:
+          path: app/google-services.json
+          contents: "${{ secrets.GOOGLE_SERVICES_JSON }}"
+          write-mode: overwrite
+
+      - name: Write client_secrets.json
+        if: github.repository == github.event.pull_request.head.repo.full_name
+        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
+        with:
+          path: app/src/main/assets/client_secrets.json
+          contents: "${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}"
+          write-mode: overwrite
+
       - name: Set up gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
 
@@ -56,12 +69,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        if: github.repository == github.event.pull_request.head.repo.full_name
-        run: ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater
-
-      - name: Build app
-        if: github.repository != github.event.pull_request.head.repo.full_name
-        run: ./gradlew assemblePreview
+        run: ./gradlew assembleRelease
 
       - name: Run unit tests
         run: ./gradlew testReleaseUnitTest
@@ -70,7 +78,7 @@ jobs:
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
-          releaseDirectory: app/build/outputs/apk/preview
+          releaseDirectory: app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -88,7 +96,7 @@ jobs:
       - name: Rename apk
         id: current_commit
         run: |
-          set -ex
+          set -x
           echo "The git ref is: ${{ github.ref }}"
           version_tag=p$(echo ${{ github.ref }} | cut -d '/' -f 3)
           commit_count=$(git rev-list --count HEAD)
@@ -96,7 +104,7 @@ jobs:
           echo "VERSION_TAG=$version_tag" >> $GITHUB_OUTPUT
           echo "COMMIT_COUNT=$commit_count"
           echo "COMMIT_COUNT=$commit_count" >> $GITHUB_OUTPUT
-          mv app/build/outputs/apk/preview/app-universal-preview${{ steps.signed_filename.outputs.SIGNED_TRAIL }}.apk Komikku-$version_tag-r$commit_count.apk
+          mv app/build/outputs/apk/release/app-universal-release-unsigned${{ steps.signed_filename.outputs.SIGNED_TRAIL }}.apk Komikku-$version_tag-r$commit_count.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -108,4 +116,4 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mapping-${{ github.sha }}
-          path: app/build/outputs/mapping/preview
+          path: app/build/outputs/mapping/release
