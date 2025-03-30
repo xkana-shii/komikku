@@ -785,7 +785,7 @@ class LibraryScreenModel(
                                 // SY <--
                                 manga.source,
 
-                                )
+                            )
                     }
                     .let { if (amount != null) it.take(amount) else it }
 
