@@ -4,7 +4,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.presentation.history.HistoryUiModel
@@ -43,6 +42,7 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.time.LocalDate
 
 class HistoryScreenModel(
     private val addTracks: AddTracks = Injekt.get(),
@@ -81,15 +81,13 @@ class HistoryScreenModel(
     }
 
     private fun List<HistoryWithRelations>.toHistoryUiModels(): List<HistoryUiModel> {
-        return map { HistoryUiModel.Item(it) }
-            .insertSeparators { before, after ->
-                val beforeDate = before?.item?.readAt?.time?.toLocalDate()
-                val afterDate = after?.item?.readAt?.time?.toLocalDate()
-                when {
-                    beforeDate != afterDate && afterDate != null -> HistoryUiModel.Header(afterDate)
-                    // Return null to avoid adding a separator between two items.
-                    else -> null
-                }
+        return this
+            .groupBy { it.readAt?.time?.toLocalDate() }
+            .flatMap { (date, histories) ->
+                val mangaCount = histories.distinctBy { it.mangaId }.size
+                val header = HistoryUiModel.Header(date ?: LocalDate.MIN, mangaCount)
+                val items = histories.map { HistoryUiModel.Item(it) }
+                listOf(header) + items
             }
     }
 
