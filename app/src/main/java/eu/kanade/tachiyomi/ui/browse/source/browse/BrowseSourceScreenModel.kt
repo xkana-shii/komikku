@@ -16,7 +16,6 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.manga.interactor.UpdateManga
-import eu.kanade.domain.manga.model.toDomainManga
 import eu.kanade.domain.source.interactor.GetExhSavedSearch
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.source.service.SourcePreferences
@@ -73,7 +72,7 @@ import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.interactor.InsertSavedSearch
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
-import tachiyomi.domain.source.repository.SourcePagingSourceType
+import tachiyomi.domain.source.repository.SourcePagingSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.sy.SYMR
 import uy.kohesive.injekt.Injekt
@@ -206,14 +205,9 @@ open class BrowseSourceScreenModel(
                 createSourcePagingSource(listing.query ?: "", listing.filters)
                 // SY <--
             }.flow.map { pagingData ->
-                pagingData.map { (it, metadata) ->
-                    // KMK -->
-                    it.toDomainManga(sourceId)
-                        .let { manga ->
-                            getManga.subscribe(manga.url, manga.source)
-                                .map { it ?: manga }
-                        }
-                        // KMK <--
+                pagingData.map { (manga, metadata) ->
+                    getManga.subscribe(manga.url, manga.source)
+                        .map { it ?: manga }
                         // SY -->
                         .combineMetadata(metadata)
                         // SY <--
@@ -425,8 +419,8 @@ open class BrowseSourceScreenModel(
     }
 
     // SY -->
-    open fun createSourcePagingSource(query: String, filters: FilterList): SourcePagingSourceType {
-        return getRemoteManga.subscribe(sourceId, query, filters)
+    open fun createSourcePagingSource(query: String, filters: FilterList): SourcePagingSource {
+        return getRemoteManga(sourceId, query, filters)
     }
     // SY <--
 
