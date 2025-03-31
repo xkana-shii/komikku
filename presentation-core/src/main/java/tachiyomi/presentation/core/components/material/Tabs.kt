@@ -1,5 +1,6 @@
 package tachiyomi.presentation.core.components.material
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -11,6 +12,8 @@ import tachiyomi.presentation.core.components.Pill
 
 @Composable
 fun TabText(text: String, badgeCount: Int? = null) {
+    val pillAlpha = if (isSystemInDarkTheme()) 0.12f else 0.08f
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -22,8 +25,7 @@ fun TabText(text: String, badgeCount: Int? = null) {
         if (badgeCount != null) {
             Pill(
                 text = "$badgeCount",
-                color = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onTertiary,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = pillAlpha),
                 fontSize = 10.sp,
             )
         }
