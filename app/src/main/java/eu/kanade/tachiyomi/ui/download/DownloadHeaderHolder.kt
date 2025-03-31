@@ -34,12 +34,12 @@ class DownloadHeaderHolder(view: View, adapter: FlexibleAdapter<*>) : Expandable
                         modifier = Modifier.weight(1f, false),
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Pill(
-                        text = "$${item.size}",
+                        text = "${item.size}",
                         color = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 14.sp,
+                        fontSize = 8.sp,
                     )
                 }
             }
