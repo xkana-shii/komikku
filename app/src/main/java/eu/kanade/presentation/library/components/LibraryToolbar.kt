@@ -107,8 +107,7 @@ private fun LibraryRegularToolbar(
                 if (title.numberOfManga != null) {
                     Pill(
                         text = "${title.numberOfManga}",
-                        color = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = pillAlpha),
                         fontSize = 14.sp,
                     )
                 }
