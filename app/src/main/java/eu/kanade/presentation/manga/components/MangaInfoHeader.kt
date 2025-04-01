@@ -79,6 +79,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.mikepenz.markdown.model.markdownAnnotator
+import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.tachiyomi.R
@@ -817,6 +819,12 @@ private fun ColumnScope.MangaContentInfo(
     }
 }
 
+private val descriptionAnnotator = markdownAnnotator(
+    config = markdownAnnotatorConfig(
+        eolAsNewLine = true,
+    ),
+)
+
 @Composable
 private fun MangaSummary(
     description: String,
@@ -849,6 +857,7 @@ private fun MangaSummary(
                     )
                     MarkdownRender(
                         content = description,
+                        annotator = descriptionAnnotator,
                         modifier = Modifier.secondaryItemAlpha(),
                     )
                 }
@@ -863,6 +872,7 @@ private fun MangaSummary(
                     SelectionContainer {
                         MarkdownRender(
                             content = description,
+                            annotator = descriptionAnnotator,
                             modifier = Modifier.secondaryItemAlpha(),
                         )
                     }
