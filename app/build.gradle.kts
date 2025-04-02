@@ -289,6 +289,7 @@ dependencies {
     implementation(libs.compose.webview)
     implementation(libs.compose.grid)
     implementation(libs.reorderable)
+    implementation(libs.bundles.markdown)
 
     // KMK -->
     implementation(libs.palette.ktx)
