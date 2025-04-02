@@ -243,7 +243,7 @@ fun MangaActionRow(
         return@remember if (nextUpdate != null &&
             // KMK -->
             notSkipCompleted
-        // KMK <--
+            // KMK <--
         ) {
             val now = Instant.now()
             now.until(nextUpdate, ChronoUnit.DAYS).toInt().coerceAtLeast(0)
@@ -289,7 +289,7 @@ fun MangaActionRow(
             color = if (isUserIntervalMode ||
                 // KMK -->
                 nextUpdateDays?.let { it <= 1 } == true
-            // KMK <--
+                // KMK <--
             ) {
                 MaterialTheme.colorScheme.primary
             } else {
