@@ -373,7 +373,7 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
         val newUpdates = CopyOnWriteArrayList<Pair<Manga, Array<Chapter>>>()
         val hasDownloads = AtomicBoolean(false)
-        val failedUpdatesCount = AtomicInteger(0)
+        val failedUpdatesCount = AtomicInt(0)
         // SY -->
         val mdlistLogged = mdList.isLoggedIn
         // SY <--
