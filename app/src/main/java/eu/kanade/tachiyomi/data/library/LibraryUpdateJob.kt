@@ -455,7 +455,7 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
                                             else -> e.message ?: context.getString(R.string.exception_unknown)
                                         }
                                         try {
-                                            failedUpdatesCount.getAndIncrement()
+                                            failedUpdatesCount.fetchAndAdd(1)
                                             val fullErrorMessage = "${e::class.java.simpleName}: $errorMessage"
                                             val isOnline = if (context.isOnline()) 1L else 0L
                                             failedUpdatesManager.insert(manga.id, fullErrorMessage, isOnline)
@@ -480,9 +480,9 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
             }
         }
 
-        if (failedUpdatesCount.get() > 0) {
+        if (failedUpdatesCount.load() > 0) {
             notifier.showUpdateErrorNotification(
-                failedUpdatesCount.get(),
+                failedUpdatesCount.load(),
             )
         }
     }
