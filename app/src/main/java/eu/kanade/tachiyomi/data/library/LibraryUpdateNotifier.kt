@@ -149,9 +149,10 @@ class LibraryUpdateNotifier(
     }
 
     /**
-     * Shows notification containing update entries that failed with action to open full log.
+     * Shows notification containing update entries that failed with action to open failed updates screen.
      *
      * @param failed Number of entries that failed to update.
+     * @param uri Uri for error log file containing all titles that failed.
      */
     fun showUpdateErrorNotification(failed: Int) {
         if (failed == 0) {
@@ -167,7 +168,7 @@ class LibraryUpdateNotifier(
             setSmallIcon(R.drawable.ic_komikku)
             setColor(ContextCompat.getColor(context, R.color.ic_launcher))
 
-            setContentIntent(NotificationReceiver.openErrorLogPendingActivity(context))
+            setContentIntent(NotificationHandler.openFailedUpdatesPendingActivity(context))
         }
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.FlipToBack
 import androidx.compose.material.icons.outlined.Panorama
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -31,6 +32,7 @@ import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel
 import eu.kanade.tachiyomi.ui.updates.groupByDateAndManga
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
@@ -57,6 +59,7 @@ fun UpdateScreen(
     onInvertSelection: () -> Unit,
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Boolean,
+    onUpdateWarning: () -> Unit,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
     onMultiFillermarkClicked: (List<UpdatesItem>, fillermark: Boolean) -> Unit,
@@ -64,6 +67,7 @@ fun UpdateScreen(
     onMultiDeleteClicked: (List<UpdatesItem>) -> Unit,
     onUpdateSelected: (UpdatesItem, Boolean, Boolean, Boolean) -> Unit,
     onOpenChapter: (UpdatesItem) -> Unit,
+    hasFailedUpdates: Boolean,
     // KMK -->
     collapseToggle: (key: String) -> Unit,
     // KMK <--
@@ -78,11 +82,13 @@ fun UpdateScreen(
             UpdatesAppBar(
                 onCalendarClicked = { onCalendarClicked() },
                 onUpdateLibrary = { onUpdateLibrary() },
+                onUpdateWarning = onUpdateWarning,
                 actionModeCounter = state.selected.size,
                 onSelectAll = { onSelectAll(true) },
                 onInvertSelection = { onInvertSelection() },
                 onCancelActionMode = { onSelectAll(false) },
                 scrollBehavior = scrollBehavior,
+                hasFailedUpdates = hasFailedUpdates,
                 // KMK -->
                 usePanoramaCover = usePanoramaCover.value,
                 usePanoramaCoverClick = { usePanoramaCover.value = !usePanoramaCover.value },
@@ -150,6 +156,7 @@ fun UpdateScreen(
                             preserveReadingPosition = preserveReadingPosition,
                             // SY <--
                             onUpdateSelected = onUpdateSelected,
+
                             onClickCover = onClickCover,
                             onClickUpdate = onOpenChapter,
                             onDownloadChapter = onDownloadChapter,
@@ -165,6 +172,7 @@ fun UpdateScreen(
 private fun UpdatesAppBar(
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
+    onUpdateWarning: () -> Unit,
     // For action mode
     actionModeCounter: Int,
     onSelectAll: () -> Unit,
@@ -176,13 +184,25 @@ private fun UpdatesAppBar(
     usePanoramaCoverClick: () -> Unit,
     // KMK <--
     modifier: Modifier = Modifier,
+    hasFailedUpdates: Boolean,
 ) {
+    val warningIconTint = MaterialTheme.colorScheme.error
     AppBar(
         modifier = modifier,
         title = stringResource(MR.strings.label_recent_updates),
         actions = {
-            AppBarActions(
-                persistentListOf(
+            val actions = mutableListOf<AppBar.Action>().apply {
+                if (hasFailedUpdates) {
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_update_warning),
+                            icon = Icons.Rounded.Warning,
+                            onClick = onUpdateWarning,
+                            iconTint = warningIconTint,
+                        ),
+                    )
+                }
+                add(
                     // KMK -->
                     AppBar.Action(
                         title = stringResource(KMR.strings.action_panorama_cover),
@@ -190,19 +210,24 @@ private fun UpdatesAppBar(
                         iconTint = MaterialTheme.colorScheme.primary.takeIf { usePanoramaCover },
                         onClick = usePanoramaCoverClick,
                     ),
+                )
+                add(
                     // KMK <--
                     AppBar.Action(
                         title = stringResource(MR.strings.action_view_upcoming),
                         icon = Icons.Outlined.CalendarMonth,
                         onClick = onCalendarClicked,
                     ),
+                )
+                add(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_update_library),
                         icon = Icons.Outlined.Refresh,
                         onClick = onUpdateLibrary,
                     ),
-                ),
-            )
+                )
+            }
+            AppBarActions(actions.toImmutableList())
         },
         actionModeCounter = actionModeCounter,
         onCancelActionMode = onCancelActionMode,

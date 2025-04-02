@@ -208,7 +208,7 @@ fun MangaBottomActionMenu(
 }
 
 @Composable
-internal fun RowScope.Button(
+fun RowScope.Button(
     title: String,
     icon: ImageVector,
     toConfirm: Boolean,
