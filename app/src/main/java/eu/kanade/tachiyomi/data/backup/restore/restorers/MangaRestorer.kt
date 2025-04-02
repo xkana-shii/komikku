@@ -167,6 +167,7 @@ class MangaRestorer(
                 updateStrategy = manga.updateStrategy.let(UpdateStrategyColumnAdapter::encode),
                 version = manga.version,
                 isSyncing = 1,
+                notes = manga.notes,
             )
         }
         return manga
@@ -328,6 +329,7 @@ class MangaRestorer(
                 dateAdded = manga.dateAdded,
                 updateStrategy = manga.updateStrategy,
                 version = manga.version,
+                notes = manga.notes,
             )
             mangasQueries.selectLastInsertedRowId()
         }
@@ -571,7 +573,7 @@ class MangaRestorer(
         setCustomMangaInfo.set(mangaJson)
     }
 
-    fun BackupManga.getCustomMangaInfo(): CustomMangaInfo? {
+    private fun BackupManga.getCustomMangaInfo(): CustomMangaInfo? {
         if (customTitle != null ||
             customArtist != null ||
             customAuthor != null ||
