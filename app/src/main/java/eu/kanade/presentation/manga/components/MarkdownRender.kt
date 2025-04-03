@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
@@ -53,12 +54,12 @@ private fun mihonMarkdownPadding() = markdownPadding(
 
 @Composable
 private fun mihonMarkdownTypography() = markdownTypography(
-    h1 = MaterialTheme.typography.headlineMedium,
-    h2 = MaterialTheme.typography.headlineSmall,
-    h3 = MaterialTheme.typography.titleLarge,
-    h4 = MaterialTheme.typography.titleMedium,
-    h5 = MaterialTheme.typography.titleSmall,
-    h6 = MaterialTheme.typography.bodyLarge,
+    h1 = MaterialTheme.typography.headlineMedium.withMaterialColor(),
+    h2 = MaterialTheme.typography.headlineSmall.withMaterialColor(),
+    h3 = MaterialTheme.typography.titleLarge.withMaterialColor(),
+    h4 = MaterialTheme.typography.titleMedium.withMaterialColor(),
+    h5 = MaterialTheme.typography.titleSmall.withMaterialColor(),
+    h6 = MaterialTheme.typography.bodyLarge.withMaterialColor(),
     paragraph = MaterialTheme.typography.bodyMedium,
     text = MaterialTheme.typography.bodyMedium,
     ordered = MaterialTheme.typography.bodyMedium,
@@ -69,6 +70,11 @@ private fun mihonMarkdownTypography() = markdownTypography(
         fontWeight = FontWeight.Bold,
     ),
 )
+
+@Composable
+private fun TextStyle.withMaterialColor(): TextStyle {
+    return this.copy(color = MaterialTheme.colorScheme.secondary)
+}
 
 @Composable
 private fun mihonMarkdownComponents() = markdownComponents(
