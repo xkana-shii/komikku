@@ -73,7 +73,7 @@ android {
         create("preview") {
             initWith(release)
 
-            applicationIdSuffix = ".beta"
+            applicationIdSuffix = ".betaa"
 
             versionNameSuffix = debug.versionNameSuffix
             signingConfig = debug.signingConfig
