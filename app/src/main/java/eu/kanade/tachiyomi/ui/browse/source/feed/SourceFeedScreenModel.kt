@@ -63,7 +63,7 @@ open class SourceFeedScreenModel(
     uiPreferences: UiPreferences = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
-    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getFeedSavedSearchBySourceId: GetFeedSavedSearchBySourceId = Injekt.get(),
     private val getSavedSearchBySourceIdFeed: GetSavedSearchBySourceIdFeed = Injekt.get(),
     private val countFeedSavedSearchBySourceId: CountFeedSavedSearchBySourceId = Injekt.get(),
@@ -211,11 +211,8 @@ open class SourceFeedScreenModel(
                     }
 
                     val titles = withIOContext {
-                        page.map {
-                            // KMK -->
-                            it.toDomainManga(source.id)
-                            // KMK <--
-                        }
+                        page.map { it.toDomainManga(source.id) }
+                            .let { networkToLocalManga(it) }
                     }
 
                     mutableState.update { state ->
@@ -249,10 +246,8 @@ open class SourceFeedScreenModel(
         return produceState(initialValue = initialManga) {
             getManga.subscribe(initialManga.url, initialManga.source)
                 .collectLatest { manga ->
+                    if (manga == null) return@collectLatest
                     value = manga
-                        // KMK -->
-                        ?: initialManga
-                    // KMK <--
                 }
         }
     }

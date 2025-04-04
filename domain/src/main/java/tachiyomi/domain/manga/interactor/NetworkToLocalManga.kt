@@ -14,13 +14,4 @@ class NetworkToLocalManga(
     suspend operator fun invoke(manga: List<Manga>): List<Manga> {
         return mangaRepository.insertNetworkManga(manga)
     }
-
-    // KMK -->
-    // FIXME: does this still required?
-    suspend fun getLocal(manga: Manga): Manga = if (manga.id <= 0) {
-        invoke(manga)
-    } else {
-        manga
-    }
-    // KMK <--
 }
