@@ -192,7 +192,7 @@ class BulkFavoriteScreenModel(
 
     private suspend fun getNotDuplicateLibraryMangas(): List<Manga> {
         return state.value.selection.filterNot { manga ->
-            getDuplicateLibraryManga.await(manga).isNotEmpty()
+            getDuplicateLibraryManga(manga).isNotEmpty()
         }
     }
 
@@ -200,7 +200,7 @@ class BulkFavoriteScreenModel(
         val mangas = state.value.selection
         mangas.fastForEachIndexed { index, manga ->
             if (index < startIdx) return@fastForEachIndexed
-            val dup = getDuplicateLibraryManga.await(manga)
+            val dup = getDuplicateLibraryManga(manga)
             if (dup.isEmpty()) return@fastForEachIndexed
             return Pair(index, dup.first())
         }
@@ -291,10 +291,6 @@ class BulkFavoriteScreenModel(
             .orEmpty()
     }
 
-    private suspend fun getDuplicateLibraryManga(manga: Manga): Manga? {
-        return getDuplicateLibraryManga.await(manga).getOrNull(0)
-    }
-
     private fun moveMangaToCategories(manga: Manga, vararg categories: Category) {
         moveMangaToCategories(manga, categories.filter { it.id != 0L }.map { it.id })
     }
@@ -371,16 +367,11 @@ class BulkFavoriteScreenModel(
 
     fun addRemoveManga(manga: Manga, haptic: HapticFeedback? = null) {
         screenModelScope.launchIO {
-            val duplicateManga = getDuplicateLibraryManga(manga)
+            val duplicates = getDuplicateLibraryManga(manga)
             when {
-                manga.favorite -> setDialog(
-                    Dialog.RemoveManga(manga),
-                )
-                duplicateManga != null -> setDialog(
-                    Dialog.AddDuplicateManga(
-                        manga,
-                        duplicateManga,
-                    ),
+                manga.favorite -> setDialog(Dialog.RemoveManga(manga))
+                duplicates.isNotEmpty() -> setDialog(
+                    Dialog.AddDuplicateManga(manga, duplicates),
                 )
                 else -> addFavorite(manga)
             }
@@ -414,7 +405,7 @@ class BulkFavoriteScreenModel(
 
     interface Dialog {
         data class RemoveManga(val manga: Manga) : Dialog
-        data class AddDuplicateManga(val manga: Manga, val duplicate: Manga) : Dialog
+        data class AddDuplicateManga(val manga: Manga, val duplicates: List<Manga>) : Dialog
         data class ChangeMangaCategory(
             val manga: Manga,
             val initialSelection: ImmutableList<CheckboxState.State<Category>>,
@@ -442,18 +433,18 @@ fun AddDuplicateMangaDialog(bulkFavoriteScreenModel: BulkFavoriteScreenModel) {
     val dialog = bulkFavoriteState.dialog as BulkFavoriteScreenModel.Dialog.AddDuplicateManga
 
     DuplicateMangaDialog(
+        duplicates = dialog.duplicates,
         onDismissRequest = bulkFavoriteScreenModel::dismissDialog,
         onConfirm = { bulkFavoriteScreenModel.addFavorite(dialog.manga) },
-        onOpenManga = { navigator.push(MangaScreen(dialog.duplicate.id)) },
+        onOpenManga = { navigator.push(MangaScreen(it.id)) },
         onMigrate = {
             PreMigrationScreen.navigateToMigration(
                 Injekt.get<UnsortedPreferences>().skipPreMigration().get(),
                 navigator,
-                dialog.duplicate.id,
+                it.id,
                 dialog.manga.id,
             )
         },
-        duplicate = dialog.duplicate,
     )
 }
 
