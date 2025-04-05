@@ -100,6 +100,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.fetchAndIncrement
 import kotlin.concurrent.atomics.incrementAndFetch
 
 @OptIn(ExperimentalAtomicApi::class)
@@ -455,7 +456,7 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
                                             else -> e.message ?: context.getString(R.string.exception_unknown)
                                         }
                                         try {
-                                            failedUpdatesCount.fetchAndAdd(1)
+                                            failedUpdatesCount.fetchAndIncrement()
                                             val fullErrorMessage = "${e::class.java.simpleName}: $errorMessage"
                                             val isOnline = if (context.isOnline()) 1L else 0L
                                             failedUpdatesManager.insert(manga.id, fullErrorMessage, isOnline)
