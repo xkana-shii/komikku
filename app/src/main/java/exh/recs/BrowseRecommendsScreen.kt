@@ -54,7 +54,6 @@ class BrowseRecommendsScreen(
         }
 
         // KMK -->
-        val state by screenModel.state.collectAsState()
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
         val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
 
@@ -76,14 +75,14 @@ class BrowseRecommendsScreen(
             )
         }
 
+        // KMK -->
         val onLongClickItem = { manga: Manga ->
             when (isExternalSource) {
                 true -> WebViewActivity.newIntent(context, manga.url, title = manga.title).let(context::startActivity)
-                false -> onClickItem(manga)
+                false -> navigator.push(MangaScreen(manga.id, true))
             }
         }
 
-        // KMK -->
         val mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems()
         // KMK <--
 
@@ -159,9 +158,9 @@ class BrowseRecommendsScreen(
                     if (!bulkFavoriteState.selectionMode) {
                         bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
                     } else {
-                        // KMK <--
                         onLongClickItem(manga)
                     }
+                    // KMK <--
                 },
                 // KMK -->
                 selection = bulkFavoriteState.selection,

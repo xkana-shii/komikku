@@ -20,6 +20,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ### Improved
 - Significantly improve browsing speed (near instantaneous) ([@AntsyLich](https://github.com/AntsyLich)) ([#1946](https://github.com/mihonapp/mihon/pull/1946))
+- Deduplicate entries when browsing ([@AntsyLich](https://github.com/AntsyLich)) ([#1957](https://github.com/mihonapp/mihon/pull/1957))
 
 ### Fixes
 - Fix Bangumi search results including novels ([@MajorTanya](https://github.com/MajorTanya)) ([#1885](https://github.com/mihonapp/mihon/pull/1885))
@@ -28,6 +29,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix backup sharing from notifications not working when app is in background ([@JaymanR](https://github.com/JaymanR))([#1929](https://github.com/mihonapp/mihon/pull/1929))
 - Fix mark existing duplicate read chapters as read option not working in some cases ([@AntsyLich](https://github.com/AntsyLich)) ([#1944](https://github.com/mihonapp/mihon/pull/1944))
 - Fix app bar action tooltips blocking clicks ([@Bartuzen](https://github.com/Bartuzen)) ([#1928](https://github.com/mihonapp/mihon/pull/1928))
+- Fix unintended app permissions due to Firebase misconfiguration ([@AntsyLich](https://github.com/AntsyLich)) ([#1960](https://github.com/mihonapp/mihon/pull/1960))
 
 ## [v0.18.0] - 2025-03-20
 ### Added

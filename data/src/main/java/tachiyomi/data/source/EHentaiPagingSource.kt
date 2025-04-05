@@ -17,11 +17,13 @@ abstract class EHentaiPagingSource(override val source: CatalogueSource) : BaseS
         mangasPage as MetadataMangasPage
         val metadata = mangasPage.mangasMetadata
 
-        val manga = mangasPage.mangas.map { it.toDomainManga(source.id) }
+        val manga = mangasPage.mangas
+            .map { it.toDomainManga(source.id) }
+            .filter { seenManga.add(it.url) }
             .let { networkToLocalManga(it) }
             // SY -->
-            .mapIndexed { index, sManga -> sManga to metadata.getOrNull(index) }
-        // SY <-
+            .mapIndexed { index, manga -> manga to metadata.getOrNull(index) }
+        // SY <--
 
         return LoadResult.Page(
             data = manga,
