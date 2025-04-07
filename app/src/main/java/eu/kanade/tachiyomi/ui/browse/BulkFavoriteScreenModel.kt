@@ -76,11 +76,11 @@ class BulkFavoriteScreenModel(
         toggleSelectionMode()
     }
 
-    fun toggleSelectionMode() {
+    fun toggleSelectionMode(newMode: Boolean? = null) {
         if (state.value.selectionMode) {
             clearSelection()
         }
-        mutableState.update { it.copy(selectionMode = !it.selectionMode) }
+        mutableState.update { it.copy(selectionMode = newMode ?: !it.selectionMode) }
     }
 
     private fun clearSelection() {
@@ -97,10 +97,13 @@ class BulkFavoriteScreenModel(
     fun toggleSelection(manga: Manga, toSelectedState: Boolean? = null) {
         mutableState.update { state ->
             val newSelection = state.selection.mutate { list ->
-                if (toSelectedState != true && list.fastAny { it.id == manga.id }) {
-                    list.removeAll { it.id == manga.id }
-                } else if (toSelectedState != false && list.none { it.id == manga.id }) {
+                val isSelected = list.fastAny { it.id == manga.id }
+                val shouldSelect = toSelectedState ?: !isSelected
+                // Both condition to avoid adding duplicate entries
+                if (shouldSelect && !isSelected) {
                     list.add(manga)
+                } else if (!shouldSelect && isSelected) {
+                    list.removeAll { it.id == manga.id }
                 }
             }
             state.copy(
@@ -193,7 +196,7 @@ class BulkFavoriteScreenModel(
                         }
                         .toImmutableList()
                     stopRunning()
-                    setDialog(Dialog.ChangeMangasCategory(mangaList, preselected))
+                    setDialog(Dialog.ChangeMangaCategory(mangaList, preselected))
                 }
             }
         }
@@ -246,7 +249,7 @@ class BulkFavoriteScreenModel(
             }
             stopRunning()
         }
-        toggleSelectionMode()
+        toggleSelectionMode(newMode = false)
     }
 
     private fun moveMangaToCategoriesAndAddToLibrary(manga: Manga, categories: List<Long>) {
@@ -304,7 +307,7 @@ class BulkFavoriteScreenModel(
         moveMangaToCategories(manga, categories.filter { it.id != 0L }.map { it.id })
     }
 
-    internal fun moveMangaToCategories(manga: Manga, categoryIds: List<Long>) {
+    private fun moveMangaToCategories(manga: Manga, categoryIds: List<Long>) {
         screenModelScope.launchIO {
             setMangaCategories.await(
                 mangaId = manga.id,
@@ -365,7 +368,7 @@ class BulkFavoriteScreenModel(
                     val preselectedIds = getCategories.await(manga.id).map { it.id }
                     setDialog(
                         Dialog.ChangeMangaCategory(
-                            manga,
+                            listOf(manga),
                             categories.mapAsCheckboxState { it.id in preselectedIds }.toImmutableList(),
                         ),
                     )
@@ -422,10 +425,6 @@ class BulkFavoriteScreenModel(
         data class BulkAllowDuplicate(val manga: Manga, val duplicates: List<Manga>, val currentIdx: Int) : Dialog
         data class RemoveManga(val manga: Manga) : Dialog
         data class ChangeMangaCategory(
-            val manga: Manga,
-            val initialSelection: ImmutableList<CheckboxState.State<Category>>,
-        ) : Dialog
-        data class ChangeMangasCategory(
             val mangas: List<Manga>,
             val initialSelection: ImmutableList<CheckboxState<Category>>,
         ) : Dialog
@@ -453,7 +452,7 @@ fun BulkFavoriteDialogs(
 ) {
     when (dialog) {
         /* Bulk-favorite actions */
-        is Dialog.ChangeMangasCategory ->
+        is Dialog.ChangeMangaCategory ->
             ChangeMangaCategoryDialog(
                 bulkFavoriteScreenModel,
                 onConfirm = { include, exclude ->
@@ -470,15 +469,6 @@ fun BulkFavoriteDialogs(
 
         is Dialog.RemoveManga ->
             RemoveMangaDialog(bulkFavoriteScreenModel)
-
-        is Dialog.ChangeMangaCategory ->
-            ChangeMangaCategoryDialog(
-                bulkFavoriteScreenModel,
-                onConfirm = { include, _ ->
-                    bulkFavoriteScreenModel.changeMangaFavorite(dialog.manga)
-                    bulkFavoriteScreenModel.moveMangaToCategories(dialog.manga, include)
-                },
-            )
 
         is Dialog.Migrate ->
             ShowMigrateDialog(bulkFavoriteScreenModel)
