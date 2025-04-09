@@ -345,8 +345,7 @@ private fun DuplicateMangaListItem(
                 Badge(
                     color = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.onSecondary,
-                    text = pluralStringResource(
-                        duplicate.chapterCount.toInt(),
+                    text = duplicate.chapterCount.toInt(),
                         duplicate.chapterCount,
                     ),
                 )
