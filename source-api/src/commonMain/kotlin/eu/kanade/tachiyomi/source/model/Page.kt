@@ -27,7 +27,16 @@ open class Page(
     var status: State
         get() = _statusFlow.value
         set(value) {
+            _error.value = null
             _statusFlow.value = value
+        }
+
+    @Transient
+    private val _error = MutableStateFlow<Throwable?>(null)
+    var error: Throwable?
+        get() = _error.value
+        set(value) {
+            _error.value = value
         }
 
     @Transient
