@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.view.LayoutInflater
 import androidx.annotation.ColorInt
 import androidx.core.view.isVisible
+import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.databinding.ReaderErrorBinding
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
@@ -29,6 +30,7 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.decoder.ImageDecoder
+import tachiyomi.i18n.MR
 import kotlin.math.max
 
 /**
@@ -131,7 +133,7 @@ class PagerPageHolder(
                         }
                     }
                     Page.State.READY -> setImage()
-                    Page.State.ERROR -> setError()
+                    Page.State.ERROR -> setError(page.error)
                 }
             }
         }
@@ -223,7 +225,7 @@ class PagerPageHolder(
         } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e)
             withUIContext {
-                setError()
+                setError(e)
             }
         }
     }
@@ -415,9 +417,9 @@ class PagerPageHolder(
     /**
      * Called when the page has an error.
      */
-    private fun setError() {
+    private fun setError(error: Throwable?) {
         progressIndicator?.hide()
-        showErrorLayout()
+        showErrorLayout(error)
     }
 
     override fun onImageLoaded() {
@@ -430,7 +432,7 @@ class PagerPageHolder(
      */
     override fun onImageLoadError() {
         super.onImageLoadError()
-        setError()
+        setError(null)
     }
 
     /**
@@ -441,7 +443,7 @@ class PagerPageHolder(
         viewer.activity.hideMenu()
     }
 
-    private fun showErrorLayout(): ReaderErrorBinding {
+    private fun showErrorLayout(error: Throwable?): ReaderErrorBinding {
         if (errorLayout == null) {
             errorLayout = ReaderErrorBinding.inflate(LayoutInflater.from(context), this, true)
             errorLayout?.actionRetry?.viewer = viewer
@@ -461,6 +463,9 @@ class PagerPageHolder(
                 }
             }
         }
+
+        errorLayout?.errorMessage?.text = with(context) { error?.formattedMessage }
+            ?: context.stringResource(MR.strings.decode_image_error)
 
         errorLayout?.root?.isVisible = true
         return errorLayout!!
