@@ -51,4 +51,6 @@ interface MangaRepository {
 
     suspend fun getReadMangaNotInLibraryView(): List<LibraryManga>
     // SY <--
+    
+    suspend fun getHiddenDuplicates(manga: Manga): List<MangaWithChapterCount>
 }
