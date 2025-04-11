@@ -345,7 +345,7 @@ private fun DuplicateMangaListItem(
                     color = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.onSecondary,
                     text = duplicate.chapterCount.toInt().toString(),
-                    )
+                )
             }
         }
         // KMK <--
