@@ -345,12 +345,8 @@ private fun DuplicateMangaListItem(
                 Badge(
                     color = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.onSecondary,
-                    text = pluralStringResource(
-                        MR.plurals.manga_num_chapters,
-                        duplicate.chapterCount.toInt(),
-                        duplicate.chapterCount,
+                    text = duplicate.chapterCount.toInt().toString(),
                     ),
-                )
             }
         }
         // KMK <--
