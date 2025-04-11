@@ -404,7 +404,7 @@ private fun DuplicateMangaListItem(
         Spacer(modifier = Modifier.weight(1f))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.padding.small),
             horizontalArrangement = Arrangement.Center,
         ) {
             if (source is StubSource) {
@@ -522,7 +522,7 @@ private fun calculateMangaCardHeight(
     val sourceHeight = textMeasurer.measureHeight("", typography.labelSmall, 1, constraints)
 
     val totalHeight = coverHeight + titleHeight + authorHeight + artistHeight + statusHeight + sourceHeight
-    return with(density) { ((2 * smallPadding) + totalHeight + (5 * extraSmallPadding)).toDp() }
+    return with(density) { ((3 * smallPadding) + totalHeight + (5 * extraSmallPadding)).toDp() }
 }
 
 private fun TextMeasurer.measureHeight(
