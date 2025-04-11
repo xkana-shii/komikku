@@ -346,6 +346,7 @@ private fun DuplicateMangaListItem(
                     color = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.onSecondary,
                     text = pluralStringResource(
+                        MR.plurals.manga_num_chapters,
                         duplicate.chapterCount.toInt(),
                         duplicate.chapterCount,
                     ),
