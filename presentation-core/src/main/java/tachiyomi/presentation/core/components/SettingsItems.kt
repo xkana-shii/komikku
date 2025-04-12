@@ -264,18 +264,15 @@ fun SliderItemPreview() {
 }
 
 @Composable
-fun <T> SelectItem(
+fun SelectItem(
     label: String,
-    options: Array<T>,
+    options: Array<out Any?>,
     selectedIndex: Int,
-    modifier: Modifier = Modifier,
     onSelect: (Int) -> Unit,
-    toString: (T) -> String = { it.toString() },
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
-        modifier = modifier,
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
     ) {
@@ -288,7 +285,7 @@ fun <T> SelectItem(
                     vertical = SettingsItemsPaddings.Vertical,
                 ),
             label = { Text(text = label) },
-            value = toString(options[selectedIndex]),
+            value = options[selectedIndex].toString(),
             onValueChange = {},
             enabled = false,
             readOnly = true,
@@ -308,9 +305,9 @@ fun <T> SelectItem(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            options.forEachIndexed { index, option ->
+            options.forEachIndexed { index, text ->
                 DropdownMenuItem(
-                    text = { Text(toString(option)) },
+                    text = { Text(text.toString()) },
                     onClick = {
                         onSelect(index)
                         expanded = false
