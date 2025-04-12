@@ -91,6 +91,7 @@ jobs:
         run: ./gradlew testReleaseUnitTest
 
       - name: Sign Preview APK
+        id: signed_filename
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
@@ -103,6 +104,7 @@ jobs:
           BUILD_TOOLS_VERSION: '35.0.1'
 
       - name: Sign Release APK
+        id: signed_filename
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
