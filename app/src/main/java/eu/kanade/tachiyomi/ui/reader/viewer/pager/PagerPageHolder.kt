@@ -24,6 +24,7 @@ import kotlinx.coroutines.supervisorScope
 import logcat.LogPriority
 import okio.Buffer
 import okio.BufferedSource
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
@@ -124,16 +125,16 @@ class PagerPageHolder(
             }
             page.statusFlow.collectLatest { state ->
                 when (state) {
-                    Page.State.QUEUE -> setQueued()
-                    Page.State.LOAD_PAGE -> setLoading()
-                    Page.State.DOWNLOAD_IMAGE -> {
+                    Page.State.Queue -> setQueued()
+                    Page.State.LoadPage -> setLoading()
+                    Page.State.DownloadImage -> {
                         setDownloading()
                         page.progressFlow.collectLatest { value ->
                             progressIndicator?.setProgress(value)
                         }
                     }
-                    Page.State.READY -> setImage()
-                    Page.State.ERROR -> setError(page.error)
+                    Page.State.Ready -> setImage()
+                    is Page.State.Error -> setError(state.error)
                 }
             }
         }
@@ -430,9 +431,9 @@ class PagerPageHolder(
     /**
      * Called when an image fails to decode.
      */
-    override fun onImageLoadError() {
-        super.onImageLoadError()
-        setError(null)
+    override fun onImageLoadError(error: Throwable?) {
+        super.onImageLoadError(error)
+        setError(error)
     }
 
     /**

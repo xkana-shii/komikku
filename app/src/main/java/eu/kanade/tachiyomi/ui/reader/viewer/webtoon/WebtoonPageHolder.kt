@@ -27,6 +27,7 @@ import kotlinx.coroutines.supervisorScope
 import logcat.LogPriority
 import okio.Buffer
 import okio.BufferedSource
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
@@ -87,7 +88,7 @@ class WebtoonPageHolder(
         refreshLayoutParams()
 
         frame.onImageLoaded = { onImageDecoded() }
-        frame.onImageLoadError = { setError(null) }
+        frame.onImageLoadError = { error -> setError(error) }
         frame.onScaleChanged = { viewer.activity.hideMenu() }
     }
 
@@ -142,16 +143,16 @@ class WebtoonPageHolder(
             }
             page.statusFlow.collectLatest { state ->
                 when (state) {
-                    Page.State.QUEUE -> setQueued()
-                    Page.State.LOAD_PAGE -> setLoading()
-                    Page.State.DOWNLOAD_IMAGE -> {
+                    Page.State.Queue -> setQueued()
+                    Page.State.LoadPage -> setLoading()
+                    Page.State.DownloadImage -> {
                         setDownloading()
                         page.progressFlow.collectLatest { value ->
                             progressIndicator.setProgress(value)
                         }
                     }
-                    Page.State.READY -> setImage()
-                    Page.State.ERROR -> setError(page.error)
+                    Page.State.Ready -> setImage()
+                    is Page.State.Error -> setError(state.error)
                 }
             }
         }
