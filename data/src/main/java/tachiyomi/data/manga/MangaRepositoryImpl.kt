@@ -9,6 +9,7 @@ import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.repository.MangaRepository
 import java.time.LocalDate
 import java.time.ZoneId
@@ -65,10 +66,22 @@ class MangaRepositoryImpl(
         return handler.subscribeToList { mangasQueries.getFavoriteBySourceId(sourceId, MangaMapper::mapManga) }
     }
 
-    override suspend fun getDuplicateLibraryManga(id: Long, title: String): List<Manga> {
+    override suspend fun getDuplicateLibraryManga(id: Long, title: String): List<MangaWithChapterCount> {
         return handler.awaitList {
-            mangasQueries.getDuplicateLibraryManga(title, id, MangaMapper::mapManga)
+            mangasQueries.getDuplicateLibraryManga(id, title, MangaMapper::mapMangaWithChapterCount)
         }
+    }
+
+    override suspend fun addHiddenDuplicate(id1: Long, id2: Long) {
+        handler.await(inTransaction = true) { hidden_duplicatesQueries.insert(id1, id2) }
+    }
+
+    override suspend fun getHiddenDuplicates(manga: Manga): List<MangaWithChapterCount> {
+        return handler.awaitList { mangasQueries.getHiddenDuplicates(manga.id, MangaMapper::mapMangaWithChapterCount) }
+    }
+
+    override suspend fun removeHiddenDuplicates(id1: Long, id2: Long) {
+        handler.await(inTransaction = true) { hidden_duplicatesQueries.remove(id1, id2) }
     }
 
     override suspend fun getUpcomingManga(statuses: Set<Long>): Flow<List<Manga>> {
@@ -123,13 +136,15 @@ class MangaRepositoryImpl(
                 mangasQueries.insertNetworkManga(
                     source = it.source,
                     url = it.url,
-                    artist = it.artist,
-                    author = it.author,
-                    description = it.description,
-                    genre = it.genre,
-                    title = it.title,
-                    status = it.status,
-                    thumbnailUrl = it.thumbnailUrl,
+                    // SY -->
+                    title = it.ogTitle,
+                    artist = it.ogArtist,
+                    author = it.ogAuthor,
+                    thumbnailUrl = it.ogThumbnailUrl,
+                    description = it.ogDescription,
+                    genre = it.ogGenre,
+                    status = it.ogStatus,
+                    // SY <--
                     favorite = it.favorite,
                     lastUpdate = it.lastUpdate,
                     nextUpdate = it.nextUpdate,
@@ -141,6 +156,11 @@ class MangaRepositoryImpl(
                     dateAdded = it.dateAdded,
                     updateStrategy = it.updateStrategy,
                     version = it.version,
+                    // SY -->
+                    updateTitle = it.ogTitle.isNotBlank(),
+                    updateCover = !it.ogThumbnailUrl.isNullOrBlank(),
+                    // SY <--
+                    updateDetails = it.initialized,
                     mapper = MangaMapper::mapManga,
                 )
                     .executeAsOne()
