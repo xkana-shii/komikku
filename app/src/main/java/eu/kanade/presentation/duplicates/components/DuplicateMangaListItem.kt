@@ -363,4 +363,3 @@ private val MangaDetailsIconWidth = 16.dp
 // KMK -->
 private val MangaCardPanoramaWidth = 322.dp
 // KMK <--
-
