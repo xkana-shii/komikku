@@ -71,18 +71,22 @@ jobs:
       - name: Check code format
         run: ./gradlew spotlessCheck
 
-      - name: Build app
+      - name: Build Preview APK
         if: github.repository == github.event.pull_request.head.repo.full_name
         run: ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater
 
-      - name: Build app
+      - name: Build Preview APK (external contributors)
         if: github.repository != github.event.pull_request.head.repo.full_name
         run: ./gradlew assemblePreview
+
+      # Build Release APK
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
 
       - name: Run unit tests
         run: ./gradlew testReleaseUnitTest
 
-      - name: Sign APK
+      - name: Sign Preview APK
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
@@ -94,14 +98,19 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: '35.0.1'
 
-      - name: Signed File name
-        id: signed_filename
+      - name: Sign Release APK
         if: github.repository == github.event.pull_request.head.repo.full_name
-        run: |
-          set -x
-          echo "SIGNED_TRAIL=-signed" >> $GITHUB_OUTPUT
+        uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: '35.0.1'
 
-      - name: Rename apk
+      - name: Rename Preview APK
         id: current_commit
         run: |
           set -ex
@@ -112,13 +121,31 @@ jobs:
           echo "VERSION_TAG=$version_tag" >> $GITHUB_OUTPUT
           echo "COMMIT_COUNT=$commit_count"
           echo "COMMIT_COUNT=$commit_count" >> $GITHUB_OUTPUT
-          mv app/build/outputs/apk/preview/app-universal-preview${{ steps.signed_filename.outputs.SIGNED_TRAIL }}.apk Komikku-$version_tag-r$commit_count.apk
+          mv app/build/outputs/apk/preview/app-universal-preview${{ steps.signed_filename.outputs.SIGNED_TRAIL }}.apk Komikku-preview-$version_tag-r$commit_count.apk
 
-      - name: Upload APK
+      - name: Rename Release APK
+        run: |
+          set -ex
+          echo "The git ref is: ${{ github.ref }}"
+          version_tag=p$(echo ${{ github.ref }} | cut -d '/' -f 3)
+          commit_count=$(git rev-list --count HEAD)
+          echo "VERSION_TAG=$version_tag"
+          echo "VERSION_TAG=$version_tag" >> $GITHUB_OUTPUT
+          echo "COMMIT_COUNT=$commit_count"
+          echo "COMMIT_COUNT=$commit_count" >> $GITHUB_OUTPUT
+          mv app/build/outputs/apk/release/app-universal-release-unsigned${{ steps.signed_filename.outputs.SIGNED_TRAIL }}.apk Komikku-release-$version_tag-r$commit_count.apk
+
+      - name: Upload Preview APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Komikku-${{ steps.current_commit.outputs.VERSION_TAG }}-r${{ steps.current_commit.outputs.COMMIT_COUNT }}.apk
-          path: ./*.apk
+          name: Komikku-${{ steps.current_commit.outputs.VERSION_TAG }}-r${{ steps.current_commit.outputs.COMMIT_COUNT }}-preview.apk
+          path: ./*-preview.apk
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Komikku-${{ steps.current_commit.outputs.VERSION_TAG }}-r${{ steps.current_commit.outputs.COMMIT_COUNT }}-release.apk
+          path: ./*-release.apk
 
       - name: Upload mapping
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
