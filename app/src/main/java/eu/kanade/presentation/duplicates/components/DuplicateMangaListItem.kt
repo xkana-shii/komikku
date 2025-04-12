@@ -1,5 +1,6 @@
 package eu.kanade.presentation.duplicates.components
 
+import android.graphics.drawable.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,13 +30,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -46,9 +46,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMaxOfOrNull
-import eu.kanade.domain.ui.UiPreferences
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import eu.kanade.presentation.manga.components.MangaCover
-import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import tachiyomi.domain.manga.model.Manga
@@ -58,11 +58,9 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
 import tachiyomi.presentation.core.components.material.padding
+import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
-import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 data class ManageDuplicateAction(
     val icon: ImageVector,
@@ -78,26 +76,12 @@ fun DuplicateMangaListItem(
     onClick: () -> Unit,
     actions: List<ManageDuplicateAction> = emptyList(),
 ) {
-    // KMK -->
-    val usePanoramaCover by Injekt.get<UiPreferences>().usePanoramaCoverAlways().collectAsState()
-    val coverRatio = remember { mutableFloatStateOf(1f) }
-    val coverIsWide = coverRatio.floatValue <= RatioSwitchToPanorama
-    // KMK <--
-
     val source = getSource()
     val manga = duplicate.manga
 
     Column(
         modifier = Modifier
-            // KMK -->
-            .then(
-                if (usePanoramaCover && coverIsWide) {
-                    Modifier.width(MangaCardPanoramaWidth)
-                } else {
-                    Modifier.width(MangaCardWidth)
-                },
-            )
-            // KMK <--
+            .width(MangaCardWidth)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surface)
             .combinedClickable(
@@ -109,32 +93,14 @@ fun DuplicateMangaListItem(
             )
             .padding(MaterialTheme.padding.small),
     ) {
-        // KMK -->
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(),
-        ) {
-            if (usePanoramaCover && coverIsWide) {
-                MangaCover.Panorama(
-                    modifier = Modifier
-                        .align(Alignment.Center),
-                    data = manga,
-                    onCoverLoaded = { _, result ->
-                        val image = result.result.image
-                        coverRatio.floatValue = image.height.toFloat() / image.width
-                    },
-                )
-            } else {
-                MangaCover.Book(
-                    modifier = Modifier
-                        .align(Alignment.Center),
-                    data = manga,
-                    onCoverLoaded = { _, result ->
-                        val image = result.result.image
-                        coverRatio.floatValue = image.height.toFloat() / image.width
-                    },
-                )
-            }
+        Box {
+            MangaCover.Book(
+                data = ImageRequest.Builder(LocalContext.current)
+                    .data(manga)
+                    .crossfade(true)
+                    .build(),
+                modifier = Modifier.fillMaxWidth(),
+            )
             BadgeGroup(
                 modifier = Modifier
                     .padding(4.dp)
@@ -147,7 +113,6 @@ fun DuplicateMangaListItem(
                 )
             }
         }
-        // KMK <--
 
         Spacer(modifier = Modifier.height(MaterialTheme.padding.extraSmall))
 
@@ -359,7 +324,3 @@ private fun TextMeasurer.measureHeight(
 
 private val MangaCardWidth = 150.dp
 private val MangaDetailsIconWidth = 16.dp
-
-// KMK -->
-private val MangaCardPanoramaWidth = 322.dp
-// KMK <--
