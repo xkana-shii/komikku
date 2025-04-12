@@ -182,7 +182,7 @@ class DownloadManager(
 
         return files.sortedBy { it.name }
             .mapIndexed { i, file ->
-                Page(i, uri = file.uri).apply { status = Page.State.READY }
+                Page(i, uri = file.uri).apply { status = Page.State.Ready }
             }
     }
 
@@ -219,6 +219,15 @@ class DownloadManager(
      */
     fun getDownloadCount(manga: Manga): Int {
         return cache.getDownloadCount(manga)
+    }
+
+    /**
+     * Returns the size of downloaded chapters for a manga.
+     *
+     * @param manga the manga to check.
+     */
+    fun getDownloadSize(manga: Manga): Long {
+        return cache.getDownloadSize(manga)
     }
 
     fun cancelQueuedDownloads(downloads: List<Download>) {
