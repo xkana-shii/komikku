@@ -41,6 +41,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.failed.repository.FailedUpdatesRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.source.service.SourceManager
@@ -64,6 +65,7 @@ class UpdatesScreenModel(
     // SY -->
     readerPreferences: ReaderPreferences = Injekt.get(),
     // SY <--
+    private val failedUpdatesManager: FailedUpdatesRepository = Injekt.get(),
 ) : StateScreenModel<UpdatesScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
@@ -88,16 +90,18 @@ class UpdatesScreenModel(
                 getUpdates.subscribe(limit).distinctUntilChanged(),
                 downloadCache.changes,
                 downloadManager.queueState,
-            ) { updates, _, _ -> updates }
+                failedUpdatesManager.hasFailedUpdates(),
+            ) { updates, _, _, iconState -> updates to iconState }
                 .catch {
                     logcat(LogPriority.ERROR, it)
                     _events.send(Event.InternalError)
                 }
-                .collectLatest { updates ->
-                    mutableState.update {
-                        it.copy(
+                .collectLatest { (updates, iconState) ->
+                    mutableState.update { state ->
+                        state.copy(
                             isLoading = false,
                             items = updates.toUpdateItems(),
+                            hasFailedUpdates = iconState,
                         )
                     }
                 }
@@ -399,6 +403,7 @@ class UpdatesScreenModel(
         val expandedState: Set<String> = persistentSetOf(),
         // KMK <--
         val dialog: Dialog? = null,
+        val hasFailedUpdates: Boolean = false,
     ) {
         val selected = items.filter { it.selected }
         val selectionMode = selected.isNotEmpty()
