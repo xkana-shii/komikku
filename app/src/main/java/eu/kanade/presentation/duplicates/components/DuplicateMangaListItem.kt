@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.AttachMoney
@@ -21,6 +22,8 @@ import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.HideSource
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
@@ -29,13 +32,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -46,9 +48,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMaxOfOrNull
-import eu.kanade.domain.ui.UiPreferences
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import eu.kanade.presentation.manga.components.MangaCover
-import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import tachiyomi.domain.manga.model.Manga
@@ -57,17 +59,11 @@ import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
+import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
+import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
-import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-
-data class ManageDuplicateAction(
-    val icon: ImageVector,
-    val onClick: () -> Unit,
-)
 
 @Composable
 fun DuplicateMangaListItem(
@@ -76,28 +72,16 @@ fun DuplicateMangaListItem(
     onDismissRequest: () -> Unit,
     onLongClick: () -> Unit,
     onClick: () -> Unit,
-    actions: List<ManageDuplicateAction> = emptyList(),
+    onToggleFavoriteClicked: () -> Unit,
+    onHideDuplicateClicked: () -> Unit,
 ) {
-    // KMK -->
-    val usePanoramaCover by Injekt.get<UiPreferences>().usePanoramaCoverAlways().collectAsState()
-    val coverRatio = remember { mutableFloatStateOf(1f) }
-    val coverIsWide = coverRatio.floatValue <= RatioSwitchToPanorama
-    // KMK <--
-
     val source = getSource()
     val manga = duplicate.manga
+    val defaultActionButtonColor = MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_ALPHA)
 
     Column(
         modifier = Modifier
-            // KMK -->
-            .then(
-                if (usePanoramaCover && coverIsWide) {
-                    Modifier.width(MangaCardPanoramaWidth)
-                } else {
-                    Modifier.width(MangaCardWidth)
-                },
-            )
-            // KMK <--
+            .width(MangaCardWidth)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surface)
             .combinedClickable(
@@ -109,32 +93,14 @@ fun DuplicateMangaListItem(
             )
             .padding(MaterialTheme.padding.small),
     ) {
-        // KMK -->
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(),
-        ) {
-            if (usePanoramaCover && coverIsWide) {
-                MangaCover.Panorama(
-                    modifier = Modifier
-                        .align(Alignment.Center),
-                    data = manga,
-                    onCoverLoaded = { _, result ->
-                        val image = result.result.image
-                        coverRatio.floatValue = image.height.toFloat() / image.width
-                    },
-                )
-            } else {
-                MangaCover.Book(
-                    modifier = Modifier
-                        .align(Alignment.Center),
-                    data = manga,
-                    onCoverLoaded = { _, result ->
-                        val image = result.result.image
-                        coverRatio.floatValue = image.height.toFloat() / image.width
-                    },
-                )
-            }
+        Box {
+            MangaCover.Book(
+                data = ImageRequest.Builder(LocalContext.current)
+                    .data(manga)
+                    .crossfade(true)
+                    .build(),
+                modifier = Modifier.fillMaxWidth(),
+            )
             BadgeGroup(
                 modifier = Modifier
                     .padding(4.dp)
@@ -143,11 +109,14 @@ fun DuplicateMangaListItem(
                 Badge(
                     color = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.onSecondary,
-                    text = duplicate.chapterCount.toInt().toString(),
+                    text = pluralStringResource(
+                        MR.plurals.manga_num_chapters,
+                        duplicate.chapterCount.toInt(),
+                        duplicate.chapterCount,
+                    ),
                 )
             }
         }
-        // KMK <--
 
         Spacer(modifier = Modifier.height(MaterialTheme.padding.extraSmall))
 
@@ -218,17 +187,25 @@ fun DuplicateMangaListItem(
         }
 
         Row {
-            actions.forEach {
-                IconButton(
-                    onClick = it.onClick,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        imageVector = it.icon,
-                        tint = MaterialTheme.colorScheme.primary,
-                        contentDescription = null,
-                    )
-                }
+            IconButton(
+                onClick = onToggleFavoriteClicked,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    imageVector = if (manga.favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    tint = if (manga.favorite) MaterialTheme.colorScheme.primary else defaultActionButtonColor,
+                    contentDescription = null,
+                )
+            }
+            IconButton(
+                onClick = onHideDuplicateClicked,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.HideSource,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    contentDescription = null,
+                )
             }
         }
     }
@@ -262,7 +239,7 @@ private fun MangaDetailRow(
 }
 
 @Composable
-fun getMaximumMangaCardHeight(duplicates: List<MangaWithChapterCount>, actions: Boolean = false): Dp {
+fun getMaximumMangaCardHeight(duplicates: List<MangaWithChapterCount>): Dp {
     val density = LocalDensity.current
     val typography = MaterialTheme.typography
     val textMeasurer = rememberTextMeasurer()
@@ -287,7 +264,6 @@ fun getMaximumMangaCardHeight(duplicates: List<MangaWithChapterCount>, actions: 
         coverHeight,
         constraints,
         detailsConstraints,
-        actions,
     ) {
         duplicates.fastMaxOfOrNull {
             calculateMangaCardHeight(
@@ -300,7 +276,6 @@ fun getMaximumMangaCardHeight(duplicates: List<MangaWithChapterCount>, actions: 
                 coverHeight = coverHeight,
                 constraints = constraints,
                 detailsConstraints = detailsConstraints,
-                actions = actions,
             )
         }
             ?: 0.dp
@@ -317,7 +292,6 @@ private fun calculateMangaCardHeight(
     coverHeight: Float,
     constraints: Constraints,
     detailsConstraints: Constraints,
-    actions: Boolean,
 ): Dp {
     val titleHeight = textMeasurer.measureHeight(manga.title, typography.titleSmall, 2, constraints)
     val authorHeight = if (!manga.author.isNullOrBlank()) {
@@ -332,10 +306,8 @@ private fun calculateMangaCardHeight(
     }
     val statusHeight = textMeasurer.measureHeight("", typography.bodySmall, 2, detailsConstraints)
     val sourceHeight = textMeasurer.measureHeight("", typography.labelSmall, 1, constraints)
-    val buttonsHeight = when (actions) {
-        true -> with(density) { tachiyomi.presentation.core.components.material.IconButtonTokens.StateLayerSize.toPx() }
-        false -> 0f
-    }
+    val buttonsHeight =
+        with(density) { tachiyomi.presentation.core.components.material.IconButtonTokens.StateLayerSize.toPx() }
 
     val totalHeight =
         coverHeight + titleHeight + authorHeight + artistHeight + statusHeight + sourceHeight + buttonsHeight
@@ -359,7 +331,3 @@ private fun TextMeasurer.measureHeight(
 
 private val MangaCardWidth = 150.dp
 private val MangaDetailsIconWidth = 16.dp
-
-// KMK -->
-private val MangaCardPanoramaWidth = 322.dp
-// KMK <--
