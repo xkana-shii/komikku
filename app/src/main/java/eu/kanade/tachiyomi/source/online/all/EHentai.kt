@@ -163,7 +163,11 @@ class EHentai(
                 ),
                 manga = SManga.create().apply {
                     // Get title
-                    title = thumbnailElement.attr("title")
+                    title = if (preferences.useCleanTitle().get()) {
+                        thumbnailElement.attr("title").replace(Regex("""(\[[^]]*]|[({][^)}]*[)}])"""), "").trim()
+                    } else {
+                        thumbnailElement.attr("title")
+                    }
                     url = EHentaiSearchMetadata.normalizeUrl(linkElement.attr("href"))
                     // Get image
                     thumbnail_url = thumbnailElement.attr("src")
