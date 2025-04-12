@@ -228,6 +228,7 @@ class StorageScreenModel(
             name = "All",
             order = 0L,
             flags = 0L,
+            hidden = false,
         )
     }
 }
