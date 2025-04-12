@@ -1158,8 +1158,8 @@ class ReaderViewModel @JvmOverloads constructor(
         val isLTR = (viewer !is R2LPagerViewer) xor (viewer.config.invertDoublePages)
         val bg = viewer.config.pageCanvasColor
 
-        if (firstPage.status != Page.State.READY) return
-        if (secondPage?.status != Page.State.READY) return
+        if (firstPage.status != Page.State.Ready) return
+        if (secondPage?.status != Page.State.Ready) return
 
         val manga = manga ?: return
 
@@ -1271,8 +1271,8 @@ class ReaderViewModel @JvmOverloads constructor(
         val isLTR = (viewer !is R2LPagerViewer) xor (viewer.config.invertDoublePages)
         val bg = viewer.config.pageCanvasColor
 
-        if (firstPage.status != Page.State.READY) return
-        if (secondPage?.status != Page.State.READY) return
+        if (firstPage.status != Page.State.Ready) return
+        if (secondPage?.status != Page.State.Ready) return
         val manga = manga ?: return
 
         val context = Injekt.get<Application>()
