@@ -191,10 +191,11 @@ fun BottomReaderBar(
             IconButton(onClick = onClickDisableZoom) {
                 Icon(
                     painter = painterResource(
-                        if (isZoomDisabled) R.drawable.ic_arrows_input_24dp else R.drawable.ic_arrows_output_24dp
-                    ),
+                        if (isZoomDisabled) R.drawable.ic_baseline_zoom_in_map_24dp else R.drawable.ic_baseline_zoom_out_map_24dp),
                     contentDescription = stringResource(SYMR.strings.pref_disable_zoom),
+                    // KMK -->
                     tint = iconColor,
+                    // KMK <--
                 )
             }
         }
