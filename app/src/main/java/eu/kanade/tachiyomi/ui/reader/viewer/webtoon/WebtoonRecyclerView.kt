@@ -177,8 +177,19 @@ class WebtoonRecyclerView @JvmOverloads constructor(
     }
 
     fun onScale(scaleFactor: Float) {
-        currentScale *= scaleFactor
-        currentScale = currentScale.coerceIn(
+        val newScale = currentScale * scaleFactor
+
+        // Prevent zooming out if disabled
+        if (zoomOutDisabled && newScale < currentScale) {
+            return
+        }
+
+        // Prevent zooming in if disabled
+        if (zoomInDisabled && newScale > currentScale) {
+            return
+        }
+
+        currentScale = newScale.coerceIn(
             minRate,
             maxRate,
         )
