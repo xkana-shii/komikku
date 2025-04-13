@@ -15,7 +15,7 @@ internal class EpubPageLoader(private val reader: EpubReader) : PageLoader() {
         return reader.getImagesFromPages().mapIndexed { i, path ->
             ReaderPage(i).apply {
                 stream = { reader.getInputStream(path)!! }
-                status = Page.State.Ready
+                status = Page.State.READY
             }
         }
     }

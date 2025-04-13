@@ -182,7 +182,7 @@ class DownloadManager(
 
         return files.sortedBy { it.name }
             .mapIndexed { i, file ->
-                Page(i, uri = file.uri).apply { status = Page.State.Ready }
+                Page(i, uri = file.uri).apply { status = Page.State.READY }
             }
     }
 

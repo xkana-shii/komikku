@@ -20,23 +20,14 @@ open class Page(
         get() = index + 1
 
     @Transient
-    private val _statusFlow = MutableStateFlow<State>(State.Queue)
+    private val _statusFlow = MutableStateFlow(State.QUEUE)
 
     @Transient
     val statusFlow = _statusFlow.asStateFlow()
     var status: State
         get() = _statusFlow.value
         set(value) {
-            _error.value = null
             _statusFlow.value = value
-        }
-
-    @Transient
-    private val _error = MutableStateFlow<Throwable?>(null)
-    var error: Throwable?
-        get() = _error.value
-        set(value) {
-            _error.value = value
         }
 
     @Transient
@@ -58,11 +49,11 @@ open class Page(
         }
     }
 
-    sealed interface State {
-        data object Queue : State
-        data object LoadPage : State
-        data object DownloadImage : State
-        data object Ready : State
-        data class Error(val error: Throwable) : State
+    enum class State {
+        QUEUE,
+        LOAD_PAGE,
+        DOWNLOAD_IMAGE,
+        READY,
+        ERROR,
     }
 }
