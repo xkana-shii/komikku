@@ -171,6 +171,13 @@ fun MoreScreen(
             // KMK <--
             item {
                 TextPreferenceWidget(
+                    title = stringResource(MR.strings.label_manage_duplicates),
+                    icon = Icons.Outlined.BurstMode,
+                    onPreferenceClick = onClickManageDuplicates,
+                )
+            }
+            item {
+                TextPreferenceWidget(
                     title = stringResource(MR.strings.label_data_storage),
                     icon = Icons.Outlined.Storage,
                     onPreferenceClick = onClickDataAndStorage,
