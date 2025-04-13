@@ -255,7 +255,7 @@ private fun ColumnScope.WebtoonViewerSettings(screenModel: ReaderSettingsScreenM
         pref = screenModel.preferences.webtoonDisableZoomOut(),
     )
     CheckboxItem(
-        label = stringResource(MR.strings.pref_webtoon_disable_zoom_in),
+        label = stringResource(SYMR.strings.pref_webtoon_disable_zoom_in),
         pref = screenModel.preferences.webtoonDisableZoomIn(),
     )
 }
