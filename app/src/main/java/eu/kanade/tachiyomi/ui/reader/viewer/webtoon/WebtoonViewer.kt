@@ -171,6 +171,7 @@ class WebtoonViewer(
 
         config.zoomPropertyChangedListener = {
             frame.zoomOutDisabled = it
+            frame.zoomInDisabled = it
         }
 
         config.navigationModeChangedListener = {
