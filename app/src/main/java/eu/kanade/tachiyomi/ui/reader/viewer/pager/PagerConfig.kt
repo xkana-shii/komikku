@@ -72,6 +72,8 @@ class PagerConfig(
 
     var centerMarginType = CenterMarginType.NONE
 
+    var isZoomEnabled: Boolean = true
+
     // SY <--
 
     init {

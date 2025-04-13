@@ -212,6 +212,7 @@ class ReaderActivity : BaseActivity() {
                 viewer.config.isZoomEnabled = !isZoomDisabled
             }
         }
+        config?.isZoomEnabled = !isZoomDisabled
         invalidateOptionsMenu() // Refresh the UI to reflect the change
     }
 
@@ -593,6 +594,7 @@ class ReaderActivity : BaseActivity() {
                 },
                 onClickShiftPage = ::shiftDoublePages,
                 onClickDisableZoom = ::toggleZoom,
+                isZoomDisabled = isZoomDisabled,
                 // SY <--
             )
 
@@ -1339,6 +1341,8 @@ class ReaderActivity : BaseActivity() {
      * Class that handles the user preferences of the reader.
      */
     private inner class ReaderConfig {
+
+        var isZoomEnabled: Boolean = true
 
         private fun getCombinedPaint(grayscale: Boolean, invertedColors: Boolean): Paint {
             return Paint().apply {
