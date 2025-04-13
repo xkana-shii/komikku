@@ -207,8 +207,10 @@ class ReaderActivity : BaseActivity() {
     private fun toggleZoom() {
         isZoomDisabled = !isZoomDisabled
         // Update the viewer's zoom functionality based on the new state
-        viewModel.state.value.viewer?.config?.let { config ->
-            config.isZoomEnabled = !isZoomDisabled
+        viewModel.state.value.viewer?.let { viewer ->
+            if (viewer is PagerViewer) {
+                viewer.config.isZoomEnabled = !isZoomDisabled
+            }
         }
         invalidateOptionsMenu() // Refresh the UI to reflect the change
     }
@@ -590,6 +592,7 @@ class ReaderActivity : BaseActivity() {
                     }
                 },
                 onClickShiftPage = ::shiftDoublePages,
+                onClickDisableZoom = ::toggleZoom,
                 // SY <--
             )
 

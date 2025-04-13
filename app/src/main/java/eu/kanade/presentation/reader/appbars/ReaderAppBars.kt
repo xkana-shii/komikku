@@ -116,6 +116,8 @@ fun ReaderAppBars(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
+    onClickDisableZoom: () -> Unit,
+    isZoomDisabled: Boolean,
 ) {
     val isRtl = viewer is R2LPagerViewer
     val backgroundColor = MaterialTheme.colorScheme
@@ -338,6 +340,8 @@ fun ReaderAppBars(
                         onClickShare = onShare,
                         onClickPageLayout = onClickPageLayout,
                         onClickShiftPage = onClickShiftPage,
+                        onClickDisableZoom = onClickDisableZoom,
+                        isZoomDisabled = isZoomDisabled,
                         // SY <--
                     )
                 }
