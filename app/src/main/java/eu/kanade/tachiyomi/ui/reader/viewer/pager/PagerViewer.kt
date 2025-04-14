@@ -475,7 +475,6 @@ abstract class PagerViewer(
         if (!config.isZoomEnabled) {
             return false // Ignore zoom-related events if zoom is disabled
         }
-        return super.handleGenericMotionEvent(event)
     }
 
     fun onPageSplit(currentPage: ReaderPage, newPage: InsertPage) {
