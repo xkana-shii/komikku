@@ -82,7 +82,14 @@ class HistoryScreenModel(
     }
 
     private fun List<HistoryWithRelations>.toHistoryUiModels(): List<HistoryUiModel> {
-        return map { HistoryUiModel.Item(it) }
+        return map { history ->
+            val pagesRead = if (history.readDuration > 0) {
+                "Pages: ${history.readDuration}"
+            } else {
+                null
+            }
+            HistoryUiModel.Item(history, pagesRead)
+        }
             .insertSeparators { before, after ->
                 val beforeDate = before?.item?.readAt?.time?.toLocalDate()
                 val afterDate = after?.item?.readAt?.time?.toLocalDate()
