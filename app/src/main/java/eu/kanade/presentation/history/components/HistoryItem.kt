@@ -122,6 +122,14 @@ fun HistoryItem(
                 modifier = Modifier.padding(top = 4.dp),
                 style = textStyle,
             )
+            if (pagesRead != null) {
+                Text(
+                    text = "Pages: $pagesRead",
+                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
 
         if (!history.coverData.isMangaFavorite) {
