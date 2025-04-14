@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.pager
 
 import android.graphics.PointF
-import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
