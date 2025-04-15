@@ -40,6 +40,7 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -73,7 +74,7 @@ class HistoryScreenModel(
                             logcat(LogPriority.ERROR, error)
                             _events.send(Event.InternalError)
                         }
-                        .map { it.toHistoryUiModels().toImmutableList() }
+                        .map { it.toHistoryUiModels() }
                         .flowOn(Dispatchers.IO)
                 }
                 .collect { newList -> mutableState.update { it.copy(list = newList) } }
@@ -174,9 +175,9 @@ class HistoryScreenModel(
         screenModelScope.launchIO {
             val manga = getManga.await(mangaId) ?: return@launchIO
 
-            val duplicate = getDuplicateLibraryManga.await(manga).getOrNull(0)
-            if (duplicate != null) {
-                mutableState.update { it.copy(dialog = Dialog.DuplicateManga(manga, duplicate)) }
+            val duplicates = getDuplicateLibraryManga(manga)
+            if (duplicates.isNotEmpty()) {
+                mutableState.update { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
                 return@launchIO
             }
 
@@ -215,6 +216,12 @@ class HistoryScreenModel(
         }
     }
 
+    fun showMigrateDialog(currentManga: Manga, duplicate: Manga) {
+        mutableState.update { currentState ->
+            currentState.copy(dialog = Dialog.Migrate(newManga = currentManga, oldManga = duplicate))
+        }
+    }
+
     private fun showChangeCategoryDialog(manga: Manga) {
         screenModelScope.launch {
             val categories = getCategories()
@@ -233,18 +240,19 @@ class HistoryScreenModel(
     @Immutable
     data class State(
         val searchQuery: String? = null,
-        val list: ImmutableList<HistoryUiModel>? = null,
+        val list: List<HistoryUiModel>? = null,
         val dialog: Dialog? = null,
     )
 
     sealed interface Dialog {
         data object DeleteAll : Dialog
         data class Delete(val history: HistoryWithRelations) : Dialog
-        data class DuplicateManga(val manga: Manga, val duplicate: Manga) : Dialog
+        data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class ChangeCategory(
             val manga: Manga,
             val initialSelection: ImmutableList<CheckboxState<Category>>,
         ) : Dialog
+        data class Migrate(val newManga: Manga, val oldManga: Manga) : Dialog
     }
 
     sealed interface Event {

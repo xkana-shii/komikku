@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -17,19 +16,14 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.presentation.browse.BrowseSourceContent
 import eu.kanade.presentation.browse.components.BrowseSourceSimpleToolbar
+import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.browse.AddDuplicateMangaDialog
-import eu.kanade.tachiyomi.ui.browse.AllowDuplicateDialog
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.ChangeMangaCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.ChangeMangasCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.RemoveMangaDialog
 import eu.kanade.tachiyomi.ui.browse.source.SourcesScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import mihon.presentation.core.util.collectAsLazyPagingItems
-import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -56,7 +50,6 @@ class BrowseRecommendsScreen(
         }
 
         // KMK -->
-        val scope = rememberCoroutineScope()
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
         val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
 
@@ -78,14 +71,14 @@ class BrowseRecommendsScreen(
             )
         }
 
+        // KMK -->
         val onLongClickItem = { manga: Manga ->
             when (isExternalSource) {
                 true -> WebViewActivity.newIntent(context, manga.url, title = manga.title).let(context::startActivity)
-                false -> onClickItem(manga)
+                false -> navigator.push(MangaScreen(manga.id, true))
             }
         }
 
-        // KMK -->
         val mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems()
         // KMK <--
 
@@ -147,29 +140,23 @@ class BrowseRecommendsScreen(
                 onWebViewClick = null,
                 onHelpClick = null,
                 onLocalSourceHelpClick = null,
-                onMangaClick = {
+                onMangaClick = { manga ->
                     // KMK -->
-                    scope.launchIO {
-                        val manga = screenModel.networkToLocalManga.getLocal(it)
-                        if (bulkFavoriteState.selectionMode) {
-                            bulkFavoriteScreenModel.toggleSelection(manga)
-                        } else {
-                            // KMK <--
-                            onClickItem(manga)
-                        }
+                    if (bulkFavoriteState.selectionMode) {
+                        bulkFavoriteScreenModel.toggleSelection(manga)
+                    } else {
+                        // KMK <--
+                        onClickItem(manga)
                     }
                 },
-                onMangaLongClick = {
+                onMangaLongClick = { manga ->
                     // KMK -->
-                    scope.launchIO {
-                        val manga = screenModel.networkToLocalManga.getLocal(it)
-                        if (!bulkFavoriteState.selectionMode) {
-                            bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
-                        } else {
-                            // KMK <--
-                            onLongClickItem(manga)
-                        }
+                    if (!bulkFavoriteState.selectionMode) {
+                        bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                    } else {
+                        onLongClickItem(manga)
                     }
+                    // KMK <--
                 },
                 // KMK -->
                 selection = bulkFavoriteState.selection,
@@ -178,19 +165,10 @@ class BrowseRecommendsScreen(
         }
 
         // KMK -->
-        when (bulkFavoriteState.dialog) {
-            is BulkFavoriteScreenModel.Dialog.AddDuplicateManga ->
-                AddDuplicateMangaDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.RemoveManga ->
-                RemoveMangaDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.ChangeMangaCategory ->
-                ChangeMangaCategoryDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.ChangeMangasCategory ->
-                ChangeMangasCategoryDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.AllowDuplicate ->
-                AllowDuplicateDialog(bulkFavoriteScreenModel)
-            else -> {}
-        }
+        BulkFavoriteDialogs(
+            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            dialog = bulkFavoriteState.dialog,
+        )
         // KMK <--
     }
 }
