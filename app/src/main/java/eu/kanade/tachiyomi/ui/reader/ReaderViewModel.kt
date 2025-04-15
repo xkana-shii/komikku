@@ -716,7 +716,6 @@ class ReaderViewModel @JvmOverloads constructor(
                 }
             } ?: false // Handle case where pages is null (though unlikely)
 
-
             if (isLastPage) {
                 updateChapterProgressOnComplete(readerChapter)
 
