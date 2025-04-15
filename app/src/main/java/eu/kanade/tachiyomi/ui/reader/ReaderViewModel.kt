@@ -702,35 +702,41 @@ class ReaderViewModel @JvmOverloads constructor(
         }
         readerChapter.requestedPage = pageIndex
         chapterPageIndex = pageIndex
+        readerChapter.chapter.last_page_read = pageIndex // Always update in-memory last_page_read
+
+        // Modified isLastPage calculation (moved outside the error check):
+        val isLastPage = readerChapter.pages?.let { pages ->
+            val lastPageIndex = pages.lastIndex
+            if (hasExtraPage) {
+                lastPageIndex - 1 == pageIndex || lastPageIndex == pageIndex // Allow for last page or extra page
+            } else {
+                lastPageIndex == pageIndex
+            }
+        } ?: false // Handle case where pages is null (though unlikely)
 
         if (!incognitoMode && page.status is Page.State.Error) {
-            readerChapter.chapter.last_page_read = pageIndex
-
-            // Modified isLastPage calculation:
-            val isLastPage = readerChapter.pages?.let { pages ->
-                val lastPageIndex = pages.lastIndex
-                if (hasExtraPage) {
-                    lastPageIndex - 1 == pageIndex || lastPageIndex == pageIndex // Allow for last page or extra page
-                } else {
-                    lastPageIndex == pageIndex
-                }
-            } ?: false // Handle case where pages is null (though unlikely)
-
-            if (isLastPage) {
-                updateChapterProgressOnComplete(readerChapter)
-
-                // SY -->
-                // Check if syncing is enabled for chapter read:
-                if (isSyncEnabled && syncTriggerOpt.syncOnChapterRead) {
-                    SyncDataJob.startNow(Injekt.get<Application>())
-                }
-                // SY <--
-            }
-
+            // We still update the database in case of an error, but the "mark as read" logic
+            // is now handled separately.
             updateChapter.await(
                 ChapterUpdate(
                     id = readerChapter.chapter.id!!,
-                    read = readerChapter.chapter.read,
+                    read = readerChapter.chapter.read, // Keep existing read status
+                    lastPageRead = readerChapter.chapter.last_page_read.toLong(),
+                ),
+            )
+        }
+
+        if (!incognitoMode && isLastPage) {
+            updateChapterProgressOnComplete(readerChapter)
+        }
+
+        if (!incognitoMode) {
+            // Persist chapter updates (including potential "read" status change)
+            //  This now happens *always*, after potentially calling updateChapterProgressOnComplete
+            updateChapter.await(
+                ChapterUpdate(
+                    id = readerChapter.chapter.id!!,
+                    read = readerChapter.chapter.read, // Use potentially updated read status
                     lastPageRead = readerChapter.chapter.last_page_read.toLong(),
                 ),
             )
