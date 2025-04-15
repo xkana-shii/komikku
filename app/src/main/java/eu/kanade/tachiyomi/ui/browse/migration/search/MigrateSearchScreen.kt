@@ -4,19 +4,19 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.browse.MigrateSearchScreen
+import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.browse.AllowDuplicateDialog
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.ChangeMangasCategoryDialog
 import eu.kanade.tachiyomi.ui.browse.migration.advanced.process.MigrationListScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
-import tachiyomi.core.common.util.lang.launchIO
 
+/**
+ * Manual search [validSources] for manga to migrate to.
+ */
 class MigrateSearchScreen(private val mangaId: Long, private val validSources: List<Long>) : Screen() {
 
     @Composable
@@ -30,7 +30,6 @@ class MigrateSearchScreen(private val mangaId: Long, private val validSources: L
         val dialogState by dialogScreenModel.state.collectAsState()
 
         // KMK -->
-        val scope = rememberCoroutineScope()
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
         val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
 
@@ -53,33 +52,23 @@ class MigrateSearchScreen(private val mangaId: Long, private val validSources: L
                 navigator.push(SourceSearchScreen(dialogState.manga!!, it.id, state.searchQuery))
                 // SY <--
             },
-            onClickItem = {
+            onClickItem = { manga ->
                 // KMK -->
-                scope.launchIO {
-                    val manga = screenModel.networkToLocalManga.getLocal(it)
-                    if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
-                    } else
-                        // KMK <--
-                        {
-                            // SY -->
-                            navigator.items
-                                .filterIsInstance<MigrationListScreen>()
-                                .last()
-                                .newSelectedItem = mangaId to manga.id
-                            navigator.popUntil { it is MigrationListScreen }
-                            // SY <--
-                        }
-                }
-            },
-            onLongClickItem = {
-                // KMK -->
-                scope.launchIO {
-                    val manga = screenModel.networkToLocalManga.getLocal(it)
+                if (bulkFavoriteState.selectionMode) {
+                    bulkFavoriteScreenModel.toggleSelection(manga)
+                } else
                     // KMK <--
-                    navigator.push(MangaScreen(manga.id, true))
-                }
+                    {
+                        // SY -->
+                        navigator.items
+                            .filterIsInstance<MigrationListScreen>()
+                            .last()
+                            .newSelectedItem = mangaId to manga.id
+                        navigator.popUntil { it is MigrationListScreen }
+                        // SY <--
+                    }
             },
+            onLongClickItem = { navigator.push(MangaScreen(it.id, true)) },
             // KMK -->
             bulkFavoriteScreenModel = bulkFavoriteScreenModel,
             hasPinnedSources = screenModel.hasPinnedSources(),
@@ -87,13 +76,11 @@ class MigrateSearchScreen(private val mangaId: Long, private val validSources: L
         )
 
         // KMK -->
-        when (bulkFavoriteState.dialog) {
-            is BulkFavoriteScreenModel.Dialog.ChangeMangasCategory ->
-                ChangeMangasCategoryDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.AllowDuplicate ->
-                AllowDuplicateDialog(bulkFavoriteScreenModel)
-            else -> {}
-        }
+        // Bulk-favorite actions only
+        BulkFavoriteDialogs(
+            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            dialog = bulkFavoriteState.dialog,
+        )
         // KMK <--
     }
 }

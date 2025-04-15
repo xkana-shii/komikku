@@ -35,7 +35,6 @@ import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.PagePreview
 import eu.kanade.domain.manga.model.chaptersFiltered
 import eu.kanade.domain.manga.model.downloadedFilter
-import eu.kanade.domain.manga.model.toDomainManga
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.track.interactor.AddTracks
@@ -95,6 +94,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -104,6 +104,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.domain.chapter.interactor.FilterChaptersForDownload
+import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
@@ -140,6 +141,7 @@ import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.manga.model.applyFilter
@@ -193,7 +195,7 @@ class MangaScreenModel(
     private val smartSearchMerge: SmartSearchMerge = Injekt.get(),
     // KMK <--
     private val updateMergedSettings: UpdateMergedSettings = Injekt.get(),
-    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val deleteMergeById: DeleteMergeById = Injekt.get(),
     private val getFlatMetadata: GetFlatMetadataById = Injekt.get(),
     private val getPagePreviews: GetPagePreviews = Injekt.get(),
@@ -703,12 +705,10 @@ class MangaScreenModel(
     fun getManga(initialManga: Manga): RuntimeState<Manga> {
         return produceState(initialValue = initialManga) {
             getManga.subscribe(initialManga.url, initialManga.source)
+                .filterNotNull()
                 .flowWithLifecycle(lifecycle)
                 .collectLatest { manga ->
                     value = manga
-                        // KMK -->
-                        ?: initialManga
-                    // KMK <--
                 }
         }
     }
@@ -786,10 +786,10 @@ class MangaScreenModel(
                 // Add to library
                 // First, check if duplicate exists if callback is provided
                 if (checkDuplicate) {
-                    val duplicate = getDuplicateLibraryManga.await(manga).getOrNull(0)
+                    val duplicates = getDuplicateLibraryManga(manga)
 
-                    if (duplicate != null) {
-                        updateSuccessState { it.copy(dialog = Dialog.DuplicateManga(manga, duplicate)) }
+                    if (duplicates.isNotEmpty()) {
+                        updateSuccessState { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
                         return@launchIO
                     }
                 }
@@ -1152,11 +1152,10 @@ class MangaScreenModel(
                 state.source.getRelatedMangaList(state.manga.toSManga(), { e -> exceptionHandler(e) }) { pair, _ ->
                     /* Push found related mangas into collection */
                     val relatedManga = RelatedManga.Success.fromPair(pair) { mangaList ->
-                        mangaList.map {
-                            // KMK -->
-                            it.toDomainManga(state.source.id)
-                            // KMK <--
-                        }
+                        mangaList
+                            .map { it.toDomainManga(state.source.id) }
+                            .distinctBy { it.url }
+                            .let { networkToLocalManga(it) }
                     }
 
                     updateSuccessState { successState ->
@@ -1766,11 +1765,8 @@ class MangaScreenModel(
             val initialSelection: ImmutableList<CheckboxState<Category>>,
         ) : Dialog
         data class DeleteChapters(val chapters: List<Chapter>) : Dialog
-        data class DuplicateManga(val manga: Manga, val duplicate: Manga) : Dialog
-
-        /* SY -->
+        data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class Migrate(val newManga: Manga, val oldManga: Manga) : Dialog
-        SY <-- */
         data class SetFetchInterval(val manga: Manga) : Dialog
 
         // SY -->
@@ -1803,11 +1799,10 @@ class MangaScreenModel(
         updateSuccessState { it.copy(dialog = Dialog.FullCover) }
     }
 
-    /* SY -->
     fun showMigrateDialog(duplicate: Manga) {
         val manga = successState?.manga ?: return
         updateSuccessState { it.copy(dialog = Dialog.Migrate(newManga = manga, oldManga = duplicate)) }
-    } SY <-- */
+    }
 
     fun setExcludedScanlators(excludedScanlators: Set<String>) {
         screenModelScope.launchIO {
@@ -2042,21 +2037,14 @@ sealed interface RelatedManga {
         }
 
         internal fun List<RelatedManga>.removeDuplicates(manga: Manga): List<RelatedManga> {
-            val mangaHashes = HashSet<Int>().apply { add(manga.url.hashCode()) }
+            val mangaIds = HashSet<Long>().apply { add(manga.id) }
 
             return map { relatedManga ->
                 if (relatedManga is Success) {
-                    val stripedList = relatedManga.mangaList.mapNotNull {
-                        if (!mangaHashes.contains(it.url.hashCode())) {
-                            mangaHashes.add(it.url.hashCode())
-                            it
-                        } else {
-                            null
-                        }
-                    }
                     Success(
                         relatedManga.keyword,
-                        stripedList,
+                        relatedManga.mangaList
+                            .filter { mangaIds.add(it.id) },
                     )
                 } else {
                     relatedManga
