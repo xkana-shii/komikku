@@ -69,7 +69,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
     private var config: Config? = null
 
     var onImageLoaded: (() -> Unit)? = null
-    var onImageLoadError: ((Throwable?) -> Unit)? = null
+    var onImageLoadError: (() -> Unit)? = null
     var onScaleChanged: ((newScale: Float) -> Unit)? = null
     var onViewClicked: (() -> Unit)? = null
 
@@ -85,8 +85,8 @@ open class ReaderPageImageView @JvmOverloads constructor(
     }
 
     @CallSuper
-    open fun onImageLoadError(error: Throwable?) {
-        onImageLoadError?.invoke(error)
+    open fun onImageLoadError() {
+        onImageLoadError?.invoke()
     }
 
     @CallSuper
@@ -114,7 +114,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
                         }
 
                         override fun onImageLoadError(e: Exception) {
-                            onImageLoadError(e)
+                            onImageLoadError()
                         }
                     },
                 )
@@ -318,7 +318,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
                 }
 
                 override fun onImageLoadError(e: Exception) {
-                    this@ReaderPageImageView.onImageLoadError(e)
+                    this@ReaderPageImageView.onImageLoadError()
                 }
             },
         )
@@ -346,10 +346,8 @@ open class ReaderPageImageView @JvmOverloads constructor(
                             setImage(ImageSource.bitmap(image.bitmap))
                             isVisible = true
                         },
-                    )
-                    .listener(
-                        onError = { _, result ->
-                            onImageLoadError(result.throwable)
+                        onError = {
+                            onImageLoadError()
                         },
                     )
                     .size(ViewSizeResolver(this@ReaderPageImageView))
@@ -425,10 +423,8 @@ open class ReaderPageImageView @JvmOverloads constructor(
                     isVisible = true
                     this@ReaderPageImageView.onImageLoaded()
                 },
-            )
-            .listener(
-                onError = { _, result ->
-                    onImageLoadError(result.throwable)
+                onError = {
+                    this@ReaderPageImageView.onImageLoadError()
                 },
             )
             .crossfade(false)
