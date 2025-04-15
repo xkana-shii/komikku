@@ -706,11 +706,18 @@ class ReaderViewModel @JvmOverloads constructor(
         if (!incognitoMode && page.status is Page.State.Error) {
             readerChapter.chapter.last_page_read = pageIndex
 
-            if (readerChapter.pages?.lastIndex == pageIndex ||
-                // SY -->
-                (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
-                // SY <--
-            ) {
+            // Modified isLastPage calculation:
+            val isLastPage = readerChapter.pages?.let { pages ->
+                val lastPageIndex = pages.lastIndex
+                if (hasExtraPage) {
+                    lastPageIndex - 1 == pageIndex || lastPageIndex == pageIndex // Allow for last page or extra page
+                } else {
+                    lastPageIndex == pageIndex
+                }
+            } ?: false // Handle case where pages is null (though unlikely)
+
+
+            if (isLastPage) {
                 updateChapterProgressOnComplete(readerChapter)
 
                 // SY -->
