@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -17,15 +16,14 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.presentation.browse.BrowseSourceContent
 import eu.kanade.presentation.browse.components.BrowseSourceFloatingActionButton
+import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
+import eu.kanade.presentation.browse.components.bulkSelectionButton
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.ui.browse.AllowDuplicateDialog
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.ChangeMangasCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.bulkSelectionButton
 import eu.kanade.tachiyomi.ui.browse.migration.advanced.process.MigrationListScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterDialog
@@ -35,7 +33,6 @@ import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
 import mihon.presentation.core.util.collectAsLazyPagingItems
 import tachiyomi.core.common.Constants
-import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -44,7 +41,7 @@ import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.LocalSource
 
 /**
- * Opened when click on a source in [MigrateSearchScreen]
+ * Opened when click on a source in [MigrateSearchScreen] while doing manual search for migration
  */
 data class SourceSearchScreen(
     private val oldManga: Manga,
@@ -69,7 +66,6 @@ data class SourceSearchScreen(
 
         // KMK -->
         val context = LocalContext.current
-        val scope = rememberCoroutineScope()
 
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
         val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
@@ -168,26 +164,16 @@ data class SourceSearchScreen(
                 },
                 onHelpClick = { uriHandler.openUri(Constants.URL_HELP) },
                 onLocalSourceHelpClick = { uriHandler.openUri(LocalSource.HELP_URL) },
-                onMangaClick = {
+                onMangaClick = { manga ->
                     // KMK -->
-                    scope.launchIO {
-                        val manga = screenModel.networkToLocalManga.getLocal(it)
-                        if (bulkFavoriteState.selectionMode) {
-                            bulkFavoriteScreenModel.toggleSelection(manga)
-                        } else {
-                            // KMK <--
-                            openMigrateDialog(manga)
-                        }
-                    }
-                },
-                onMangaLongClick = {
-                    // KMK -->
-                    scope.launchIO {
-                        val manga = screenModel.networkToLocalManga.getLocal(it)
+                    if (bulkFavoriteState.selectionMode) {
+                        bulkFavoriteScreenModel.toggleSelection(manga)
+                    } else {
                         // KMK <--
-                        navigator.push(MangaScreen(manga.id, true))
+                        openMigrateDialog(manga)
                     }
                 },
+                onMangaLongClick = { navigator.push(MangaScreen(it.id, true)) },
                 // KMK -->
                 selection = bulkFavoriteState.selection,
                 // KMK <--
@@ -226,13 +212,11 @@ data class SourceSearchScreen(
         }
 
         // KMK -->
-        when (bulkFavoriteState.dialog) {
-            is BulkFavoriteScreenModel.Dialog.ChangeMangasCategory ->
-                ChangeMangasCategoryDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.AllowDuplicate ->
-                AllowDuplicateDialog(bulkFavoriteScreenModel)
-            else -> {}
-        }
+        // Bulk-favorite actions only
+        BulkFavoriteDialogs(
+            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            dialog = bulkFavoriteState.dialog,
+        )
         // KMK <--
     }
 }
