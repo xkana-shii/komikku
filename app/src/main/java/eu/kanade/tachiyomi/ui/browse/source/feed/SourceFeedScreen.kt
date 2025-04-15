@@ -7,7 +7,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -20,6 +19,7 @@ import eu.kanade.presentation.browse.MissingSourceScreen
 import eu.kanade.presentation.browse.SourceFeedOrderScreen
 import eu.kanade.presentation.browse.SourceFeedScreen
 import eu.kanade.presentation.browse.SourceFeedUI
+import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.browse.components.FeedActionsDialog
 import eu.kanade.presentation.browse.components.SourceFeedAddDialog
 import eu.kanade.presentation.browse.components.SourceFeedDeleteDialog
@@ -28,12 +28,7 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.ui.browse.AddDuplicateMangaDialog
-import eu.kanade.tachiyomi.ui.browse.AllowDuplicateDialog
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.ChangeMangaCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.ChangeMangasCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.RemoveMangaDialog
 import eu.kanade.tachiyomi.ui.browse.extension.details.SourcePreferencesScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterDialog
@@ -44,7 +39,6 @@ import exh.md.follows.MangaDexFollowsScreen
 import exh.source.anyIs
 import exh.source.isEhBasedSource
 import exh.util.nullIfBlank
-import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.interactor.GetRemoteManga
@@ -71,7 +65,6 @@ class SourceFeedScreen(val sourceId: Long) : Screen() {
         val context = LocalContext.current
 
         // KMK -->
-        val scope = rememberCoroutineScope()
         screenModel.source.let {
             if (it is StubSource) {
                 MissingSourceScreen(
@@ -130,16 +123,13 @@ class SourceFeedScreen(val sourceId: Long) : Screen() {
                     // onClickDelete = screenModel::openDeleteFeed,
                     onLongClickFeed = screenModel::openActionsDialog,
                     // KMK <--
-                    onClickManga = {
+                    onClickManga = { manga ->
                         // KMK -->
-                        scope.launchIO {
-                            val manga = screenModel.networkToLocalManga.getLocal(it)
-                            if (bulkFavoriteState.selectionMode) {
-                                bulkFavoriteScreenModel.toggleSelection(manga)
-                            } else {
-                                // KMK <--
-                                onMangaClick(navigator, manga)
-                            }
+                        if (bulkFavoriteState.selectionMode) {
+                            bulkFavoriteScreenModel.toggleSelection(manga)
+                        } else {
+                            // KMK <--
+                            onMangaClick(navigator, manga)
                         }
                     },
                     onClickSearch = { onSearchClick(navigator, screenModel.source, it) },
@@ -173,14 +163,11 @@ class SourceFeedScreen(val sourceId: Long) : Screen() {
                                 .filterIsInstance<SourceFeedUI.SourceSavedSearch>()
                                 .isNotEmpty()
                         },
-                    onLongClickManga = {
-                        scope.launchIO {
-                            val manga = screenModel.networkToLocalManga.getLocal(it)
-                            if (!bulkFavoriteState.selectionMode) {
-                                bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
-                            } else {
-                                navigator.push(MangaScreen(manga.id, true))
-                            }
+                    onLongClickManga = { manga ->
+                        if (!bulkFavoriteState.selectionMode) {
+                            bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                        } else {
+                            navigator.push(MangaScreen(manga.id, true))
                         }
                     },
                     bulkFavoriteScreenModel = bulkFavoriteScreenModel,
@@ -299,19 +286,10 @@ class SourceFeedScreen(val sourceId: Long) : Screen() {
         }
 
         // KMK -->
-        when (bulkFavoriteState.dialog) {
-            is BulkFavoriteScreenModel.Dialog.AddDuplicateManga ->
-                AddDuplicateMangaDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.RemoveManga ->
-                RemoveMangaDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.ChangeMangaCategory ->
-                ChangeMangaCategoryDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.ChangeMangasCategory ->
-                ChangeMangasCategoryDialog(bulkFavoriteScreenModel)
-            is BulkFavoriteScreenModel.Dialog.AllowDuplicate ->
-                AllowDuplicateDialog(bulkFavoriteScreenModel)
-            else -> {}
-        }
+        BulkFavoriteDialogs(
+            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            dialog = bulkFavoriteState.dialog,
+        )
         // KMK <--
     }
 
