@@ -12,7 +12,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.presentation.components.BulkSelectionToolbar
-import eu.kanade.presentation.manga.DuplicateMangaDialog
+import eu.kanade.presentation.duplicates.DuplicateMangaDialog
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.util.removeCovers
 import kotlinx.collections.immutable.ImmutableList
