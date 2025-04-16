@@ -142,7 +142,7 @@ private val happyFaces = listOf(
     "٩(^ᗜ^ )و",
     "ദ്ദി(˵ •̀ ᴗ - ˵ )",
     "(..◜ᴗ◝..)",
-    "( ˶ˆᗜˆ˵ )"
+    "( ˶ˆᗜˆ˵ )",
 )
 
 private fun getRandomHappyFace(): String {
