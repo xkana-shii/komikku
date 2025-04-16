@@ -151,4 +151,6 @@
     <!-- Misc -->
     <string name="label_to_be_updated">To be updated</string>
     <string name="batch_add_description">Support: MangaDex, E-H, ExH, nH, 8Muses, Tsumino</string>
+    <string name="show_n_more_chapters">Show %1$d more chapters</string>
+    <string name="show_less">Show less</string>
 </resources>

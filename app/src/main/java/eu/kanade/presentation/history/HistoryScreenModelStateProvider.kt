@@ -109,6 +109,7 @@ class HistoryScreenModelStateProvider : PreviewParameterProvider<HistoryScreenMo
                         ),
                     ),
                 ),
+                previousHistory = emptyList(),
             )
     }
 }
