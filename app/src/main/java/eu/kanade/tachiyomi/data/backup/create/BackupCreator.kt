@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.backup.BackupFileValidator
 import eu.kanade.tachiyomi.data.backup.create.creators.CategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.ExtensionRepoBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.FeedBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.HiddenDuplicatesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.PreferenceBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.SavedSearchBackupCreator
@@ -16,6 +17,7 @@ import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionRepos
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
+import eu.kanade.tachiyomi.data.backup.models.BackupHiddenDuplicate
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
@@ -53,6 +55,7 @@ class BackupCreator(
 
     private val categoriesBackupCreator: CategoriesBackupCreator = CategoriesBackupCreator(),
     private val mangaBackupCreator: MangaBackupCreator = MangaBackupCreator(),
+    private val hiddenDuplicatesBackupCreator: HiddenDuplicatesBackupCreator = HiddenDuplicatesBackupCreator(),
     private val preferenceBackupCreator: PreferenceBackupCreator = PreferenceBackupCreator(),
     private val extensionRepoBackupCreator: ExtensionRepoBackupCreator = ExtensionRepoBackupCreator(),
     private val sourcesBackupCreator: SourcesBackupCreator = SourcesBackupCreator(),
@@ -111,6 +114,8 @@ class BackupCreator(
                 // KMK -->
                 backupFeeds = backupFeeds(options),
                 // KMK <--
+
+                backupHiddenDuplicates = backupHiddenDuplicates(options),
             )
 
             val byteArray = parser.encodeToByteArray(Backup.serializer(), backup)
@@ -195,6 +200,12 @@ class BackupCreator(
         return feedBackupCreator()
     }
     // KMK <--
+    
+    private suspend fun backupHiddenDuplicates(options: BackupOptions): List<BackupHiddenDuplicate> {
+        if (!options.hiddenDuplicates) return emptyList()
+
+        return hiddenDuplicatesBackupCreator()
+    }
 
     companion object {
         private const val MAX_AUTO_BACKUPS: Int = 4
