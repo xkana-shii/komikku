@@ -460,5 +460,5 @@ data class UpdatesItem(
 
 // KMK -->
 /** String to identify which manga's update on which day it is collapsing */
-fun UpdatesWithRelations.groupByDateAndManga() = "${dateFetch.toLocalDate().toEpochDay()}-$mangaId"
+fun UpdatesWithRelations.groupByDateAndManga() = "$mangaId"
 // KMK <--
