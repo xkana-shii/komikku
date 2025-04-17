@@ -131,7 +131,7 @@ duplicates AS (
     WHERE manga1_id IS NULL
     AND M.favorite = 1
     AND M._id != :id
-    AND lower(M.title) LIKE '%' || lower(:title) || '%'
+    AND lower(M.title) LIKE lower(:search)
 ),
 chapter_counts AS (
     SELECT
