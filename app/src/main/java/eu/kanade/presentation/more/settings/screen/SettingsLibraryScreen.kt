@@ -262,7 +262,7 @@ object SettingsLibraryScreen : SearchableSettings {
                     ),
                     title = stringResource(MR.strings.pref_duplicate_automatic_match),
                 ),
-            )
+            ),
         )
     }
 
