@@ -235,7 +235,9 @@ class ReaderViewModel @JvmOverloads constructor(
                                     ) ||
                                 // SY <--
                                 (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
-                                (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark)
+                                (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark) ||
+                                (manga.fillermarkedFilterRaw == Manga.CHAPTER_SHOW_FILLERMARKED && !it.fillermark) ||
+                                (manga.fillermarkedFilterRaw == Manga.CHAPTER_SHOW_NOT_FILLERMARKED && it.fillermark)
                         }
                         else -> false
                     }
@@ -702,41 +704,29 @@ class ReaderViewModel @JvmOverloads constructor(
         }
         readerChapter.requestedPage = pageIndex
         chapterPageIndex = pageIndex
-        readerChapter.chapter.last_page_read = pageIndex // Always update in-memory last_page_read
 
-        // Modified isLastPage calculation (moved outside the error check):
-        val isLastPage = readerChapter.pages?.let { pages ->
-            val lastPageIndex = pages.lastIndex
-            if (hasExtraPage) {
-                lastPageIndex - 1 == pageIndex || lastPageIndex == pageIndex // Allow for last page or extra page
-            } else {
-                lastPageIndex == pageIndex
+        if (!incognitoMode && page.status !is Page.State.Error) {
+            readerChapter.chapter.last_page_read = pageIndex
+
+            if (readerChapter.pages?.lastIndex == pageIndex ||
+                // SY -->
+                (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
+                // SY <--
+            ) {
+                updateChapterProgressOnComplete(readerChapter)
+
+                // SY -->
+                // Check if syncing is enabled for chapter read:
+                if (isSyncEnabled && syncTriggerOpt.syncOnChapterRead) {
+                    SyncDataJob.startNow(Injekt.get<Application>())
+                }
+                // SY <--
             }
-        } ?: false // Handle case where pages is null (though unlikely)
 
-        if (!incognitoMode && page.status is Page.State.Error) {
-            // We still update the database in case of an error, but the "mark as read" logic
-            // is now handled separately.
             updateChapter.await(
                 ChapterUpdate(
                     id = readerChapter.chapter.id!!,
-                    read = readerChapter.chapter.read, // Keep existing read status
-                    lastPageRead = readerChapter.chapter.last_page_read.toLong(),
-                ),
-            )
-        }
-
-        if (!incognitoMode && isLastPage) {
-            updateChapterProgressOnComplete(readerChapter)
-        }
-
-        if (!incognitoMode) {
-            // Persist chapter updates (including potential "read" status change)
-            //  This now happens *always*, after potentially calling updateChapterProgressOnComplete
-            updateChapter.await(
-                ChapterUpdate(
-                    id = readerChapter.chapter.id!!,
-                    read = readerChapter.chapter.read, // Use potentially updated read status
+                    read = readerChapter.chapter.read,
                     lastPageRead = readerChapter.chapter.last_page_read.toLong(),
                 ),
             )
@@ -880,6 +870,27 @@ class ReaderViewModel @JvmOverloads constructor(
         }
     }
 
+    fun toggleChapterFillermark() {
+        val chapter = getCurrentChapter()?.chapter ?: return
+        val fillermarked = !chapter.fillermark
+        chapter.fillermark = fillermarked
+
+        viewModelScope.launchNonCancellable {
+            updateChapter.await(
+                ChapterUpdate(
+                    id = chapter.id!!.toLong(),
+                    fillermark = fillermarked,
+                ),
+            )
+        }
+
+        mutableState.update {
+            it.copy(
+                fillermarked = fillermarked,
+            )
+        }
+    }
+
     // SY -->
     fun toggleBookmark(chapterId: Long, bookmarked: Boolean) {
         val chapter = chapterList.find { it.chapter.id == chapterId }?.chapter ?: return
@@ -889,6 +900,19 @@ class ReaderViewModel @JvmOverloads constructor(
                 ChapterUpdate(
                     id = chapterId,
                     bookmark = bookmarked,
+                ),
+            )
+        }
+    }
+
+    fun toggleFillermark(chapterId: Long, fillermarked: Boolean) {
+        val chapter = chapterList.find { it.chapter.id == chapterId }?.chapter ?: return
+        chapter.fillermark = fillermarked
+        viewModelScope.launchNonCancellable {
+            updateChapter.await(
+                ChapterUpdate(
+                    id = chapterId,
+                    fillermark = fillermarked,
                 ),
             )
         }
@@ -1366,6 +1390,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val manga: Manga? = null,
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
+        val fillermarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
 

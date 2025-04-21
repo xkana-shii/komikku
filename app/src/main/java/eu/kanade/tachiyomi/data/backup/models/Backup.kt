@@ -18,4 +18,5 @@ data class Backup(
     // Global Popular/Latest feeds
     @ProtoNumber(610) var backupFeeds: List<BackupFeed> = emptyList(),
     // KMK <--
+    @ProtoNumber(107) var backupHiddenDuplicates: List<BackupHiddenDuplicate> = emptyList(),
 )
