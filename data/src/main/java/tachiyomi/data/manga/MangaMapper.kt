@@ -225,6 +225,10 @@ object MangaMapper {
         chapterFlags: Long,
         coverLastModified: Long,
         dateAdded: Long,
+        // SY -->
+        @Suppress("UNUSED_PARAMETER")
+        filteredScanlators: String?,
+        // SY <--
         updateStrategy: UpdateStrategy,
         calculateInterval: Long,
         lastModifiedAt: Long,
