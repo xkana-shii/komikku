@@ -824,6 +824,14 @@ private fun ColumnScope.MangaContentInfo(
 }
 
 private val descriptionAnnotator = markdownAnnotator(
+    annotate = { content, child ->
+        if (child.type in DISALLOWED_MARKDOWN_TYPES) {
+            append(content.substring(child.startOffset, child.endOffset))
+            return@markdownAnnotator true
+        }
+
+        false
+    },
     config = markdownAnnotatorConfig(
         eolAsNewLine = true,
     ),
@@ -845,6 +853,7 @@ private fun MangaSummary(
         modifier = modifier.clipToBounds(),
         contents = listOf(
             {
+                // shrunk: calculate minimum size when shrunk
                 Text(
                     // Shows at least 3 lines if no notes
                     // when there are notes show 6
@@ -853,6 +862,7 @@ private fun MangaSummary(
                 )
             },
             {
+                // expanded: calculate maximum size when expanded
                 Column {
                     MangaNotesSection(
                         content = notes,
@@ -861,12 +871,13 @@ private fun MangaSummary(
                     )
                     MarkdownRender(
                         content = description,
-                        annotator = descriptionAnnotator,
                         modifier = Modifier.secondaryItemAlpha(),
+                        annotator = descriptionAnnotator,
                     )
                 }
             },
             {
+                // actual: the actual displayed content
                 Column {
                     MangaNotesSection(
                         content = notes,
@@ -876,13 +887,14 @@ private fun MangaSummary(
                     SelectionContainer {
                         MarkdownRender(
                             content = description,
-                            annotator = descriptionAnnotator,
                             modifier = Modifier.secondaryItemAlpha(),
+                            annotator = descriptionAnnotator,
                         )
                     }
                 }
             },
             {
+                // scrim
                 val colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
                 Box(
                     modifier = Modifier.background(Brush.verticalGradient(colors = colors)),
