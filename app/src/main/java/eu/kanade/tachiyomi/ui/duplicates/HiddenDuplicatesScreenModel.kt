@@ -30,11 +30,13 @@ class HiddenDuplicatesScreenModel(
 
     init {
         screenModelScope.launch {
-            val allLibraryManga = getLibraryManga.await()
-            allLibraryManga.forEach { libraryManga ->
-                val keyManga = MangaWithChapterCount(libraryManga.manga, libraryManga.totalChapters)
-                val hiddenDuplicates = getHiddenDuplicates(libraryManga.manga).sortedBy { it.manga.title }
-                updateHiddenDuplicatesMap(keyManga, hiddenDuplicates)
+            getHiddenDuplicateManga.subscribe().collectLatest { newMap ->
+                _hiddenDuplicatesMapState.value = newMap.filterNot {
+                    it.value.count() == 1 &&
+                        newMap[it.value[0]]?.count() == 1 &&
+                        newMap[it.value[0]]?.get(0) == it.key &&
+                        it.value[0].manga.id < it.key.manga.id
+                }.onEach { it.value.sortedBy { it.manga.title } }
             }
             mutableState.update { it.copy(loading = false) }
         }
