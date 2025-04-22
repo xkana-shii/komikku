@@ -239,12 +239,27 @@ class LibraryPreferences(
 
     // endregion
 
+    // region Duplicates
+
+    fun duplicateMatchLevel() = preferenceStore.getEnum(
+        "pref_duplicate_automatic_match",
+        DuplicateMatchLevel.FuzzyTitle,
+    )
+
+    // endregion
+
     enum class ChapterSwipeAction {
         ToggleRead,
         ToggleBookmark,
         ToggleFillermark,
         Download,
         Disabled,
+    }
+
+    enum class DuplicateMatchLevel {
+        ExactMatch,
+        FuzzyTitle,
+        TitleSubstring,
     }
 
     // SY -->

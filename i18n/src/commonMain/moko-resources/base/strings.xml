@@ -15,6 +15,7 @@
     <string name="categories">Categories</string>
     <string name="manga">Library entries</string>
     <string name="chapters">Chapters</string>
+    <string name="hidden_duplicates">Hidden duplicates</string>
     <string name="track">Tracking</string>
     <string name="delete_downloaded">Delete downloaded</string>
     <string name="history">History</string>
@@ -36,6 +37,10 @@
     <string name="label_data_storage">Data and storage</string>
     <string name="label_stats">Statistics</string>
     <string name="label_migration">Migrate</string>
+    <string name="label_manage_duplicates">Manage duplicates</string>
+    <string name="label_duplicates">Duplicates</string>
+    <string name="label_possible_duplicates">Possible Duplicates</string>
+    <string name="label_hidden_duplicates">Hidden Duplicates</string>
     <string name="label_extensions">Extensions</string>
     <string name="label_extension_info">Extension info</string>
     <string name="label_help">Help</string>
@@ -216,7 +221,7 @@
     <string name="onboarding_guides_returning_user">Reinstalling %s?</string>
 
     <!-- Preferences -->
-      <!-- Subsections -->
+    <!-- Subsections -->
     <string name="pref_category_general">General</string>
     <string name="pref_category_appearance">Appearance</string>
     <string name="pref_category_library">Library</string>
@@ -227,7 +232,7 @@
     <string name="pref_category_about">About</string>
 
     <string name="pref_appearance_summary">Theme, date &amp; time format</string>
-    <string name="pref_library_summary">Categories, global update, chapter swipe</string>
+    <string name="pref_library_summary">Categories, global update, duplicates, chapter swipe</string>
     <string name="pref_reader_summary">Reading mode, display, navigation</string>
     <string name="pref_downloads_summary">Automatic download, download ahead</string>
     <string name="pref_tracking_summary">One-way progress sync, enhanced sync</string>
@@ -236,7 +241,7 @@
     <string name="pref_security_summary">App lock, secure screen</string>
     <string name="pref_advanced_summary">Dump crash logs, battery optimizations</string>
 
-      <!-- General section -->
+    <!-- General section -->
     <string name="pref_category_theme">Theme</string>
     <string name="pref_app_theme">App theme</string>
     <string name="theme_system">System</string>
@@ -282,7 +287,7 @@
 
     <string name="relative_time_today">Today</string>
 
-      <!-- Library section -->
+    <!-- Library section -->
     <string name="pref_category_display">Display</string>
     <string name="pref_library_columns">Items per row</string>
     <string name="portrait">Portrait</string>
@@ -324,6 +329,11 @@
     <string name="include">Include: %s</string>
     <string name="exclude">Exclude: %s</string>
 
+    <string name="pref_duplicate_automatic_match">Automatic duplicate matching level</string>
+    <string name="pref_duplicate_automatic_match_exact">Exact title only</string>
+    <string name="pref_duplicate_automatic_match_fuzzy_title">Fuzzy title search</string>
+    <string name="pref_duplicate_automatic_match_title_substring">Any title match</string>
+
     <string name="pref_behavior">Behavior</string>
     <!-- This should be to the left for RTL locales -->
     <string name="pref_chapter_swipe_end">Chapter on swipe to right</string>
@@ -333,7 +343,7 @@
     <string name="pref_mark_duplicate_read_chapter_read_existing">After reading a chapter</string>
     <string name="pref_mark_duplicate_read_chapter_read_new">After fetching new chapter</string>
 
-      <!-- Extension section -->
+    <!-- Extension section -->
     <string name="multi_lang">Multi</string>
     <string name="ext_updates_pending">Updates pending</string>
     <string name="ext_update">Update</string>
@@ -387,7 +397,7 @@
     <string name="action_replace_repo_title">Signing Key Fingerprint Already Exists</string>
     <string name="action_replace_repo_message">Repository %1$s has the same Signing Key Fingerprint as %2$s.\nIf this is expected, %2$s will be replaced, otherwise contact your repo maintainer.</string>
 
-      <!-- Reader section -->
+    <!-- Reader section -->
     <string name="pref_fullscreen">Fullscreen</string>
     <string name="pref_show_navigation_mode">Show tap zones overlay</string>
     <string name="pref_show_navigation_mode_summary">Briefly show when reader is opened</string>
@@ -507,7 +517,7 @@
     <string name="pref_lowest">Lowest</string>
     <string name="pref_webtoon_disable_zoom_out">Disable zoom out</string>
 
-      <!-- Downloads section -->
+    <!-- Downloads section -->
     <string name="pref_category_delete_chapters">Delete chapters</string>
     <string name="pref_remove_after_marked_as_read">After manually marked as read</string>
     <string name="pref_remove_after_read">After reading automatically delete</string>
@@ -543,10 +553,10 @@
     <string name="enhanced_tracking_info">Provides enhanced features for specific sources. Entries are automatically tracked when added to your library.</string>
     <string name="track_activity_name">Tracker login</string>
 
-      <!-- Browse section -->
+    <!-- Browse section -->
     <string name="pref_hide_in_library_items">Hide entries already in library</string>
 
-      <!-- Data and storage section -->
+    <!-- Data and storage section -->
     <string name="pref_storage_location">Storage location</string>
     <string name="pref_storage_location_info">Used for automatic backups, chapter downloads, and local source.</string>
     <string name="pref_create_backup">Create backup</string>
@@ -606,7 +616,7 @@
     <string name="syncing_library">Syncing library</string>
     <string name="library_sync_complete">Library sync complete</string>
 
-      <!-- Advanced section -->
+    <!-- Advanced section -->
     <string name="label_network">Networking</string>
     <string name="pref_clear_cookies">Clear cookies</string>
     <string name="pref_dns_over_https">DNS over HTTPS (DoH)</string>
@@ -647,7 +657,7 @@
     <string name="pref_verbose_logging_summary">Print verbose logs to system log (reduces app performance)</string>
     <string name="pref_debug_info">Debug info</string>
 
-      <!-- About section -->
+    <!-- About section -->
     <string name="website">Website</string>
     <string name="version">Version</string>
     <string name="whats_new">What\'s new</string>
@@ -731,8 +741,6 @@
     <!-- missing confirm menu after Compose rewrite #7901 -->
     <string name="remove_from_library">Remove from library</string>
     <string name="unknown_title">Unknown title</string>
-    <string name="possible_duplicates_title">Possible duplicates</string>
-    <string name="possible_duplicates_summary">You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway.</string>
     <string name="manga_added_library">Added to library</string>
     <string name="manga_removed_library">Removed from library</string>
     <string name="manga_info_expand">More</string>
@@ -818,6 +826,13 @@
     <string name="track_delete_title">Remove %s tracking?</string>
     <string name="track_delete_text">This will remove the tracking locally.</string>
     <string name="track_delete_remote_text">Also remove from %s</string>
+
+    <!-- Duplicates Screen -->
+    <string name="duplicate_match_level_title">Duplicates matching level</string>
+
+    <!-- Duplicate Manga Dialog -->
+    <string name="possible_duplicates_title">Possible duplicates</string>
+    <string name="possible_duplicates_summary">You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway.</string>
 
     <!-- Category activity -->
     <string name="error_category_exists">A category with this name already exists!</string>
@@ -971,6 +986,8 @@
     <string name="getting_started_guide">Getting started guide</string>
     <string name="information_empty_category">You have no categories. Tap the plus button to create one for organizing your library.</string>
     <string name="information_empty_category_dialog">You don\'t have any categories yet.</string>
+    <string name="information_empty_possible_duplicates">No duplicates found.</string>
+    <string name="information_empty_hidden_duplicates">You haven\'t hidden any duplicates yet.</string>
     <string name="information_cloudflare_bypass_failure">Failed to bypass Cloudflare</string>
     <string name="information_cloudflare_help">Tap here for help with Cloudflare</string>
     <string name="information_required_plain">*required</string>
