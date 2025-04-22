@@ -61,18 +61,6 @@ jobs:
           token: "${{ secrets.BOT_PAT }}"
           inputs: '{ "git-ref": "${{ steps.branch_names.outputs.current_branch }}" }'
 
-  create_and_push_v_tag:
-    name: Create and Push v Tag
-    runs-on: 'ubuntu-24.04'
-    needs: trigger_preview_build # Ensures this job only runs after `trigger_preview_build` completes
-    if: ${{ github.ref == 'refs/heads/master' }} # Only run on master branch
-
-    steps:
-      - name: Clone repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-
       - name: Determine Latest v Tag
         id: latest_v_tag
         run: |
@@ -83,7 +71,8 @@ jobs:
           echo "LATEST_TAG=$latest_tag"
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_OUTPUT
 
-      - name: Create New v Tag
+      - name: Create New v Tag (for release trigger)
+        if: ${{ github.ref }} == "refs/heads/master"
         id: new_v_tag
         run: |
           # Parse the latest tag
