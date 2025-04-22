@@ -48,6 +48,40 @@ jobs:
           git push origin "r${{ steps.prepare_build.outputs.COMMIT_COUNT }}"
           echo "New tag created: r${{ steps.prepare_build.outputs.COMMIT_COUNT }}"
 
+      - name: Determine Latest v Tag
+        id: latest_v_tag
+        run: |
+          # Fetch tags
+          git fetch --tags
+          # Get the latest v* tag
+          latest_tag=$(git tag --list "v*" --sort=-v:refname | head -n 1)
+          echo "LATEST_TAG=$latest_tag"
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_OUTPUT
+
+      - name: Create New v Tag (for release trigger)
+        if: ${{ github.ref }} == "refs/heads/master"
+        id: new_v_tag
+        run: |
+          # Parse the latest tag
+          latest_tag="${{ steps.latest_v_tag.outputs.LATEST_TAG }}"
+          if [ -z "$latest_tag" ]; then
+            # Default to v1.0.0 if no v* tags exist
+            new_tag="v1.0.0"
+          else
+            # Increment the patch version
+            major=$(echo $latest_tag | cut -d'.' -f1 | cut -d'v' -f2)
+            minor=$(echo $latest_tag | cut -d'.' -f2)
+            patch=$(echo $latest_tag | cut -d'.' -f3)
+            patch=$((patch + 1))
+            new_tag="v${major}.${minor}.${patch}"
+          fi
+          # Create and push the new tag
+          git tag "$new_tag"
+          git push origin "$new_tag"
+          echo "NEW_TAG=$new_tag"
+          echo "NEW_TAG=$new_tag" >> $GITHUB_OUTPUT
+          echo "Release trigger tag created: $new_tag"
+
       - name: Get branch names
         id: branch_names
         uses: tj-actions/branch-names@dde14ac574a8b9b1cedc59a1cf312788af43d8d8 # v8.2.1
