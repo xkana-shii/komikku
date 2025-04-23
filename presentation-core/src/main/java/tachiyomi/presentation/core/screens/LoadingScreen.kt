@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -19,12 +20,31 @@ import tachiyomi.presentation.core.util.secondaryItemAlpha
 import java.text.NumberFormat
 
 @Composable
-fun LoadingScreen(modifier: Modifier = Modifier) {
+fun LoadingScreen(
+    modifier: Modifier = Modifier,
+    text: StringResource? = null,
+    content: @Composable () -> Unit = {},
+) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CircularProgressIndicator()
+            if (text != null) {
+                Text(
+                    text = stringResource(text),
+                    modifier = Modifier
+                        .padding(top = MaterialTheme.padding.small)
+                        .secondaryItemAlpha(),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            content()
+        }
     }
 }
 
@@ -35,17 +55,10 @@ fun LoadingScreen(
     modifier: Modifier = Modifier,
 ) {
     val numberFormat = remember { NumberFormat.getPercentInstance() }
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
+    LoadingScreen(modifier = modifier) {
         Text(
             text = stringResource(message, numberFormat.format(percentage / 100f)),
-            modifier = Modifier
-                .padding(top = MaterialTheme.padding.small)
-                .secondaryItemAlpha(),
+            modifier = Modifier.secondaryItemAlpha(),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
