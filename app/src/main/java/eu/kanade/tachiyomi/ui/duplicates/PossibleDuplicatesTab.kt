@@ -42,27 +42,6 @@ fun Screen.possibleDuplicatesTab(): TabContent {
             ),
         ),
     ) { contentPadding, _ ->
-        if (state.loading) {
-            LoadingScreen(Modifier.padding(contentPadding))
-            return@TabContent
-        }
-
-        if (duplicatesMapState.isEmpty()) {
-            EmptyScreen(MR.strings.information_empty_possible_duplicates, happyFace = true)
-            return@TabContent
-        }
-
-        PossibleDuplicatesContent(
-            duplicatesMap = duplicatesMapState,
-            paddingValues = contentPadding,
-            lazyListState = lazyListState,
-            onOpenManga = { navigator.push(MangaScreen(it.id)) },
-            onDismissRequest = onDismissRequest,
-            onToggleFavoriteClicked = screenModel::openDeleteMangaDialog,
-            onHideSingleClicked = screenModel::hideSingleDuplicate,
-            onHideGroupClicked = screenModel::hideGroupDuplicate,
-        )
-
         when (val dialog = state.dialog) {
             is PossibleDuplicatesScreenModel.Dialog.FilterSheet -> run {
                 DuplicateFilterDialog(
@@ -81,5 +60,26 @@ fun Screen.possibleDuplicatesTab(): TabContent {
             }
             null -> {}
         }
+
+        if (state.loading) {
+            LoadingScreen(Modifier.padding(contentPadding), MR.strings.information_long_load)
+            return@TabContent
+        }
+
+        if (duplicatesMapState.isEmpty()) {
+            EmptyScreen(MR.strings.information_empty_possible_duplicates, happyFace = true)
+            return@TabContent
+        }
+
+        PossibleDuplicatesContent(
+            duplicatesMap = duplicatesMapState,
+            paddingValues = contentPadding,
+            lazyListState = lazyListState,
+            onOpenManga = { navigator.push(MangaScreen(it.id)) },
+            onDismissRequest = onDismissRequest,
+            onToggleFavoriteClicked = screenModel::openDeleteMangaDialog,
+            onHideSingleClicked = screenModel::hideSingleDuplicate,
+            onHideGroupClicked = screenModel::hideGroupDuplicate,
+        )
     }
 }
