@@ -62,10 +62,7 @@ fun Screen.possibleDuplicatesTab(): TabContent {
         }
 
         if (state.loading) {
-            LoadingScreen(
-                modifier = Modifier.padding(contentPadding),
-                message = MR.strings.information_long_load,
-            )
+            LoadingScreen(Modifier.padding(contentPadding), MR.strings.information_long_load)
             return@TabContent
         }
 
