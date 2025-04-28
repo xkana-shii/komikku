@@ -1,5 +1,5 @@
 [versions]
-aboutlib_version = "11.6.3"
+aboutlib_version = "12.0.1"
 leakcanary = "2.14"
 moko = "0.24.5"
 okhttp_version = "5.0.0-alpha.14"
@@ -9,7 +9,7 @@ sqlite = "2.5.0"
 voyager = "1.0.1"
 spotless = "7.0.3"
 ktlint-core = "1.5.0"
-firebase-bom = "33.12.0"
+firebase-bom = "33.13.0"
 markdown = "0.33.0"
 
 [libraries]
@@ -52,7 +52,7 @@ image-decoder = "com.github.tachiyomiorg:image-decoder:41c059e540"
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"
 
-richeditor-compose = "com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc10"
+richeditor-compose = "com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc11"
 
 material = "com.google.android.material:material:1.12.0"
 flexible-adapter-core = "com.github.arkon.FlexibleAdapter:flexible-adapter:c8013533"
