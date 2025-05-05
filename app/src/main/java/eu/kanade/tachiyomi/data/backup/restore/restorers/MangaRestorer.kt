@@ -435,7 +435,6 @@ class MangaRestorer(
                         it.chapterId,
                         it.readAt,
                         it.readDuration,
-                        it.lastPageRead,
                     )
                 }
             }

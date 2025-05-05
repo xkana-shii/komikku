@@ -192,7 +192,7 @@ class EHentaiUpdateHelper(context: Context) {
                 }
                 ?.takeIf { it.chapterId != chapter.id && it.readAt != null }
             if (newHistory != null) {
-                HistoryUpdate(chapter.id, newHistory.readAt!!, newHistory.readDuration, newHistory.lastPageRead)
+                HistoryUpdate(chapter.id, newHistory.readAt!!, newHistory.readDuration)
             } else {
                 null
             }
