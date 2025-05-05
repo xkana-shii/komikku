@@ -66,6 +66,7 @@ class HistoryRepositoryImpl(
                     historyUpdate.chapterId,
                     historyUpdate.readAt,
                     historyUpdate.sessionReadDuration,
+                    historyUpdate.lastPageRead,
                 )
             }
         } catch (e: Exception) {
@@ -82,6 +83,7 @@ class HistoryRepositoryImpl(
                         historyUpdate.chapterId,
                         historyUpdate.readAt,
                         historyUpdate.sessionReadDuration,
+                        historyUpdate.lastPageRead,
                     )
                 }
             }
