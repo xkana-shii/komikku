@@ -12,8 +12,7 @@ SELECT
     history.last_read AS readAt,
     history.time_read AS readDuration,
     max_last_read.last_read AS maxReadAt,
-    max_last_read.chapter_id AS maxReadAtChapterId,
-    chapters.last_page_read AS lastPageRead -- Include last_page_read
+    max_last_read.chapter_id AS maxReadAtChapterId
 FROM mangas
 JOIN chapters
 ON mangas._id = chapters.manga_id

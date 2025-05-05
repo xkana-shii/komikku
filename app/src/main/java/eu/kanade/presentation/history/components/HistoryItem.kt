@@ -122,14 +122,6 @@ fun HistoryItem(
                 modifier = Modifier.padding(top = 4.dp),
                 style = textStyle,
             )
-            val pagesRead = history.pagesRead
-            if (pagesRead != null) {
-                Text(
-                    text = stringResource(MR.strings.chapter_progress, pagesRead),
-                    modifier = Modifier.padding(top = 4.dp),
-                    style = textStyle,
-                )
-            }
         }
 
         if (!history.coverData.isMangaFavorite) {
