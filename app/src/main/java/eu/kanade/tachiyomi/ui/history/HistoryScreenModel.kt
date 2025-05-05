@@ -242,6 +242,7 @@ class HistoryScreenModel(
         val searchQuery: String? = null,
         val list: List<HistoryUiModel>? = null,
         val dialog: Dialog? = null,
+        val pagesRead: Map<Long, Int> = emptyMap()
     )
 
     sealed interface Dialog {
