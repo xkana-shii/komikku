@@ -284,6 +284,7 @@ internal class MigrateDialogScreenModel(
                                     updatedChapter.id,
                                     prevHistory.readAt ?: return@let,
                                     prevHistory.readDuration,
+                                    prevHistory.lastPageRead,
                                 )
                             }
                             // SY <--
