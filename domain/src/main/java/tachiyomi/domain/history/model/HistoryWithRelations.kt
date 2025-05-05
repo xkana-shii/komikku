@@ -17,7 +17,7 @@ data class HistoryWithRelations(
     val readDuration: Long,
     val coverData: MangaCover,
     val pagesRead: Int? = null, // Add pagesRead property
-    val lastPageRead: Int? = null // Add lastPageRead property
+    val lastPageRead: Int? = null, // Add lastPageRead property
 ) {
     // SY -->
     val title: String = customMangaManager.get(mangaId)?.title ?: ogTitle
