@@ -69,7 +69,7 @@ DO UPDATE
 SET
     last_read = :readAt,
     time_read = time_read + :time_read,
-    last_page_read = :last_page_read
+    last_page_read = :lastPageRead
 WHERE chapter_id = :chapterId;
 
 getReadDuration:
