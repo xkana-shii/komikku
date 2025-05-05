@@ -802,10 +802,8 @@ class ReaderViewModel @JvmOverloads constructor(
         val chapterId = readerChapter.chapter.id!!
         val endTime = Date()
         val sessionReadDuration = chapterReadStartTime?.let { endTime.time - it } ?: 0
-        val lastPageRead = readerChapter.chapter.last_page_read.toLong()
 
-        upsertHistory.await(HistoryUpdate(chapterId, endTime, sessionReadDuration, lastPageRead))
-
+        upsertHistory.await(HistoryUpdate(chapterId, endTime, sessionReadDuration))
         chapterReadStartTime = null
     }
 
