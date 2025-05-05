@@ -6,4 +6,5 @@ data class HistoryUpdate(
     val chapterId: Long,
     val readAt: Date,
     val sessionReadDuration: Long,
+    val lastPageRead: Long,
 )
