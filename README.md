@@ -1,4 +1,4 @@
-<div align="center">
+ <div align="center">
  <img width=200px height=200px src="./.github/readme-images/app-icon.png"/>
 
  <h1 align="center"> Komikku </h1>
