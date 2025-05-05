@@ -122,17 +122,12 @@ fun HistoryItem(
                 modifier = Modifier.padding(top = 4.dp),
                 style = textStyle,
             )
-            val readProgress = history.lastPageRead
-                .takeIf { it > 0L }
-                ?.let {
-                    stringResource(MR.strings.chapter_progress, it + 1)
-                }
-
-            if (readProgress != null) {
+            val pagesRead = history.pagesRead
+            if (pagesRead != null) {
                 Text(
-                    text = readProgress,
+                    text = stringResource(MR.strings.chapter_progress, pagesRead),
+                    modifier = Modifier.padding(top = 4.dp),
                     style = textStyle,
-                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
         }

@@ -11,13 +11,11 @@ object HistoryMapper {
         chapterId: Long,
         readAt: Date?,
         readDuration: Long,
-        lastPageRead: Long,
     ): History = History(
         id = id,
         chapterId = chapterId,
         readAt = readAt,
         readDuration = readDuration,
-        lastPageRead = lastPageRead,
     )
 
     fun mapHistoryWithRelations(
@@ -32,7 +30,6 @@ object HistoryMapper {
         chapterNumber: Double,
         readAt: Date?,
         readDuration: Long,
-        lastPageRead: Long,
     ): HistoryWithRelations = HistoryWithRelations(
         id = historyId,
         chapterId = chapterId,
@@ -43,7 +40,6 @@ object HistoryMapper {
         chapterNumber = chapterNumber,
         readAt = readAt,
         readDuration = readDuration,
-        lastPageRead = lastPageRead,
         coverData = MangaCover(
             mangaId = mangaId,
             sourceId = sourceId,
