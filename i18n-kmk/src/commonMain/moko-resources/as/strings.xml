@@ -2,7 +2,7 @@
 <resources>
     <string name="too_many_in_feed">আপোনাৰ ফিডত বেছি সংখ্যক উৎস আছে, ২০ টাতকৈ অধিক যোগ কৰিব নোৱাৰিব</string>
     <string name="action_copy_to_clipboard_first_page">প্ৰথম পৃষ্ঠা ক্লিপব\'ৰ্ডত কপি কৰক</string>
-    <string name="action_toggle_nsfw_only">কেৱল NSFW টগল কৰক</string>
+    <string name="action_toggle_nsfw_only">কেৱল NSFWa টগল কৰক</string>
     <string name="action_faq_and_guides">প্ৰশ্নোত্তৰ আৰু দিশ-নিৰ্দেশনা</string>
     <string name="action_bulk_select">একেলগে বাছনি মোড</string>
     <string name="action_search_for_source">উৎসৰ বাবে অনুসন্ধান কৰক</string>
