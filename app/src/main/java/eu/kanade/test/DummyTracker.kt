@@ -132,8 +132,4 @@ data class DummyTracker(
         track: Track,
     ): TrackMangaMetadata = TrackMangaMetadata(0, "test", "test", "test", "test", "test")
     // SY <--
-
-    // KMK -->
-    override fun hasNotStartedReading(status: Long): Boolean = status == 2L
-    // KMK <--
 }

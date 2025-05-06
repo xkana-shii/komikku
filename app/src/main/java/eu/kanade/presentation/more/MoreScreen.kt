@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.BurstMode
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.History
@@ -26,7 +27,6 @@ import exh.pref.DelegateSourcePreferences
 import tachiyomi.core.common.Constants
 import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -49,15 +49,13 @@ fun MoreScreen(
     onClickDownloadQueue: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
+    onClickManageDuplicates: () -> Unit,
     onClickDataAndStorage: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAbout: () -> Unit,
     onClickBatchAdd: () -> Unit,
     onClickUpdates: () -> Unit,
     onClickHistory: () -> Unit,
-    // KMK -->
-    onClickLibraryUpdateErrors: () -> Unit,
-    // KMK <--
 ) {
     val uriHandler = LocalUriHandler.current
     // SY -->
@@ -158,15 +156,13 @@ fun MoreScreen(
                     onPreferenceClick = onClickStats,
                 )
             }
-            // KMK -->
             item {
                 TextPreferenceWidget(
-                    title = stringResource(KMR.strings.option_label_library_update_errors),
-                    icon = Icons.Outlined.NewReleases,
-                    onPreferenceClick = onClickLibraryUpdateErrors,
+                    title = stringResource(MR.strings.label_duplicates),
+                    icon = Icons.Outlined.BurstMode,
+                    onPreferenceClick = onClickManageDuplicates,
                 )
             }
-            // KMK <--
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_data_storage),

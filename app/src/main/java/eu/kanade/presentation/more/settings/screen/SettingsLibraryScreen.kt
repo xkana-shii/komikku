@@ -68,6 +68,7 @@ object SettingsLibraryScreen : SearchableSettings {
         return listOf(
             getCategoriesGroup(LocalNavigator.currentOrThrow, allCategories, libraryPreferences),
             getGlobalUpdateGroup(allCategories, libraryPreferences),
+            getDuplicatesGroup(libraryPreferences),
             getBehaviorGroup(libraryPreferences),
             // SY -->
             getSortingCategory(LocalNavigator.currentOrThrow, libraryPreferences),
@@ -243,6 +244,29 @@ object SettingsLibraryScreen : SearchableSettings {
     }
 
     @Composable
+    private fun getDuplicatesGroup(
+        libraryPreferences: LibraryPreferences,
+    ): Preference.PreferenceGroup {
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.label_duplicates),
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.duplicateMatchLevel(),
+                    entries = persistentMapOf(
+                        LibraryPreferences.DuplicateMatchLevel.ExactMatch to
+                            stringResource(MR.strings.pref_duplicate_automatic_match_exact),
+                        LibraryPreferences.DuplicateMatchLevel.FuzzyTitle to
+                            stringResource(MR.strings.pref_duplicate_automatic_match_fuzzy_title),
+                        LibraryPreferences.DuplicateMatchLevel.TitleSubstring to
+                            stringResource(MR.strings.pref_duplicate_automatic_match_title_substring),
+                    ),
+                    title = stringResource(MR.strings.pref_duplicate_automatic_match),
+                ),
+            ),
+        )
+    }
+
+    @Composable
     private fun getBehaviorGroup(
         libraryPreferences: LibraryPreferences,
     ): Preference.PreferenceGroup {
@@ -256,6 +280,8 @@ object SettingsLibraryScreen : SearchableSettings {
                             stringResource(MR.strings.disabled),
                         LibraryPreferences.ChapterSwipeAction.ToggleBookmark to
                             stringResource(MR.strings.action_bookmark),
+                        LibraryPreferences.ChapterSwipeAction.ToggleFillermark to
+                            stringResource(KMR.strings.action_fillermark_chapter),
                         LibraryPreferences.ChapterSwipeAction.ToggleRead to
                             stringResource(MR.strings.action_mark_as_read),
                         LibraryPreferences.ChapterSwipeAction.Download to
@@ -270,6 +296,8 @@ object SettingsLibraryScreen : SearchableSettings {
                             stringResource(MR.strings.disabled),
                         LibraryPreferences.ChapterSwipeAction.ToggleBookmark to
                             stringResource(MR.strings.action_bookmark),
+                        LibraryPreferences.ChapterSwipeAction.ToggleFillermark to
+                            stringResource(KMR.strings.action_fillermark_chapter),
                         LibraryPreferences.ChapterSwipeAction.ToggleRead to
                             stringResource(MR.strings.action_mark_as_read),
                         LibraryPreferences.ChapterSwipeAction.Download to
