@@ -91,4 +91,8 @@ interface Tracker {
     // SY -->
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata
     // SY <--
+
+    // KMK -->
+    fun hasNotStartedReading(status: Long): Boolean
+    // KMK <--
 }

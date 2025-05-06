@@ -84,8 +84,15 @@ class SyncChapterProgressWithTrack(
                 // update Track in database
                 insertTrack.await(updatedTrack)
             }
-            // Update local chapters following Tracker
-            updateChapter.awaitAll(chapterUpdates)
+            // KMK -->
+            // Always update local chapters following Tracker even past chapters
+            if (chapterUpdates.isNotEmpty() &&
+                !tracker.hasNotStartedReading(remoteTrack.status)
+            ) {
+                updateChapter.awaitAll(chapterUpdates)
+                return lastRead.toInt()
+            }
+            // KMK <--
         } catch (e: Throwable) {
             logcat(LogPriority.WARN, e)
         }

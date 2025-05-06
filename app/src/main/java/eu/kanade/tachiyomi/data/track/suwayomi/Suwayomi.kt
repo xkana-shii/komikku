@@ -103,4 +103,8 @@ class Suwayomi(id: Long) : BaseTracker(id, "Suwayomi"), EnhancedTracker {
         } else {
             null
         }
+
+    // KMK -->
+    override fun hasNotStartedReading(status: Long): Boolean = status == UNREAD
+    // KMK <--
 }
