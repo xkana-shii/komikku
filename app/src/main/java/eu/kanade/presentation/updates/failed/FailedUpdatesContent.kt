@@ -201,11 +201,12 @@ fun LazyListScope.failedUpdatesGroupUiItem(
             ),
             shape = RoundedCornerShape(corner = CornerSize(15.dp)),
             modifier = Modifier.animateItem(
-                fadeInSpec = null, fadeOutSpec = null,
+                fadeInSpec = null,
+                fadeOutSpec = null,
                 placementSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessLow,
-                )
+                ),
             )
                 .fillMaxWidth(),
         ) {
