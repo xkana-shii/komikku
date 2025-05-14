@@ -193,19 +193,21 @@ fun LazyListScope.failedUpdatesGroupUiItem(
     item(
         key = errorMessageMap.values.flatten().find { it.source.name == id }!!.source.id,
     ) {
+        Modifier
+            .padding(vertical = 9.dp)
         ElevatedCard(
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 2.dp,
             ),
             shape = RoundedCornerShape(corner = CornerSize(15.dp)),
-            modifier = Modifier
-                .padding(vertical = 9.dp)
-                .animateItemPlacement(
-                    spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow,
-                    ),
-                )
+            modifier = Modifier.animateItem(
+                fadeInSpec = null,
+                fadeOutSpec = null,
+                placementSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow,
+                ),
+            )
                 .fillMaxWidth(),
         ) {
             Column {
@@ -321,16 +323,16 @@ fun LazyListScope.failedUpdatesGroupUiItem(
                                     .selectedBackground(!items.fastAny { !it.selected })
                                     .combinedClickable(
                                         onClick =
-                                        {
-                                            if (expanded[errorMessageHeaderId] == null) {
-                                                onExpandedMapChange(errorMessageHeaderId, true)
-                                            } else {
-                                                onExpandedMapChange(
-                                                    errorMessageHeaderId,
-                                                    !expanded[errorMessageHeaderId]!!,
-                                                )
-                                            }
-                                        },
+                                            {
+                                                if (expanded[errorMessageHeaderId] == null) {
+                                                    onExpandedMapChange(errorMessageHeaderId, true)
+                                                } else {
+                                                    onExpandedMapChange(
+                                                        errorMessageHeaderId,
+                                                        !expanded[errorMessageHeaderId]!!,
+                                                    )
+                                                }
+                                            },
                                         onLongClick = { onGroupSelected(items) },
                                     )
                                     .padding(
@@ -403,8 +405,8 @@ fun LazyListScope.failedUpdatesGroupUiItem(
                                 AnimatedVisibility(
                                     modifier = Modifier,
                                     visible =
-                                    expanded[errorMessageHeaderId] == true &&
-                                        expanded[GroupKey(id, "")] == true,
+                                        expanded[errorMessageHeaderId] == true &&
+                                            expanded[GroupKey(id, "")] == true,
                                 ) {
                                     FailedUpdatesUiItem(
                                         modifier = Modifier
