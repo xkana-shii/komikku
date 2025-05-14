@@ -119,7 +119,7 @@ object DownloadQueueScreen : Screen() {
                             if (downloadCount > 0) {
                                 Pill(
                                     text = "$downloadCount",
-                                    modifier = Modifier.padding(start = 4.dp),
+                                    modifier = Modifier.padding(start = 8.dp),
                                     color = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
                                     fontSize = 14.sp,
