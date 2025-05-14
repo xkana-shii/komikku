@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -186,7 +187,11 @@ data class BrowseSourceScreen(
 
         Scaffold(
             topBar = {
-                Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface)
+                        .pointerInput(Unit) {},
+                ) {
                     // KMK -->
                     if (bulkFavoriteState.selectionMode) {
                         BulkSelectionToolbar(
@@ -197,15 +202,23 @@ data class BrowseSourceScreen(
                             onSelectAll = {
                                 mangaList.itemSnapshotList.items
                                     .map { it.value.first }
-                                    .forEach { manga ->
-                                        bulkFavoriteScreenModel.select(manga)
+                                    .let {
+                                        scope.launchIO {
+                                            bulkFavoriteScreenModel.networkToLocalManga(it)
+                                                .forEach { bulkFavoriteScreenModel.select(it) }
+                                        }
                                     }
                             },
                             onReverseSelection = {
-                                bulkFavoriteScreenModel.reverseSelection(
-                                    mangaList.itemSnapshotList.items
-                                        .map { it.value.first },
-                                )
+                                mangaList.itemSnapshotList.items
+                                    .map { it.value.first }
+                                    .let {
+                                        scope.launchIO {
+                                            bulkFavoriteScreenModel.reverseSelection(
+                                                bulkFavoriteScreenModel.networkToLocalManga(it),
+                                            )
+                                        }
+                                    }
                             },
                         )
                     } else {
@@ -225,6 +238,7 @@ data class BrowseSourceScreen(
                             onWebViewClick = onWebViewClick,
                             onHelpClick = onHelpClick,
                             // KMK -->
+                            onToggleIncognito = screenModel::toggleIncognitoMode,
                             onSettingsClick = {
                                 when {
                                     screenModel.source.isEhBasedSource() && isHentaiEnabled ->
@@ -353,32 +367,36 @@ data class BrowseSourceScreen(
                 onWebViewClick = onWebViewClick,
                 onHelpClick = { uriHandler.openUri(Constants.URL_HELP) },
                 onLocalSourceHelpClick = onHelpClick,
-                onMangaClick = { manga ->
+                onMangaClick = {
                     // KMK -->
-                    if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
-                    } else {
-                        // KMK <--
-                        navigator.push(
-                            MangaScreen(
-                                mangaId = manga.id,
-                                // KMK -->
-                                // Finding the entry to be merged to, so we don't want to expand description
-                                // so that user can see the `Merge to another` button
-                                fromSource = smartSearchConfig == null,
-                                // KMK <--
-                                smartSearchConfig = smartSearchConfig,
-                            ),
-                        )
+                    scope.launchIO {
+                        val manga = screenModel.networkToLocalManga(it)
+                        if (bulkFavoriteState.selectionMode) {
+                            bulkFavoriteScreenModel.toggleSelection(manga)
+                        } else {
+                            // KMK <--
+                            navigator.push(
+                                MangaScreen(
+                                    mangaId = manga.id,
+                                    // KMK -->
+                                    // Finding the entry to be merged to, so we don't want to expand description
+                                    // so that user can see the `Merge to another` button
+                                    fromSource = smartSearchConfig == null,
+                                    // KMK <--
+                                    smartSearchConfig = smartSearchConfig,
+                                ),
+                            )
+                        }
                     }
                 },
-                onMangaLongClick = { manga ->
+                onMangaLongClick = {
                     // KMK -->
-                    if (bulkFavoriteState.selectionMode) {
-                        navigator.push(MangaScreen(manga.id, true))
-                    } else {
-                        // KMK <--
-                        scope.launchIO {
+                    scope.launchIO {
+                        val manga = screenModel.networkToLocalManga(it)
+                        if (bulkFavoriteState.selectionMode) {
+                            navigator.push(MangaScreen(manga.id, true))
+                        } else {
+                            // KMK <--
                             val duplicates = screenModel.getDuplicateLibraryManga(manga)
                             when {
                                 manga.favorite -> screenModel.setDialog(BrowseSourceScreenModel.Dialog.RemoveManga(manga))
@@ -460,7 +478,7 @@ data class BrowseSourceScreen(
                 MigrateDialog(
                     oldManga = dialog.oldManga,
                     newManga = dialog.newManga,
-                    screenModel = MigrateDialogScreenModel(),
+                    screenModel = rememberScreenModel { MigrateDialogScreenModel() },
                     onDismissRequest = onDismissRequest,
                     onClickTitle = { navigator.push(MangaScreen(dialog.oldManga.id)) },
                     onPopScreen = { onDismissRequest() },

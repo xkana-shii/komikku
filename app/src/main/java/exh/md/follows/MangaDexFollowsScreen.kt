@@ -77,15 +77,23 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                         onSelectAll = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .forEach { manga ->
-                                    bulkFavoriteScreenModel.select(manga)
+                                .let {
+                                    scope.launchIO {
+                                        bulkFavoriteScreenModel.networkToLocalManga(it)
+                                            .forEach { bulkFavoriteScreenModel.select(it) }
+                                    }
                                 }
                         },
                         onReverseSelection = {
-                            bulkFavoriteScreenModel.reverseSelection(
-                                mangaList.itemSnapshotList.items
-                                    .map { it.value.first },
-                            )
+                            mangaList.itemSnapshotList.items
+                                .map { it.value.first }
+                                .let {
+                                    scope.launchIO {
+                                        bulkFavoriteScreenModel.reverseSelection(
+                                            bulkFavoriteScreenModel.networkToLocalManga(it),
+                                        )
+                                    }
+                                }
                         },
                     )
                 } else {
@@ -120,22 +128,26 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                 onWebViewClick = null,
                 onHelpClick = null,
                 onLocalSourceHelpClick = null,
-                onMangaClick = { manga ->
+                onMangaClick = {
                     // KMK -->
-                    if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
-                    } else {
-                        // KMK <--
-                        navigator.push(MangaScreen(manga.id, true))
+                    scope.launchIO {
+                        val manga = screenModel.networkToLocalManga(it)
+                        if (bulkFavoriteState.selectionMode) {
+                            bulkFavoriteScreenModel.toggleSelection(manga)
+                        } else {
+                            // KMK <--
+                            navigator.push(MangaScreen(manga.id, true))
+                        }
                     }
                 },
-                onMangaLongClick = { manga ->
+                onMangaLongClick = {
                     // KMK -->
-                    if (bulkFavoriteState.selectionMode) {
-                        navigator.push(MangaScreen(manga.id, true))
-                    } else {
-                        // KMK <--
-                        scope.launchIO {
+                    scope.launchIO {
+                        val manga = screenModel.networkToLocalManga(it)
+                        if (bulkFavoriteState.selectionMode) {
+                            navigator.push(MangaScreen(manga.id, true))
+                        } else {
+                            // KMK <--
                             val duplicates = screenModel.getDuplicateLibraryManga(manga)
                             when {
                                 manga.favorite -> screenModel.setDialog(BrowseSourceScreenModel.Dialog.RemoveManga(manga))
@@ -172,7 +184,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                 MigrateDialog(
                     oldManga = dialog.oldManga,
                     newManga = dialog.newManga,
-                    screenModel = MigrateDialogScreenModel(),
+                    screenModel = rememberScreenModel { MigrateDialogScreenModel() },
                     onDismissRequest = onDismissRequest,
                     onClickTitle = { navigator.push(MangaScreen(dialog.oldManga.id)) },
                     onPopScreen = { onDismissRequest() },
