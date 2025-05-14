@@ -390,8 +390,18 @@ class MangaScreen(
                 }
                 showRelatedMangasScreen()
             },
-            onRelatedMangaClick = { navigator.push(MangaScreen(it.id, true)) },
-            onRelatedMangaLongClick = { bulkFavoriteScreenModel.addRemoveManga(it, haptic) },
+            onRelatedMangaClick = {
+                scope.launchIO {
+                    val manga = screenModel.networkToLocalManga(it)
+                    navigator.push(MangaScreen(manga.id, true))
+                }
+            },
+            onRelatedMangaLongClick = {
+                scope.launchIO {
+                    val manga = screenModel.networkToLocalManga(it)
+                    bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                }
+            },
             onSourceClick = {
                 if (successState.source !is StubSource) {
                     val screen = when {
@@ -468,7 +478,7 @@ class MangaScreen(
                 MigrateDialog(
                     oldManga = dialog.oldManga,
                     newManga = dialog.newManga,
-                    screenModel = MigrateDialogScreenModel(),
+                    screenModel = rememberScreenModel { MigrateDialogScreenModel() },
                     onDismissRequest = onDismissRequest,
                     onClickTitle = { navigator.push(MangaScreen(dialog.oldManga.id)) },
                     onPopScreen = onDismissRequest,
