@@ -4,19 +4,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.source.interactor.GetExhSavedSearch
+import eu.kanade.domain.source.interactor.GetIncognitoState
+import eu.kanade.domain.source.interactor.ToggleIncognito
+import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.SourceFeedUI
+import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.ui.browse.feed.MaxFeedItems
+import exh.source.EH_PACKAGE
+import exh.source.LOCAL_SOURCE_PACKAGE
 import exh.source.getMainSource
+import exh.source.isEhBasedSource
 import exh.source.mangaDexSourceIds
 import exh.util.nullIfBlank
 import kotlinx.collections.immutable.ImmutableList
@@ -49,9 +57,11 @@ import tachiyomi.domain.source.interactor.ReorderFeed
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
+import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
+import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import xyz.nulldev.ts.api.http.serializer.FilterSerializer
@@ -63,7 +73,7 @@ open class SourceFeedScreenModel(
     uiPreferences: UiPreferences = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
-    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getFeedSavedSearchBySourceId: GetFeedSavedSearchBySourceId = Injekt.get(),
     private val getSavedSearchBySourceIdFeed: GetSavedSearchBySourceIdFeed = Injekt.get(),
     private val countFeedSavedSearchBySourceId: CountFeedSavedSearchBySourceId = Injekt.get(),
@@ -72,6 +82,10 @@ open class SourceFeedScreenModel(
     private val getExhSavedSearch: GetExhSavedSearch = Injekt.get(),
     // KMK -->
     private val reorderFeed: ReorderFeed = Injekt.get(),
+    private val getIncognitoState: GetIncognitoState = Injekt.get(),
+    private val toggleIncognito: ToggleIncognito = Injekt.get(),
+    private val extensionManager: ExtensionManager = Injekt.get(),
+    sourcePreferences: SourcePreferences = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<SourceFeedState>(SourceFeedState()) {
 
@@ -82,6 +96,10 @@ open class SourceFeedScreenModel(
     private val coroutineDispatcher = Executors.newFixedThreadPool(5).asCoroutineDispatcher()
 
     val startExpanded by uiPreferences.expandFilters().asState(screenModelScope)
+
+    // KMK -->
+    var incognitoMode = mutableStateOf(getIncognitoState.await(source.id))
+    // KMK <--
 
     init {
         // KMK -->
@@ -99,6 +117,13 @@ open class SourceFeedScreenModel(
             setFilters(source.getFilterList())
             // KMK -->
             reloadSavedSearches()
+
+            getIncognitoState.subscribe(sourceId)
+                .onEach {
+                    if (!it) sourcePreferences.lastUsedSource().set(source.id)
+                    incognitoMode.value = it
+                }
+                .launchIn(screenModelScope)
             // KMK <--
             getFeedSavedSearchBySourceId.subscribe(source.id)
                 .onEach {
@@ -115,6 +140,18 @@ open class SourceFeedScreenModel(
     }
 
     // KMK-->
+    fun toggleIncognitoMode() {
+        val packageName = when {
+            source is StubSource -> null
+            source.isLocal() -> LOCAL_SOURCE_PACKAGE
+            source.isEhBasedSource() -> EH_PACKAGE
+            else -> extensionManager.getExtensionPackage(sourceId)
+        }
+        packageName?.let {
+            toggleIncognito.await(it, !incognitoMode.value)
+        }
+    }
+
     fun resetFilters() {
         val source = source
         if (source !is CatalogueSource) return
@@ -213,7 +250,7 @@ open class SourceFeedScreenModel(
                     val titles = withIOContext {
                         page.map { it.toDomainManga(source.id) }
                             .distinctBy { it.url }
-                            .let { networkToLocalManga(it) }
+                        /* KMK --> .let { networkToLocalManga(it) } KMK <-- */
                     }
 
                     mutableState.update { state ->
@@ -247,8 +284,11 @@ open class SourceFeedScreenModel(
         return produceState(initialValue = initialManga) {
             getManga.subscribe(initialManga.url, initialManga.source)
                 .collectLatest { manga ->
-                    if (manga == null) return@collectLatest
+                    /* KMK --> if (manga == null) return@collectLatest KMK <-- */
                     value = manga
+                        // KMK -->
+                        ?: initialManga
+                    // KMK <--
                 }
         }
     }
