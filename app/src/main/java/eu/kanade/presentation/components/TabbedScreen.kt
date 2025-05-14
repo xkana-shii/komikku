@@ -29,6 +29,7 @@ import eu.kanade.tachiyomi.ui.browse.feed.FeedScreenModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
@@ -65,17 +66,29 @@ fun TabbedScreen(
                     onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
                     onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
                     onSelectAll = {
-                        feedState.items?.forEach {
-                            it.results?.forEach { manga ->
-                                bulkFavoriteScreenModel.select(manga)
-                            }
+                        feedState.items?.let { result ->
+                            result.mapNotNull { it.results }
+                                .flatten()
+                                .let {
+                                    scope.launchIO {
+                                        bulkFavoriteScreenModel.networkToLocalManga(it)
+                                            .forEach { bulkFavoriteScreenModel.select(it) }
+                                    }
+                                }
                         }
                     },
                     onReverseSelection = {
-                        feedState.items
-                            ?.mapNotNull { it.results }
-                            ?.flatten()
-                            ?.let { bulkFavoriteScreenModel.reverseSelection(it) }
+                        feedState.items?.let { result ->
+                            result.mapNotNull { it.results }
+                                .flatten()
+                                .let {
+                                    scope.launchIO {
+                                        bulkFavoriteScreenModel.reverseSelection(
+                                            bulkFavoriteScreenModel.networkToLocalManga(it),
+                                        )
+                                    }
+                                }
+                        }
                     },
                 )
             } else {

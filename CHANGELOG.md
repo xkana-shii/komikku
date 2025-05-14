@@ -20,6 +20,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
   - Use Github markdown flavour for Github releases & fix bullet list alignment ([@Secozzi](https://github.com/Secozzi)) ([#2024](https://github.com/mihonapp/mihon/pull/2024))
 - Add Nord Theme ([@Riztard](https://github.com/Riztard)) ([#1951](https://github.com/mihonapp/mihon/pull/1951))
 - Option to keep read manga when clearing database ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#1979](https://github.com/mihonapp/mihon/pull/1979))
+- Add advanced option to always update manga title from source ([@FlaminSarge](https://github.com/FlaminSarge)) ([#1182](https://github.com/mihonapp/mihon/pull/1182))
 
 ### Improved
 - Significantly improve browsing speed (near instantaneous) ([@AntsyLich](https://github.com/AntsyLich)) ([#1946](https://github.com/mihonapp/mihon/pull/1946))
@@ -27,11 +28,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Update non-library manga data when browsing ([@AntsyLich](https://github.com/AntsyLich)) ([#1967](https://github.com/mihonapp/mihon/pull/1967))
 - Surface image loading error in Reader ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#1981](https://github.com/mihonapp/mihon/pull/1981))
 - Include source headers when opening failed images from reader ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#2004](https://github.com/mihonapp/mihon/pull/2004))
+- Added autofill support to tracker login dialog ([@AntsyLich](https://github.com/AntsyLich)) ([#2069](https://github.com/mihonapp/mihon/pull/2069))
 
 ### Changed
 - Display all similarly named duplicates in duplicate manga dialogue ([@NarwhalHorns](https://github.com/NarwhalHorns), [@AntsyLich](https://github.com/AntsyLich)) ([#1861](https://github.com/mihonapp/mihon/pull/1861))
   - Display chapter count on items in duplicate manga dialogue ([@NarwhalHorns](https://github.com/NarwhalHorns)) ([#1963](https://github.com/mihonapp/mihon/pull/1963))
 - Update Facebook and Reddit icons ([@Joehuu](https://github.com/Joehuu)) ([#1994](https://github.com/mihonapp/mihon/pull/1994))
+- Switch default user agent to Android Chrome ([@AntsyLich](https://github.com/AntsyLich)) ([#2048](https://github.com/mihonapp/mihon/pull/2048))
+- Changed log in button text when processing tracker login ([@AntsyLich](https://github.com/AntsyLich)) ([#2069](https://github.com/mihonapp/mihon/pull/2069))
 
 ### Fixes
 - Fix Bangumi search results including novels ([@MajorTanya](https://github.com/MajorTanya)) ([#1885](https://github.com/mihonapp/mihon/pull/1885))
@@ -43,6 +47,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix unintended app permissions due to Firebase misconfiguration ([@AntsyLich](https://github.com/AntsyLich)) ([#1960](https://github.com/mihonapp/mihon/pull/1960))
 - Fix navigation issue after migrating a duplicated entry from History tab ([@cuong-tran](https://github.com/cuong-tran)) ([#1980](https://github.com/mihonapp/mihon/pull/1980))
 - Fix duplicate requests in WebView due to empty reasonPhrase ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#2003](https://github.com/mihonapp/mihon/pull/2003))
+- Fix content under source browse screen top appbar is interactable ([@AntsyLich](https://github.com/AntsyLich)) ([#2026](https://github.com/mihonapp/mihon/pull/2026))
+- Fix crash when trying use source sort filter without a pre-selection ([@AntsyLich](https://github.com/AntsyLich)) ([#2036](https://github.com/mihonapp/mihon/pull/2036))
+- Fix empty layout not appearing in browse source screen in some cases ([@NarwhalHorns](https://github.com/NarwhalHorns)) ([#2043](https://github.com/mihonapp/mihon/pull/2043))
+- Fix Pill not following the local text style ([@AntsyLich](https://github.com/AntsyLich)) ([`f8cb506`](https://github.com/mihonapp/mihon/commit/f8cb506))
+- Fix downloader stopping after failing to create download directory of a manga ([@AntsyLich](https://github.com/AntsyLich)) ([#2068](https://github.com/mihonapp/mihon/pull/2068))
 
 ### Removed
 - Remove Okhttp networking from WebView Screen ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#2020](https://github.com/mihonapp/mihon/pull/2020))
