@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.browse.migration.advanced.design
 
-import android.os.Build
 import android.view.LayoutInflater
 import android.widget.CompoundButton
 import android.widget.RadioButton
@@ -14,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
@@ -83,26 +81,8 @@ fun MigrationBottomSheetDialog(
                 binding.HideNotFoundManga.thumbTintList = colorScheme.thumbTintList
                 binding.OnlyShowUpdates.thumbTintList = colorScheme.thumbTintList
 
-                with(binding.extraSearchParamText) {
-                    highlightColor = colorScheme.textHighlightColor
-                    backgroundTintList = colorScheme.editTextBackgroundTintList
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        textCursorDrawable = colorScheme.primary.toDrawable()
-                        textSelectHandle?.let { drawable ->
-                            drawable.setTint(colorScheme.primary)
-                            setTextSelectHandle(drawable)
-                        }
-                        textSelectHandleLeft?.let { drawable ->
-                            drawable.setTint(colorScheme.primary)
-                            setTextSelectHandleLeft(drawable)
-                        }
-                        textSelectHandleRight?.let { drawable ->
-                            drawable.setTint(colorScheme.primary)
-                            setTextSelectHandleRight(drawable)
-                        }
-                    }
-                }
+                colorScheme.setTextInputLayoutColor(binding.extraSearchParamInputLayout)
+                colorScheme.setEditTextColor(binding.extraSearchParamText)
                 // KMK <--
                 binding.root
             },
@@ -140,9 +120,9 @@ class MigrationBottomSheetDialogState(
         binding.migDeleteDownloaded.setOnCheckedChangeListener { _, _ -> setFlags(binding) }
 
         binding.useSmartSearch.bindToPreference(preferences.smartMigration())
-        binding.extraSearchParamText.isVisible = false
+        binding.extraSearchParamInputLayout.isVisible = false
         binding.extraSearchParam.setOnCheckedChangeListener { _, isChecked ->
-            binding.extraSearchParamText.isVisible = isChecked
+            binding.extraSearchParamInputLayout.isVisible = isChecked
         }
         binding.sourceGroup.bindToPreference(preferences.useSourceWithMost())
 
@@ -163,8 +143,8 @@ class MigrationBottomSheetDialogState(
             preferences.hideNotFoundMigration().set(binding.HideNotFoundManga.isChecked)
             preferences.showOnlyUpdatesMigration().set(binding.OnlyShowUpdates.isChecked)
             onStartMigration.value(
-                if (binding.useSmartSearch.isChecked && binding.extraSearchParamText.text.isNotBlank()) {
-                    binding.extraSearchParamText.toString()
+                if (binding.useSmartSearch.isChecked && !binding.extraSearchParamText.text.isNullOrBlank()) {
+                    binding.extraSearchParamText.text.toString()
                 } else {
                     null
                 },
@@ -175,7 +155,7 @@ class MigrationBottomSheetDialogState(
         if (!fullSettings) {
             binding.useSmartSearch.isVisible = false
             binding.extraSearchParam.isVisible = false
-            binding.extraSearchParamText.isVisible = false
+            binding.extraSearchParamInputLayout.isVisible = false
             binding.sourceGroup.isVisible = false
             binding.skipStep.isVisible = false
             binding.migrateBtn.text = binding.root.context.stringResource(MR.strings.action_save)
