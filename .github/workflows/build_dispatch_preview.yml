@@ -56,7 +56,7 @@ jobs:
         uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4
         with:
           workflow: build_app.yml
-          repo: komikku-app/komikku-preview
+          repo: kana-shii/komikku-preview
           ref: "refs/heads/main"
           token: "${{ secrets.BOT_PAT }}"
           inputs: '{ "git-ref": "${{ steps.branch_names.outputs.current_branch }}" }'
