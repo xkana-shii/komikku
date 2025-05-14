@@ -39,7 +39,7 @@ class DownloadHeaderHolder(view: View, adapter: FlexibleAdapter<*>) : Expandable
                         text = "${item.size}",
                         color = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 8.sp,
+                        fontSize = 14.sp,
                     )
                 }
             }
