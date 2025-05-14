@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -24,6 +25,7 @@ import eu.kanade.tachiyomi.ui.browse.source.SourcesScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import mihon.presentation.core.util.collectAsLazyPagingItems
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -50,6 +52,7 @@ class BrowseRecommendsScreen(
         }
 
         // KMK -->
+        val scope = rememberCoroutineScope()
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
         val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
 
@@ -94,15 +97,23 @@ class BrowseRecommendsScreen(
                         onSelectAll = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .forEach { manga ->
-                                    bulkFavoriteScreenModel.select(manga)
+                                .let {
+                                    scope.launchIO {
+                                        bulkFavoriteScreenModel.networkToLocalManga(it)
+                                            .forEach { bulkFavoriteScreenModel.select(it) }
+                                    }
                                 }
                         },
                         onReverseSelection = {
-                            bulkFavoriteScreenModel.reverseSelection(
-                                mangaList.itemSnapshotList.items
-                                    .map { it.value.first },
-                            )
+                            mangaList.itemSnapshotList.items
+                                .map { it.value.first }
+                                .let {
+                                    scope.launchIO {
+                                        bulkFavoriteScreenModel.reverseSelection(
+                                            bulkFavoriteScreenModel.networkToLocalManga(it),
+                                        )
+                                    }
+                                }
                         },
                     )
                 } else {
@@ -119,7 +130,9 @@ class BrowseRecommendsScreen(
                         onDisplayModeChange = { screenModel.displayMode = it },
                         scrollBehavior = scrollBehavior,
                         // KMK -->
-                        toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
+                        toggleSelectionMode = {
+                            bulkFavoriteScreenModel.toggleSelectionMode()
+                        }.takeIf { !isExternalSource },
                         isRunning = bulkFavoriteState.isRunning,
                         // KMK <--
                     )
@@ -140,23 +153,37 @@ class BrowseRecommendsScreen(
                 onWebViewClick = null,
                 onHelpClick = null,
                 onLocalSourceHelpClick = null,
-                onMangaClick = { manga ->
+                onMangaClick = {
                     // KMK -->
-                    if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
+                    if (isExternalSource) {
+                        onClickItem(it)
                     } else {
-                        // KMK <--
-                        onClickItem(manga)
+                        scope.launchIO {
+                            val manga = screenModel.networkToLocalManga(it)
+                            if (bulkFavoriteState.selectionMode) {
+                                bulkFavoriteScreenModel.toggleSelection(manga)
+                            } else {
+                                // KMK <--
+                                onClickItem(manga)
+                            }
+                        }
                     }
                 },
-                onMangaLongClick = { manga ->
+                onMangaLongClick = {
                     // KMK -->
-                    if (!bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                    if (isExternalSource) {
+                        onLongClickItem(it)
                     } else {
-                        onLongClickItem(manga)
+                        scope.launchIO {
+                            val manga = screenModel.networkToLocalManga(it)
+                            if (!bulkFavoriteState.selectionMode) {
+                                bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                            } else {
+                                onLongClickItem(manga)
+                            }
+                        }
+                        // KMK <--
                     }
-                    // KMK <--
                 },
                 // KMK -->
                 selection = bulkFavoriteState.selection,

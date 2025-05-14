@@ -26,9 +26,9 @@ jobs:
       - name: Get tag name (${{ github.ref }})
         id: get_tag
         run: |
-          set -x
-          echo "VERSION_TAG=${GITHUB_REF/refs\/tags\//}"
-          echo "VERSION_TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+          version_tag=$(echo ${GITHUB_REF/refs\/tags\//} | sed -r 's/^refs\/(heads|tags)\///' | sed -r 's/[-\/]+/_/g')
+          echo "VERSION_TAG=$version_tag"
+          echo "VERSION_TAG=$version_tag" >> $GITHUB_OUTPUT
 
       - name: Clone Repository (${{ steps.get_tag.outputs.VERSION_TAG }})
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -46,20 +46,16 @@ jobs:
       - name: Curren commit
         id: current_commit
         run: |
-          set -x
-
           commit_count=$(git rev-list --count HEAD)
+          current_sha=$(git rev-parse --short HEAD)
           echo "COMMIT_COUNT=$commit_count"
           echo "COMMIT_COUNT=$commit_count" >> $GITHUB_OUTPUT
-          current_sha=$(git rev-parse --short HEAD)
           echo "CURRENT_SHA=$current_sha"
           echo "CURRENT_SHA=$current_sha" >> $GITHUB_OUTPUT
 
       - name: Previous commit
         id: previous_commit
         run: |
-          set -x
-
           commit_count_diff=$(git rev-list --count "${{ steps.last_release.outputs.tag_name }}"..HEAD)
 
           # Fake at least 1 commits (to avoid no changes)
@@ -77,8 +73,6 @@ jobs:
       - name: Commit logs
         id: commit_logs
         run: |
-          set -x
-
           echo "COMMIT_LOGS<<{delimiter}
           $(curl -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/komikku-app/komikku/compare/${{ steps.previous_commit.outputs.PREV_RELEASE_SHA }}...${{ steps.current_commit.outputs.CURRENT_SHA }}" \
@@ -148,7 +142,7 @@ jobs:
       - build-app
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           merge-multiple: true
 
@@ -189,7 +183,7 @@ jobs:
           echo "APK_X86_64_SHA=$sha" >> $GITHUB_OUTPUT
 
       - name: Create release
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           tag_name: ${{ needs.prepare-build.outputs.VERSION_TAG }}
           name: Komikku ${{ needs.prepare-build.outputs.VERSION_TAG }}
