@@ -926,7 +926,7 @@ class ReaderActivity : BaseActivity() {
                 ) % 2 != 0
         }
         viewModel.state.value.viewerChapters?.let {
-            viewer.setChaptersDoubleShift(it)
+            viewer.setChaptersInternal(it)
         }
     }
 
@@ -942,7 +942,7 @@ class ReaderActivity : BaseActivity() {
             config.shiftDoublePage = !config.shiftDoublePage
             viewModel.state.value.viewerChapters?.let {
                 viewer.updateShifting()
-                viewer.setChaptersDoubleShift(it)
+                viewer.setChaptersInternal(it)
                 invalidateOptionsMenu()
             }
         }
