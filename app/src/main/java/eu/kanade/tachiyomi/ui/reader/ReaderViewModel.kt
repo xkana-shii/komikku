@@ -703,7 +703,7 @@ class ReaderViewModel @JvmOverloads constructor(
         readerChapter.requestedPage = pageIndex
         chapterPageIndex = pageIndex
 
-        if (!incognitoMode && page.status is Page.State.Error) {
+        if (!incognitoMode && page.status !is Page.State.Error) {
             readerChapter.chapter.last_page_read = pageIndex
 
             if (readerChapter.pages?.lastIndex == pageIndex ||
@@ -743,13 +743,10 @@ class ReaderViewModel @JvmOverloads constructor(
         // SY -->
         if (manga?.isEhBasedManga() == true) {
             viewModelScope.launchNonCancellable {
-                val chapterUpdates = chapterList
-                    .filter { it.chapter.source_order > readerChapter.chapter.source_order }
+                val chapterUpdates = unfilteredChapterList
+                    .filter { it.sourceOrder > readerChapter.chapter.source_order }
                     .map { chapter ->
-                        ChapterUpdate(
-                            id = chapter.chapter.id!!,
-                            read = true,
-                        )
+                        ChapterUpdate(id = chapter.id, read = true)
                     }
                 updateChapter.awaitAll(chapterUpdates)
             }
