@@ -136,16 +136,15 @@ fun MigrationListScreen(
                         .fillMaxWidth()
                         .animateItem()
                         .padding(horizontal = 16.dp)
-                        .height(IntrinsicSize.Min),
+                        .height(IntrinsicSize.Min)
+                        .padding(vertical = 8.dp), // Removed the extra dot here
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val result by migrationItem.searchResult.collectAsState()
                     MigrationItem(
                         modifier = Modifier
-                            .padding(top = 8.dp)
                             .weight(1f)
-                            .align(Alignment.Top)
                             .fillMaxHeight(),
                         manga = migrationItem.manga,
                         sourcesString = migrationItem.sourcesString,
@@ -161,9 +160,7 @@ fun MigrationListScreen(
 
                     MigrationItemResult(
                         modifier = Modifier
-                            .padding(top = 8.dp)
                             .weight(1f)
-                            .align(Alignment.Top)
                             .fillMaxHeight(),
                         migrationItem = migrationItem,
                         result = result,
