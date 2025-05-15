@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
@@ -174,7 +175,8 @@ fun MigrationListScreen(
 
                     MigrationActionIcon(
                         modifier = Modifier
-                            .weight(0.2f),
+                            .weight(0.2f)
+                            .offset(y = (-4).dp), // Adjust the negative value to move it up
                         result = result,
                         skipManga = { skipManga(migrationItem.manga.id) },
                         // KMK -->
