@@ -18,3 +18,10 @@ FROM mangas JOIN libraryUpdateError
 ON mangas._id = libraryUpdateError.manga_id
 WHERE favorite = 1
 ORDER BY lastUpdate DESC;
+<<<<<<<< HEAD:data/src/main/sqldelight/tachiyomi/migrations/39.sqm
+========
+
+errors:
+SELECT *
+FROM libraryUpdateErrorView;
+>>>>>>>> master:data/src/main/sqldelight/tachiyomi/view/libraryUpdateErrorView.sq
