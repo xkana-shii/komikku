@@ -90,6 +90,9 @@ data class Manga(
     val bookmarkedFilterRaw: Long
         get() = chapterFlags and CHAPTER_BOOKMARKED_MASK
 
+    val fillermarkedFilterRaw: Long
+        get() = chapterFlags and CHAPTER_FILLERMARKED_MASK
+
     val unreadFilter: TriState
         get() = when (unreadFilterRaw) {
             CHAPTER_SHOW_UNREAD -> TriState.ENABLED_IS
@@ -107,6 +110,12 @@ data class Manga(
     // KMK -->
     val incognitoMode = customMangaInfo?.incognitoMode ?: false
     // KMK <--
+    val fillermarkedFilter: TriState
+        get() = when (fillermarkedFilterRaw) {
+            CHAPTER_SHOW_FILLERMARKED -> TriState.ENABLED_IS
+            CHAPTER_SHOW_NOT_FILLERMARKED -> TriState.ENABLED_NOT
+            else -> TriState.DISABLED
+        }
 
     fun sortDescending(): Boolean {
         return chapterFlags and CHAPTER_SORT_DIR_MASK == CHAPTER_SORT_DESC
@@ -131,6 +140,10 @@ data class Manga(
         const val CHAPTER_SHOW_BOOKMARKED = 0x00000020L
         const val CHAPTER_SHOW_NOT_BOOKMARKED = 0x00000040L
         const val CHAPTER_BOOKMARKED_MASK = 0x00000060L
+
+        const val CHAPTER_SHOW_FILLERMARKED = 0x00000080L
+        const val CHAPTER_SHOW_NOT_FILLERMARKED = 0x00000100L
+        const val CHAPTER_FILLERMARKED_MASK = 0x00000180L
 
         const val CHAPTER_SORTING_SOURCE = 0x00000000L
         const val CHAPTER_SORTING_NUMBER = 0x00000100L
