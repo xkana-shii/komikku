@@ -13,6 +13,7 @@ data class BackupOptions(
     val tracking: Boolean = true,
     val history: Boolean = true,
     val readEntries: Boolean = true,
+    val hiddenDuplicates: Boolean = true,
     val appSettings: Boolean = true,
     val extensionRepoSettings: Boolean = true,
     val sourceSettings: Boolean = true,
@@ -30,6 +31,7 @@ data class BackupOptions(
         tracking,
         history,
         readEntries,
+        hiddenDuplicates,
         appSettings,
         extensionRepoSettings,
         sourceSettings,
@@ -94,6 +96,12 @@ data class BackupOptions(
                 setter = { options, enabled -> options.copy(savedSearchesFeeds = enabled) },
             ),
             // SY <--
+            Entry(
+                label = MR.strings.hidden_duplicates,
+                getter = BackupOptions::hiddenDuplicates,
+                setter = { options, enabled -> options.copy(hiddenDuplicates = enabled) },
+                enabled = { it.hiddenDuplicates },
+            ),
         )
 
         val settingsOptions = persistentListOf(
@@ -127,13 +135,14 @@ data class BackupOptions(
             tracking = array[3],
             history = array[4],
             readEntries = array[5],
-            appSettings = array[6],
-            extensionRepoSettings = array[7],
-            sourceSettings = array[8],
-            privateSettings = array[9],
+            hiddenDuplicates = array[6],
+            appSettings = array[7],
+            extensionRepoSettings = array[8],
+            sourceSettings = array[9],
+            privateSettings = array[10],
             // SY -->
-            customInfo = array[10],
-            savedSearchesFeeds = array[11],
+            customInfo = array[11],
+            savedSearchesFeeds = array[12],
             // SY <--
         )
     }
