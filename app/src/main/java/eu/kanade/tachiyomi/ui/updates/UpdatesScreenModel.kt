@@ -41,6 +41,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.failed.repository.FailedUpdatesRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.source.service.SourceManager
@@ -61,6 +62,7 @@ class UpdatesScreenModel(
     private val getChapter: GetChapter = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
+    private val failedUpdatesManager: FailedUpdatesRepository = Injekt.get(),
     // SY -->
     readerPreferences: ReaderPreferences = Injekt.get(),
     // SY <--
@@ -88,15 +90,17 @@ class UpdatesScreenModel(
                 getUpdates.subscribe(limit).distinctUntilChanged(),
                 downloadCache.changes,
                 downloadManager.queueState,
-            ) { updates, _, _ -> updates }
+                failedUpdatesManager.hasFailedUpdates(),
+            ) { updates, _, _, iconState -> updates to iconState }
                 .catch {
                     logcat(LogPriority.ERROR, it)
                     _events.send(Event.InternalError)
                 }
-                .collectLatest { updates ->
+                .collectLatest { (updates, iconState) ->
                     mutableState.update { state ->
                         state.copy(
                             isLoading = false,
+                            hasFailedUpdates = iconState,
                             items = updates.toUpdateItems()
                                 // KMK -->
                                 .groupBy { it.update.mangaId }
@@ -442,6 +446,7 @@ class UpdatesScreenModel(
         val expandedState: Set<String> = persistentSetOf(),
         // KMK <--
         val dialog: Dialog? = null,
+        val hasFailedUpdates: Boolean = false,
     ) {
         val selected = items.filter { it.selected }
         val selectionMode = selected.isNotEmpty()
