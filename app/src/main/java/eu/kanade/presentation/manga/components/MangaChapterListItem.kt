@@ -15,10 +15,12 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
+import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FileDownloadOff
+import androidx.compose.material.icons.outlined.HideSource
 import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -37,10 +39,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import me.saket.swipe.SwipeableActionsBox
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -149,11 +149,11 @@ fun MangaChapterListItem(
                     }
                     if (fillermark) {
                         Icon(
-                            imageVector = ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp),
+                            imageVector = Icons.Filled.Circle,
                             contentDescription = stringResource(KMR.strings.action_filter_fillermarked),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
-                            tint = MaterialTheme.colorScheme.tertiary,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                     }
@@ -250,20 +250,12 @@ internal fun getSwipeAction(
             isUndo = bookmark,
             onSwipe = onSwipe,
         )
-        LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
-            val icon = if (!fillermark) {
-                ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)
-            } else {
-                ImageVector.vectorResource(id = R.drawable.ic_fillermark_border_24dp)
-            }
-            swipeAction(
-                icon = icon,
-                background = background,
-                isUndo = bookmark,
-                onSwipe = onSwipe,
-            )
-        }
-        // <-- AM (FILLERMARK)
+        LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> swipeAction(
+            icon = if (!fillermark) Icons.Outlined.Circle else Icons.Outlined.HideSource,
+            background = background,
+            isUndo = fillermark,
+            onSwipe = onSwipe,
+        )
         LibraryPreferences.ChapterSwipeAction.Download -> swipeAction(
             icon = when (downloadState) {
                 Download.State.NOT_DOWNLOADED, Download.State.ERROR -> Icons.Outlined.Download
