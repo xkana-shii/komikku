@@ -323,16 +323,16 @@ fun LazyListScope.failedUpdatesGroupUiItem(
                                     .selectedBackground(!items.fastAny { !it.selected })
                                     .combinedClickable(
                                         onClick =
-                                            {
-                                                if (expanded[errorMessageHeaderId] == null) {
-                                                    onExpandedMapChange(errorMessageHeaderId, true)
-                                                } else {
-                                                    onExpandedMapChange(
-                                                        errorMessageHeaderId,
-                                                        !expanded[errorMessageHeaderId]!!,
-                                                    )
-                                                }
-                                            },
+                                        {
+                                            if (expanded[errorMessageHeaderId] == null) {
+                                                onExpandedMapChange(errorMessageHeaderId, true)
+                                            } else {
+                                                onExpandedMapChange(
+                                                    errorMessageHeaderId,
+                                                    !expanded[errorMessageHeaderId]!!,
+                                                )
+                                            }
+                                        },
                                         onLongClick = { onGroupSelected(items) },
                                     )
                                     .padding(
@@ -405,8 +405,8 @@ fun LazyListScope.failedUpdatesGroupUiItem(
                                 AnimatedVisibility(
                                     modifier = Modifier,
                                     visible =
-                                        expanded[errorMessageHeaderId] == true &&
-                                            expanded[GroupKey(id, "")] == true,
+                                    expanded[errorMessageHeaderId] == true &&
+                                        expanded[GroupKey(id, "")] == true,
                                 ) {
                                     FailedUpdatesUiItem(
                                         modifier = Modifier
