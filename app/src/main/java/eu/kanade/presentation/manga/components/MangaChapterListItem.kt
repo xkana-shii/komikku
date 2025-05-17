@@ -104,14 +104,14 @@ fun MangaChapterListItem(
     }
 
     SwipeableActionsBox(
-        modifier = Modifier.clipToBounds(),
+        modifier = modifier.clipToBounds(),
         startActions = listOfNotNull(swipeStart),
         endActions = listOfNotNull(swipeEnd),
         swipeThreshold = swipeActionThreshold,
         backgroundUntilSwipeThreshold = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
         Row(
-            modifier = modifier
+            modifier = Modifier
                 .selectedBackground(selected)
                 .combinedClickable(
                     onClick = onClick,
@@ -269,7 +269,7 @@ internal fun getSwipeAction(
     }
 }
 
-private fun swipeAction(
+internal fun swipeAction(
     onSwipe: () -> Unit,
     icon: ImageVector,
     background: Color,
