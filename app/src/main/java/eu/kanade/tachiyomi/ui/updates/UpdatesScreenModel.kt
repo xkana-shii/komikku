@@ -470,6 +470,9 @@ class UpdatesScreenModel(
             LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> {
                 bookmarkUpdates(listOf(updateItem), !update.bookmark)
             }
+            LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
+                bookmarkUpdates(listOf(updateItem), !update.fillermark)
+            }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction = when (updateItem.downloadStateProvider()) {
                     Download.State.ERROR,
