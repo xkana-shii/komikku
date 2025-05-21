@@ -101,6 +101,7 @@ object SettingsEhScreen : SearchableSettings {
         var initialLoadGuard by remember { mutableStateOf(false) }
         val useHentaiAtHome by unsortedPreferences.useHentaiAtHome().collectAsState()
         val useJapaneseTitle by unsortedPreferences.useJapaneseTitle().collectAsState()
+        val useCleanTitle by unsortedPreferences.useCleanTitle().collectAsState()
         val useOriginalImages by unsortedPreferences.exhUseOriginalImages().collectAsState()
         val ehTagFilterValue by unsortedPreferences.ehTagFilterValue().collectAsState()
         val ehTagWatchingValue by unsortedPreferences.ehTagWatchingValue().collectAsState()
@@ -110,6 +111,7 @@ object SettingsEhScreen : SearchableSettings {
         DisposableEffect(
             useHentaiAtHome,
             useJapaneseTitle,
+            useCleanTitle,
             useOriginalImages,
             ehTagFilterValue,
             ehTagWatchingValue,
@@ -154,6 +156,7 @@ object SettingsEhScreen : SearchableSettings {
                     getLoginPreference(unsortedPreferences, openWarnConfigureDialogController),
                     useHentaiAtHome(exhentaiEnabled, unsortedPreferences),
                     useJapaneseTitle(exhentaiEnabled, unsortedPreferences),
+                    useCleanTitle(exhentaiEnabled, unsortedPreferences),
                     useOriginalImages(exhentaiEnabled, unsortedPreferences),
                     watchedTags(exhentaiEnabled),
                     tagFilterThreshold(exhentaiEnabled, unsortedPreferences),
@@ -272,6 +275,19 @@ object SettingsEhScreen : SearchableSettings {
             } else {
                 stringResource(SYMR.strings.show_japanese_titles_option_2)
             },
+            enabled = exhentaiEnabled,
+        )
+    }
+
+    @Composable
+    fun useCleanTitle(
+        exhentaiEnabled: Boolean,
+        unsortedPreferences: UnsortedPreferences,
+    ): Preference.PreferenceItem.SwitchPreference {
+        return Preference.PreferenceItem.SwitchPreference(
+            preference = unsortedPreferences.useCleanTitle(),
+            title = stringResource(SYMR.strings.clean_title),
+            subtitle = stringResource(SYMR.strings.clean_title_summary),
             enabled = exhentaiEnabled,
         )
     }
