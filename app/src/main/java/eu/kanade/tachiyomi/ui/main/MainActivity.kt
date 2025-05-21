@@ -575,7 +575,11 @@ class MainActivity : BaseActivity() {
                 navigator.popUntilRoot()
                 HomeScreen.Tab.Library(idToOpen)
             }
-            Constants.SHORTCUT_UPDATES -> HomeScreen.Tab.Updates
+            Constants.SHORTCUT_UPDATES -> HomeScreen.Tab.Updates(false)
+            Constants.SHORTCUT_FAILED -> {
+                navigator.popUntilRoot()
+                HomeScreen.Tab.Updates(true)
+            }
             Constants.SHORTCUT_HISTORY -> HomeScreen.Tab.History
             Constants.SHORTCUT_SOURCES -> HomeScreen.Tab.Browse(false)
             Constants.SHORTCUT_EXTENSIONS -> HomeScreen.Tab.Browse(true)
@@ -583,12 +587,6 @@ class MainActivity : BaseActivity() {
                 navigator.popUntilRoot()
                 HomeScreen.Tab.More(toDownloads = true)
             }
-            // KMK -->
-            Constants.SHORTCUT_LIBRARY_UPDATE_ERRORS -> {
-                navigator.popUntilRoot()
-                HomeScreen.Tab.More(toDownloads = false, toLibraryUpdateErrors = true)
-            }
-            // KMK <--
             Intent.ACTION_SEARCH, Intent.ACTION_SEND, "com.google.android.gms.actions.SEARCH_ACTION" -> {
                 // If the intent match the "standard" Android search intent
                 // or the Google-specific search intent (triggered by saying or typing "search *query* on *Tachiyomi*" in Google Search/Google Assistant)
