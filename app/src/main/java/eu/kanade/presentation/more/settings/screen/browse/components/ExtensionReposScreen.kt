@@ -24,6 +24,7 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.screen.browse.RepoScreenState
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import kotlinx.collections.immutable.persistentSetOf
+import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.KANASHII_SIGNATURE
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.KOMIKKU_SIGNATURE
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_HELP
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_SIGNATURE
@@ -116,6 +117,7 @@ fun ExtensionReposScreen(
 private fun ExtensionReposScreenPreview() {
     val state = RepoScreenState.Success(
         repos = persistentSetOf(
+            ExtensionRepo("https://repo", "Kanashii", "", "", KANASHII_SIGNATURE),
             ExtensionRepo("https://repo", "Komikku", "", "", KOMIKKU_SIGNATURE),
             ExtensionRepo("https://repo", "Repo", "", "", REPO_SIGNATURE),
             ExtensionRepo("https://repo", "Other", "", "", "key2"),
