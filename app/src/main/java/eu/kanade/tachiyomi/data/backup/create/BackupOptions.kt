@@ -20,6 +20,7 @@ data class BackupOptions(
     // SY -->
     val customInfo: Boolean = true,
     val savedSearchesFeeds: Boolean = true,
+    val smartCategories: Boolean = true,
     // SY <--
 ) {
 
@@ -37,11 +38,12 @@ data class BackupOptions(
         // SY -->
         customInfo,
         savedSearchesFeeds,
+        smartCategories,
         // SY <--
     )
 
     fun canCreate() =
-        libraryEntries || categories || appSettings || extensionRepoSettings || sourceSettings || savedSearchesFeeds
+        libraryEntries || categories || appSettings || extensionRepoSettings || sourceSettings || savedSearches || smartCategories
 
     companion object {
         val libraryOptions = persistentListOf(
@@ -93,6 +95,11 @@ data class BackupOptions(
                 getter = BackupOptions::savedSearchesFeeds,
                 setter = { options, enabled -> options.copy(savedSearchesFeeds = enabled) },
             ),
+            Entry(
+                label = SYMR.strings.smart_categories,
+                getter = BackupOptions::smartCategories,
+                setter = { options, enabled -> options.copy(smartCategories = enabled) },
+            ),
             // SY <--
         )
 
@@ -134,6 +141,7 @@ data class BackupOptions(
             // SY -->
             customInfo = array[10],
             savedSearchesFeeds = array[11],
+            smartCategories = array[12],
             // SY <--
         )
     }

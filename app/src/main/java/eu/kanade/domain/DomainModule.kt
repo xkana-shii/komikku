@@ -37,6 +37,7 @@ import mihon.domain.extensionrepo.repository.ExtensionRepoRepository
 import mihon.domain.extensionrepo.service.ExtensionRepoService
 import mihon.domain.upcoming.interactor.GetUpcomingManga
 import tachiyomi.data.category.CategoryRepositoryImpl
+import tachiyomi.data.smartCategory.SmartCategoryRepositoryImpl
 import tachiyomi.data.chapter.ChapterRepositoryImpl
 import tachiyomi.data.history.HistoryRepositoryImpl
 import tachiyomi.data.manga.MangaRepositoryImpl
@@ -58,6 +59,12 @@ import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.interactor.SetSortModeForCategory
 import tachiyomi.domain.category.interactor.UpdateCategory
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.smartCategory.interactor.CreateSmartCategory
+import tachiyomi.domain.smartCategory.interactor.DeleteSmartCategory
+import tachiyomi.domain.smartCategory.interactor.GetSmartCategory
+import tachiyomi.domain.smartCategory.interactor.SyncSmartCategory
+import tachiyomi.domain.smartCategory.interactor.UpdateSmartCategory
+import tachiyomi.domain.smartCategory.repository.SmartCategoryRepository
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.GetChapterByUrlAndMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -115,6 +122,16 @@ class DomainModule : InjektModule {
         addFactory { ReorderCategory(get()) }
         addFactory { UpdateCategory(get()) }
         addFactory { DeleteCategory(get(), get(), get()) }
+
+        // SY -->
+        addSingletonFactory<SmartCategoryRepository> { SmartCategoryRepositoryImpl(get()) }
+        addFactory { GetSmartCategory(get()) }
+        addFactory { CreateSmartCategory(get(), get()) }
+        addFactory { UpdateSmartCategory(get(), get()) }
+        addFactory { DeleteSmartCategory(get()) }
+        addFactory { SyncSmartCategory(get(), get(), get(), get()) }
+        // SY <--
+
         // KMK -->
         addFactory { HideCategory(get()) }
         addFactory { GetCategoriesPerLibraryManga(get()) }

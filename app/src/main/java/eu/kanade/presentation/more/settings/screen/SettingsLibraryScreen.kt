@@ -21,6 +21,7 @@ import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.category.genre.SortTagScreen
+import eu.kanade.tachiyomi.ui.category.smart.SmartCategoriesScreen
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
@@ -119,6 +120,11 @@ object SettingsLibraryScreen : SearchableSettings {
                         }
                         true
                     },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(SYMR.strings.pref_smart_categories_settings),
+                    subtitle = stringResource(SYMR.strings.pref_smart_categories_summary),
+                    onClick = { navigator.push(SmartCategoriesScreen()) },
                 ),
             ),
         )

@@ -13,6 +13,7 @@ data class RestoreOptions(
     val sourceSettings: Boolean = true,
     // SY -->
     val savedSearchesFeeds: Boolean = true,
+    val smartCategories: Boolean = true,
     // SY <--
 ) {
 
@@ -24,6 +25,7 @@ data class RestoreOptions(
         sourceSettings,
         // SY -->
         savedSearchesFeeds,
+        smartCategories,
         // SY <--
     )
 
@@ -33,7 +35,8 @@ data class RestoreOptions(
             appSettings ||
             extensionRepoSettings ||
             sourceSettings /* SY --> */ ||
-            savedSearchesFeeds /* SY <-- */
+            savedSearchesFeeds /* SY <-- */ ||
+            smartCategories /* SY <-- */
 
     companion object {
         val options = persistentListOf(
@@ -69,6 +72,11 @@ data class RestoreOptions(
                 // KMK <--
                 getter = RestoreOptions::savedSearchesFeeds,
                 setter = { options, enabled -> options.copy(savedSearchesFeeds = enabled) },
+            ),
+            Entry(
+                label = SYMR.strings.smart_categories,
+                getter = RestoreOptions::smartCategories,
+                setter = { options, enabled -> options.copy(smartCategories = enabled) },
             ),
             // SY <--
         )
