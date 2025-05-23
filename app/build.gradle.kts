@@ -23,10 +23,10 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.komikku.kns"
+        applicationId = "app.komikku.knsh"
 
         versionCode = 74
-        versionName = "1.13.8"
+        versionName = "1.13.2"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")

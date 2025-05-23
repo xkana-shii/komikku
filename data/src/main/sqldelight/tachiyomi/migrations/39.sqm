@@ -1,0 +1,9 @@
+import kotlin.String;
+import kotlin.collections.List;
+
+CREATE TABLE smart_category (
+    category_id INTEGER NOT NULL PRIMARY KEY,
+    tags TEXT AS List<String> NOT NULL,
+    FOREIGN KEY(category_id) REFERENCES categories(_id)
+    ON DELETE CASCADE
+);

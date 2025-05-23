@@ -42,6 +42,7 @@ import tachiyomi.data.failed.FailedUpdatesRepositoryImpl
 import tachiyomi.data.history.HistoryRepositoryImpl
 import tachiyomi.data.manga.MangaRepositoryImpl
 import tachiyomi.data.release.ReleaseServiceImpl
+import tachiyomi.data.smartCategory.SmartCategoryRepositoryImpl
 import tachiyomi.data.source.SourceRepositoryImpl
 import tachiyomi.data.source.StubSourceRepositoryImpl
 import tachiyomi.data.track.TrackRepositoryImpl
@@ -87,6 +88,12 @@ import tachiyomi.domain.manga.interactor.UpdateMangaNotes
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.release.interactor.GetApplicationRelease
 import tachiyomi.domain.release.service.ReleaseService
+import tachiyomi.domain.smartCategory.interactor.CreateSmartCategory
+import tachiyomi.domain.smartCategory.interactor.DeleteSmartCategory
+import tachiyomi.domain.smartCategory.interactor.GetSmartCategory
+import tachiyomi.domain.smartCategory.interactor.SyncSmartCategory
+import tachiyomi.domain.smartCategory.interactor.UpdateSmartCategory
+import tachiyomi.domain.smartCategory.repository.SmartCategoryRepository
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.interactor.GetSourcesWithNonLibraryManga
 import tachiyomi.domain.source.repository.SourceRepository
@@ -117,6 +124,16 @@ class DomainModule : InjektModule {
         addFactory { ReorderCategory(get()) }
         addFactory { UpdateCategory(get()) }
         addFactory { DeleteCategory(get(), get(), get()) }
+
+        // SY -->
+        addSingletonFactory<SmartCategoryRepository> { SmartCategoryRepositoryImpl(get()) }
+        addFactory { GetSmartCategory(get()) }
+        addFactory { CreateSmartCategory(get(), get()) }
+        addFactory { UpdateSmartCategory(get(), get()) }
+        addFactory { DeleteSmartCategory(get()) }
+        addFactory { SyncSmartCategory(get(), get(), get(), get()) }
+        // SY <--
+
         // KMK -->
         addFactory { HideCategory(get()) }
         addFactory { GetCategoriesPerLibraryManga(get()) }

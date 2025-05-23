@@ -93,6 +93,7 @@ class SyncManager(
             customInfo = syncOptions.customInfo,
             readEntries = syncOptions.readEntries,
             savedSearchesFeeds = syncOptions.savedSearchesFeeds,
+            smartCategories = syncOptions.smartCategories,
             // SY <--
         )
 
@@ -108,6 +109,7 @@ class SyncManager(
 
             // SY -->
             backupSavedSearches = backupCreator.backupSavedSearches(backupOptions),
+            backupSmartCategories = backupCreator.backupSmartCategories(backupOptions),
             // SY <--
 
             // KMK -->
@@ -186,6 +188,7 @@ class SyncManager(
 
             // SY -->
             backupSavedSearches = remoteBackup.backupSavedSearches,
+            backupSmartCategories = remoteBackup.backupSmartCategories,
             // SY <--
 
             // KMK -->

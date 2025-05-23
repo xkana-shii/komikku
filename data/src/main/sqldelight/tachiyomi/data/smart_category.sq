@@ -1,0 +1,43 @@
+import kotlin.String;
+import kotlin.collections.List;
+
+CREATE TABLE smart_category (
+    category_id INTEGER NOT NULL PRIMARY KEY,
+    tags TEXT AS List<String> NOT NULL,
+    FOREIGN KEY(category_id) REFERENCES categories(_id)
+    ON DELETE CASCADE
+);
+
+selectAll:
+SELECT category_id AS categoryId,
+       categories.name AS categoryName,
+       tags
+FROM smart_category
+INNER JOIN categories ON categories._id = category_id;
+
+select:
+SELECT category_id AS categoryId,
+       categories.name AS categoryName,
+       tags
+FROM smart_category
+INNER JOIN categories ON categories._id = category_id
+WHERE categoryId = :categoryId
+LIMIT 1;
+
+insert:
+INSERT INTO smart_category(category_id, tags)
+VALUES (:categoryId, :tags);
+
+upsert:
+INSERT INTO smart_category(category_id, tags)
+VALUES (:categoryId, :tags)
+ON CONFLICT(category_id) DO UPDATE SET tags = excluded.tags;
+
+update:
+UPDATE smart_category
+SET tags = coalesce(:tags, tags)
+WHERE category_id = :categoryId;
+
+delete:
+DELETE FROM smart_category
+WHERE category_id = :categoryId;

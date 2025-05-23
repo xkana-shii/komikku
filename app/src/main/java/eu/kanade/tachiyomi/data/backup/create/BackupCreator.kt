@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.data.backup.create.creators.FeedBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.PreferenceBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.SavedSearchBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.SmartCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.SourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
@@ -19,6 +20,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
+import eu.kanade.tachiyomi.data.backup.models.BackupSmartCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -61,6 +63,7 @@ class BackupCreator(
     // KMK <--
     // SY -->
     private val savedSearchBackupCreator: SavedSearchBackupCreator = SavedSearchBackupCreator(),
+    private val smartCategoriesBackupCreator: SmartCategoriesBackupCreator = SmartCategoriesBackupCreator(),
     private val getMergedManga: GetMergedManga = Injekt.get(),
     // SY <--
 ) {
@@ -106,6 +109,7 @@ class BackupCreator(
 
                 // SY -->
                 backupSavedSearches = backupSavedSearches(options),
+                backupSmartCategories = backupSmartCategories(options),
                 // SY <--
 
                 // KMK -->
@@ -182,6 +186,12 @@ class BackupCreator(
         if (!options.savedSearchesFeeds) return emptyList()
 
         return savedSearchBackupCreator()
+    }
+
+    suspend fun backupSmartCategories(options: BackupOptions): List<BackupSmartCategory> {
+        if (!options.smartCategories) return emptyList()
+
+        return smartCategoriesBackupCreator()
     }
     // SY <--
 
