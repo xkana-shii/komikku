@@ -9,6 +9,7 @@
     <string name="action_clean_titles">Clean titles</string>
     <string name="action_start_reading">Start reading</string>
     <string name="action_edit_info">Edit info</string>
+    <string name="action_sync">Sync</string>
 
     <!-- Entry Type -->
     <string name="entry_type_manga">Manga</string>
@@ -194,6 +195,22 @@
     <string name="update_30min">Every 30 minutes</string>
     <string name="update_1hour">Every hour</string>
     <string name="update_3hour">Every 3 hours</string>
+
+    <!-- Smart Categories -->
+    <string name="smart_categories">Smart categories</string>
+    <string name="pref_smart_categories_settings">Edit smart categories</string>
+    <string name="pref_smart_categories_summary">Smart categories are regular library categories that automatically adds new entries if all of the configured tags for that category match</string>
+    <string name="information_empty_smart_categories">You have no smart categories configured. Tap the plus button to select a category to configure.</string>
+    <string name="select_category">Select a category</string>
+    <string name="error_smart_category_exists">This smart category already exists!</string>
+    <string name="delete_smart_category">Delete smart category</string>
+    <string name="smart_category_sync_complete">Smart categories sync completed</string>
+    <string name="smart_category_sync_cancel">Smart categories sync cancelled</string>
+    <string name="smart_category_sync">Sync smart category</string>
+    <string name="smart_category_sync_progress">Syncing smart category %s</string>
+    <string name="smart_category_sync_confirmation">Do you wish to sync manga for the smart category %s? This could take up to a few minutes.</string>
+    <string name="information_empty_smart_category_tags">You have no tags. Tap the plus button to create one for the smart category.</string>
+    <string name="delete_smart_category_confirmation">Do you wish to delete the smart category configuration for %s?</string>
 
     <!-- Browse settings -->
     <string name="pref_hide_feed">Hide Feed tab</string>

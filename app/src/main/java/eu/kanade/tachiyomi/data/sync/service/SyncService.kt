@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
+import eu.kanade.tachiyomi.data.backup.models.BackupSmartCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import kotlinx.serialization.Serializable
@@ -61,6 +62,10 @@ abstract class SyncService(
             localSyncData.backup?.backupSavedSearches,
             remoteSyncData.backup?.backupSavedSearches,
         )
+        val mergedSmartCategoriesList = mergeSmartCategoriesLists(
+            localSyncData.backup?.backupSmartCategories,
+            remoteSyncData.backup?.backupSmartCategories,
+        )
         // SY <--
 
         // Create the merged Backup object
@@ -73,6 +78,7 @@ abstract class SyncService(
 
             // SY -->
             backupSavedSearches = mergedSavedSearchesList,
+            backupSmartCategories = mergedSmartCategoriesList,
             // SY <--
         )
 
@@ -520,6 +526,39 @@ abstract class SyncService(
         }
 
         return mergedSearches
+    }
+
+    /**
+     * Merges to lists of smart categories by adding their tags.
+     */
+    private fun mergeSmartCategoriesLists(
+        localSmartCategories: List<BackupSmartCategory>?,
+        remoteSmartCategories: List<BackupSmartCategory>?,
+    ): List<BackupSmartCategory> {
+        if (localSmartCategories == null) return remoteSmartCategories ?: emptyList()
+        if (remoteSmartCategories == null) return localSmartCategories
+        val localSmartCategoriesMap = localSmartCategories.associateBy { it.categoryName }
+        val remoteSmartCategoriesMap = remoteSmartCategories.associateBy { it.categoryName }
+
+        val mergedSmartCategoriesMap = mutableMapOf<String, BackupSmartCategory>()
+
+        localSmartCategoriesMap.forEach { (name, localSmartCategory) ->
+            val remoteSmartCategory = remoteSmartCategoriesMap[name]
+            if (remoteSmartCategory != null) {
+                localSmartCategory.tags = (localSmartCategory.tags + remoteSmartCategory.tags).toSet().toList()
+                mergedSmartCategoriesMap[name] = localSmartCategory
+            } else {
+                mergedSmartCategoriesMap[name] = localSmartCategory
+            }
+        }
+
+        remoteSmartCategoriesMap.forEach { (name, remoteCategory) ->
+            if (!mergedSmartCategoriesMap.containsKey(name)) {
+                mergedSmartCategoriesMap[name] = remoteCategory
+            }
+        }
+
+        return mergedSmartCategoriesMap.values.toList()
     }
     // SY <--
 }

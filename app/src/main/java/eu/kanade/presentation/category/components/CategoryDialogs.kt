@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TriStateCheckbox
@@ -34,6 +35,7 @@ import kotlinx.coroutines.delay
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.domain.category.model.Category
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import kotlin.time.Duration.Companion.seconds
@@ -327,3 +329,92 @@ fun ChangeCategoryDialog(
         },
     )
 }
+
+// SY -->
+@Composable
+fun CategorySelectDialog(
+    categories: ImmutableList<Category>,
+    title: String = stringResource(SYMR.strings.select_category),
+    onDismissRequest: () -> Unit,
+    onEditCategories: () -> Unit,
+    onConfirm: (Category) -> Unit,
+) {
+    if (categories.isEmpty()) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            confirmButton = {
+                tachiyomi.presentation.core.components.material.TextButton(
+                    onClick = {
+                        onDismissRequest()
+                        onEditCategories()
+                    },
+                ) {
+                    Text(text = stringResource(MR.strings.action_edit_categories))
+                }
+            },
+            title = {
+                Text(text = title)
+            },
+            text = {
+                Text(text = stringResource(MR.strings.information_empty_category_dialog))
+            },
+        )
+        return
+    }
+
+    var selection by remember { mutableStateOf<Category?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            Row {
+                tachiyomi.presentation.core.components.material.TextButton(
+                    onClick = {
+                        onDismissRequest()
+                        onEditCategories()
+                    },
+                ) {
+                    Text(text = stringResource(MR.strings.action_edit))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                tachiyomi.presentation.core.components.material.TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+                tachiyomi.presentation.core.components.material.TextButton(
+                    onClick = {
+                        onDismissRequest()
+                        selection?.let(onConfirm)
+                    },
+                ) {
+                    Text(text = stringResource(MR.strings.action_ok))
+                }
+            }
+        },
+        title = {
+            Text(text = title)
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                categories.forEach { category ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selection = category },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = if (selection != null) selection!!.id == category.id else false,
+                            onClick = { selection = category },
+                        )
+                        Text(
+                            text = category.name,
+                            modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium),
+                        )
+                    }
+                }
+            }
+        },
+    )
+}
+// SY <--
