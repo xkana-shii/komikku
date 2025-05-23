@@ -33,7 +33,6 @@ import com.elvishew.xlog.printer.file.backup.NeverBackupStrategy
 import com.elvishew.xlog.printer.file.naming.DateFileNameGenerator
 import dev.mihon.injekt.patchInjekt
 import eu.kanade.domain.DomainModule
-import eu.kanade.domain.KMKDomainModule
 import eu.kanade.domain.SYDomainModule
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.sync.SyncPreferences
@@ -140,9 +139,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Injekt.importModule(SYPreferenceModule(this))
         Injekt.importModule(SYDomainModule())
         // SY <--
-        // KMK -->
-        Injekt.importModule(KMKDomainModule())
-        // KMK <--
 
         setupExhLogging() // EXH logging
         LogcatLogger.install(XLogLogcatLogger()) // SY Redirect Logcat to XLog

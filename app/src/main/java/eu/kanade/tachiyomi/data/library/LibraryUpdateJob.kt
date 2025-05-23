@@ -24,6 +24,7 @@ import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.model.toDomainTrack
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
@@ -35,6 +36,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.online.all.MergedSource
 import eu.kanade.tachiyomi.util.system.isConnectedToWifi
+import eu.kanade.tachiyomi.util.system.isOnline
 import eu.kanade.tachiyomi.util.system.isRunning
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
 import eu.kanade.tachiyomi.util.system.workManager
@@ -64,6 +66,7 @@ import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.NoChaptersException
+import tachiyomi.domain.failed.repository.FailedUpdatesRepository
 import tachiyomi.domain.library.model.GroupLibraryMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibraryManga
@@ -75,11 +78,6 @@ import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_HAS_U
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_NON_COMPLETED
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_NON_READ
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_OUTSIDE_RELEASE_PERIOD
-import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
-import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
-import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
-import tachiyomi.domain.libraryUpdateErrorMessage.interactor.InsertLibraryUpdateErrorMessages
-import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.interactor.GetLibraryManga
@@ -102,6 +100,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.fetchAndIncrement
 import kotlin.concurrent.atomics.incrementAndFetch
 
 @OptIn(ExperimentalAtomicApi::class)
@@ -117,6 +116,7 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
     private val updateManga: UpdateManga = Injekt.get()
     private val syncChaptersWithSource: SyncChaptersWithSource = Injekt.get()
     private val fetchInterval: FetchInterval = Injekt.get()
+    private val failedUpdatesManager: FailedUpdatesRepository = Injekt.get()
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get()
 
     // SY -->
@@ -134,9 +134,6 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
 
     // KMK -->
     private val libraryUpdateStatus: LibraryUpdateStatus = Injekt.get()
-    private val deleteLibraryUpdateErrors: DeleteLibraryUpdateErrors = Injekt.get()
-    private val insertLibraryUpdateErrors: InsertLibraryUpdateErrors = Injekt.get()
-    private val insertLibraryUpdateErrorMessages: InsertLibraryUpdateErrorMessages = Injekt.get()
     // KMK <--
 
     private var mangaToUpdate: List<LibraryManga> = mutableListOf()
@@ -159,8 +156,6 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
 
         // KMK -->
         libraryUpdateStatus.start()
-
-        deleteLibraryUpdateErrors.cleanUnrelevantMangaErrors()
         // KMK <--
 
         setForegroundSafely()
@@ -378,8 +373,8 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         val progressCount = AtomicInt(0)
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
         val newUpdates = CopyOnWriteArrayList<Pair<Manga, Array<Chapter>>>()
-        val failedUpdates = CopyOnWriteArrayList<Pair<Manga, String?>>()
         val hasDownloads = AtomicBoolean(false)
+        val failedUpdatesCount = AtomicInt(0)
         // SY -->
         val mdlistLogged = mdList.isLoggedIn
         // SY <--
@@ -421,6 +416,8 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
                                 val manga = libraryManga.manga
                                 ensureActive()
 
+                                failedUpdatesManager.removeFailedUpdatesByMangaIds(listOf(manga.id))
+
                                 // Don't continue to update if manga is not in library
                                 if (getManga.await(manga.id)?.favorite != true) {
                                     return@forEach
@@ -448,21 +445,24 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
                                             // Convert to the manga that contains new chapters
                                             newUpdates.add(manga to newChapters.toTypedArray())
                                         }
-                                        clearErrorFromDB(mangaId = manga.id)
                                     } catch (e: Throwable) {
                                         val errorMessage = when (e) {
                                             is NoChaptersException ->
                                                 context.stringResource(MR.strings.no_chapters_error)
-                                            // failedUpdates will already have the source,
-                                            // don't need to copy it into the message
                                             is SourceNotInstalledException -> context.stringResource(
                                                 MR.strings.loader_not_implemented_error,
                                             )
 
-                                            else -> e.message
+                                            else -> e.message ?: context.getString(R.string.exception_unknown)
                                         }
-                                        writeErrorToDB(manga to errorMessage)
-                                        failedUpdates.add(manga to errorMessage)
+                                        try {
+                                            failedUpdatesCount.fetchAndIncrement()
+                                            val fullErrorMessage = "${e::class.java.simpleName}: $errorMessage"
+                                            val isOnline = if (context.isOnline()) 1L else 0L
+                                            failedUpdatesManager.insert(manga.id, fullErrorMessage, isOnline)
+                                        } catch (e: Exception) {
+                                            logcat(LogPriority.ERROR, e)
+                                        }
                                     }
                                 }
                             }
@@ -481,9 +481,9 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
             }
         }
 
-        if (failedUpdates.isNotEmpty()) {
+        if (failedUpdatesCount.load() > 0) {
             notifier.showUpdateErrorNotification(
-                failedUpdates.size,
+                failedUpdatesCount.load(),
             )
         }
     }
@@ -653,40 +653,6 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         )
     }
 
-    // KMK -->
-    private suspend fun clearErrorFromDB(mangaId: Long) {
-        deleteLibraryUpdateErrors.deleteMangaError(mangaIds = listOf(mangaId))
-    }
-
-    private suspend fun writeErrorToDB(error: Pair<Manga, String?>) {
-        val errorMessage = error.second ?: "???"
-        val errorMessageId = insertLibraryUpdateErrorMessages.get(errorMessage)
-            ?: insertLibraryUpdateErrorMessages.insert(
-                libraryUpdateErrorMessage = LibraryUpdateErrorMessage(-1L, errorMessage),
-            )
-
-        insertLibraryUpdateErrors.upsert(
-            LibraryUpdateError(id = -1L, mangaId = error.first.id, messageId = errorMessageId),
-        )
-    }
-
-    private suspend fun writeErrorsToDB(errors: List<Pair<Manga, String?>>) {
-        val libraryErrors = errors.groupBy({ it.second }, { it.first })
-        val errorMessages = insertLibraryUpdateErrorMessages.insertAll(
-            libraryUpdateErrorMessages = libraryErrors.keys.map { errorMessage ->
-                LibraryUpdateErrorMessage(-1L, errorMessage.orEmpty())
-            },
-        )
-        val errorList = mutableListOf<LibraryUpdateError>()
-        errorMessages.forEach {
-            libraryErrors[it.second]?.forEach { manga ->
-                errorList.add(LibraryUpdateError(id = -1L, mangaId = manga.id, messageId = it.first))
-            }
-        }
-        insertLibraryUpdateErrors.insertAll(errorList)
-    }
-    // KMK <--
-
     /**
      * Defines what should be updated within a service execution.
      */
@@ -704,8 +670,6 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         private const val TAG = "LibraryUpdate"
         private const val WORK_NAME_AUTO = "LibraryUpdate-auto"
         private const val WORK_NAME_MANUAL = "LibraryUpdate-manual"
-
-        private const val ERROR_LOG_HELP_URL = "https://komikku-app.github.io/docs/guides/troubleshooting/"
 
         /**
          * Key for category to update.

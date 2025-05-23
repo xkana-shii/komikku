@@ -1,5 +1,6 @@
 package eu.kanade.presentation.history
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -19,17 +20,16 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
-import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
 import kotlinx.collections.immutable.persistentListOf
+import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
-import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -46,6 +46,10 @@ fun HistoryScreen(
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
 ) {
+    BackHandler(!state.searchQuery.isNullOrEmpty()) {
+        onSearchQueryChange(null)
+    }
+
     // KMK -->
     val usePanoramaCover = remember { mutableStateOf(false) }
     // KMK <--
@@ -150,9 +154,10 @@ private fun HistoryScreenContent(
         ) { item ->
             when (item) {
                 is HistoryUiModel.Header -> {
-                    ListGroupHeader(
+                    DateHeading(
                         modifier = Modifier.animateItemFastScroll(),
-                        text = relativeDateText(item.date),
+                        date = item.date,
+                        mangaCount = item.mangaCount,
                     )
                 }
                 is HistoryUiModel.Item -> {
@@ -175,7 +180,7 @@ private fun HistoryScreenContent(
 }
 
 sealed interface HistoryUiModel {
-    data class Header(val date: LocalDate) : HistoryUiModel
+    data class Header(val date: LocalDate, val mangaCount: Int) : HistoryUiModel
     data class Item(val item: HistoryWithRelations) : HistoryUiModel
 }
 
