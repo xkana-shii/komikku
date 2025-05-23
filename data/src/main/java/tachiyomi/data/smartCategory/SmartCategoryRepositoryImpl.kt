@@ -47,7 +47,6 @@ class SmartCategoryRepositoryImpl(
                 tags = tags,
             )
         }
-
     }
 
     override suspend fun update(categoryId: Long, tags: List<String>) {

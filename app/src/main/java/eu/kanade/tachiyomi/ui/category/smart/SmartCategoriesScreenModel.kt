@@ -117,8 +117,6 @@ class SmartCategoriesScreenModel(
             }
         }
     }
-
-
 }
 
 sealed class SmartCategoriesEvent {

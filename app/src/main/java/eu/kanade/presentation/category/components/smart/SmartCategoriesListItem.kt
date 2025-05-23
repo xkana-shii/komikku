@@ -51,7 +51,7 @@ fun SmartCategoriesListItem(
             IconButton(onClick = onSync) {
                 Icon(
                     imageVector = Icons.Outlined.Sync,
-                    contentDescription = stringResource(SYMR.strings.action_sync)
+                    contentDescription = stringResource(SYMR.strings.action_sync),
                 )
             }
             IconButton(onClick = onEdit) {

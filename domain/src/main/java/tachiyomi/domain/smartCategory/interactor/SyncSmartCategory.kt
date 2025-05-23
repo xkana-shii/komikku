@@ -3,7 +3,6 @@ package tachiyomi.domain.smartCategory.interactor
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.manga.interactor.GetAllManga
-import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.smartCategory.model.SmartCategory
 

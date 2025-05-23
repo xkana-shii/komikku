@@ -42,5 +42,4 @@ class UpdateSmartCategory(
     }
 
     private fun hasDuplicates(tags: List<String>) = tags.toSet().size != tags.size
-
 }

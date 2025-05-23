@@ -38,12 +38,12 @@ import nl.adaptivity.xmlutil.serialization.XML
 import tachiyomi.core.common.storage.AndroidStorageFolderProvider
 import tachiyomi.core.common.storage.UniFileTempFileManager
 import tachiyomi.data.AndroidDatabaseHandler
-import tachiyomi.data.Smart_category
 import tachiyomi.data.Database
 import tachiyomi.data.DatabaseHandler
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.History
 import tachiyomi.data.Mangas
+import tachiyomi.data.Smart_category
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
