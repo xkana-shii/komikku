@@ -6,7 +6,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 
-
 data class RestoreOptions(
     val libraryEntries: Boolean = true,
     val categories: Boolean = true,
