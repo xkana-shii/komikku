@@ -383,6 +383,8 @@ class MangaScreen(
                     else -> {}
                 }
             }.takeIf { isConfigurableSource },
+            onOpenMangaFolder = { screenModel.openMangaFolder() }
+                .takeIf { successState.source !is StubSource },
             onRelatedMangasScreenClick = {
                 if (successState.isRelatedMangasFetched == null) {
                     scope.launchIO { screenModel.fetchRelatedMangasFromSource(onDemand = true) }
@@ -470,6 +472,9 @@ class MangaScreen(
                     onConfirm = { screenModel.toggleFavorite(onRemoved = {}, checkDuplicate = false) },
                     onOpenManga = { navigator.push(MangaScreen(it.id)) },
                     onMigrate = { screenModel.showMigrateDialog(it) },
+                    // KMK -->
+                    targetManga = dialog.manga,
+                    // KMK <--
                 )
             }
 
