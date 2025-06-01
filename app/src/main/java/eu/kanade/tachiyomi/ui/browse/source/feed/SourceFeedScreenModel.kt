@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import mihon.domain.manga.model.toDomainManga
+import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
@@ -73,7 +74,7 @@ open class SourceFeedScreenModel(
     uiPreferences: UiPreferences = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
-    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getFeedSavedSearchBySourceId: GetFeedSavedSearchBySourceId = Injekt.get(),
     private val getSavedSearchBySourceIdFeed: GetSavedSearchBySourceIdFeed = Injekt.get(),
     private val countFeedSavedSearchBySourceId: CountFeedSavedSearchBySourceId = Injekt.get(),
@@ -238,7 +239,7 @@ open class SourceFeedScreenModel(
                                 is SourceFeedUI.Latest -> source.getLatestUpdates(1)
                                 is SourceFeedUI.SourceSavedSearch -> source.getSearchManga(
                                     page = 1,
-                                    query = sourceFeed.savedSearch.query.orEmpty(),
+                                    query = sourceFeed.savedSearch.query?.sanitize().orEmpty(),
                                     filters = getFilterList(sourceFeed.savedSearch, source),
                                 )
                             }
@@ -250,7 +251,7 @@ open class SourceFeedScreenModel(
                     val titles = withIOContext {
                         page.map { it.toDomainManga(source.id) }
                             .distinctBy { it.url }
-                        /* KMK --> .let { networkToLocalManga(it) } KMK <-- */
+                            .let { networkToLocalManga(it) }
                     }
 
                     mutableState.update { state ->
@@ -284,11 +285,8 @@ open class SourceFeedScreenModel(
         return produceState(initialValue = initialManga) {
             getManga.subscribe(initialManga.url, initialManga.source)
                 .collectLatest { manga ->
-                    /* KMK --> if (manga == null) return@collectLatest KMK <-- */
+                    if (manga == null) return@collectLatest
                     value = manga
-                        // KMK -->
-                        ?: initialManga
-                    // KMK <--
                 }
         }
     }
