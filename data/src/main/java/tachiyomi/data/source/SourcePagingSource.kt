@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.metadata.metadata.RaisedSearchMetadata
 import mihon.domain.manga.model.toDomainManga
+import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
@@ -20,7 +21,7 @@ class SourceSearchPagingSource(
     private val filters: FilterList,
 ) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source?.getSearchManga(currentPage, query, filters)
+        return source?.getSearchManga(currentPage, query.sanitize(), filters)
             // KMK -->
             ?: MangasPage(emptyList(), false)
         // KMK <--
@@ -93,8 +94,8 @@ abstract class BaseSourcePagingSource(
             // SY -->
             .mapIndexed { index, sManga -> sManga.toDomainManga(source!!.id) to metadata.getOrNull(index) }
             .filter { seenManga.add(it.first.url) }
-        // KMK -->
-        // .let { pairs -> pairs.zip(networkToLocalManga(pairs.map { it.first })).map { it.second to it.first.second } }
+            // KMK -->
+            .let { pairs -> networkToLocalManga(pairs.map { it.first }).zip(pairs.map { it.second }) }
         // KMK <--
         // SY <--
 
