@@ -26,11 +26,11 @@ Before you start, please note that the ability to use following technologies is 
 
 ## Getting help
 
-- Join [the Discord server](https://discord.gg/Nft8MxpR) for online help and to ask questions while developing.
+- Join [the Discord server](https://discord.gg/85jB7V5AJR) for online help and to ask questions while developing.
 
 # Translations
 
-Translations are done externally via [Crowdin](https://crowdin.com/project/komikku).
+Translations are done externally via [Weblate](https://hosted.weblate.org/engage/komikku-app/). See [our website](https://komikku-app.github.io/docs/contribute#translation) for more details.
 
 
 # Forks
