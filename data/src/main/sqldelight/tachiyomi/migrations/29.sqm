@@ -36,6 +36,7 @@ LEFT JOIN(
     LEFT JOIN history
     ON chapters._id = history.chapter_id
     WHERE excluded_scanlators.scanlator IS NULL
+      AND chapters.fillermark = 0
     GROUP BY chapters.manga_id
 ) AS C
 ON M._id = C.manga_id
