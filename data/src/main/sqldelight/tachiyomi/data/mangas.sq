@@ -136,7 +136,6 @@ chapter_counts AS (
     ON C.manga_id = ES.manga_id
     AND C.scanlator = ES.scanlator
     WHERE ES.scanlator IS NULL
-      AND C.fillermark = 0
     GROUP BY M._id
 )
 SELECT
