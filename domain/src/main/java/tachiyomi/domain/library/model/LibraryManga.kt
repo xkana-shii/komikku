@@ -11,6 +11,7 @@ data class LibraryManga(
     val fillermarkCount: Long,
     // KMK -->
     val bookmarkReadCount: Long,
+    val fillermarkReadCount: Long,
     val chapterFlags: Long,
     // KMK <--
     val latestUpload: Long,
@@ -24,6 +25,8 @@ data class LibraryManga(
             // KMK -->
             chapterFlags and Manga.CHAPTER_SHOW_NOT_BOOKMARKED != 0L -> (totalChapters - bookmarkCount) - (readCount - bookmarkReadCount)
             chapterFlags and Manga.CHAPTER_SHOW_BOOKMARKED != 0L -> bookmarkCount - bookmarkReadCount
+            chapterFlags and Manga.CHAPTER_SHOW_NOT_FILLERMARKED != 0L -> (totalChapters - fillermarkCount) - (readCount - fillermarkReadCount)
+            chapterFlags and Manga.CHAPTER_SHOW_FILLERMARKED != 0L -> fillermarkCount - fillermarkReadCount
             // KMK <--
             else -> totalChapters - readCount
         }

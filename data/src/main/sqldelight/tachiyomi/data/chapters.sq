@@ -71,6 +71,12 @@ AND (
 )
 AND (
     (M.chapter_flags & :bookmarkMask) = 0 OR C.bookmark = 1
+)
+AND (
+    (M.chapter_flags & :fillermarkUnmask) = 0 OR C.fillermark = 0
+)
+AND (
+    (M.chapter_flags & :fillermarkMask) = 0 OR C.fillermark = 1
 );
 
 getScanlatorsByMangaId:

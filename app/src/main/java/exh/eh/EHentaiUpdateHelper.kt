@@ -225,10 +225,12 @@ class EHentaiUpdateHelper(context: Context) {
                                 lastPageRead = newLastPageRead
                             }
                             val bookmark = it.bookmark || chapter.bookmark
+                            val fillermark = it.fillermark || chapter.fillermark
                             it.copy(
                                 read = read,
                                 lastPageRead = lastPageRead,
                                 bookmark = bookmark,
+                                fillermark = fillermark,
                             )
                         } else {
                             it
