@@ -48,7 +48,6 @@ LEFT JOIN(
     ON chapters.manga_id = excluded_scanlators.manga_id
     AND chapters.scanlator = excluded_scanlators.scanlator
     WHERE ex_scanlator IS NULL
-      AND chapters.fillermark = 0
     GROUP BY chapters.manga_id
 ) AS C
 ON mangas._id = C.manga_id;
