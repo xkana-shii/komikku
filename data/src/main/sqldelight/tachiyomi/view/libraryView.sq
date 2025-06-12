@@ -9,6 +9,10 @@ SELECT
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.fillermarkCount, 0) AS fillermarkCount,
+    -- KMK -->
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
+    -- KMK <--
     coalesce(MC.category_id, 0) AS category
 FROM mangas M
 LEFT JOIN(
@@ -21,6 +25,10 @@ LEFT JOIN(
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
         sum(chapters.fillermark) AS fillermarkCount,
+        -- KMK -->
+        sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN chapters.fillermark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
+        -- KMK <--
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     LEFT JOIN excluded_scanlators
@@ -29,7 +37,6 @@ LEFT JOIN(
     LEFT JOIN history
     ON chapters._id = history.chapter_id
     WHERE ex_scanlator IS NULL
-      AND fillermarkCount = 0
     GROUP BY chapters.manga_id
 ) AS C
 ON M._id = C.manga_id
@@ -46,6 +53,10 @@ SELECT
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.fillermarkCount, 0) AS fillermarkCount,
+    -- KMK -->
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
+    -- KMK <--
     coalesce(MC.category_id, 0) AS category
 FROM mangas M
 LEFT JOIN (
@@ -64,6 +75,10 @@ LEFT JOIN(
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
         sum(chapters.fillermark) AS fillermarkCount,
+        -- KMK -->
+        sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN chapters.fillermark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
+        -- KMK <--
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     LEFT JOIN excluded_scanlators
@@ -74,7 +89,6 @@ LEFT JOIN(
     LEFT JOIN merged ME
     ON ME.manga_id = chapters.manga_id
     WHERE ex_scanlator IS NULL
-      AND fillermarkCount = 0
     GROUP BY ME.merge_id
 ) AS C
 ON M._id = C.merge_id  -- ON ME.merge_id = C.merge_id

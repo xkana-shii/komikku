@@ -37,7 +37,6 @@ CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapters
 WHEN new.is_syncing = 0 AND (
     new.read != old.read OR
     new.bookmark != old.bookmark OR
-    new.fillermark != old.fillermark OR
     new.last_page_read != old.last_page_read
 )
 BEGIN
@@ -58,6 +57,7 @@ WHERE _id = :id;
 getChaptersByMangaId:
 SELECT C.*
 FROM chapters C
+JOIN mangas M ON C.manga_id = M._id
 LEFT JOIN excluded_scanlators ES
 ON C.manga_id = ES.manga_id
 AND C.scanlator = ES.scanlator
@@ -65,6 +65,18 @@ WHERE C.manga_id = :mangaId
 AND (
     :applyScanlatorFilter = 0
     OR ES.scanlator IS NULL
+)
+AND (
+    (M.chapter_flags & :bookmarkUnmask) = 0 OR C.bookmark = 0
+)
+AND (
+    (M.chapter_flags & :bookmarkMask) = 0 OR C.bookmark = 1
+)
+AND (
+    (M.chapter_flags & :fillermarkUnmask) = 0 OR C.fillermark = 0
+)
+AND (
+    (M.chapter_flags & :fillermarkMask) = 0 OR C.fillermark = 1
 );
 
 getScanlatorsByMangaId:
@@ -83,6 +95,7 @@ SELECT *
 FROM chapters
 WHERE fillermark
 AND manga_id = :mangaId;
+
 
 getChapterByUrl:
 SELECT *
