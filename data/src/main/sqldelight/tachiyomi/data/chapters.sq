@@ -37,6 +37,7 @@ CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapters
 WHEN new.is_syncing = 0 AND (
     new.read != old.read OR
     new.bookmark != old.bookmark OR
+    new.fillermark != old.fillermark OR
     new.last_page_read != old.last_page_read
 )
 BEGIN
@@ -127,6 +128,8 @@ AND (
         ES.scanlator IS NULL
         AND ((MA.chapter_flags & :bookmarkUnmask) = 0 OR C.bookmark = 0)
         AND ((MA.chapter_flags & :bookmarkMask) = 0 OR C.bookmark = 1)
+        AND ((MA.chapter_flags & :fillermarkUnmask) = 0 OR C.fillermark = 0)
+        AND ((MA.chapter_flags & :fillermarkMask) = 0 OR C.fillermark = 1)
     )
     -- KMK <--
 );
