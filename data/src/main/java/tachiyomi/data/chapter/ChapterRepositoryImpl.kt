@@ -8,6 +8,7 @@ import tachiyomi.data.DatabaseHandler
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
+import tachiyomi.domain.manga.model.Manga
 
 class ChapterRepositoryImpl(
     private val handler: DatabaseHandler,
@@ -84,7 +85,17 @@ class ChapterRepositoryImpl(
 
     override suspend fun getChapterByMangaId(mangaId: Long, applyScanlatorFilter: Boolean): List<Chapter> {
         return handler.awaitList {
-            chaptersQueries.getChaptersByMangaId(mangaId, applyScanlatorFilter.toLong(), ChapterMapper::mapChapter)
+            chaptersQueries.getChaptersByMangaId(
+                mangaId,
+                applyScanlatorFilter.toLong(),
+                // KMK -->
+                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+                Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
+                // KMK <--
+                ChapterMapper::mapChapter,
+            )
         }
     }
 
@@ -124,7 +135,17 @@ class ChapterRepositoryImpl(
 
     override suspend fun getChapterByMangaIdAsFlow(mangaId: Long, applyScanlatorFilter: Boolean): Flow<List<Chapter>> {
         return handler.subscribeToList {
-            chaptersQueries.getChaptersByMangaId(mangaId, applyScanlatorFilter.toLong(), ChapterMapper::mapChapter)
+            chaptersQueries.getChaptersByMangaId(
+                mangaId,
+                applyScanlatorFilter.toLong(),
+                // KMK -->
+                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+                Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
+                // KMK <--
+                ChapterMapper::mapChapter,
+            )
         }
     }
 
