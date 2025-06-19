@@ -37,12 +37,7 @@ class DiscordLoginActivity : BaseActivity() {
                     webView.stopLoading()
                     webView.evaluateJavascript(
                         """
-                        (function() {
-                            const wreq = (webpackChunkdiscord_app.push([[''], {}, e => { m = []; for (let c in e.c) m.push(e.c[c])}]), m)
-                            webpackChunkdiscord_app.pop()
-                            const token = wreq.find(m => m?.exports?.default?.getToken !== void 0).exports.default.getToken();
-                            return token;
-                        })()
+                            (()=>{const i=document.createElement('iframe');document.body.append(i);const t=JSON.parse(i.contentWindow.localStorage.token);i.remove();return t})()
                         """.trimIndent(),
                     ) {
                         login(it.trim('"'))
