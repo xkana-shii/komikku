@@ -49,11 +49,20 @@ class DiscordLoginActivity : BaseActivity() {
     }
 
     private fun login(token: String) {
-        connectionsPreferences.connectionsToken(connectionsManager.discord).set(token)
-        connectionsPreferences.setConnectionsCredentials(connectionsManager.discord, "Discord", "Logged In")
-        toast(MR.strings.login_success)
-        Log.d("discord_login_tachiyomisy", "Logged in with token: $token")
+        if (!validateToken(token)) {
+            toast("Login Failed: Failed to retrieve token")
+        } else {
+            connectionsPreferences.connectionsToken(connectionsManager.discord).set(token)
+            connectionsPreferences.setConnectionsCredentials(connectionsManager.discord, "Discord", "Logged In")
+            toast(MR.strings.login_success)
+            Log.d("discord_login_tachiyomisy", "Logged in with token: ${token.take(6)}...${token.takeLast(6)}")
+        }
         applicationInfo.dataDir.let { File("$it/app_webview/").deleteRecursively() }
         finish()
+    }
+
+    private fun validateToken(token: String): Boolean {
+        // Basic validation for Discord tokens
+        return Regex("""^[\w-]{24}\.[\w-]{6}\.[\w-]{27}\w+?$""").matches(token)
     }
 }
