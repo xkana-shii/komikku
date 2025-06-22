@@ -326,7 +326,7 @@ class BulkFavoriteScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
+            updateManga.await(new.toMangaUpdate())
         }
     }
 
