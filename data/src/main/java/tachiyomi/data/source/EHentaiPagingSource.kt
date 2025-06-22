@@ -10,7 +10,7 @@ import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.domain.manga.model.Manga
 
 abstract class EHentaiPagingSource(
-    override val source: CatalogueSource,
+    source: CatalogueSource,
 ) : BaseSourcePagingSource(source) {
 
     override suspend fun getPageLoadResult(
