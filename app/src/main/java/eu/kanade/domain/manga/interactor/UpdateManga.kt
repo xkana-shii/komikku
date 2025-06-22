@@ -72,7 +72,6 @@ class UpdateManga(
             MangaUpdate(
                 id = localManga.id,
                 title = title,
-                chapterFlags = localManga.chapterFlags,
                 coverLastModified = coverLastModified,
                 author = remoteManga.author,
                 artist = remoteManga.artist,
@@ -108,13 +107,13 @@ class UpdateManga(
         return mangaRepository.update(MangaUpdate(id = mangaId, coverLastModified = Instant.now().toEpochMilli()))
     }
 
-    suspend fun awaitUpdateFavorite(mangaId: Long, favorite: Boolean, chapterFlags: Long? = null): Boolean {
+    suspend fun awaitUpdateFavorite(mangaId: Long, favorite: Boolean): Boolean {
         val dateAdded = when (favorite) {
             true -> Instant.now().toEpochMilli()
             false -> 0
         }
         return mangaRepository.update(
-            MangaUpdate(id = mangaId, favorite = favorite, dateAdded = dateAdded, chapterFlags = chapterFlags),
+            MangaUpdate(id = mangaId, favorite = favorite, dateAdded = dateAdded),
         )
     }
 }
