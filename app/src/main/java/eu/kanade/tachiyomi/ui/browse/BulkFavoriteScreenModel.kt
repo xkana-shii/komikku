@@ -244,6 +244,11 @@ class BulkFavoriteScreenModel(
 
         screenModelScope.launchIO {
             updateManga.awaitUpdateFavorite(manga.id, true)
+            val updated = manga.copy(
+                favorite = true,
+                dateAdded = Instant.now().toEpochMilli(),
+            )
+            updateManga.await(updated.toMangaUpdate().copy(chapterFlags = null))
         }
     }
 
