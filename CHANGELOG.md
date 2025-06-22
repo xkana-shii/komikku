@@ -21,6 +21,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Add Nord Theme ([@Riztard](https://github.com/Riztard)) ([#1951](https://github.com/mihonapp/mihon/pull/1951))
 - Option to keep read manga when clearing database ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#1979](https://github.com/mihonapp/mihon/pull/1979))
 - Add advanced option to always update manga title from source ([@FlaminSarge](https://github.com/FlaminSarge)) ([#1182](https://github.com/mihonapp/mihon/pull/1182))
+- Full predictive back support ([@AntsyLich](https://github.com/AntsyLich)) ([#2085](https://github.com/mihonapp/mihon/pull/2085))
+- Add Catppuccin theme (mocha for dark and latte for light, mauve accent) ([@claymorwan](https://github.com/claymorwan/)) ([#2117](https://github.com/mihonapp/mihon/pull/2117))
 
 ### Improved
 - Significantly improve browsing speed (near instantaneous) ([@AntsyLich](https://github.com/AntsyLich)) ([#1946](https://github.com/mihonapp/mihon/pull/1946))
@@ -36,6 +38,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Update Facebook and Reddit icons ([@Joehuu](https://github.com/Joehuu)) ([#1994](https://github.com/mihonapp/mihon/pull/1994))
 - Switch default user agent to Android Chrome ([@AntsyLich](https://github.com/AntsyLich)) ([#2048](https://github.com/mihonapp/mihon/pull/2048))
 - Changed log in button text when processing tracker login ([@AntsyLich](https://github.com/AntsyLich)) ([#2069](https://github.com/mihonapp/mihon/pull/2069))
+- Disable reader's 'Keep screen on' setting by default ([@AntsyLich](https://github.com/AntsyLich)) ([#2095](https://github.com/mihonapp/mihon/pull/2095))
 
 ### Fixes
 - Fix Bangumi search results including novels ([@MajorTanya](https://github.com/MajorTanya)) ([#1885](https://github.com/mihonapp/mihon/pull/1885))
@@ -52,6 +55,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix empty layout not appearing in browse source screen in some cases ([@NarwhalHorns](https://github.com/NarwhalHorns)) ([#2043](https://github.com/mihonapp/mihon/pull/2043))
 - Fix Pill not following the local text style ([@AntsyLich](https://github.com/AntsyLich)) ([`f8cb506`](https://github.com/mihonapp/mihon/commit/f8cb506))
 - Fix downloader stopping after failing to create download directory of a manga ([@AntsyLich](https://github.com/AntsyLich)) ([#2068](https://github.com/mihonapp/mihon/pull/2068))
+- Fix pressing `Enter` while searching also triggering navigation back on physical keyboards ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#2077](https://github.com/mihonapp/mihon/pull/2077))
+- Ensure app waits for Cloudflare challenge to complete before continuing ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#2200](https://github.com/mihonapp/mihon/pull/2200))
 
 ### Removed
 - Remove Okhttp networking from WebView Screen ([@AwkwardPeak7](https://github.com/AwkwardPeak7)) ([#2020](https://github.com/mihonapp/mihon/pull/2020))
