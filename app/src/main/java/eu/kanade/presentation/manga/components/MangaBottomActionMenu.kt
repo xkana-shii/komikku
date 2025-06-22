@@ -287,6 +287,7 @@ fun LibraryBottomActionMenu(
     // SY -->
     onClickCleanTitles: (() -> Unit)?,
     onClickMigrate: (() -> Unit)?,
+    onClickCollectRecommendations: (() -> Unit)?,
     onClickAddToMangaDex: (() -> Unit)?,
     onClickResetInfo: (() -> Unit)?,
     // SY <--
@@ -327,8 +328,9 @@ fun LibraryBottomActionMenu(
                 onClickResetInfo != null ||
                 // KMK -->
                 onClickMigrate != null ||
-                onClickMerge != null
-            // KMK <--
+                onClickMerge != null ||
+                // KMK <--
+                onClickCollectRecommendations != null
             val configuration = LocalConfiguration.current
             val isTabletUi = remember { configuration.isTabletUi() }
             var overFlowOpen by remember { mutableStateOf(false) }
@@ -444,6 +446,12 @@ fun LibraryBottomActionMenu(
                             DropdownMenuItem(
                                 text = { Text(stringResource(SYMR.strings.action_clean_titles)) },
                                 onClick = onClickCleanTitles,
+                            )
+                        }
+                        if (onClickCollectRecommendations != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(SYMR.strings.rec_search_short)) },
+                                onClick = onClickCollectRecommendations,
                             )
                         }
                         if (onClickAddToMangaDex != null) {
