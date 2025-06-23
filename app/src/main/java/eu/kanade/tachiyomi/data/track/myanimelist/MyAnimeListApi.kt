@@ -33,7 +33,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.text.ifEmpty
 import kotlin.text.isNotBlank
-import kotlin.text.map
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 class MyAnimeListApi(
