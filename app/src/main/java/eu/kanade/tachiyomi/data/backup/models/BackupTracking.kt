@@ -27,7 +27,7 @@ data class BackupTracking(
     @ProtoNumber(11) var finishedReadingDate: Long = 0,
     @ProtoNumber(12) var private: Boolean = false,
     @ProtoNumber(100) var mediaId: Long = 0,
-    @ProtoNumber(101) var rereadCount: Int? = 0
+    @ProtoNumber(101) var rereadCount: Int? = 0,
 ) {
 
     @Suppress("DEPRECATION")
