@@ -248,6 +248,10 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
             null
         }
     }
+
+    override suspend fun getPaginatedMangaList(page: Int, statusId: Long): List<TrackMangaMetadata> {
+        return api.getPaginatedMangaList(page, statusId, getUsername().toInt())
+    }
     // SY <--
 
     fun saveOAuth(alOAuth: ALOAuth?) {
