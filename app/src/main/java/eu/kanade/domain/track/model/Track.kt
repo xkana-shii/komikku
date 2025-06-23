@@ -28,6 +28,7 @@ fun Track.toDbTrack(): DbTrack = DbTrack.create(trackerId).also {
     it.started_reading_date = startDate
     it.finished_reading_date = finishDate
     it.private = private
+    it.reread_count = rereadCount
 }
 
 fun DbTrack.toDomainTrack(idRequired: Boolean = true): Track? {
@@ -47,5 +48,6 @@ fun DbTrack.toDomainTrack(idRequired: Boolean = true): Track? {
         startDate = started_reading_date,
         finishDate = finished_reading_date,
         private = private,
+        rereadCount = reread_count
     )
 }
