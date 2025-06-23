@@ -35,6 +35,7 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()
         start_date = this@toTrackSearch.year.toString()
+        authors = listOf(this@toTrackSearch.authors.toString())
     }
 }
 
