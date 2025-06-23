@@ -25,9 +25,6 @@ interface Tracker {
 
     val supportsPrivateTracking: Boolean
 
-    val rereadCount: Int?
-        get() = 0
-
     @ColorInt
     fun getLogoColor(): Int
 

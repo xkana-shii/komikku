@@ -15,14 +15,13 @@ CREATE TABLE manga_sync(
     remote_url TEXT NOT NULL,
     start_date INTEGER AS Long NOT NULL,
     finish_date INTEGER AS Long NOT NULL,
-    reread_count INTEGER NOT NULL DEFAULT 0,
     UNIQUE (manga_id, sync_id) ON CONFLICT REPLACE,
     FOREIGN KEY(manga_id) REFERENCES mangas (_id)
     ON DELETE CASCADE
 );
 
-INSERT INTO manga_sync(_id, manga_id, sync_id, remote_id, library_id, title, last_chapter_read, total_chapters, status, score, remote_url, start_date, finish_date, reread_count)
-SELECT _id, manga_id, sync_id, remote_id, library_id, title, last_chapter_read, total_chapters, status, score, remote_url, start_date, finish_date, reread_count
+INSERT INTO manga_sync(_id, manga_id, sync_id, remote_id, library_id, title, last_chapter_read, total_chapters, status, score, remote_url, start_date, finish_date)
+SELECT _id, manga_id, sync_id, remote_id, library_id, title, last_chapter_read, total_chapters, status, score, remote_url, start_date, finish_date
 FROM manga_sync_tmp;
 
 

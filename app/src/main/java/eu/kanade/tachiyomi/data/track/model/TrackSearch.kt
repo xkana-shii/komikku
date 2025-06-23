@@ -32,8 +32,6 @@ class TrackSearch : Track {
 
     override var private: Boolean = false
 
-    override var reread_count: Int? = 0
-
     override lateinit var tracking_url: String
 
     var authors: List<String> = emptyList()

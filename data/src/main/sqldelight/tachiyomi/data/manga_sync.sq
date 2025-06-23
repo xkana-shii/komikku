@@ -15,7 +15,6 @@ CREATE TABLE manga_sync(
     start_date INTEGER NOT NULL,
     finish_date INTEGER NOT NULL,
     private INTEGER AS Boolean DEFAULT 0 NOT NULL,
-    reread_count INTEGER NOT NULL DEFAULT 0,
     UNIQUE (manga_id, sync_id) ON CONFLICT REPLACE,
     FOREIGN KEY(manga_id) REFERENCES mangas (_id)
     ON DELETE CASCADE
@@ -43,8 +42,8 @@ FROM manga_sync
 WHERE manga_id = :mangaId;
 
 insert:
-INSERT INTO manga_sync(manga_id,sync_id,remote_id,library_id,title,last_chapter_read,total_chapters,status,score,remote_url,start_date,finish_date,private,reread_count)
-VALUES (:mangaId,:syncId,:remoteId,:libraryId,:title,:lastChapterRead,:totalChapters,:status,:score,:remoteUrl,:startDate,:finishDate,:private,:rereadCount);
+INSERT INTO manga_sync(manga_id,sync_id,remote_id,library_id,title,last_chapter_read,total_chapters,status,score,remote_url,start_date,finish_date,private)
+VALUES (:mangaId,:syncId,:remoteId,:libraryId,:title,:lastChapterRead,:totalChapters,:status,:score,:remoteUrl,:startDate,:finishDate,:private);
 
 update:
 UPDATE manga_sync
@@ -62,5 +61,4 @@ SET
     start_date = coalesce(:startDate, start_date),
     finish_date = coalesce(:finishDate, finish_date),
     private = coalesce(:private, private)
-    reread_count = coalesce(:rereadCount, reread_count)
 WHERE _id = :id;
