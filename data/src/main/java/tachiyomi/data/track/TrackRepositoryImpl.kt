@@ -79,6 +79,7 @@ class TrackRepositoryImpl(
                     startDate = mangaTrack.startDate,
                     finishDate = mangaTrack.finishDate,
                     private = mangaTrack.private,
+                    rereadCount = mangaTrack.rereadCount,
                 )
             }
         }

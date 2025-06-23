@@ -77,6 +77,14 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     }
 
     override suspend fun update(track: Track, didReadChapter: Boolean): Track {
+        if (track.status == COMPLETED && track.last_chapter_read < track.total_chapters && track.total_chapters > 0) {
+            track.status = REREADING
+        }
+
+        if (track.status == REREADING && track.last_chapter_read == track.total_chapters.toDouble() && track.total_chapters > 0) {
+            track.status = COMPLETED
+            track.reread_count = (track.reread_count ?: 0) + 1
+        }
         if (track.status != COMPLETED) {
             if (didReadChapter) {
                 if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
