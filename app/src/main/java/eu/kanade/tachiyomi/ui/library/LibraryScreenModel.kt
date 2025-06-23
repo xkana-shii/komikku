@@ -359,7 +359,8 @@ class LibraryScreenModel(
                     state.copy(
                         hasLoggedInTrackers = trackerList.filterNot { it is EnhancedTracker }.any { tracker ->
                             tracker::class in listOf(
-                                Anilist::class, MyAnimeList::class,
+                                Anilist::class,
+                                MyAnimeList::class,
                             )
                         },
                     )
