@@ -54,6 +54,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.presentation.components.AppStateBanners
 import eu.kanade.presentation.components.DownloadedOnlyBannerBackgroundColor
 import eu.kanade.presentation.components.IncognitoModeBannerBackgroundColor
@@ -74,6 +75,8 @@ import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.SyncStatus
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverMetadata
+import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
+import eu.kanade.tachiyomi.data.connections.discord.DiscordScreen
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
@@ -152,6 +155,8 @@ class MainActivity : BaseActivity() {
     var ready = false
 
     private var navigator: Navigator? = null
+
+    private val connectionsPreferences: ConnectionsPreferences by injectLazy()
 
     init {
         registerSecureActivity(this)
@@ -344,6 +349,24 @@ class MainActivity : BaseActivity() {
                             }
                         }
                         .launchIn(this)
+
+                    connectionsPreferences.enableDiscordRPC().changes()
+                        .drop(1)
+                        .onEach {
+                            if (it) {
+                                DiscordRPCService.start(this@MainActivity.applicationContext)
+                            } else {
+                                DiscordRPCService.stop(this@MainActivity.applicationContext, 0L)
+                            }
+                        }.launchIn(this)
+
+                    connectionsPreferences.discordRPCStatus().changes()
+                        .drop(1)
+                        .onEach {
+                            DiscordRPCService.stop(this@MainActivity.applicationContext, 0L)
+                            DiscordRPCService.start(this@MainActivity.applicationContext)
+                            DiscordRPCService.setScreen(this@MainActivity, DiscordScreen.MORE)
+                        }.launchIn(this)
                 }
 
                 HandleOnNewIntent(context = context, navigator = navigator)
