@@ -554,6 +554,9 @@
     <string name="pref_discord_incognito">Discord Incognito mode</string>
     <string name="pref_discord_incognito_summary">Overridden when Incognito Mode is enabled</string>
     <string name="pref_discord_incognito_categories_details">Entries in included categories will not be displayed in Discord</string>
+    <string name="discord_accounts">Discord Accounts</string>
+    <string name="active_account">Active Account</string>
+    <string name="no_accounts_found">No accounts found</string>
 
     <!-- Discord section -->
     <string name="browsing">Browsing</string>

@@ -15,6 +15,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.util.fastMap
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.more.settings.Preference
@@ -49,6 +51,7 @@ object SettingsDiscordScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
+        val navigator = LocalNavigator.currentOrThrow
         val connectionsPreferences = remember { Injekt.get<ConnectionsPreferences>() }
         val connectionsManager = remember { Injekt.get<ConnectionsManager>() }
         val enableDRPCPref = connectionsPreferences.enableDiscordRPC()
@@ -74,6 +77,10 @@ object SettingsDiscordScreen : SearchableSettings {
         }
 
         return listOf(
+            Preference.PreferenceItem.TextPreference(
+                title = stringResource(MR.strings.discord_accounts),
+                onClick = { navigator.push(DiscordAccountsScreen) },
+            ),
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.connections_discord),
                 preferenceItems = persistentListOf(

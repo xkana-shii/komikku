@@ -10,7 +10,7 @@ class ConnectionsManager {
 
     val discord = Discord(DISCORD)
 
-    val services = listOf(discord)
+    private val services = listOf(discord)
 
     fun getService(id: Long) = services.find { it.id == id }
 }
