@@ -41,7 +41,6 @@ import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
-import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.manga.model.toSManga
@@ -291,38 +290,20 @@ class MangaScreen(
                         screenModel.source,
                     )
                 } else {
-                    mergedMangaAction(
+                    openMergedMangaWebview(
                         context,
                         navigator,
                         successState.mergedData,
-                        // KMK -->
-                        action = { _, nav, manga, source -> openMangaInWebView(nav, manga, source) },
-                        titleRes = MR.strings.action_open_in_web_view,
-                        // KMK <--
                     )
                 }
             }.takeIf { isHttpSource },
             // SY <--
             onWebViewLongClicked = {
-                // KMK -->
-                if (successState.mergedData == null) {
-                    // KMK <--
-                    copyMangaUrl(
-                        context,
-                        screenModel.manga,
-                        screenModel.source,
-                    )
-                    // KMK -->
-                } else {
-                    mergedMangaAction(
-                        context,
-                        navigator,
-                        successState.mergedData,
-                        action = { ctx, _, manga, source -> copyMangaUrl(ctx, manga, source) },
-                        titleRes = MR.strings.action_copy_link,
-                    )
-                    // KMK <--
-                }
+                copyMangaUrl(
+                    context,
+                    screenModel.manga,
+                    screenModel.source,
+                )
             }.takeIf { isHttpSource },
             onTrackingClicked = {
                 if (!successState.hasLoggedInTrackers) {
@@ -343,23 +324,7 @@ class MangaScreen(
             },
             // KMK <--
             onCoverClicked = screenModel::showCoverDialog,
-            onShareClicked = {
-                // KMK -->
-                if (successState.mergedData == null) {
-                    // KMK <--
-                    shareManga(context, screenModel.manga, screenModel.source)
-                    // KMK -->
-                } else {
-                    mergedMangaAction(
-                        context,
-                        navigator,
-                        successState.mergedData,
-                        action = { ctx, _, manga, source -> shareManga(ctx, manga, source) },
-                        titleRes = MR.strings.action_share,
-                    )
-                    // KMK <--
-                }
-            }.takeIf { isHttpSource },
+            onShareClicked = { shareManga(context, screenModel.manga, screenModel.source) }.takeIf { isHttpSource },
             onDownloadActionClicked = screenModel::runDownloadAction.takeIf { !successState.source.isLocalOrStub() },
             onEditCategoryClicked = screenModel::showChangeCategoryDialog.takeIf { successState.manga.favorite },
             onEditFetchIntervalClicked = screenModel::showSetFetchIntervalDialog.takeIf {
@@ -469,13 +434,7 @@ class MangaScreen(
 
         var showScanlatorsDialog by remember { mutableStateOf(false) }
 
-        val onDismissRequest = {
-            screenModel.dismissDialog()
-            if (screenModel.autoOpenTrack && screenModel.showTrackDialogAfterCategorySelection) {
-                screenModel.showTrackDialogAfterCategorySelection = false
-                screenModel.showTrackDialog()
-            }
-        }
+        val onDismissRequest = { screenModel.dismissDialog() }
         when (val dialog = successState.dialog) {
             null -> {}
             is MangaScreenModel.Dialog.ChangeCategory -> {
@@ -800,7 +759,6 @@ class MangaScreen(
         context.copyToClipboard(url, url)
     }
 
-    // SY -->
     private fun openMetadataViewer(
         navigator: Navigator,
         manga: Manga,
@@ -811,36 +769,18 @@ class MangaScreen(
         navigator.push(MetadataViewScreen(manga.id, manga.source, seedColor?.toArgb()))
     }
 
-    private fun mergedMangaAction(
-        context: Context,
-        navigator: Navigator,
-        mergedMangaData: MergedMangaData,
-        // KMK -->
-        action: (Context, Navigator, Manga, HttpSource?) -> Unit,
-        titleRes: StringResource,
-        // KMK <--
-    ) {
+    private fun openMergedMangaWebview(context: Context, navigator: Navigator, mergedMangaData: MergedMangaData) {
         val sourceManager: SourceManager = Injekt.get()
-        // KMK -->
-        val mergedMangaAndSources = mergedMangaData.manga.values
-            .filterNot { it.source == MERGED_SOURCE_ID }
-            .map { manga -> manga to sourceManager.getOrStub(manga.source) }
-        // KMK <--
+        val mergedManga = mergedMangaData.manga.values.filterNot { it.source == MERGED_SOURCE_ID }
+        val sources = mergedManga.map { sourceManager.getOrStub(it.source) }
         MaterialAlertDialogBuilder(context)
-            .setTitle(titleRes.getString(context))
+            .setTitle(MR.strings.action_open_in_web_view.getString(context))
             .setSingleChoiceItems(
-                Array(mergedMangaAndSources.size) { index ->
-                    // KMK -->
-                    mergedMangaAndSources[index].second.toString()
-                    // KMK <--
-                },
+                Array(mergedManga.size) { index -> sources[index].toString() },
                 -1,
             ) { dialog, index ->
                 dialog.dismiss()
-                // KMK -->
-                val (manga, source) = mergedMangaAndSources[index]
-                action(context, navigator, manga, source as? HttpSource)
-                // KMK <--
+                openMangaInWebView(navigator, mergedManga[index], sources[index] as? HttpSource)
             }
             .setNegativeButton(MR.strings.action_cancel.getString(context), null)
             .show()

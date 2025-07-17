@@ -293,9 +293,8 @@ fun LibraryBottomActionMenu(
     // SY <--
     // KMK -->
     onClickMerge: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    onClickRefreshSelected: (() -> Unit)? = null,
     // KMK <--
+    modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -330,7 +329,6 @@ fun LibraryBottomActionMenu(
                 // KMK -->
                 onClickMigrate != null ||
                 onClickMerge != null ||
-                onClickRefreshSelected != null ||
                 // KMK <--
                 onClickCollectRecommendations != null
             val configuration = LocalConfiguration.current
@@ -428,14 +426,6 @@ fun LibraryBottomActionMenu(
                         offset = DpOffset((-10).dp, 0.dp),
                         // KMK <--
                     ) {
-                        // KMK -->
-                        if (onClickRefreshSelected != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(KMR.strings.action_update)) },
-                                onClick = onClickRefreshSelected,
-                            )
-                        }
-                        // KMK <--
                         if (!isTabletUi) {
                             if (onClickMigrate != null) {
                                 DropdownMenuItem(

@@ -93,6 +93,7 @@ object SettingsTrackingScreen : SearchableSettings {
         val trackPreferences = remember { Injekt.get<TrackPreferences>() }
         val trackerManager = remember { Injekt.get<TrackerManager>() }
         val sourceManager = remember { Injekt.get<SourceManager>() }
+        val autoTrackStatePref = trackPreferences.autoUpdateTrackOnMarkRead()
 
         var dialog by remember { mutableStateOf<Any?>(null) }
         dialog?.run {
@@ -129,10 +130,6 @@ object SettingsTrackingScreen : SearchableSettings {
         }
 
         return listOf(
-            Preference.PreferenceItem.SwitchPreference(
-                preference = trackPreferences.trackOnAddingToLibrary(),
-                title = stringResource(KMR.strings.pref_track_on_add_library),
-            ),
             Preference.PreferenceItem.SwitchPreference(
                 preference = trackPreferences.autoUpdateTrack(),
                 title = stringResource(MR.strings.pref_auto_update_manga_sync),
