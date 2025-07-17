@@ -23,7 +23,7 @@ data class LibraryManga(
     val unreadCount
         get() = when {
             // KMK -->
-            chapterFlags and Manga.CHAPTER_SHOW_NOT_BOOKMARKED != 0L -> (totalChapters - bookmarkCount) - (readCount - bookmarkReadCount)
+            chapterFlags and Manga.CHAPTER_SHOW_NOT_BOOKMARKED != 0L -> totalChapters - bookmarkCount - (readCount - bookmarkReadCount)
             chapterFlags and Manga.CHAPTER_SHOW_BOOKMARKED != 0L -> bookmarkCount - bookmarkReadCount
             chapterFlags and Manga.CHAPTER_SHOW_NOT_FILLERMARKED != 0L -> (totalChapters - fillermarkCount) - (readCount - fillermarkReadCount)
             chapterFlags and Manga.CHAPTER_SHOW_FILLERMARKED != 0L -> fillermarkCount - fillermarkReadCount
