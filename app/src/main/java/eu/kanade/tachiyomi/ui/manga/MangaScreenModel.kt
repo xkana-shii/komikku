@@ -259,6 +259,11 @@ class MangaScreenModel(
     private val selectedPositions: Array<Int> = arrayOf(-1, -1) // first and last selected index in list
     private val selectedChapterIds: HashSet<Long> = HashSet()
 
+    internal var showTrackDialogAfterCategorySelection: Boolean = false
+
+    internal val autoOpenTrack: Boolean
+        get() = successState?.hasLoggedInTrackers == true && trackPreferences.trackOnAddingToLibrary().get()
+
     // EXH -->
     private val updateHelper: EHentaiUpdateHelper by injectLazy()
 
@@ -466,6 +471,7 @@ class MangaScreenModel(
                     excludedScanlators = getExcludedScanlators.await(mangaId).toImmutableSet(),
                     isRefreshingData = needRefreshInfo || needRefreshChapter,
                     dialog = null,
+                    hideMissingChapters = libraryPreferences.hideMissingChapters().get(),
                     // SY -->
                     showRecommendationsInOverflow = uiPreferences.recommendsInOverflow().get(),
                     showMergeInOverflow = uiPreferences.mergeInOverflow().get(),
@@ -817,11 +823,17 @@ class MangaScreenModel(
                     }
 
                     // Choose a category
-                    else -> showChangeCategoryDialog()
+                    else -> {
+                        showTrackDialogAfterCategorySelection = true
+                        showChangeCategoryDialog()
+                    }
                 }
 
                 // Finally match with enhanced tracking when available
                 addTracks.bindEnhancedTrackers(manga, state.source)
+                if (autoOpenTrack && !showTrackDialogAfterCategorySelection) {
+                    showTrackDialog()
+                }
             }
         }
     }
@@ -1876,6 +1888,7 @@ class MangaScreenModel(
             val isRefreshingData: Boolean = false,
             val dialog: Dialog? = null,
             val hasPromptedToAddBefore: Boolean = false,
+            val hideMissingChapters: Boolean = false,
 
             // SY -->
             val meta: RaisedSearchMetadata?,
@@ -1928,6 +1941,10 @@ class MangaScreenModel(
             }
 
             val chapterListItems by lazy {
+                if (hideMissingChapters) {
+                    return@lazy processedChapters
+                }
+
                 processedChapters.insertSeparators { before, after ->
                     val (lowerChapter, higherChapter) = if (manga.sortDescending()) {
                         after to before
