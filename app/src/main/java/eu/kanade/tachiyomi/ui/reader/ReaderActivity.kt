@@ -580,6 +580,7 @@ class ReaderActivity : BaseActivity() {
                 },
                 onClickShiftPage = ::shiftDoublePages,
                 // SY <--
+                readerPreferences = readerPreferences,
             )
 
             if (flashOnPageChange) {
