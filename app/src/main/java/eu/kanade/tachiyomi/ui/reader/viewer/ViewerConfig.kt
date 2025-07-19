@@ -22,6 +22,8 @@ abstract class ViewerConfig(readerPreferences: ReaderPreferences, private val sc
     var volumeKeysEnabled = false
     var volumeKeysInverted = false
     var alwaysShowChapterTransition = true
+    var autoScrollSpeed = 10
+    var autoFlipInterval = 5
     var navigationMode = 0
         protected set
 
@@ -59,6 +61,12 @@ abstract class ViewerConfig(readerPreferences: ReaderPreferences, private val sc
 
         readerPreferences.alwaysShowChapterTransition()
             .register({ alwaysShowChapterTransition = it })
+
+        readerPreferences.autoScrollSpeed()
+            .register({ autoScrollSpeed = it })
+
+        readerPreferences.autoFlipInterval()
+            .register({ autoFlipInterval = it })
 
         forceNavigationOverlay = readerPreferences.showNavigationOverlayNewUser().get()
         if (forceNavigationOverlay) {

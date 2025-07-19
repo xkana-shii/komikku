@@ -146,6 +146,13 @@ class ReaderPreferences(
     // KMK -->
     fun smallerTapZone() = preferenceStore.getBoolean("reader_navigation_smaller_tap_zone", false)
     // KMK <--
+    fun autoScroll() = preferenceStore.getBoolean("pref_auto_scroll", false)
+
+    fun autoScrollSpeed() = preferenceStore.getInt("pref_auto_scroll_speed", 10)
+
+    fun autoFlip() = preferenceStore.getBoolean("pref_auto_flip", false)
+
+    fun autoFlipInterval() = preferenceStore.getInt("pref_auto_flip_interval", 5)
 
     // endregion
 
