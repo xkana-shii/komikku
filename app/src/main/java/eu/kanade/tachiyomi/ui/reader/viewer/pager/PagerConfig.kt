@@ -73,6 +73,8 @@ class PagerConfig(
     var centerMarginType = CenterMarginType.NONE
 
     // SY <--
+    var autoFlipEnabled = false
+    var autoFlipInterval = 5
 
     init {
         readerPreferences.readerTheme()
@@ -174,6 +176,11 @@ class PagerConfig(
         readerPreferences.invertDoublePages()
             .register({ invertDoublePages = it && dualPageSplit == false }, { imagePropertyChangedListener?.invoke() })
         // SY <--
+        readerPreferences.autoFlip()
+            .register({ autoFlipEnabled = it })
+
+        readerPreferences.autoFlipInterval()
+            .register({ autoFlipInterval = it })
     }
 
     private fun zoomTypeFromPreference(value: Int) {
