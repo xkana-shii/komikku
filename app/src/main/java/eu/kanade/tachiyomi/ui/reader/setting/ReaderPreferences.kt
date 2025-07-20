@@ -148,7 +148,7 @@ class ReaderPreferences(
     // KMK <--
     fun autoScroll() = preferenceStore.getBoolean("pref_auto_scroll", false)
 
-    fun autoScrollSpeed() = preferenceStore.getInt("pref_auto_scroll_speed", 10)
+    fun autoScrollSpeed() = preferenceStore.getInt("pref_auto_scroll_speed", 5)
 
     fun autoFlip() = preferenceStore.getBoolean("pref_auto_flip", false)
 

@@ -192,8 +192,14 @@ class WebtoonViewer(
         scope.launch {
             automationInProgress.collect { isAutomating ->
                 if (isAutomating) {
-                    android.util.Log.d("Automation","started")
+
                     activity.hideMenu()
+
+                    val screenHeight = activity.resources.displayMetrics.heightPixels
+                    val refreshRate = activity.windowManager.defaultDisplay.refreshRate
+                    val scrollDistancePerFrame = screenHeight / (config.autoScrollSpeed * refreshRate)
+                    val scrollDistancePerFrameInt = scrollDistancePerFrame.toInt()
+                    android.util.Log.d("Automation","started @ $scrollDistancePerFrameInt px/frame")
                     while (automationInProgress.value) {
                         suspendCancellableCoroutine { continuation ->
                             val frameCallback = Choreographer.FrameCallback {
@@ -207,7 +213,7 @@ class WebtoonViewer(
                                 android.util.Log.d("Automation", "Choreographer callback cancelled", it)
                             }
                         }
-                        recycler.scrollBy(0, config.autoScrollSpeed)
+                        recycler.scrollBy(0, scrollDistancePerFrameInt)
                     }
                 } else {
                     android.util.Log.d("Automation","stopped")
