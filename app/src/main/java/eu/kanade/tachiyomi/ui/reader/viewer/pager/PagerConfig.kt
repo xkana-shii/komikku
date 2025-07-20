@@ -73,8 +73,8 @@ class PagerConfig(
     var centerMarginType = CenterMarginType.NONE
 
     // SY <--
-    var autoFlipEnabled = false
-    var autoFlipInterval = 5
+    var autoFlipEnabled = readerPreferences.autoFlip().get()
+    var autoFlipInterval = readerPreferences.autoFlipInterval().get()
 
     init {
         readerPreferences.readerTheme()

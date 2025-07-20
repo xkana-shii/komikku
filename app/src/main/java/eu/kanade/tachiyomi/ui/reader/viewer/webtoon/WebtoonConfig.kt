@@ -49,8 +49,8 @@ class WebtoonConfig(
         private set
 
     // SY <--
-    var autoScrollEnabled = false
-    var autoScrollSpeed = 10
+    var autoScrollEnabled = readerPreferences.autoScroll().get()
+    var autoScrollSpeed = readerPreferences.autoScrollSpeed().get()
 
     init {
         readerPreferences.cropBordersWebtoon()
