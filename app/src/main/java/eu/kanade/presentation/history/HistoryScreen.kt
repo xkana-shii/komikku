@@ -1,5 +1,6 @@
 package eu.kanade.presentation.history
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -46,6 +47,10 @@ fun HistoryScreen(
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
 ) {
+    BackHandler(!state.searchQuery.isNullOrEmpty()) {
+        onSearchQueryChange(null)
+    }
+
     // KMK -->
     val usePanoramaCover = remember { mutableStateOf(false) }
     // KMK <--
