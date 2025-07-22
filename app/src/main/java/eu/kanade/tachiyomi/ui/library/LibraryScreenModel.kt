@@ -405,9 +405,8 @@ class LibraryScreenModel(
             }
         }
         // KMK <--
-    }
-
-            screenModelScope.launchIO {
+        
+        screenModelScope.launchIO {
             trackerManager.loggedInTrackersFlow().collectLatest { trackerList ->
                 mutableState.update { state ->
                     state.copy(
@@ -421,6 +420,7 @@ class LibraryScreenModel(
                 }
             }
         }
+    }
 
     /**
      * Applies library filters to the given map of manga.
