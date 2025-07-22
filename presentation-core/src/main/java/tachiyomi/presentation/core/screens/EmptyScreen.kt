@@ -93,7 +93,7 @@ fun EmptyScreen(
         )
 
         // KMK -->
-        help?.let { help() }
+        help?.invoke()
         // KMK <--
 
         if (!actions.isNullOrEmpty()) {
