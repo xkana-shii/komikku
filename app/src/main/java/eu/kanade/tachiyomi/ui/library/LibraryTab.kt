@@ -41,6 +41,7 @@ import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.ui.browse.migration.advanced.design.PreMigrationScreen
@@ -184,6 +185,10 @@ data object LibraryTab : Tab {
                     // SY <--
                     searchQuery = state.searchQuery,
                     onSearchQueryChange = screenModel::search,
+                    onInvalidateDownloadCache = { context ->
+                        Injekt.get<DownloadCache>().invalidateCache()
+                        context.toast(MR.strings.download_cache_invalidated)
+                    },
                     scrollBehavior = scrollBehavior.takeIf { !tabVisible }, // For scroll overlay when no tab
                 )
             },
@@ -254,6 +259,20 @@ data object LibraryTab : Tab {
                         } else {
                             screenModel.clearSelection()
                             context.toast(SYMR.strings.no_valid_entry)
+                        }
+                    },
+                    onClickRefreshSelected = {
+                        val started = screenModel.refreshSelectedManga()
+                        scope.launch {
+                            val msgRes = if (started) {
+                                KMR.strings.updating
+                            } else {
+                                MR.strings.update_already_running
+                            }
+                            if (started) {
+                                screenModel.clearSelection()
+                            }
+                            snackbarHostState.showSnackbar(context.stringResource(msgRes))
                         }
                     },
                     // KMK <--
