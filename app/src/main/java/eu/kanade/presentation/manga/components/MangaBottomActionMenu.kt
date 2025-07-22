@@ -293,6 +293,7 @@ fun LibraryBottomActionMenu(
     // SY <--
     // KMK -->
     onClickMerge: (() -> Unit)?,
+    onClickRefreshSelected: (() -> Unit)?,
     // KMK <--
     modifier: Modifier = Modifier,
 ) {
@@ -329,6 +330,7 @@ fun LibraryBottomActionMenu(
                 // KMK -->
                 onClickMigrate != null ||
                 onClickMerge != null ||
+                onClickRefreshSelected != null ||
                 // KMK <--
                 onClickCollectRecommendations != null
             val configuration = LocalConfiguration.current
@@ -426,6 +428,17 @@ fun LibraryBottomActionMenu(
                         offset = DpOffset((-10).dp, 0.dp),
                         // KMK <--
                     ) {
+                        // KMK -->
+                        if (onClickRefreshSelected != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(KMR.strings.action_update)) },
+                                onClick = {
+                                    overFlowOpen = false
+                                    onClickRefreshSelected()
+                                },
+                            )
+                        }
+                        // KMK <--
                         if (!isTabletUi) {
                             if (onClickMigrate != null) {
                                 DropdownMenuItem(
