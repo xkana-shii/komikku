@@ -101,6 +101,7 @@ object MangaMapper {
         chapterFetchedAt: Long,
         lastRead: Long,
         bookmarkCount: Double,
+        fillermarkCount: Double,
         // KMK -->
         bookmarkedReadCount: Long,
         // KMK <--
@@ -140,6 +141,7 @@ object MangaMapper {
         totalChapters = totalCount,
         readCount = readCount.toLong(),
         bookmarkCount = bookmarkCount.toLong(),
+        fillermarkCount = fillermarkCount.toLong(),
         // KMK -->
         bookmarkReadCount = bookmarkedReadCount,
         chapterFlags = chapterFlags,
