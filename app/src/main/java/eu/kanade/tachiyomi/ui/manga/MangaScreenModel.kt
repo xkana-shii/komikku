@@ -224,9 +224,6 @@ class MangaScreenModel(
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // KMK -->
-    private val deleteLibraryUpdateErrors: DeleteLibraryUpdateErrors = Injekt.get(),
-    private val insertLibraryUpdateErrors: InsertLibraryUpdateErrors = Injekt.get(),
-    private val insertLibraryUpdateErrorMessages: InsertLibraryUpdateErrorMessages = Injekt.get(),
     private val deleteChaptersFromDb: DeleteChapters = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<MangaScreenModel.State>(State.Loading) {
