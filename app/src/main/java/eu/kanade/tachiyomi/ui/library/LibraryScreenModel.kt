@@ -31,6 +31,7 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
+import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
@@ -207,10 +208,11 @@ class LibraryScreenModel(
                 combine(
                     getCategoriesPerLibraryManga.subscribe(),
                     state.map { it.filterCategory }.distinctUntilChanged(),
-                    ::Pair,
+                    state.map { it.searchQuery.isNullOrBlank() && !it.hasActiveFilters }.distinctUntilChanged(),
+                    ::Triple,
                 ),
                 // KMK <--
-            ) { (searchQuery, library, _), (tracks, trackingFilter), (groupType, sort), (categoriesPerManga, filterCategory) ->
+            ) { (searchQuery, library, _), (tracks, trackingFilter), (groupType, sort), (categoriesPerManga, filterCategory, noActiveFilterOrSearch) ->
                 library
                     // SY -->
                     .applyGrouping(/* KMK --> */ if (filterCategory) LibraryGroup.UNGROUPED else /* KMK <-- */ groupType)
@@ -240,6 +242,24 @@ class LibraryScreenModel(
                             value
                         }
                     }
+                    // KMK -->
+                    .filter {
+                        noActiveFilterOrSearch || it.value.isNotEmpty()
+                    }
+                    .let {
+                        it.ifEmpty {
+                            mapOf(
+                                Category(
+                                    0,
+                                    preferences.context.stringResource(MR.strings.default_category),
+                                    0,
+                                    0,
+                                    false,
+                                ) to emptyList(),
+                            )
+                        }
+                    }
+                // KMK <--
             }
                 .collectLatest {
                     mutableState.update { state ->
@@ -801,9 +821,9 @@ class LibraryScreenModel(
         // SY -->
         val mergedManga = getMergedMangaById.await(manga.id).associateBy { it.id }
         return if (manga.id == MERGED_SOURCE_ID) {
-            getMergedChaptersByMangaId.await(manga.id, applyScanlatorFilter = true)
+            getMergedChaptersByMangaId.await(manga.id, applyFilter = true)
         } else {
-            getChaptersByMangaId.await(manga.id, applyScanlatorFilter = true)
+            getChaptersByMangaId.await(manga.id, applyFilter = true)
         }.getNextUnread(manga, downloadManager, mergedManga)
         // SY <--
     }
@@ -948,6 +968,20 @@ class LibraryScreenModel(
         clearSelection()
     }
     // SY <--
+
+    // KMK -->
+    /**
+     * Update Selected Mangas
+     */
+    fun refreshSelectedManga(): Boolean {
+        val mangaIds = state.value.selection.map { it.manga.id }
+        return LibraryUpdateJob.startNow(
+            context = preferences.context,
+            mangaIds = mangaIds,
+            target = LibraryUpdateJob.Target.CHAPTERS,
+        )
+    }
+    // KMK <--
 
     /**
      * Marks mangas' chapters read status.
