@@ -175,6 +175,10 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
             null
         }
     }
+
+    override suspend fun getPaginatedMangaList(page: Int, statusId: Long): List<TrackMangaMetadata> {
+        return api.getPaginatedMangaList(page, statusId)
+    }
     // SY <--
 
     fun getIfAuthExpired(): Boolean {
