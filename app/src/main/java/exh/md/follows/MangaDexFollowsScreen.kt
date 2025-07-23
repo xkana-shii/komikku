@@ -77,15 +77,12 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                         onSelectAll = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .forEach { manga ->
-                                    bulkFavoriteScreenModel.select(manga)
-                                }
+                                .forEach { bulkFavoriteScreenModel.select(it) }
                         },
                         onReverseSelection = {
-                            bulkFavoriteScreenModel.reverseSelection(
-                                mangaList.itemSnapshotList.items
-                                    .map { it.value.first },
-                            )
+                            mangaList.itemSnapshotList.items
+                                .map { it.value.first }
+                                .let { bulkFavoriteScreenModel.reverseSelection(it) }
                         },
                     )
                 } else {
@@ -163,6 +160,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                     onConfirm = { screenModel.addFavorite(dialog.manga) },
                     onOpenManga = { navigator.push(MangaScreen(it.id)) },
                     // KMK -->
+                    targetManga = dialog.manga,
                     onMigrate = { screenModel.setDialog(BrowseSourceScreenModel.Dialog.Migrate(dialog.manga, it)) },
                     // KMK <--
                 )
@@ -172,7 +170,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                 MigrateDialog(
                     oldManga = dialog.oldManga,
                     newManga = dialog.newManga,
-                    screenModel = MigrateDialogScreenModel(),
+                    screenModel = rememberScreenModel { MigrateDialogScreenModel() },
                     onDismissRequest = onDismissRequest,
                     onClickTitle = { navigator.push(MangaScreen(dialog.oldManga.id)) },
                     onPopScreen = { onDismissRequest() },

@@ -4,6 +4,7 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.res.ColorStateList
 import android.os.Build
+import android.widget.EditText
 import androidx.annotation.ColorInt
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.surfaceColorAtElevation
@@ -12,6 +13,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
@@ -188,7 +191,7 @@ class AndroidViewColorScheme(
         ),
         intArrayOf(
             onPrimary,
-            onSurface,
+            onSurfaceVariant,
         ),
     )
 
@@ -199,7 +202,7 @@ class AndroidViewColorScheme(
         ),
         intArrayOf(
             primary,
-            onSurface,
+            onSurfaceVariant,
         ),
     )
 
@@ -210,7 +213,7 @@ class AndroidViewColorScheme(
         ),
         intArrayOf(
             primary,
-            onSurface,
+            onSurfaceVariant,
         ),
     )
 
@@ -226,6 +229,65 @@ class AndroidViewColorScheme(
             primary, // Default color
         ),
     )
+
+    /**
+     * Set the color of the [TextInputEditText] or [EditText].
+     * @param editText The EditText to set the color for.
+     */
+    fun setEditTextColor(
+        editText: TextInputEditText,
+    ) {
+        editText.setTextColor(onSurfaceVariant)
+        editText.highlightColor = inversePrimary
+        editText.backgroundTintList = editTextBackgroundTintList
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            editText.textSelectHandle?.let { drawable ->
+                drawable.setTint(primary)
+                editText.setTextSelectHandle(drawable)
+            }
+            editText.textSelectHandleLeft?.let { drawable ->
+                drawable.setTint(primary)
+                editText.setTextSelectHandleLeft(drawable)
+            }
+            editText.textSelectHandleRight?.let { drawable ->
+                drawable.setTint(primary)
+                editText.setTextSelectHandleRight(drawable)
+            }
+        }
+    }
+
+    fun setTextInputLayoutColor(
+        inputLayout: TextInputLayout,
+        isError: Boolean = false,
+    ) {
+        val (strokeColorFocused, strokeColorDefault, hintColor, cursorColor) = if (isError) {
+            arrayOf(error, error, error, error)
+        } else {
+            arrayOf(primary, onSurfaceVariant, primary, primary)
+        }
+
+        val boxStrokeColorStateList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_focused),
+                intArrayOf(), // Default state
+            ),
+            intArrayOf(
+                strokeColorFocused,
+                strokeColorDefault,
+            ),
+        )
+        val hintTextColorStateList = ColorStateList.valueOf(hintColor)
+        val endIconTintList = ColorStateList.valueOf(onSurfaceVariant)
+        val cursorColorStateList = ColorStateList.valueOf(cursorColor)
+
+        inputLayout.setBoxStrokeColorStateList(boxStrokeColorStateList)
+        inputLayout.hintTextColor = hintTextColorStateList
+        inputLayout.setEndIconTintList(endIconTintList)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            inputLayout.cursorColor = cursorColorStateList
+        }
+    }
 
     companion object {
         fun LinearProgressIndicator.setColors(colorScheme: AndroidViewColorScheme) {

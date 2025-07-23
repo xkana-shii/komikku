@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -186,7 +187,11 @@ data class BrowseSourceScreen(
 
         Scaffold(
             topBar = {
-                Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface)
+                        .pointerInput(Unit) {},
+                ) {
                     // KMK -->
                     if (bulkFavoriteState.selectionMode) {
                         BulkSelectionToolbar(
@@ -197,15 +202,12 @@ data class BrowseSourceScreen(
                             onSelectAll = {
                                 mangaList.itemSnapshotList.items
                                     .map { it.value.first }
-                                    .forEach { manga ->
-                                        bulkFavoriteScreenModel.select(manga)
-                                    }
+                                    .forEach { bulkFavoriteScreenModel.select(it) }
                             },
                             onReverseSelection = {
-                                bulkFavoriteScreenModel.reverseSelection(
-                                    mangaList.itemSnapshotList.items
-                                        .map { it.value.first },
-                                )
+                                mangaList.itemSnapshotList.items
+                                    .map { it.value.first }
+                                    .let { bulkFavoriteScreenModel.reverseSelection(it) }
                             },
                         )
                     } else {
@@ -225,6 +227,7 @@ data class BrowseSourceScreen(
                             onWebViewClick = onWebViewClick,
                             onHelpClick = onHelpClick,
                             // KMK -->
+                            onToggleIncognito = screenModel::toggleIncognitoMode,
                             onSettingsClick = {
                                 when {
                                     screenModel.source.isEhBasedSource() && isHentaiEnabled ->
@@ -453,6 +456,9 @@ data class BrowseSourceScreen(
                     onConfirm = { screenModel.addFavorite(dialog.manga) },
                     onOpenManga = { navigator.push(MangaScreen(it.id)) },
                     onMigrate = { screenModel.setDialog(BrowseSourceScreenModel.Dialog.Migrate(dialog.manga, it)) },
+                    // KMK -->
+                    targetManga = dialog.manga,
+                    // KMK <--
                 )
             }
 
@@ -460,7 +466,7 @@ data class BrowseSourceScreen(
                 MigrateDialog(
                     oldManga = dialog.oldManga,
                     newManga = dialog.newManga,
-                    screenModel = MigrateDialogScreenModel(),
+                    screenModel = rememberScreenModel { MigrateDialogScreenModel() },
                     onDismissRequest = onDismissRequest,
                     onClickTitle = { navigator.push(MangaScreen(dialog.oldManga.id)) },
                     onPopScreen = { onDismissRequest() },

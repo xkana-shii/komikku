@@ -30,8 +30,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -60,6 +63,7 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
+import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
@@ -89,7 +93,6 @@ object SettingsTrackingScreen : SearchableSettings {
         val trackPreferences = remember { Injekt.get<TrackPreferences>() }
         val trackerManager = remember { Injekt.get<TrackerManager>() }
         val sourceManager = remember { Injekt.get<SourceManager>() }
-        val autoTrackStatePref = trackPreferences.autoUpdateTrackOnMarkRead()
 
         var dialog by remember { mutableStateOf<Any?>(null) }
         dialog?.run {
@@ -127,6 +130,10 @@ object SettingsTrackingScreen : SearchableSettings {
 
         return listOf(
             Preference.PreferenceItem.SwitchPreference(
+                preference = trackPreferences.trackOnAddingToLibrary(),
+                title = stringResource(KMR.strings.pref_track_on_add_library),
+            ),
+            Preference.PreferenceItem.SwitchPreference(
                 preference = trackPreferences.autoUpdateTrack(),
                 title = stringResource(MR.strings.pref_auto_update_manga_sync),
             ),
@@ -143,6 +150,13 @@ object SettingsTrackingScreen : SearchableSettings {
                 title = stringResource(KMR.strings.pref_auto_sync_progress_from_trackers),
             ),
             // KMK <--
+            // SY -->
+            Preference.PreferenceItem.SwitchPreference(
+                preference = trackPreferences.resolveUsingSourceMetadata(),
+                title = stringResource(SYMR.strings.pref_tracker_resolve_using_source_metadata),
+                subtitle = stringResource(SYMR.strings.pref_tracker_resolve_using_source_metadata_summary),
+            ),
+            // SY <--
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.services),
                 preferenceItems = persistentListOf(
@@ -228,7 +242,9 @@ object SettingsTrackingScreen : SearchableSettings {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.Username + ContentType.EmailAddress },
                         value = username,
                         onValueChange = { username = it },
                         label = { Text(text = stringResource(uNameStringRes)) },
@@ -239,7 +255,9 @@ object SettingsTrackingScreen : SearchableSettings {
 
                     var hidePassword by remember { mutableStateOf(true) }
                     OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.Password },
                         value = password,
                         onValueChange = { password = it },
                         label = { Text(text = stringResource(MR.strings.password)) },
@@ -288,7 +306,7 @@ object SettingsTrackingScreen : SearchableSettings {
                         }
                     },
                 ) {
-                    val id = if (processing) MR.strings.loading else MR.strings.login
+                    val id = if (processing) MR.strings.logging_in else MR.strings.login
                     Text(text = stringResource(id))
                 }
             },

@@ -1,11 +1,16 @@
 package eu.kanade.presentation.browse.components
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
@@ -28,7 +33,7 @@ import tachiyomi.presentation.core.i18n.stringResource
  * @param dialog the dialog to show.
  */
 @Composable
-fun BulkFavoriteDialogs(
+fun Screen.BulkFavoriteDialogs(
     bulkFavoriteScreenModel: BulkFavoriteScreenModel,
     dialog: Dialog?,
 ) {
@@ -84,6 +89,7 @@ fun BulkFavoriteDialogs(
                 dialog = dialog,
                 navigator = navigator,
                 state = bulkFavoriteState,
+                migrateScreenModel = rememberScreenModel { MigrateDialogScreenModel() },
                 onDismiss = bulkFavoriteScreenModel::dismissDialog,
                 stopRunning = bulkFavoriteScreenModel::stopRunning,
                 toggleSelection = bulkFavoriteScreenModel::toggleSelection,
@@ -99,6 +105,7 @@ private fun ShowMigrateDialog(
     dialog: Dialog.Migrate,
     navigator: Navigator?,
     state: BulkFavoriteScreenModel.State,
+    migrateScreenModel: MigrateDialogScreenModel,
     onDismiss: () -> Unit,
     stopRunning: () -> Unit,
     toggleSelection: (Manga, toSelectedState: Boolean) -> Unit,
@@ -109,7 +116,7 @@ private fun ShowMigrateDialog(
     MigrateDialog(
         oldManga = dialog.oldManga,
         newManga = dialog.newManga,
-        screenModel = MigrateDialogScreenModel(),
+        screenModel = migrateScreenModel,
         onDismissRequest = onDismiss,
         onClickTitle = { navigator?.push(MangaScreen(dialog.oldManga.id)) },
         onPopScreen = {
@@ -151,6 +158,7 @@ private fun AddDuplicateMangaDialog(
         },
         onOpenManga = { navigator?.push(MangaScreen(it.id)) },
         onMigrate = { showMigrateDialog(dialog.manga, it) },
+        targetManga = dialog.manga,
     )
 }
 
@@ -202,6 +210,7 @@ private fun BulkAllowDuplicateDialog(
         onConfirm = { addFavorite(dialog.currentIdx + 1) },
         onOpenManga = { navigator?.push(MangaScreen(it.id)) },
         onMigrate = { showMigrateDialog(dialog.manga, it) },
+        targetManga = dialog.manga,
         bulkFavoriteManga = dialog.manga,
         onAllowAllDuplicate = { addFavoriteDuplicate(false) },
         onSkipAllDuplicate = { addFavoriteDuplicate(true) },
@@ -217,9 +226,23 @@ private fun BulkAllowDuplicateDialog(
 fun bulkSelectionButton(
     isRunning: Boolean,
     toggleSelectionMode: () -> Unit,
-) = AppBar.Action(
-    title = stringResource(KMR.strings.action_bulk_select),
-    icon = Icons.Outlined.Checklist,
-    iconTint = MaterialTheme.colorScheme.primary.takeIf { isRunning },
-    onClick = toggleSelectionMode,
-)
+): AppBar.AppBarAction {
+    val title = stringResource(KMR.strings.action_bulk_select)
+    return if (isRunning) {
+        AppBar.ActionCompose(
+            title = title,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(24.dp),
+                strokeWidth = 2.dp,
+            )
+        }
+    } else {
+        AppBar.Action(
+            title = title,
+            icon = Icons.Outlined.Checklist,
+            onClick = toggleSelectionMode,
+        )
+    }
+}

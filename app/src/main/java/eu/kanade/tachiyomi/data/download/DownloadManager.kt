@@ -5,7 +5,6 @@ import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.Page
-import eu.kanade.tachiyomi.util.storage.DiskUtil
 import exh.log.xLogE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -28,6 +27,7 @@ import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
+import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -278,6 +278,10 @@ class DownloadManager(
             provider.findMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source)?.delete()
             cache.removeManga(manga)
 
+            // KMK -->
+            if (source.isLocal()) return@launchIO
+            // KMK <--
+
             // Delete source directory if empty
             val sourceDir = provider.findSourceDir(source)
             if (sourceDir?.listFiles()?.isEmpty() == true) {
@@ -329,7 +333,10 @@ class DownloadManager(
         var cleaned = 0
 
         if (removeNonFavorite && !manga.favorite) {
-            val mangaFolder = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source)
+            val mangaFolder = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source).getOrElse { e ->
+                logcat(LogPriority.ERROR, e) { "Manga download folder doesn't exist." }
+                return 0
+            }
             cleaned += 1 + mangaFolder.listFiles().orEmpty().size
             mangaFolder.delete()
             cache.removeManga(manga)
@@ -350,7 +357,10 @@ class DownloadManager(
         }
 
         if (cache.getDownloadCount(manga) == 0) {
-            val mangaFolder = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source)
+            val mangaFolder = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source).getOrElse { e ->
+                logcat(LogPriority.ERROR, e) { "Manga download folder doesn't exist." }
+                return cleaned
+            }
             if (!mangaFolder.listFiles().isNullOrEmpty()) {
                 mangaFolder.delete()
                 cache.removeManga(manga)
@@ -410,6 +420,38 @@ class DownloadManager(
     }
 
     /**
+     * Renames manga download folder
+     *
+     * @param manga the manga
+     * @param newTitle the new manga title.
+     */
+    suspend fun renameManga(manga: Manga, newTitle: String) {
+        val source = sourceManager.getOrStub(manga.source)
+        val oldFolder = provider.findMangaDir(/* KMK --> */ manga.ogTitle /* KMK --> */, source) ?: return
+        val newName = provider.getMangaDirName(newTitle)
+
+        if (oldFolder.name == newName) return
+
+        // just to be safe, don't allow downloads for this manga while renaming it
+        downloader.removeFromQueue(manga)
+
+        val capitalizationChanged = oldFolder.name.equals(newName, ignoreCase = true)
+        if (capitalizationChanged) {
+            val tempName = newName + Downloader.TMP_DIR_SUFFIX
+            if (!oldFolder.renameTo(tempName)) {
+                logcat(LogPriority.ERROR) { "Failed to rename manga download folder: ${oldFolder.name}" }
+                return
+            }
+        }
+
+        if (oldFolder.renameTo(newName)) {
+            cache.renameManga(manga, oldFolder, newTitle)
+        } else {
+            logcat(LogPriority.ERROR) { "Failed to rename manga download folder: ${oldFolder.name}" }
+        }
+    }
+
+    /**
      * Renames an already downloaded chapter
      *
      * @param source the source of the manga.
@@ -419,7 +461,10 @@ class DownloadManager(
      */
     suspend fun renameChapter(source: Source, manga: Manga, oldChapter: Chapter, newChapter: Chapter) {
         val oldNames = provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator)
-        val mangaDir = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source)
+        val mangaDir = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source).getOrElse { e ->
+            logcat(LogPriority.ERROR, e) { "Manga download folder doesn't exist. Skipping renaming after source sync" }
+            return
+        }
 
         // Assume there's only 1 version of the chapter name formats present
         val oldDownload = oldNames.asSequence()
@@ -507,10 +552,4 @@ class DownloadManager(
                     .asFlow(),
             )
         }
-
-    fun renameMangaDir(oldTitle: String, newTitle: String, source: Long) {
-        val sourceDir = provider.findSourceDir(sourceManager.getOrStub(source)) ?: return
-        val mangaDir = sourceDir.findFile(DiskUtil.buildValidFilename(oldTitle)) ?: return
-        mangaDir.renameTo(DiskUtil.buildValidFilename(newTitle))
-    }
 }

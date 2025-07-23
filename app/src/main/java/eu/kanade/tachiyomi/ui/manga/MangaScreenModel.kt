@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.ui.manga
 
 import android.content.Context
+import android.content.Intent
+import android.provider.DocumentsContract
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -50,6 +52,7 @@ import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.coil.getBestColor
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
+import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
@@ -117,6 +120,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.interactor.DeleteChapters
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.UpdateChapter
@@ -126,6 +130,11 @@ import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
+import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
+import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
+import tachiyomi.domain.libraryUpdateErrorMessage.interactor.InsertLibraryUpdateErrorMessages
+import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.manga.interactor.DeleteMergeById
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -153,13 +162,12 @@ import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.domain.track.model.Track
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
-import kotlin.collections.filter
-import kotlin.collections.forEach
 import kotlin.math.floor
 import androidx.compose.runtime.State as RuntimeState
 
@@ -179,6 +187,7 @@ class MangaScreenModel(
     // KMK -->
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     private val refreshTracks: RefreshTracks = Injekt.get(),
+    private val downloadProvider: DownloadProvider = Injekt.get(),
     // KMK <--
     private val trackerManager: TrackerManager = Injekt.get(),
     private val trackChapter: TrackChapter = Injekt.get(),
@@ -219,6 +228,12 @@ class MangaScreenModel(
     private val mangaRepository: MangaRepository = Injekt.get(),
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
+    // KMK -->
+    private val deleteLibraryUpdateErrors: DeleteLibraryUpdateErrors = Injekt.get(),
+    private val insertLibraryUpdateErrors: InsertLibraryUpdateErrors = Injekt.get(),
+    private val insertLibraryUpdateErrorMessages: InsertLibraryUpdateErrorMessages = Injekt.get(),
+    private val deleteChaptersFromDb: DeleteChapters = Injekt.get(),
+    // KMK <--
 ) : StateScreenModel<MangaScreenModel.State>(State.Loading) {
 
     private val successState: State.Success?
@@ -256,6 +271,11 @@ class MangaScreenModel(
     private val selectedPositions: Array<Int> = arrayOf(-1, -1) // first and last selected index in list
     private val selectedChapterIds: HashSet<Long> = HashSet()
 
+    internal var showTrackDialogAfterCategorySelection: Boolean = false
+
+    internal val autoOpenTrack: Boolean
+        get() = successState?.hasLoggedInTrackers == true && trackPreferences.trackOnAddingToLibrary().get()
+
     // EXH -->
     private val updateHelper: EHentaiUpdateHelper by injectLazy()
 
@@ -291,10 +311,10 @@ class MangaScreenModel(
 
     init {
         screenModelScope.launchIO {
-            getMangaAndChapters.subscribe(mangaId, applyScanlatorFilter = true).distinctUntilChanged()
+            getMangaAndChapters.subscribe(mangaId, applyFilter = true).distinctUntilChanged()
                 // SY -->
                 .combine(
-                    getMergedChaptersByMangaId.subscribe(mangaId, true, applyScanlatorFilter = true)
+                    getMergedChaptersByMangaId.subscribe(mangaId, true, applyFilter = true)
                         .distinctUntilChanged(),
                 ) { (manga, chapters), mergedChapters ->
                     if (manga.source == MERGED_SOURCE_ID) {
@@ -427,9 +447,9 @@ class MangaScreenModel(
                 if (manga.source ==
                     MERGED_SOURCE_ID
                 ) {
-                    getMergedChaptersByMangaId.await(mangaId, applyScanlatorFilter = true)
+                    getMergedChaptersByMangaId.await(mangaId, applyFilter = true)
                 } else {
-                    getMangaAndChapters.awaitChapters(mangaId, applyScanlatorFilter = true)
+                    getMangaAndChapters.awaitChapters(mangaId, applyFilter = true)
                 }
                 )
                 .toChapterListItems(manga, mergedData)
@@ -463,6 +483,7 @@ class MangaScreenModel(
                     excludedScanlators = getExcludedScanlators.await(mangaId).toImmutableSet(),
                     isRefreshingData = needRefreshInfo || needRefreshChapter,
                     dialog = null,
+                    hideMissingChapters = libraryPreferences.hideMissingChapters().get(),
                     // SY -->
                     showRecommendationsInOverflow = uiPreferences.recommendsInOverflow().get(),
                     showMergeInOverflow = uiPreferences.mergeInOverflow().get(),
@@ -610,6 +631,9 @@ class MangaScreenModel(
             withIOContext {
                 val networkManga = state.source.getMangaDetails(state.manga.toSManga())
                 updateManga.awaitUpdateFromSource(state.manga, networkManga, manualFetch)
+                // KMK -->
+                clearErrorFromDB(state.manga.id)
+                // KMK <--
             }
         } catch (e: Throwable) {
             // Ignore early hints "errors" that aren't handled by OkHttp
@@ -619,8 +643,28 @@ class MangaScreenModel(
             screenModelScope.launch {
                 snackbarHostState.showSnackbar(message = with(context) { e.formattedMessage })
             }
+            // KMK -->
+            writeErrorToDB(state.manga to with(context) { e.formattedMessage })
+            // KMK <--
         }
     }
+
+    // KMK -->
+    private suspend fun clearErrorFromDB(mangaId: Long) {
+        deleteLibraryUpdateErrors.deleteMangaError(mangaIds = listOf(mangaId))
+    }
+
+    private suspend fun writeErrorToDB(error: Pair<Manga, String?>) {
+        val errorMessage = error.second ?: context.stringResource(MR.strings.unknown_error)
+        val errorMessageId = insertLibraryUpdateErrorMessages.insert(
+            libraryUpdateErrorMessage = LibraryUpdateErrorMessage(-1L, errorMessage),
+        )
+
+        insertLibraryUpdateErrors.upsert(
+            LibraryUpdateError(id = -1L, mangaId = error.first.id, messageId = errorMessageId),
+        )
+    }
+    // KMK <--
 
     // SY -->
     private fun raiseMetadata(flatMetadata: FlatMetadata?, source: Source): RaisedSearchMetadata? {
@@ -814,11 +858,17 @@ class MangaScreenModel(
                     }
 
                     // Choose a category
-                    else -> showChangeCategoryDialog()
+                    else -> {
+                        showTrackDialogAfterCategorySelection = true
+                        showChangeCategoryDialog()
+                    }
                 }
 
                 // Finally match with enhanced tracking when available
                 addTracks.bindEnhancedTrackers(manga, state.source)
+                if (autoOpenTrack && !showTrackDialogAfterCategorySelection) {
+                    showTrackDialog()
+                }
             }
         }
     }
@@ -881,6 +931,27 @@ class MangaScreenModel(
             }
         } else {
             /* SY <-- */ downloadManager.deleteManga(state.manga, state.source)
+        }
+    }
+
+    /**
+     * Opens manga folder with the system's file manager.
+     */
+    fun openMangaFolder() {
+        try {
+            val currentManga = manga
+            val currentSource = source
+            if (currentManga == null || currentSource == null || currentSource is StubSource) return
+
+            val mangaDir = downloadProvider.findMangaDir(/* SY --> */ currentManga.ogTitle /* SY <-- */, currentSource) ?: return
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(mangaDir.uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            context.toast(e.message ?: context.stringResource(KMR.strings.error_opening_folder))
         }
     }
 
@@ -1098,6 +1169,9 @@ class MangaScreenModel(
                     state.source.fetchChaptersForMergedManga(state.manga, manualFetch)
                 }
                 // SY <--
+                // KMK -->
+                clearErrorFromDB(state.manga.id)
+                // KMK <--
             }
         } catch (e: Throwable) {
             val message = if (e is NoChaptersException) {
@@ -1112,6 +1186,9 @@ class MangaScreenModel(
             }
             val newManga = mangaRepository.getMangaById(mangaId)
             updateSuccessState { it.copy(manga = newManga, isRefreshingData = false) }
+            // KMK -->
+            writeErrorToDB(state.manga to message)
+            // KMK <--
         }
     }
 
@@ -1155,7 +1232,7 @@ class MangaScreenModel(
                         mangaList
                             .map { it.toDomainManga(state.source.id) }
                             .distinctBy { it.url }
-                            .let { networkToLocalManga(it) }
+                            .let { networkToLocalManga(it, false) }
                     }
 
                     updateSuccessState { successState ->
@@ -1449,12 +1526,63 @@ class MangaScreenModel(
                         ignoreCategoryExclusion = true,
                         // KMK <--
                     )
+                    // KMK -->
+                    if (source?.isLocal() == true) {
+                        // Refresh chapters state for Local source
+                        fetchChaptersFromSource()
+                    }
+                    // KMK <--
                 }
             } catch (e: Throwable) {
                 logcat(LogPriority.ERROR, e)
             }
         }
     }
+
+    // KMK -->
+    fun clearManga(
+        deleteDownload: Boolean,
+        removeChapters: Boolean,
+    ) {
+        if (deleteDownload) {
+            deleteDownloadedData()
+        }
+        if (removeChapters) {
+            removeChaptersDatabase()
+        }
+    }
+
+    private fun deleteDownloadedData() {
+        screenModelScope.launchNonCancellable {
+            try {
+                successState?.let { state ->
+                    downloadManager.deleteManga(
+                        manga = state.manga,
+                        source = state.source,
+                        removeQueued = true,
+                    )
+                    if (source?.isLocal() == true) {
+                        // Refresh chapters state for Local source
+                        fetchChaptersFromSource()
+                    }
+                }
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e)
+            }
+        }
+    }
+
+    private fun removeChaptersDatabase() {
+        screenModelScope.launchNonCancellable {
+            try {
+                successState?.chapters?.map { it.id }
+                    ?.let { deleteChaptersFromDb.await(it) }
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e)
+            }
+        }
+    }
+    // KMK <--
 
     private fun downloadNewChapters(chapters: List<Chapter>) {
         screenModelScope.launchNonCancellable {
@@ -1747,6 +1875,10 @@ class MangaScreenModel(
         data class EditMergedSettings(val mergedData: MergedMangaData) : Dialog
         // SY <--
 
+        // KMK -->
+        data class ClearManga(val isMergedSource: Boolean) : Dialog
+        // KMK <--
+
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
         data object FullCover : Dialog
@@ -1808,6 +1940,12 @@ class MangaScreenModel(
     }
     // SY <--
 
+    // KMK -->
+    fun showClearMangaDialog(isMergedSource: Boolean) {
+        updateSuccessState { it.copy(dialog = Dialog.ClearManga(isMergedSource)) }
+    }
+    // KMK <--
+
     sealed interface State {
         @Immutable
         data object Loading : State
@@ -1825,6 +1963,7 @@ class MangaScreenModel(
             val isRefreshingData: Boolean = false,
             val dialog: Dialog? = null,
             val hasPromptedToAddBefore: Boolean = false,
+            val hideMissingChapters: Boolean = false,
 
             // SY -->
             val meta: RaisedSearchMetadata?,
@@ -1877,6 +2016,10 @@ class MangaScreenModel(
             }
 
             val chapterListItems by lazy {
+                if (hideMissingChapters) {
+                    return@lazy processedChapters
+                }
+
                 processedChapters.insertSeparators { before, after ->
                     val (lowerChapter, higherChapter) = if (manga.sortDescending()) {
                         after to before

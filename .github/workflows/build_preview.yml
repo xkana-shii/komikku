@@ -144,7 +144,7 @@ jobs:
           write-mode: overwrite
 
       - name: Set up gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4
 
       - name: Check code format
         run: ./gradlew spotlessCheck
@@ -168,7 +168,7 @@ jobs:
       - build-app
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           merge-multiple: true
 
@@ -209,7 +209,7 @@ jobs:
           echo "APK_X86_64_SHA=$sha" >> $GITHUB_OUTPUT
 
       - name: Create release
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
           tag_name: ${{ needs.prepare-build.outputs.TAG_NAME }}
           name: Komikku Preview ${{ needs.prepare-build.outputs.TAG_NAME }} (${{ needs.prepare-build.outputs.VERSION_TAG }})

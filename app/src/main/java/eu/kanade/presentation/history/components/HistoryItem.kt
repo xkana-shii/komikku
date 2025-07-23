@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,13 +28,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.presentation.manga.components.MangaCover
+import eu.kanade.presentation.manga.components.MangaCoverHide
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.util.lang.toTimestampString
+import exh.debug.DebugToggles
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -47,10 +53,15 @@ fun HistoryItem(
     onClickFavorite: () -> Unit,
     modifier: Modifier = Modifier,
     // KMK -->
+    readProgress: String?,
+    hasUnread: Boolean,
     usePanoramaCover: Boolean,
     coverRatio: MutableFloatState = remember { mutableFloatStateOf(1f) },
     // KMK <--
 ) {
+    // KMK -->
+    val textAlpha = if (history.read) DISABLED_ALPHA else 1f
+    // KMK <--
     Row(
         modifier = modifier
             .clickable(onClick = onClickResume)
@@ -63,65 +74,106 @@ fun HistoryItem(
         val coverIsWide = coverRatio.floatValue <= RatioSwitchToPanorama
         val bgColor = mangaCover.dominantCoverColors?.first?.let { Color(it) }
         val onBgColor = mangaCover.dominantCoverColors?.second
-        if (usePanoramaCover && coverIsWide) {
-            MangaCover.Panorama(
+        if (DebugToggles.HIDE_COVER_IMAGE_ONLY_SHOW_COLOR.enabled) {
+            MangaCoverHide.Book(
                 modifier = Modifier.fillMaxHeight(),
-                data = mangaCover,
-                onClick = onClickCover,
-                // KMK -->
                 bgColor = bgColor,
                 tint = onBgColor,
                 size = MangaCover.Size.Medium,
-                onCoverLoaded = { _, result ->
-                    val image = result.result.image
-                    coverRatio.floatValue = image.height.toFloat() / image.width
-                },
-                // KMK <--
             )
         } else {
-            // KMK <--
-            MangaCover.Book(
-                modifier = Modifier.fillMaxHeight(),
-                data = mangaCover,
-                onClick = onClickCover,
-                // KMK -->
-                bgColor = bgColor,
-                tint = onBgColor,
-                size = MangaCover.Size.Medium,
-                onCoverLoaded = { _, result ->
-                    val image = result.result.image
-                    coverRatio.floatValue = image.height.toFloat() / image.width
-                },
+            if (usePanoramaCover && coverIsWide) {
+                MangaCover.Panorama(
+                    modifier = Modifier.fillMaxHeight(),
+                    data = mangaCover,
+                    onClick = onClickCover,
+                    // KMK -->
+                    bgColor = bgColor,
+                    tint = onBgColor,
+                    size = MangaCover.Size.Medium,
+                    onCoverLoaded = { _, result ->
+                        val image = result.result.image
+                        coverRatio.floatValue = image.height.toFloat() / image.width
+                    },
+                    // KMK <--
+                )
+            } else {
                 // KMK <--
-            )
+                MangaCover.Book(
+                    modifier = Modifier.fillMaxHeight(),
+                    data = mangaCover,
+                    onClick = onClickCover,
+                    // KMK -->
+                    bgColor = bgColor,
+                    tint = onBgColor,
+                    size = MangaCover.Size.Medium,
+                    onCoverLoaded = { _, result ->
+                        val image = result.result.image
+                        coverRatio.floatValue = image.height.toFloat() / image.width
+                    },
+                    // KMK <--
+                )
+            }
         }
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(start = MaterialTheme.padding.medium, end = MaterialTheme.padding.small),
         ) {
-            val textStyle = MaterialTheme.typography.bodyMedium
             Text(
                 text = history.title,
+                // KMK -->
+                color = LocalContentColor.current.copy(alpha = textAlpha),
+                // KMK <--
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                style = textStyle,
+                style = MaterialTheme.typography.bodyMedium,
             )
             val readAt = remember { history.readAt?.toTimestampString() ?: "" }
-            Text(
-                text = if (history.chapterNumber > -1) {
-                    stringResource(
-                        MR.strings.recent_manga_time,
-                        formatChapterNumber(history.chapterNumber),
-                        readAt,
-                    )
-                } else {
-                    readAt
-                },
+            // KMK -->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 4.dp),
-                style = textStyle,
-            )
+            ) {
+                if (hasUnread) {
+                    Icon(
+                        imageVector = Icons.Filled.Circle,
+                        contentDescription = stringResource(MR.strings.unread),
+                        modifier = Modifier
+                            .height(8.dp)
+                            .padding(end = 4.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                // KMK <--
+                Text(
+                    text = if (history.chapterNumber > -1) {
+                        stringResource(
+                            MR.strings.recent_manga_time,
+                            formatChapterNumber(history.chapterNumber),
+                            readAt,
+                        )
+                    } else {
+                        readAt
+                    },
+                    // KMK -->
+                    color = LocalContentColor.current.copy(alpha = textAlpha),
+                    style = MaterialTheme.typography.bodySmall,
+                    // KMK <--
+                )
+                // KMK -->
+                if (readProgress != null) {
+                    DotSeparatorText()
+                    Text(
+                        text = readProgress,
+                        maxLines = 1,
+                        color = LocalContentColor.current.copy(alpha = textAlpha),
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                // KMK <--
+            }
         }
 
         if (!history.coverData.isMangaFavorite) {
@@ -158,6 +210,8 @@ private fun HistoryItemPreviews(
                 onClickResume = {},
                 onClickDelete = {},
                 onClickFavorite = {},
+                readProgress = "Page 5",
+                hasUnread = true,
                 usePanoramaCover = false,
             )
         }

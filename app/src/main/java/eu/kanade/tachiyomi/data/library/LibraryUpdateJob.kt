@@ -105,7 +105,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 
 @OptIn(ExperimentalAtomicApi::class)
-class LibraryUpdateJob(private val context: Context, private val workerParams: WorkerParameters) :
+class LibraryUpdateJob(private val context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
 
     private val sourceManager: SourceManager = Injekt.get()
@@ -230,6 +230,27 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         val groupLibraryUpdateType = libraryPreferences.groupLibraryUpdateType().get()
         // SY <--
 
+        // KMK -->
+        // Check if specific manga IDs are provided for targeted update
+        val targetMangaIds = inputData.getLongArray(KEY_MANGA_IDS)?.toSet()
+        if (targetMangaIds != null) {
+            // Filter to only the specified manga IDs
+            mangaToUpdate = libraryManga
+                .filter {
+                    it.manga.id in targetMangaIds &&
+                        when {
+                            // Apply update restrictions even for targeted updates
+                            it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> false
+                            // Skip other restrictions for targeted updates to allow forced refresh
+                            else -> true
+                        }
+                }
+
+            notifier.showQueueSizeWarningNotificationIfNeeded(mangaToUpdate)
+            return
+        }
+        // KMK <--
+
         val listToUpdate = if (categoryId != -1L) {
             libraryManga.filter { it.category == categoryId }
         } else if (
@@ -300,7 +321,7 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
             // SY <--
             .filter {
                 when {
-                    it.manga.updateStrategy != UpdateStrategy.ALWAYS_UPDATE -> {
+                    it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {
                         skippedUpdates.add(
                             it.manga to
                                 context.stringResource(MR.strings.skipped_reason_not_always_update),
@@ -655,15 +676,14 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
 
     // KMK -->
     private suspend fun clearErrorFromDB(mangaId: Long) {
-        deleteLibraryUpdateErrors.deleteMangaError(mangaId = mangaId)
+        deleteLibraryUpdateErrors.deleteMangaError(mangaIds = listOf(mangaId))
     }
 
     private suspend fun writeErrorToDB(error: Pair<Manga, String?>) {
-        val errorMessage = error.second ?: "???"
-        val errorMessageId = insertLibraryUpdateErrorMessages.get(errorMessage)
-            ?: insertLibraryUpdateErrorMessages.insert(
-                libraryUpdateErrorMessage = LibraryUpdateErrorMessage(-1L, errorMessage),
-            )
+        val errorMessage = error.second ?: context.stringResource(MR.strings.unknown_error)
+        val errorMessageId = insertLibraryUpdateErrorMessages.insert(
+            libraryUpdateErrorMessage = LibraryUpdateErrorMessage(-1L, errorMessage),
+        )
 
         insertLibraryUpdateErrors.upsert(
             LibraryUpdateError(id = -1L, mangaId = error.first.id, messageId = errorMessageId),
@@ -724,6 +744,13 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
         const val KEY_GROUP = "group"
         const val KEY_GROUP_EXTRA = "group_extra"
         // SY <--
+
+        // KMK -->
+        /**
+         * Key for specific manga IDs to update.
+         */
+        private const val KEY_MANGA_IDS = "manga_ids"
+        // KMK <--
 
         fun cancelAllWorks(context: Context) {
             context.workManager.cancelAllWorkByTag(TAG)
@@ -786,6 +813,9 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
             group: Int = LibraryGroup.BY_DEFAULT,
             groupExtra: String? = null,
             // SY <--
+            // KMK -->
+            mangaIds: List<Long>? = null,
+            // KMK <--
         ): Boolean {
             val wm = context.workManager
             // Check if the LibraryUpdateJob is already running
@@ -801,6 +831,9 @@ class LibraryUpdateJob(private val context: Context, private val workerParams: W
                 KEY_GROUP to group,
                 KEY_GROUP_EXTRA to groupExtra,
                 // SY <--
+                // KMK -->
+                KEY_MANGA_IDS to mangaIds?.toLongArray(),
+                // KMK <--
             )
 
             val syncPreferences: SyncPreferences = Injekt.get()

@@ -116,6 +116,17 @@ class LibraryPreferences(
     )
     // SY <--
 
+    // KMK -->
+    fun filterCategories() = preferenceStore.getBoolean(
+        "pref_filter_library_categories",
+        false,
+    )
+
+    fun filterCategoriesInclude() = preferenceStore.getStringSet(FILTER_LIBRARY_CATEGORIES_INCLUDE_PREF_KEY, emptySet())
+
+    fun filterCategoriesExclude() = preferenceStore.getStringSet(FILTER_LIBRARY_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
+    // KMK <--
+
     fun filterTracking(id: Int) = preferenceStore.getEnum(
         "pref_filter_library_tracked_${id}_v2",
         TriState.DISABLED,
@@ -212,6 +223,7 @@ class LibraryPreferences(
 
     fun autoClearChapterCache() = preferenceStore.getBoolean("auto_clear_chapter_cache", false)
 
+    fun hideMissingChapters() = preferenceStore.getBoolean("pref_hide_missing_chapter_indicators", false)
     // endregion
 
     // region Swipe Actions
@@ -225,6 +237,8 @@ class LibraryPreferences(
         "pref_chapter_swipe_start_action",
         ChapterSwipeAction.ToggleRead,
     )
+
+    fun updateMangaTitles() = preferenceStore.getBoolean("pref_update_library_manga_titles", false)
 
     // endregion
 
@@ -261,10 +275,20 @@ class LibraryPreferences(
         const val DEFAULT_CATEGORY_PREF_KEY = "default_category"
         private const val LIBRARY_UPDATE_CATEGORIES_PREF_KEY = "library_update_categories"
         private const val LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY = "library_update_categories_exclude"
+
+        // KMK -->
+        private const val FILTER_LIBRARY_CATEGORIES_INCLUDE_PREF_KEY = "pref_filter_library_categories_include"
+        private const val FILTER_LIBRARY_CATEGORIES_EXCLUDE_PREF_KEY = "pref_filter_library_categories_exclude"
+        // KMK <--
+
         val categoryPreferenceKeys = setOf(
             DEFAULT_CATEGORY_PREF_KEY,
             LIBRARY_UPDATE_CATEGORIES_PREF_KEY,
             LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY,
+            // KMK -->
+            FILTER_LIBRARY_CATEGORIES_INCLUDE_PREF_KEY,
+            FILTER_LIBRARY_CATEGORIES_EXCLUDE_PREF_KEY,
+            // KMK <--
         )
     }
 }

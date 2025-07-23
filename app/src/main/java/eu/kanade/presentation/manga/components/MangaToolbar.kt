@@ -52,11 +52,13 @@ fun MangaToolbar(
     onClickEditInfo: (() -> Unit)?,
     // KMK -->
     onClickRelatedMangas: (() -> Unit)?,
+    onClickSourceSettings: (() -> Unit)?,
+    onClearManga: () -> Unit,
+    onOpenMangaFolder: (() -> Unit)?,
     // KMK <--
     onClickRecommend: (() -> Unit)?,
     onClickMerge: (() -> Unit)?,
     onClickMergedSettings: (() -> Unit)?,
-    onClickSourceSettings: (() -> Unit)?,
     // SY <--
 
     // For action mode
@@ -234,6 +236,20 @@ fun MangaToolbar(
                     }
                     // SY <--
                     // KMK -->
+                    if (onOpenMangaFolder != null) {
+                        add(
+                            AppBar.OverflowAction(
+                                title = stringResource(KMR.strings.action_open_folder),
+                                onClick = onOpenMangaFolder,
+                            ),
+                        )
+                    }
+                    add(
+                        AppBar.OverflowAction(
+                            title = stringResource(KMR.strings.action_clear_manga),
+                            onClick = onClearManga,
+                        ),
+                    )
                     if (onClickSourceSettings != null) {
                         add(
                             AppBar.OverflowAction(

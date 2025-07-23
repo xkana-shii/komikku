@@ -12,8 +12,10 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
+import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.io.IOException
 
 /**
  * This class is used to provide the directories where the downloads should be saved.
@@ -35,21 +37,36 @@ class DownloadProvider(
      * @param mangaTitle the title of the manga to query.
      * @param source the source of the manga.
      */
-    internal fun getMangaDir(mangaTitle: String, source: Source): UniFile {
-        try {
-            return downloadsDir!!
-                .createDirectory(getSourceDirName(source))!!
-                .createDirectory(getMangaDirName(mangaTitle))!!
-        } catch (e: Throwable) {
-            logcat(LogPriority.ERROR, e) { "Invalid download directory" }
-            throw Exception(
-                context.stringResource(
-                    MR.strings.invalid_location,
-                    (downloadsDir?.displayablePath ?: "") +
-                        "/${getSourceDirName(source)}/${getMangaDirName(mangaTitle)}",
-                ),
+    internal fun getMangaDir(mangaTitle: String, source: Source): Result<UniFile> {
+        val downloadsDir = downloadsDir
+        if (downloadsDir == null) {
+            logcat(LogPriority.ERROR) { "Failed to create download directory" }
+            return Result.failure(
+                IOException(context.stringResource(MR.strings.storage_failed_to_create_download_directory)),
             )
         }
+
+        val sourceDirName = getSourceDirName(source)
+        val sourceDir = downloadsDir.createDirectory(sourceDirName)
+        if (sourceDir == null) {
+            val displayablePath = downloadsDir.displayablePath + "/$sourceDirName"
+            logcat(LogPriority.ERROR) { "Failed to create source download directory: $displayablePath" }
+            return Result.failure(
+                IOException(context.stringResource(MR.strings.storage_failed_to_create_directory, displayablePath)),
+            )
+        }
+
+        val mangaDirName = getMangaDirName(mangaTitle)
+        val mangaDir = sourceDir.createDirectory(mangaDirName)
+        if (mangaDir == null) {
+            val displayablePath = sourceDir.displayablePath + "/$mangaDirName"
+            logcat(LogPriority.ERROR) { "Failed to create manga download directory: $displayablePath" }
+            return Result.failure(
+                IOException(context.stringResource(MR.strings.storage_failed_to_create_directory, displayablePath)),
+            )
+        }
+
+        return Result.success(mangaDir)
     }
 
     /**
@@ -58,7 +75,13 @@ class DownloadProvider(
      * @param source the source to query.
      */
     fun findSourceDir(source: Source): UniFile? {
-        return downloadsDir?.findFile(getSourceDirName(source))
+        // KMK -->
+        return if (source.isLocal()) {
+            storageManager.getLocalSourceDirectory()
+        } else {
+            // KMK <--
+            downloadsDir?.findFile(getSourceDirName(source))
+        }
     }
 
     /**
@@ -97,9 +120,22 @@ class DownloadProvider(
     fun findChapterDirs(chapters: List<Chapter>, manga: Manga, source: Source): Pair<UniFile?, List<UniFile>> {
         val mangaDir = findMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source) ?: return null to emptyList()
         return mangaDir to chapters.mapNotNull { chapter ->
-            getValidChapterDirNames(chapter.name, chapter.scanlator).asSequence()
-                .mapNotNull { mangaDir.findFile(it) }
-                .firstOrNull()
+            // KMK -->
+            if (source.isLocal()) {
+                val splitUrl = chapter.url.split('/', limit = 2)
+                if (splitUrl.size < 2) {
+                    null
+                } else {
+                    val (mangaDirName, chapterDirName) = splitUrl
+                    mangaDir.findFile(chapterDirName)
+                        ?: storageManager.getLocalSourceDirectory()?.findFile(mangaDirName)?.findFile(chapterDirName)
+                }
+            } else {
+                // KMK <--
+                getValidChapterDirNames(chapter.name, chapter.scanlator).asSequence()
+                    .mapNotNull { mangaDir.findFile(it) }
+                    .firstOrNull()
+            }
         }
     }
 

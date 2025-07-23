@@ -88,6 +88,7 @@ import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
+import eu.kanade.tachiyomi.source.isIncognitoModeEnabled
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.EHentai
 import eu.kanade.tachiyomi.source.online.all.MangaDex
@@ -200,6 +201,8 @@ fun MangaScreen(
     // KMK -->
     getMangaState: @Composable (Manga) -> State<Manga>,
     onClickSourceSettingsClicked: (() -> Unit)?,
+    onClearManga: () -> Unit,
+    onOpenMangaFolder: (() -> Unit)?,
     onRelatedMangasScreenClick: () -> Unit,
     onRelatedMangaClick: (Manga) -> Unit,
     onRelatedMangaLongClick: (Manga) -> Unit,
@@ -267,6 +270,8 @@ fun MangaScreen(
             // KMK -->
             getMangaState = getMangaState,
             onClickSourceSettingsClicked = onClickSourceSettingsClicked,
+            onClearManga = onClearManga,
+            onOpenMangaFolder = onOpenMangaFolder,
             onRelatedMangasScreenClick = onRelatedMangasScreenClick,
             onRelatedMangaClick = onRelatedMangaClick,
             onRelatedMangaLongClick = onRelatedMangaLongClick,
@@ -327,6 +332,8 @@ fun MangaScreen(
             // KMK -->
             getMangaState = getMangaState,
             onClickSourceSettingsClicked = onClickSourceSettingsClicked,
+            onClearManga = onClearManga,
+            onOpenMangaFolder = onOpenMangaFolder,
             onRelatedMangasScreenClick = onRelatedMangasScreenClick,
             onRelatedMangaClick = onRelatedMangaClick,
             onRelatedMangaLongClick = onRelatedMangaLongClick,
@@ -404,6 +411,8 @@ private fun MangaScreenSmallImpl(
     // KMK -->
     getMangaState: @Composable ((Manga) -> State<Manga>),
     onClickSourceSettingsClicked: (() -> Unit)?,
+    onClearManga: () -> Unit,
+    onOpenMangaFolder: (() -> Unit)?,
     onRelatedMangasScreenClick: () -> Unit,
     onRelatedMangaClick: (Manga) -> Unit,
     onRelatedMangaLongClick: (Manga) -> Unit,
@@ -486,6 +495,8 @@ private fun MangaScreenSmallImpl(
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
                 // KMK -->
                 onClickSourceSettings = onClickSourceSettingsClicked,
+                onClearManga = onClearManga,
+                onOpenMangaFolder = onOpenMangaFolder,
                 onClickRelatedMangas = onRelatedMangasScreenClick.takeIf {
                     !expandRelatedMangas &&
                         showRelatedMangasInOverflow &&
@@ -621,6 +632,9 @@ private fun MangaScreenSmallImpl(
                             manga = state.manga,
                             sourceName = remember { state.source.getNameForMangaInfo(state.mergedData?.sources) },
                             isStubSource = remember { state.source is StubSource },
+                            // KMK -->
+                            isSourceIncognito = remember { state.source.isIncognitoModeEnabled() },
+                            // KMK <--
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                             // KMK -->
@@ -866,6 +880,8 @@ private fun MangaScreenLargeImpl(
     // KMK -->
     getMangaState: @Composable ((Manga) -> State<Manga>),
     onClickSourceSettingsClicked: (() -> Unit)?,
+    onClearManga: () -> Unit,
+    onOpenMangaFolder: (() -> Unit)?,
     onRelatedMangasScreenClick: () -> Unit,
     onRelatedMangaClick: (Manga) -> Unit,
     onRelatedMangaLongClick: (Manga) -> Unit,
@@ -940,6 +956,8 @@ private fun MangaScreenLargeImpl(
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
                 // KMK -->
                 onClickSourceSettings = onClickSourceSettingsClicked,
+                onClearManga = onClearManga,
+                onOpenMangaFolder = onOpenMangaFolder,
                 onClickRelatedMangas = onRelatedMangasScreenClick.takeIf {
                     !expandRelatedMangas &&
                         showRelatedMangasInOverflow &&
@@ -1075,6 +1093,9 @@ private fun MangaScreenLargeImpl(
                             manga = state.manga,
                             sourceName = remember { state.source.getNameForMangaInfo(state.mergedData?.sources) },
                             isStubSource = remember { state.source is StubSource },
+                            // KMK -->
+                            isSourceIncognito = remember { state.source.isIncognitoModeEnabled() },
+                            // KMK <--
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
                             // KMK -->

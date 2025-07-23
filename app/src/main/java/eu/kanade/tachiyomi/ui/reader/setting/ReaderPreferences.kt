@@ -39,7 +39,7 @@ class ReaderPreferences(
 
     fun cutoutShort() = preferenceStore.getBoolean("cutout_short", true)
 
-    fun keepScreenOn() = preferenceStore.getBoolean("pref_keep_screen_on_key", true)
+    fun keepScreenOn() = preferenceStore.getBoolean("pref_keep_screen_on_key", false)
 
     fun defaultReadingMode() = preferenceStore.getInt(
         "pref_default_reading_mode_key",
@@ -142,6 +142,10 @@ class ReaderPreferences(
     fun showNavigationOverlayNewUser() = preferenceStore.getBoolean("reader_navigation_overlay_new_user", true)
 
     fun showNavigationOverlayOnStart() = preferenceStore.getBoolean("reader_navigation_overlay_on_start", false)
+
+    // KMK -->
+    fun smallerTapZone() = preferenceStore.getBoolean("reader_navigation_smaller_tap_zone", false)
+    // KMK <--
 
     // endregion
 

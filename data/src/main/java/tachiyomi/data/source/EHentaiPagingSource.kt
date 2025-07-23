@@ -6,9 +6,12 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.metadata.metadata.RaisedSearchMetadata
 import mihon.domain.manga.model.toDomainManga
+import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.domain.manga.model.Manga
 
-abstract class EHentaiPagingSource(override val source: CatalogueSource) : BaseSourcePagingSource(source) {
+abstract class EHentaiPagingSource(
+    source: CatalogueSource,
+) : BaseSourcePagingSource(source) {
 
     override suspend fun getPageLoadResult(
         params: LoadParams<Long>,
@@ -18,12 +21,11 @@ abstract class EHentaiPagingSource(override val source: CatalogueSource) : BaseS
         val metadata = mangasPage.mangasMetadata
 
         val manga = mangasPage.mangas
-            .map { it.toDomainManga(source.id) }
-            .filter { seenManga.add(it.url) }
-            .let { networkToLocalManga(it) }
-            // SY -->
-            .mapIndexed { index, manga -> manga to metadata.getOrNull(index) }
-        // SY <--
+            .mapIndexed { index, sManga -> sManga.toDomainManga(source.id) to metadata.getOrNull(index) }
+            .filter { seenManga.add(it.first.url) }
+            // KMK -->
+            .let { pairs -> networkToLocalManga(pairs.map { it.first }).zip(pairs.map { it.second }) }
+        // KMK <--
 
         return LoadResult.Page(
             data = manga,
@@ -39,7 +41,7 @@ class EHentaiSearchPagingSource(
     val filters: FilterList,
 ) : EHentaiPagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source.getSearchManga(currentPage, query, filters)
+        return source.getSearchManga(currentPage, query.sanitize(), filters)
     }
 }
 
