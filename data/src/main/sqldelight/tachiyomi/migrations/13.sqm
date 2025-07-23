@@ -60,6 +60,7 @@ CREATE TABLE chapters(
     scanlator TEXT,
     read INTEGER AS Boolean NOT NULL,
     bookmark INTEGER AS Boolean NOT NULL,
+    fillermark INTEGER AS Boolean NOT NULL,
     last_page_read INTEGER NOT NULL,
     chapter_number REAL AS Float NOT NULL,
     source_order INTEGER NOT NULL,
@@ -69,7 +70,7 @@ CREATE TABLE chapters(
     ON DELETE CASCADE
 );
 INSERT INTO chapters
-SELECT _id,manga_id,url,name,scanlator,read,bookmark,last_page_read,chapter_number,source_order,date_fetch,date_upload
+SELECT _id,manga_id,url,name,scanlator,read,bookmark,fillermark,last_page_read,chapter_number,source_order,date_fetch,date_upload
 FROM chapters_temp;
 
 ALTER TABLE history RENAME TO history_temp;

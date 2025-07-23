@@ -24,6 +24,7 @@ CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapters
 WHEN new.is_syncing = 0 AND (
     new.read != old.read OR
     new.bookmark != old.bookmark OR
+    new.fillermark != old.fillermark OR
     new.last_page_read != old.last_page_read
 )
 BEGIN

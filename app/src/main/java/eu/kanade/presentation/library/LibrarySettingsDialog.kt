@@ -156,6 +156,12 @@ private fun ColumnScope.FilterPage(
         state = filterBookmarked,
         onClick = { screenModel.toggleFilter(LibraryPreferences::filterBookmarked) },
     )
+    val filterFillermarked by screenModel.libraryPreferences.filterFillermarked().collectAsState()
+    TriStateItem(
+        label = stringResource(KMR.strings.action_filter_fillermarked),
+        state = filterFillermarked,
+        onClick = { screenModel.toggleFilter(LibraryPreferences::filterFillermarked) },
+    )
     val filterCompleted by screenModel.libraryPreferences.filterCompleted().collectAsState()
     TriStateItem(
         label = stringResource(MR.strings.completed),
@@ -440,13 +446,13 @@ private fun ColumnScope.GroupPage(
             if (trackers.isNotEmpty()) {
                 add(LibraryGroup.BY_TRACK_STATUS)
             }
-            if (hasCategories) {
+            if (hasCategories || screenModel.grouping == LibraryGroup.UNGROUPED) {
                 add(LibraryGroup.UNGROUPED)
             }
         }.map {
             GroupMode(
                 it,
-                LibraryGroup.groupTypeStringRes(it, hasCategories),
+                LibraryGroup.groupTypeStringRes(it),
                 groupTypeDrawableRes(it),
             )
         }.toImmutableList()

@@ -130,11 +130,6 @@ import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
-import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
-import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
-import tachiyomi.domain.libraryUpdateErrorMessage.interactor.InsertLibraryUpdateErrorMessages
-import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.manga.interactor.DeleteMergeById
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -229,9 +224,6 @@ class MangaScreenModel(
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // KMK -->
-    private val deleteLibraryUpdateErrors: DeleteLibraryUpdateErrors = Injekt.get(),
-    private val insertLibraryUpdateErrors: InsertLibraryUpdateErrors = Injekt.get(),
-    private val insertLibraryUpdateErrorMessages: InsertLibraryUpdateErrorMessages = Injekt.get(),
     private val deleteChaptersFromDb: DeleteChapters = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<MangaScreenModel.State>(State.Loading) {
@@ -631,9 +623,6 @@ class MangaScreenModel(
             withIOContext {
                 val networkManga = state.source.getMangaDetails(state.manga.toSManga())
                 updateManga.awaitUpdateFromSource(state.manga, networkManga, manualFetch)
-                // KMK -->
-                clearErrorFromDB(state.manga.id)
-                // KMK <--
             }
         } catch (e: Throwable) {
             // Ignore early hints "errors" that aren't handled by OkHttp
@@ -643,28 +632,8 @@ class MangaScreenModel(
             screenModelScope.launch {
                 snackbarHostState.showSnackbar(message = with(context) { e.formattedMessage })
             }
-            // KMK -->
-            writeErrorToDB(state.manga to with(context) { e.formattedMessage })
-            // KMK <--
         }
     }
-
-    // KMK -->
-    private suspend fun clearErrorFromDB(mangaId: Long) {
-        deleteLibraryUpdateErrors.deleteMangaError(mangaIds = listOf(mangaId))
-    }
-
-    private suspend fun writeErrorToDB(error: Pair<Manga, String?>) {
-        val errorMessage = error.second ?: context.stringResource(MR.strings.unknown_error)
-        val errorMessageId = insertLibraryUpdateErrorMessages.insert(
-            libraryUpdateErrorMessage = LibraryUpdateErrorMessage(-1L, errorMessage),
-        )
-
-        insertLibraryUpdateErrors.upsert(
-            LibraryUpdateError(id = -1L, mangaId = error.first.id, messageId = errorMessageId),
-        )
-    }
-    // KMK <--
 
     // SY -->
     private fun raiseMetadata(flatMetadata: FlatMetadata?, source: Source): RaisedSearchMetadata? {
@@ -1169,9 +1138,6 @@ class MangaScreenModel(
                     state.source.fetchChaptersForMergedManga(state.manga, manualFetch)
                 }
                 // SY <--
-                // KMK -->
-                clearErrorFromDB(state.manga.id)
-                // KMK <--
             }
         } catch (e: Throwable) {
             val message = if (e is NoChaptersException) {
@@ -1186,9 +1152,6 @@ class MangaScreenModel(
             }
             val newManga = mangaRepository.getMangaById(mangaId)
             updateSuccessState { it.copy(manga = newManga, isRefreshingData = false) }
-            // KMK -->
-            writeErrorToDB(state.manga to message)
-            // KMK <--
         }
     }
 
@@ -1280,6 +1243,9 @@ class MangaScreenModel(
             }
             LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> {
                 bookmarkChapters(listOf(chapter), !chapter.bookmark)
+            }
+            LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
+                fillermarkChapters(listOf(chapter), !chapter.fillermark)
             }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction: ChapterDownloadAction = when (chapterItem.downloadState) {
@@ -1509,6 +1475,16 @@ class MangaScreenModel(
         toggleAllSelection(false)
     }
 
+    fun fillermarkChapters(chapters: List<Chapter>, fillermarked: Boolean) {
+        screenModelScope.launchIO {
+            chapters
+                .filterNot { it.fillermark == fillermarked }
+                .map { ChapterUpdate(id = it.id, fillermark = fillermarked) }
+                .let { updateChapter.awaitAll(it) }
+        }
+        toggleAllSelection(false)
+    }
+
     /**
      * Deletes the given list of chapter.
      *
@@ -1645,6 +1621,20 @@ class MangaScreenModel(
 
         screenModelScope.launchNonCancellable {
             setMangaChapterFlags.awaitSetBookmarkFilter(manga, flag)
+        }
+    }
+
+    fun setFillermarkedFilter(state: TriState) {
+        val manga = successState?.manga ?: return
+
+        val flag = when (state) {
+            TriState.DISABLED -> Manga.SHOW_ALL
+            TriState.ENABLED_IS -> Manga.CHAPTER_SHOW_FILLERMARKED
+            TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_NOT_FILLERMARKED
+        }
+
+        screenModelScope.launchNonCancellable {
+            setMangaChapterFlags.awaitSetFillermarkFilter(manga, flag)
         }
     }
 
@@ -2061,9 +2051,11 @@ class MangaScreenModel(
                 val unreadFilter = manga.unreadFilter
                 val downloadedFilter = manga.downloadedFilter
                 val bookmarkedFilter = manga.bookmarkedFilter
+                val fillermarkedFilter = manga.fillermarkedFilter
                 return asSequence()
                     .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
+                    .filter { (chapter) -> applyFilter(fillermarkedFilter) { chapter.fillermark } }
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
                     .sortedWith { (chapter1), (chapter2) -> getChapterSort(manga).invoke(chapter1, chapter2) }
             }

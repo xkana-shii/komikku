@@ -25,8 +25,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku.knsh"
 
-        versionCode = 75
-        versionName = "1.13.3"
+        versionCode = 76
+        versionName = "1.15.2"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")

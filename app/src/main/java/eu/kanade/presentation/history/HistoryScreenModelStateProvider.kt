@@ -74,10 +74,10 @@ class HistoryScreenModelStateProvider : PreviewParameterProvider<HistoryScreenMo
     private object HistoryUiModelExamples {
         val headerToday = header()
         val headerTomorrow =
-            HistoryUiModel.Header(LocalDate.now().plusDays(1))
+            HistoryUiModel.Header(LocalDate.now().plusDays(1), mangaCount = 0)
 
         fun header(instantBuilder: (Instant) -> Instant = { it }) =
-            HistoryUiModel.Header(LocalDate.from(instantBuilder(Instant.now())))
+            HistoryUiModel.Header(LocalDate.from(instantBuilder(Instant.now())), mangaCount = 0)
 
         fun items() = sequence {
             var count = 1

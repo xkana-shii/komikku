@@ -31,8 +31,11 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.anilist.Anilist
+import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -314,6 +317,7 @@ class LibraryScreenModel(
                     prefs.filterUnread,
                     prefs.filterStarted,
                     prefs.filterBookmarked,
+                    prefs.filterFillermarked,
                     prefs.filterCompleted,
                     prefs.filterIntervalCustom,
                     // SY -->
@@ -401,6 +405,21 @@ class LibraryScreenModel(
             }
         }
         // KMK <--
+
+        screenModelScope.launchIO {
+            trackerManager.loggedInTrackersFlow().collectLatest { trackerList ->
+                mutableState.update { state ->
+                    state.copy(
+                        hasLoggedInTrackers = trackerList.filterNot { it is EnhancedTracker }.any { tracker ->
+                            tracker::class in listOf(
+                                Anilist::class,
+                                MyAnimeList::class,
+                            )
+                        },
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -420,6 +439,7 @@ class LibraryScreenModel(
         val filterUnread = prefs.filterUnread
         val filterStarted = prefs.filterStarted
         val filterBookmarked = prefs.filterBookmarked
+        val filterFillermarked = prefs.filterFillermarked
         val filterCompleted = prefs.filterCompleted
         val filterIntervalCustom = prefs.filterIntervalCustom
 
@@ -451,6 +471,10 @@ class LibraryScreenModel(
 
         val filterFnBookmarked: (LibraryItem) -> Boolean = {
             applyFilter(filterBookmarked) { it.libraryManga.hasBookmarks }
+        }
+
+        val filterFnFillermarked: (LibraryItem) -> Boolean = {
+            applyFilter(filterFillermarked) { it.libraryManga.hasFillermarks }
         }
 
         val filterFnCompleted: (LibraryItem) -> Boolean = {
@@ -502,6 +526,7 @@ class LibraryScreenModel(
                 filterFnUnread(it) &&
                 filterFnStarted(it) &&
                 filterFnBookmarked(it) &&
+                filterFnFillermarked(it) &&
                 filterFnCompleted(it) &&
                 filterFnIntervalCustom(it) &&
                 filterFnTracking(it) &&
@@ -642,6 +667,7 @@ class LibraryScreenModel(
             libraryPreferences.filterUnread().changes(),
             libraryPreferences.filterStarted().changes(),
             libraryPreferences.filterBookmarked().changes(),
+            libraryPreferences.filterFillermarked().changes(),
             libraryPreferences.filterCompleted().changes(),
             libraryPreferences.filterIntervalCustom().changes(),
             // SY -->
@@ -663,14 +689,15 @@ class LibraryScreenModel(
                 filterUnread = it[7] as TriState,
                 filterStarted = it[8] as TriState,
                 filterBookmarked = it[9] as TriState,
-                filterCompleted = it[10] as TriState,
-                filterIntervalCustom = it[11] as TriState,
+                filterFillermarked = it[10] as TriState,
+                filterCompleted = it[11] as TriState,
+                filterIntervalCustom = it[12] as TriState,
                 // SY -->
-                filterLewd = it[12] as TriState,
+                filterLewd = it[13] as TriState,
                 // SY <--
                 // KMK -->
-                sourceBadge = it[13] as Boolean,
-                useLangIcon = it[14] as Boolean,
+                sourceBadge = it[14] as Boolean,
+                useLangIcon = it[15] as Boolean,
             )
         }
     }
@@ -1597,6 +1624,7 @@ class LibraryScreenModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
+        val filterFillermarked: TriState,
         val filterCompleted: TriState,
         val filterIntervalCustom: TriState,
         // SY -->
@@ -1620,6 +1648,7 @@ class LibraryScreenModel(
         val isSyncEnabled: Boolean = false,
         val ogCategories: List<Category> = emptyList(),
         val groupType: Int = LibraryGroup.BY_DEFAULT,
+        val hasLoggedInTrackers: Boolean = false,
         // SY <--
         // KMK -->
         val libraryCategories: List<Category> = emptyList(),

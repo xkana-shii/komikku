@@ -3,10 +3,13 @@ package eu.kanade.presentation.browse
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -16,13 +19,17 @@ import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.browse.components.MigrationActionIcon
 import eu.kanade.presentation.browse.components.MigrationItem
 import eu.kanade.presentation.browse.components.MigrationItemResult
@@ -35,6 +42,7 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
+import tachiyomi.presentation.core.components.Pill
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.topSmallPaddingValues
@@ -66,11 +74,27 @@ fun MigrationListScreen(
             val titleString = stringResource(SYMR.strings.migration)
             val title by produceState(initialValue = titleString, items, finishedCount, titleString) {
                 withIOContext {
-                    value = "$titleString ($finishedCount/${items.size})"
+                    value = titleString
                 }
             }
             AppBar(
-                title = title,
+                titleContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = title,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f, false),
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Pill(
+                            text = "$finishedCount/${items.size}",
+                            color = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            fontSize = 14.sp,
+                        )
+                    }
+                },
                 // KMK -->
                 navigateUp = navigateUp,
                 // KMK <--
@@ -112,16 +136,15 @@ fun MigrationListScreen(
                         .fillMaxWidth()
                         .animateItem()
                         .padding(horizontal = 16.dp)
-                        .height(IntrinsicSize.Min),
+                        .height(IntrinsicSize.Min)
+                        .padding(vertical = 8.dp), // Removed the extra dot here
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val result by migrationItem.searchResult.collectAsState()
                     MigrationItem(
                         modifier = Modifier
-                            .padding(top = 8.dp)
                             .weight(1f)
-                            .align(Alignment.Top)
                             .fillMaxHeight(),
                         manga = migrationItem.manga,
                         sourcesString = migrationItem.sourcesString,
@@ -137,9 +160,7 @@ fun MigrationListScreen(
 
                     MigrationItemResult(
                         modifier = Modifier
-                            .padding(top = 8.dp)
                             .weight(1f)
-                            .align(Alignment.Top)
                             .fillMaxHeight(),
                         migrationItem = migrationItem,
                         result = result,
@@ -151,7 +172,8 @@ fun MigrationListScreen(
 
                     MigrationActionIcon(
                         modifier = Modifier
-                            .weight(0.2f),
+                            .weight(0.2f)
+                            .offset(y = (-4).dp), // Adjust the negative value to move it up
                         result = result,
                         skipManga = { skipManga(migrationItem.manga.id) },
                         // KMK -->
