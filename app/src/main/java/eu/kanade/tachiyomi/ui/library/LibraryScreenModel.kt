@@ -68,6 +68,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -371,18 +372,21 @@ class LibraryScreenModel(
 
         // KMK -->
         libraryPreferences.filterCategories().changes()
+            .distinctUntilChanged()
             .onEach {
                 mutableState.update { state ->
                     state.copy(filterCategory = it)
                 }
             }.launchIn(screenModelScope)
         libraryPreferences.filterCategoriesInclude().changes()
+            .distinctUntilChanged()
             .onEach {
                 mutableState.update { state ->
                     state.copy(includedCategories = it.mapNotNull(String::toLongOrNull).toImmutableSet())
                 }
             }.launchIn(screenModelScope)
         libraryPreferences.filterCategoriesExclude().changes()
+            .distinctUntilChanged()
             .onEach {
                 mutableState.update { state ->
                     state.copy(excludedCategories = it.mapNotNull(String::toLongOrNull).toImmutableSet())
@@ -676,6 +680,7 @@ class LibraryScreenModel(
             // KMK -->
             libraryPreferences.sourceBadge().changes(),
             libraryPreferences.useLangIcon().changes(),
+            libraryPreferences.filterCategories().changes(),
             // KMK <--
         ) {
             ItemPreferences(
@@ -698,6 +703,7 @@ class LibraryScreenModel(
                 // KMK -->
                 sourceBadge = it[14] as Boolean,
                 useLangIcon = it[15] as Boolean,
+                filterCategories = it[15] as Boolean,
             )
         }
     }
@@ -1630,6 +1636,9 @@ class LibraryScreenModel(
         // SY -->
         val filterLewd: TriState,
         // SY <--
+        // KMK -->
+        val filterCategories: Boolean,
+        // KMK <--
     )
 
     @Immutable
@@ -1653,8 +1662,8 @@ class LibraryScreenModel(
         // KMK -->
         val libraryCategories: List<Category> = emptyList(),
         val filterCategory: Boolean = false,
-        val includedCategories: ImmutableSet<Long> = emptySet<Long>().toImmutableSet(),
-        val excludedCategories: ImmutableSet<Long> = emptySet<Long>().toImmutableSet(),
+        val includedCategories: ImmutableSet<Long> = persistentSetOf(),
+        val excludedCategories: ImmutableSet<Long> = persistentSetOf(),
         // KMK <--
     ) {
         private val libraryCount by lazy {
