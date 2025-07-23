@@ -97,9 +97,9 @@ val GITHUB_REPO: String by lazy { getGithubRepo() }
 
 fun getGithubRepo(peekIntoPreview: Boolean = false): String =
     if (isPreviewBuildType || peekIntoPreview) {
-        "kana-shii/komikku-preview"
+        "xkana-shii/komikku-preview"
     } else {
-        "kana-shii/komikku"
+        "xkana-shii/komikku"
     }
 
 val RELEASE_TAG: String by lazy { getReleaseTag() }
