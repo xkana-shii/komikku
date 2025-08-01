@@ -731,13 +731,13 @@ class EHentai(
 
                 exh = this@EHentai.exh
                 title = if (preferences.useCleanTitle().get()) {
-                    select("#gn").text().trimOrNull()?.replace(cleanTitleRegex, "")
+                    select("#gn").text().trimOrNull()?.replace(cleanTitleRegex, "").trim()
                 } else {
                     select("#gn").text().trimOrNull()
                 }
 
                 altTitle = if (preferences.useCleanTitle().get()) {
-                    select("#gj").text().trimOrNull()?.replace(cleanTitleRegex, "")
+                    select("#gj").text().trimOrNull()?.replace(cleanTitleRegex, "").trim()
                 } else {
                     select("#gj").text().trimOrNull()
                 }
