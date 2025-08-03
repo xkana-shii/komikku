@@ -13,6 +13,6 @@ data class MUSeries(
         val name: String,
         val authorId: Long? = null,
         val url: String? = null,
-        val type: String
+        val type: String,
     )
 }
