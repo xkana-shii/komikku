@@ -21,8 +21,16 @@ data class MURecord(
     val ratingVotes: Int? = null,
     @SerialName("latest_chapter")
     val latestChapter: Int? = null,
-    val authors: List<MUAuthor>? = null,
-)
+    val authors: List<Author>? = null,
+) {
+    @Serializable
+    data class Author(
+        val name: String,
+        @SerialName("author_id") val authorId: Long? = null,
+        val url: String? = null,
+        val type: String,
+    )
+}
 
 fun MURecord.toTrackSearch(id: Long): TrackSearch {
     return TrackSearch.create(id).apply {
@@ -35,31 +43,7 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()
         start_date = this@toTrackSearch.year.toString()
-
-        val sourceAuthorsList: List<MUAuthor> = this@toTrackSearch.authors ?: emptyList()
-
-        this.authors = sourceAuthorsList
-            .filter { author ->
-                author.type.equals("Author(s)", ignoreCase = true) && author.name != null
-            }
-            .map { author -> author.name!!.trim() }
-            .filter { name -> name.isNotBlank() }
-            .distinct()
-            .ifEmpty { emptyList() }
-
-        this.artists = sourceAuthorsList
-            .filter { author ->
-                author.type.equals("Artist(s)", ignoreCase = true) && author.name != null
-            }
-            .map { author -> author.name!!.trim() }
-            .filter { name -> name.isNotBlank() }
-            .distinct()
-            .ifEmpty { emptyList() }
+        authors = this@toTrackSearch.authors?.filter { it.type == "Author" }?.map { it.name } ?: emptyList()
+        artists = this@toTrackSearch.authors?.filter { it.type == "Artist" }?.map { it.name } ?: emptyList()
     }
 }
-
-@Serializable
-data class MUAuthor(
-    val type: String? = null,
-    val name: String? = null,
-)
