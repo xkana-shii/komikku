@@ -40,7 +40,7 @@ data class Activity(
         @SerialName("small_image")
         val smallImage: String? = null,
         @SerialName("small_text")
-        val smallText: String? = "TachiyomiSY",
+        val smallText: String? = "Komikku",
     )
 
     @Serializable
