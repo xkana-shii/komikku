@@ -533,7 +533,7 @@
     <string name="enhanced_services_not_installed">Available but source not installed: %s</string>
     <string name="enhanced_tracking_info">Provides enhanced features for specific sources. Entries are automatically tracked when added to your library.</string>
     <string name="action_track">Track</string>
-    <string name="track_activity_name">Tracker login</string>  
+    <string name="track_activity_name">Tracker login</string>
 
     <!-- Connections section -->
     <string name="special_services">Special Services</string>

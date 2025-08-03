@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonElement
 const val RICH_PRESENCE_TAG = "discord_rpc"
 
 // Constant for application id
-private const val RICH_PRESENCE_APPLICATION_ID = "1229438545437921392"
+private const val RICH_PRESENCE_APPLICATION_ID = "1365208874440986685"
 
 // Constant for buttons list
 private val RICH_PRESENCE_BUTTONS = null
@@ -40,7 +40,7 @@ data class Activity(
         @SerialName("small_image")
         val smallImage: String? = null,
         @SerialName("small_text")
-        val smallText: String? = "TachiyomiSY",
+        val smallText: String? = "Komikku",
     )
 
     @Serializable
@@ -167,22 +167,21 @@ enum class DiscordScreen(
     @StringRes val state: Int,
     val imageUrl: String,
 ) {
-    APP(R.string.app_name, R.string.browsing, R.string.label_library, tachiyomiImageUrl),
-    LIBRARY(R.string.app_name, R.string.browsing, R.string.label_library, libraryImageUrl),
-    UPDATES(R.string.app_name, R.string.scrolling, R.string.label_recent_updates, updatesImageUrl),
-    HISTORY(R.string.app_name, R.string.scrolling, R.string.label_recent_manga, historyImageUrl),
-    BROWSE(R.string.app_name, R.string.browsing, R.string.label_sources, browseImageUrl),
-    MORE(R.string.app_name, R.string.messing, R.string.label_settings, moreImageUrl),
-    WEBVIEW(R.string.app_name, R.string.browsing, R.string.action_web_view, webviewImageUrl),
-    MANGA(R.string.app_name, R.string.comic, R.string.reading, mangaImageUrl),
+    APP(R.string.app_name, R.string.browsing, R.string.label_library, KOMIKKU_IMAGE),
+    LIBRARY(R.string.app_name, R.string.browsing, R.string.label_library, LIBRARY_IMAGE_URL),
+    UPDATES(R.string.app_name, R.string.scrolling, R.string.label_recent_updates, UPDATES_IMAGE_URL),
+    HISTORY(R.string.app_name, R.string.scrolling, R.string.label_recent_manga, HISTORY_IMAGE_URL),
+    BROWSE(R.string.app_name, R.string.browsing, R.string.label_sources, BROWSE_IMAGE_URL),
+    MORE(R.string.app_name, R.string.messing, R.string.label_settings, MORE_IMAGE_URL),
+    WEBVIEW(R.string.app_name, R.string.browsing, R.string.action_web_view, WEBVIEW_IMAGE_URL),
+    MANGA(R.string.app_name, R.string.comic, R.string.reading, MANGA_IMAGE_URL),
 }
 
-// Constants for standard Rich Presence image urls
-private const val tachiyomiImageUrl = "emojis/1229456525026787409.webp?quality=lossless"
-private const val libraryImageUrl = "emojis/1229715147250077736.webp?size=128&quality=lossless"
-private const val updatesImageUrl = "emojis/1216122475688231003.webp?quality=lossless"
-private const val historyImageUrl = "emojis/1216122387515310170.webp?quality=lossless"
-private const val browseImageUrl = "emojis/1216122371501723718.webp?quality=lossless"
-private const val moreImageUrl = "emojis/1216122403219050536.webp?quality=lossless"
-private const val webviewImageUrl = "emojis/1216122455618490509.webp?quality=lossless"
-private const val mangaImageUrl = "emojis/1216122415751626782.webp?quality=lossless"
+private const val KOMIKKU_IMAGE = "emojis/1229456525026787409.webp?quality=lossless"
+private const val LIBRARY_IMAGE_URL = "emojis/1229715147250077736.webp?size=128&quality=lossless"
+private const val UPDATES_IMAGE_URL = "emojis/1216122475688231003.webp?quality=lossless"
+private const val HISTORY_IMAGE_URL = "emojis/1216122387515310170.webp?quality=lossless"
+private const val BROWSE_IMAGE_URL = "emojis/1216122371501723718.webp?quality=lossless"
+private const val MORE_IMAGE_URL = "emojis/1216122403219050536.webp?quality=lossless"
+private const val WEBVIEW_IMAGE_URL = "emojis/1216122455618490509.webp?quality=lossless"
+private const val MANGA_IMAGE_URL = "emojis/1216122415751626782.webp?quality=lossless"
