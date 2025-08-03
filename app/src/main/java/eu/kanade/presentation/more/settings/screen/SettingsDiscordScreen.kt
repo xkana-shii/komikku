@@ -78,17 +78,17 @@ object SettingsDiscordScreen : SearchableSettings {
                 title = stringResource(MR.strings.connections_discord),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.SwitchPreference(
-                        pref = enableDRPCPref,
+                        preference = enableDRPCPref,
                         title = stringResource(MR.strings.pref_enable_discord_rpc),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        pref = useChapterTitlesPref,
+                        preference = useChapterTitlesPref,
                         enabled = enableDRPC,
                         title = stringResource(MR.strings.show_chapters_titles_title),
                         subtitle = stringResource(MR.strings.show_chapters_titles_subtitle),
                     ),
                     Preference.PreferenceItem.ListPreference(
-                        pref = discordRPCStatus,
+                        preference = discordRPCStatus,
                         title = stringResource(MR.strings.pref_discord_status),
                         entries = persistentMapOf(
                             -1 to stringResource(MR.strings.pref_discord_dnd),
@@ -147,7 +147,7 @@ object SettingsDiscordScreen : SearchableSettings {
             title = stringResource(MR.strings.general_categories),
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.SwitchPreference(
-                    pref = discordRPCIncognitoPref,
+                    preference = discordRPCIncognitoPref,
                     title = stringResource(MR.strings.pref_discord_incognito),
                     subtitle = stringResource(MR.strings.pref_discord_incognito_summary),
                 ),
