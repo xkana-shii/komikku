@@ -31,8 +31,11 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.anilist.Anilist
+import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -403,6 +406,21 @@ class LibraryScreenModel(
         screenModelScope.launchIO {
             if (mangaDexDmcaUuids.isEmpty()) {
                 mangaDexDmcaUuids = loadMangaDexDmcaUuids(context = Injekt.get<Application>())
+            }
+        }
+
+        screenModelScope.launchIO {
+            trackerManager.loggedInTrackersFlow().collectLatest { trackerList ->
+                mutableState.update { state ->
+                    state.copy(
+                        hasLoggedInTrackers = trackerList.filterNot { it is EnhancedTracker }.any { tracker ->
+                            tracker::class in listOf(
+                                Anilist::class,
+                                MyAnimeList::class,
+                            )
+                        },
+                    )
+                }
             }
         }
         // KMK <--
@@ -1639,6 +1657,7 @@ class LibraryScreenModel(
         val isSyncEnabled: Boolean = false,
         val ogCategories: List<Category> = emptyList(),
         val groupType: Int = LibraryGroup.BY_DEFAULT,
+        val hasLoggedInTrackers: Boolean = false,
         // SY <--
         // KMK -->
         val libraryCategories: List<Category> = emptyList(),
