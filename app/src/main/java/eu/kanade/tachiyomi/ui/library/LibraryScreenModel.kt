@@ -30,8 +30,8 @@ import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
-import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
@@ -378,7 +378,8 @@ class LibraryScreenModel(
                     state.copy(
                         hasLoggedInTrackers = trackerList.filterNot { it is EnhancedTracker }.any { tracker ->
                             tracker::class in listOf(
-                                Anilist::class, MyAnimeList::class,
+                                Anilist::class,
+                                MyAnimeList::class,
                             )
                         },
                     )
