@@ -35,7 +35,7 @@ fun ChapterHeader(
             .combinedClickable(
                 enabled = enabled,
                 onClick = onClick,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
             )
             .padding(horizontal = 16.dp, vertical = 4.dp),
         // KMK -->
