@@ -91,6 +91,7 @@ fun Source.isIncognitoModeEnabled(incognitoExtensions: Set<String>? = null): Boo
     }
     return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions().get())
 }
+
 // KMK <--
 fun Source?.isNsfw(): Boolean {
     if (this == null || this.isLocalOrStub()) return false

@@ -1567,13 +1567,16 @@ class ReaderActivity : BaseActivity() {
                     DiscordRPCService.setReaderActivity(
                         context = this@ReaderActivity,
                         ReaderData(
-                            incognitoMode = viewModel.incognitoMode,    // viewModel.currentSource.isNsfw()
+                            incognitoMode = viewModel.incognitoMode, // viewModel.currentSource.isNsfw()
                             mangaId = viewModel.manga?.id,
                             mangaTitle = viewModel.manga?.title,
                             thumbnailUrl = viewModel.manga?.thumbnailUrl,
                             chapterNumber = Pair(currentChapter?.chapter_number ?: -1f, viewModel.getChapters().size),
-                            chapterTitle = if(connectionsPreferences.useChapterTitles().get()) currentChapter?.name
-                                            else currentChapter?.chapter_number.toString(),
+                            chapterTitle = if (connectionsPreferences.useChapterTitles().get()) {
+                                currentChapter?.name
+                            } else {
+                                currentChapter?.chapter_number.toString()
+                            },
                         ),
                     )
                 } else {

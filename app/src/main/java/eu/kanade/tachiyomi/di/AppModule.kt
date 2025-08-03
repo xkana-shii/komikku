@@ -181,7 +181,7 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { SyncStatus() }
         addSingletonFactory { LibraryUpdateStatus() }
         // KMK <--
-        
+
         addSingletonFactory { ConnectionsManager() }
 
         // Asynchronously init expensive components for a faster cold start
