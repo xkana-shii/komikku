@@ -46,6 +46,7 @@ import exh.pref.DelegateSourcePreferences
 import tachiyomi.core.common.Constants
 import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
