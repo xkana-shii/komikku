@@ -63,6 +63,7 @@ class DiscordRPCService : Service() {
     }
 
     private fun notification(context: Context) {
+        val stopIntent = NotificationReceiver.stopDiscordRPCService(context)
         val builder = context.notificationBuilder(Notifications.CHANNEL_DISCORD_RPC) {
             setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher))
             setSmallIcon(R.drawable.ic_discord_24dp)
@@ -70,6 +71,7 @@ class DiscordRPCService : Service() {
             setAutoCancel(false)
             setOngoing(true)
             setUsesChronometer(true)
+            addAction(R.drawable.ic_close_24dp, context.getString(R.string.action_stop), stopIntent)
         }
 
         startForeground(Notifications.ID_DISCORD_RPC, builder.build())
