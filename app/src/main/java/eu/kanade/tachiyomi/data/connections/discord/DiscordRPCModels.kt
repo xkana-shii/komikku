@@ -177,7 +177,7 @@ enum class DiscordScreen(
     MANGA(R.string.app_name, R.string.comic, R.string.reading, MANGA_IMAGE_URL),
 }
 
-private const val KOMIKKU_IMAGE = "emojis/1229456525026787409.webp?quality=lossless"
+private const val KOMIKKU_IMAGE = "emojis/1401719615536500916.webp?quality=lossless"
 private const val LIBRARY_IMAGE_URL = "emojis/1229715147250077736.webp?size=128&quality=lossless"
 private const val UPDATES_IMAGE_URL = "emojis/1216122475688231003.webp?quality=lossless"
 private const val HISTORY_IMAGE_URL = "emojis/1216122387515310170.webp?quality=lossless"
