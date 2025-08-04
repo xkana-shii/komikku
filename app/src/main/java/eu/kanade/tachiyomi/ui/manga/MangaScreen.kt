@@ -268,6 +268,7 @@ class MangaScreen(
                     incognitoMode = Injekt.get<GetIncognitoState>().await(successState.manga.source),
                     mangaId = successState.manga.id,
                     chapterTitle = successState.manga.title,
+                    thumbnailUrl = successState.manga.thumbnailUrl
                 ),
             )
         }
