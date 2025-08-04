@@ -107,7 +107,7 @@ class UpdateManga(
         return mangaRepository.updateAll(
             mangas.map { manga ->
                 fetchInterval.toMangaUpdate(manga, dateTime, window)
-            }
+            },
         )
     }
 
