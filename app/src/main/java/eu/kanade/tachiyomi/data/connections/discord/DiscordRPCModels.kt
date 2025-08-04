@@ -178,10 +178,10 @@ enum class DiscordScreen(
 }
 
 private const val KOMIKKU_IMAGE = "emojis/1401719615536500916.webp?quality=lossless"
-private const val LIBRARY_IMAGE_URL = "emojis/1229715147250077736.webp?size=128&quality=lossless"
-private const val UPDATES_IMAGE_URL = "emojis/1216122475688231003.webp?quality=lossless"
-private const val HISTORY_IMAGE_URL = "emojis/1216122387515310170.webp?quality=lossless"
-private const val BROWSE_IMAGE_URL = "emojis/1216122371501723718.webp?quality=lossless"
-private const val MORE_IMAGE_URL = "emojis/1216122403219050536.webp?quality=lossless"
-private const val WEBVIEW_IMAGE_URL = "emojis/1216122455618490509.webp?quality=lossless"
-private const val MANGA_IMAGE_URL = "emojis/1216122415751626782.webp?quality=lossless"
+private const val LIBRARY_IMAGE_URL = "emojis/1401723992963940443.webp?size=128&quality=lossless"
+private const val UPDATES_IMAGE_URL = "emojis/1401723857571938424.webp?quality=lossless"
+private const val HISTORY_IMAGE_URL = "emojis/1401724070369689620.webp?quality=lossless"
+private const val BROWSE_IMAGE_URL = "emojis/1401723924764688465.webp?quality=lossless"
+private const val MORE_IMAGE_URL = "emojis/1401723775174578176.webp?quality=lossless"
+private const val WEBVIEW_IMAGE_URL = "emojis/1401725215465275412.webp?quality=lossless"
+private const val MANGA_IMAGE_URL = "emojis/1401724681731444858.webp?quality=lossless"
