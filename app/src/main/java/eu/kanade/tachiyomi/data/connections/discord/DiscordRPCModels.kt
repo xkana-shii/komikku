@@ -180,7 +180,7 @@ enum class DiscordScreen(
 
 // Constants for standard Rich Presence image urls
 private const val KOMIKKU_IMAGE_URL = "emojis/1401719615536500916.webp?quality=lossless"
-private const val KOMIKKU_PREVIEW_IMAGE_URL = "emojis/1401719615536500916.webp?quality=lossless"
+private const val KOMIKKU_PREVIEW_IMAGE_URL = "emojis/1401732831314575401.webp?quality=lossless"
 
 @Suppress("SimplifyBooleanWithConstants")
 private val KOMIKKU_IMAGE = if (isPreviewBuildType == true) KOMIKKU_PREVIEW_IMAGE_URL else KOMIKKU_IMAGE_URL
