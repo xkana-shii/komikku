@@ -82,11 +82,13 @@ data object UpdatesTab : Tab {
             lastUpdated = screenModel.lastUpdated,
             // SY -->
             preserveReadingPosition = screenModel.preserveReadingPosition,
+            isLoading = state.isLoading,
             // SY <--
             onClickCover = { item -> navigator.push(MangaScreen(item.update.mangaId)) },
             onSelectAll = screenModel::toggleAllSelection,
             onInvertSelection = screenModel::invertSelection,
             onUpdateLibrary = screenModel::updateLibrary,
+            onCancelUpdateLibrary = { screenModel.cancelLibraryUpdate(context) },
             onDownloadChapter = screenModel::downloadChapters,
             onMultiBookmarkClicked = screenModel::bookmarkUpdates,
             onMultiFillermarkClicked = screenModel::fillermarkUpdates,
