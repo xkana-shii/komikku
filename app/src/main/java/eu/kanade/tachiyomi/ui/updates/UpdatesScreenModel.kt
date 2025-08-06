@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.updates
 
 import android.app.Application
+import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -156,6 +157,12 @@ class UpdatesScreenModel(
             _events.send(Event.LibraryUpdateTriggered(started))
         }
         return started
+    }
+
+    fun cancelLibraryUpdate(context: Context): Boolean {
+        LibraryUpdateJob.stop(context)
+        mutableState.update { it.copy(isLoading = false) }
+        return true
     }
 
     /**
