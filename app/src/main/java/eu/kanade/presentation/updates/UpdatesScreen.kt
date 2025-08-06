@@ -215,7 +215,7 @@ private fun UpdatesAppBar(
                             } else {
                                 onUpdateLibrary()
                             }
-                        }
+                        },
                     ),
                 ),
             )
