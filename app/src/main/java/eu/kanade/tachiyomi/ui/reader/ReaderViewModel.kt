@@ -26,6 +26,7 @@ import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
@@ -151,6 +152,9 @@ class ReaderViewModel @JvmOverloads constructor(
     val manga: Manga?
         get() = state.value.manga
 
+    val currentSource: Source?
+        get() = state.value.source
+
     /**
      * The chapter id of the currently loaded chapter. Used to restore from process kill.
      */
@@ -270,7 +274,7 @@ class ReaderViewModel @JvmOverloads constructor(
             .map(::ReaderChapter)
     }
 
-    private val incognitoMode: Boolean by lazy { getIncognitoState.await(manga?.source) }
+    val incognitoMode: Boolean by lazy { getIncognitoState.await(manga?.source) }
     private val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading().get()
 
     init {
@@ -375,7 +379,8 @@ class ReaderViewModel @JvmOverloads constructor(
                     mutableState.update {
                         it.copy(
                             manga = manga,
-                            // SY -->
+                            /* SY --> */
+                            source = source,
                             meta = metadata,
                             mergedManga = mergedManga,
                             dateRelativeTime = relativeTime,
@@ -475,6 +480,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 )
             }
         }
+        eventChannel.trySend(Event.ChapterChanged)
         return newChapters
     }
 
@@ -1348,7 +1354,9 @@ class ReaderViewModel @JvmOverloads constructor(
 
     @Immutable
     data class State(
+        val chapter: Chapter? = null,
         val manga: Manga? = null,
+        val source: Source? = null,
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
@@ -1411,6 +1419,7 @@ class ReaderViewModel @JvmOverloads constructor(
 
     sealed interface Event {
         data object ReloadViewerChapters : Event
+        data object ChapterChanged : Event
         data object PageChanged : Event
         data class SetOrientation(val orientation: Int) : Event
         data class SetCoverResult(val result: SetAsCoverResult) : Event
