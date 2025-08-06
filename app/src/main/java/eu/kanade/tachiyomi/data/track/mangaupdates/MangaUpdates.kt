@@ -128,10 +128,8 @@ class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker
                 it.title?.htmlDecode(),
                 it.image?.url?.original,
                 it.description?.htmlDecode(),
-                it.authors?.filter { it.type != null && "Author" in it.type }
-                    ?.joinToString(separator = ", ") { it.name ?: "" },
-                it.authors?.filter { it.type != null && "Artist" in it.type }
-                    ?.joinToString(separator = ", ") { it.name ?: "" },
+                it.authors?.filter { a -> a.type == "Author" }?.map { a -> a.name }?.joinToString(", "),
+                it.authors?.filter { a -> a.type == "Artist" }?.map { a -> a.name }?.joinToString(", "),
             )
         }
     }
