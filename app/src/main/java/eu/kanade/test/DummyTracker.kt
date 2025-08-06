@@ -133,6 +133,8 @@ data class DummyTracker(
     ): TrackMangaMetadata = TrackMangaMetadata(0, "test", "test", "test", "test", "test")
 
     override suspend fun searchById(id: String) = null
+
+    override suspend fun getPaginatedMangaList(page: Int, statusId: Long): List<TrackMangaMetadata> = emptyList()
     // SY <--
 
     // KMK -->

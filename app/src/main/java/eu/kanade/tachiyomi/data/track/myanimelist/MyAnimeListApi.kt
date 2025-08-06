@@ -31,6 +31,8 @@ import tachiyomi.core.common.util.lang.withIOContext
 import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.text.ifEmpty
+import kotlin.text.isNotBlank
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 class MyAnimeListApi(
@@ -99,7 +101,8 @@ class MyAnimeListApi(
                 .appendPath(id.toString())
                 .appendQueryParameter(
                     "fields",
-                    "id,title,synopsis,num_chapters,mean,main_picture,status,media_type,start_date",
+                    // Ensure authors field with role is requested
+                    "id,title,synopsis,num_chapters,mean,main_picture,status,media_type,start_date,authors{first_name,last_name,role}",
                 )
                 .build()
             with(json) {
@@ -118,6 +121,20 @@ class MyAnimeListApi(
                             publishing_status = it.status.replace("_", " ")
                             publishing_type = it.mediaType.replace("_", " ")
                             start_date = it.startDate ?: ""
+
+                            val malAuthorsList = it.authors ?: emptyList()
+
+                            this.authors = malAuthorsList
+                                .filter { authorEntry -> "Story" in authorEntry.role }
+                                .map { authorEntry -> "${authorEntry.node.firstName} ${authorEntry.node.lastName}".trim() }
+                                .filter { it.isNotBlank() } // Ensure we don't add empty strings to the list
+                                .ifEmpty { emptyList() } // Use emptyList if no authors found
+
+                            this.artists = malAuthorsList
+                                .filter { authorEntry -> "Art" in authorEntry.role }
+                                .map { authorEntry -> "${authorEntry.node.firstName} ${authorEntry.node.lastName}".trim() }
+                                .filter { it.isNotBlank() } // Ensure we don't add empty strings to the list
+                                .ifEmpty { emptyList() } // Use emptyList if no artists found
                         }
                     }
             }
@@ -224,6 +241,35 @@ class MyAnimeListApi(
                                 .ifEmpty { null },
                         )
                     }
+            }
+        }
+    }
+
+    suspend fun getPaginatedMangaList(page: Int, statusId: Long): List<TrackMangaMetadata> {
+        return withIOContext {
+            val urlBuilder = "$BASE_API_URL/users/@me/mangalist".toUri().buildUpon()
+                .appendQueryParameter("status", "${statusId.toMyAnimeListStatus()}")
+                .appendQueryParameter("fields", "list_status")
+                .appendQueryParameter("limit", 50.toString())
+                .appendQueryParameter("offset", ((page - 1) * 50).toString())
+
+            val request = Request.Builder().url(urlBuilder.build().toString()).get().build()
+            with(json) {
+                val data = authClient.newCall(request)
+                    .awaitSuccess()
+                    .parseAs<MALUserSearchResult>()
+                    .data
+                data.mapNotNull {
+                    if (statusId == MyAnimeList.REREADING && !it.listStatus!!.isRereading) {
+                        null
+                    } else {
+                        TrackMangaMetadata(
+                            remoteId = it.node.id.toLong(),
+                            title = it.node.title,
+                            thumbnailUrl = it.node.covers?.large,
+                        )
+                    }
+                }
             }
         }
     }
