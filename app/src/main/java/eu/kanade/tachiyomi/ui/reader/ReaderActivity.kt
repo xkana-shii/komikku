@@ -1594,7 +1594,7 @@ class ReaderActivity : BaseActivity() {
                                 thumbnailUrl = manga.thumbnailUrl ?: "",
                                 chapterProgress = Pair(
                                     viewModel.state.value.currentPage,
-                                    viewModel.state.value.totalPages
+                                    viewModel.state.value.totalPages,
                                 ),
                                 chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
                                     chapter.name
