@@ -87,6 +87,7 @@ import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
+import eu.kanade.tachiyomi.source.isNsfw
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -530,8 +531,8 @@ class ReaderActivity : BaseActivity() {
                 chapterTitle = state.currentChapter?.chapter?.name,
                 navigateUp = onBackPressedDispatcher::onBackPressed,
                 onClickTopAppBar = ::openMangaScreen,
-                bookmarked = state.bookmarked,
-                onToggleBookmarked = viewModel::toggleChapterBookmark,
+                // bookmarked = state.bookmarked,
+                // onToggleBookmarked = viewModel::toggleChapterBookmark,
                 onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
                 onOpenInBrowser = ::openChapterInBrowser.takeIf { isHttpSource },
                 onShare = ::shareChapter.takeIf { isHttpSource },
@@ -700,16 +701,6 @@ class ReaderActivity : BaseActivity() {
                             chapters = chapters.map {
                                 if (it.chapter.id == chapter.id) {
                                     it.copy(chapter = chapter.copy(bookmark = !chapter.bookmark))
-                                } else {
-                                    it
-                                }
-                            }.toImmutableList()
-                        },
-                        onFillermark = { chapter ->
-                            viewModel.toggleFillermark(chapter.id, !chapter.fillermark)
-                            chapters = chapters.map {
-                                if (it.chapter.id == chapter.id) {
-                                    it.copy(chapter = chapter.copy(fillermark = !chapter.fillermark))
                                 } else {
                                     it
                                 }
@@ -1580,38 +1571,32 @@ class ReaderActivity : BaseActivity() {
     private fun updateDiscordRPC(exitingReader: Boolean) {
         if (connectionsPreferences.enableDiscordRPC().get()) {
             viewModel.viewModelScope.launchIO {
-                try {
-                    if (!exitingReader) {
-                        val manga = viewModel.currentManga.value ?: return@launchIO
-                        val chapter = viewModel.currentChapter.value ?: return@launchIO
+                if (!exitingReader) {
+                    val manga = viewModel.currentManga.value ?: return@launchIO
+                    val chapter = viewModel.currentChapter.value ?: return@launchIO
 
-                        DiscordRPCService.setReaderActivity(
-                            context = this@ReaderActivity,
-                            ReaderData(
-                                incognitoMode = viewModel.incognitoMode,
-                                mangaId = manga.id,
-                                mangaTitle = manga.ogTitle,
-                                thumbnailUrl = manga.thumbnailUrl ?: "",
-                                chapterProgress = Pair(
-                                    viewModel.state.value.currentPage,
-                                    viewModel.state.value.totalPages,
-                                ),
-                                chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
-                                    chapter.name
-                                } else {
-                                    chapter.chapterNumber.toString()
-                                },
-                            ),
-                        )
-                    } else {
-                        with(DiscordRPCService) {
-                            setScreen(this@ReaderActivity)
-                        }
+                    DiscordRPCService.setReaderActivity(
+                        context = this@ReaderActivity,
+                        ReaderData(
+                            incognitoMode = viewModel.incognitoMode,
+                            mangaId = manga.id,
+                            mangaTitle = manga.ogTitle,
+                            thumbnailUrl = manga.thumbnailUrl ?: "",
+                            chapterProgress = Pair(viewModel.state.value.currentPage, viewModel.state.value.totalPages),
+                            chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
+                                chapter.name
+                            } else {
+                                chapter.chapterNumber.toString()
+                            },
+                        ),
+                    )
+                } else {
+                    with(DiscordRPCService) {
+                        setScreen(this@ReaderActivity)
                     }
-                } catch (e: Exception) {
-                    logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
                 }
             }
         }
     }
+    // <-- AM (DISCORD)
 }
