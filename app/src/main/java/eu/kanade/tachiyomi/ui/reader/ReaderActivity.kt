@@ -1600,9 +1600,8 @@ class ReaderActivity : BaseActivity() {
                         ),
                     )
                 } else {
-                    with(DiscordRPCService) {
-                        setScreen(this@ReaderActivity)
-                    }
+                    val lastUsedScreen = DiscordRPCService.lastUsedScreen
+                    DiscordRPCService.setScreen(this@ReaderActivity, lastUsedScreen)
                 }
             }
         }
