@@ -147,7 +147,7 @@ class DiscordRPCService : Service() {
 
         private var since = 0L
 
-        private var lastUsedScreen = DiscordScreen.APP
+        var lastUsedScreen = DiscordScreen.APP
             set(value) {
                 // Only update if the new screen is not a media/webview screen
                 if (value !in listOf(DiscordScreen.MANGA, DiscordScreen.WEBVIEW)) {

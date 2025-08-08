@@ -1579,37 +1579,32 @@ class ReaderActivity : BaseActivity() {
      * If false, the Discord RPC status is set to the current reader activity, displaying details such as the manga title, chapter number, and chapter title.
      */
     private fun updateDiscordRPC(exitingReader: Boolean) {
-        if (!connectionsPreferences.enableDiscordRPC().get()) return
-
-        DiscordRPCService.discordScope.launchIO {
-            try {
+        if (connectionsPreferences.enableDiscordRPC().get()) {
+            viewModel.viewModelScope.launchIO {
                 if (!exitingReader) {
-                    val manga = viewModel.currentManga.value ?: return@launchIO
-                    val chapter = viewModel.currentChapter.value ?: return@launchIO
-
                     DiscordRPCService.setReaderActivity(
                         context = this@ReaderActivity,
                         ReaderData(
                             incognitoMode = viewModel.currentSource.value?.isNsfw() == true || viewModel.incognitoMode,
-                            mangaId = manga.id,
-                            mangaTitle = manga.ogTitle,
-                            thumbnailUrl = manga.thumbnailUrl ?: "",
+                            mangaId = viewModel.manga?.id,
+                            // AM (CU)>
+                            mangaTitle = viewModel.manga?.ogTitle,
+                            thumbnailUrl = viewModel.manga?.thumbnailUrl,
                             chapterProgress = Pair(viewModel.state.value.currentPage, viewModel.state.value.totalPages),
-                            chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
-                                chapter.name
-                            } else {
-                                chapter.chapterNumber.toString()
-                            },
+                            chapterNumber =
+                                if (connectionsPreferences.useChapterTitles().get()) {
+                                    viewModel.state.value.currentChapter?.chapter?.name
+                                } else {
+                                    viewModel.state.value.currentChapter?.chapter?.chapter_number.toString()
+                                },
                         ),
                     )
                 } else {
-                    with(DiscordRPCService) {
-                        setScreen(this@ReaderActivity)
-                    }
+                    val lastUsedScreen = DiscordRPCService.lastUsedScreen
+                    DiscordRPCService.setScreen(this@ReaderActivity, lastUsedScreen)
                 }
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
             }
         }
     }
+    // <-- AM (DISCORD)
 }
