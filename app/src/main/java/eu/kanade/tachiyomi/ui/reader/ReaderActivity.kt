@@ -87,7 +87,6 @@ import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
-import eu.kanade.tachiyomi.source.isNsfw
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -1572,28 +1571,26 @@ class ReaderActivity : BaseActivity() {
         if (connectionsPreferences.enableDiscordRPC().get()) {
             viewModel.viewModelScope.launchIO {
                 if (!exitingReader) {
-                    val manga = viewModel.currentManga.value ?: return@launchIO
-                    val chapter = viewModel.currentChapter.value ?: return@launchIO
-
                     DiscordRPCService.setReaderActivity(
                         context = this@ReaderActivity,
                         ReaderData(
                             incognitoMode = viewModel.incognitoMode,
-                            mangaId = manga.id,
-                            mangaTitle = manga.ogTitle,
-                            thumbnailUrl = manga.thumbnailUrl ?: "",
+                            mangaId = viewModel.manga?.id,
+                            // AM (CU)>
+                            mangaTitle = viewModel.manga?.ogTitle,
+                            thumbnailUrl = viewModel.manga?.thumbnailUrl,
                             chapterProgress = Pair(viewModel.state.value.currentPage, viewModel.state.value.totalPages),
-                            chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
-                                chapter.name
-                            } else {
-                                chapter.chapterNumber.toString()
-                            },
+                            chapterNumber =
+                                if (connectionsPreferences.useChapterTitles().get()) {
+                                    viewModel.state.value.currentChapter?.chapter?.name
+                                } else {
+                                    viewModel.state.value.currentChapter?.chapter?.chapter_number.toString()
+                                },
                         ),
                     )
                 } else {
-                    with(DiscordRPCService) {
-                        setScreen(this@ReaderActivity)
-                    }
+                    val lastUsedScreen = DiscordRPCService.lastUsedScreen
+                    DiscordRPCService.setScreen(this@ReaderActivity, lastUsedScreen)
                 }
             }
         }
