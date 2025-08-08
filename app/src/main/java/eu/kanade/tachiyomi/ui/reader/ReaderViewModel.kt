@@ -150,16 +150,10 @@ class ReaderViewModel @JvmOverloads constructor(
      * The manga loaded in the reader. It can be null when instantiated for a short time.
      */
     val manga: Manga?
-        get() = currentManga.value
+        get() = state.value.manga
 
-    private val _currentChapter = MutableStateFlow<Chapter?>(null)
-    val currentChapter = _currentChapter.asStateFlow()
-
-    private val _currentManga = MutableStateFlow<Manga?>(null)
-    val currentManga = _currentManga.asStateFlow()
-
-    private val _currentSource = MutableStateFlow<Source?>(null)
-    val currentSource = _currentSource.asStateFlow()
+    val currentSource: Source?
+        get() = state.value.source
 
     /**
      * The chapter id of the currently loaded chapter. Used to restore from process kill.
@@ -191,7 +185,7 @@ class ReaderViewModel @JvmOverloads constructor(
 
     private var chapterToDownload: Download? = null
 
-    val unfilteredChapterList by lazy {
+    private val unfilteredChapterList by lazy {
         val manga = manga!!
         runBlocking { getChaptersByMangaId.await(manga.id, applyFilter = false) }
     }
@@ -200,7 +194,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * Chapter list for the active manga. It's retrieved lazily and should be accessed for the first
      * time in a background thread to avoid blocking the UI.
      */
-    val chapterList by lazy {
+    private val chapterList by lazy {
         val manga = manga!!
         // SY -->
         val (chapters, mangaMap) = runBlocking {
@@ -280,7 +274,7 @@ class ReaderViewModel @JvmOverloads constructor(
             .map(::ReaderChapter)
     }
 
-    val incognitoMode: Boolean by lazy { getIncognitoState.await(currentSource.value?.id) }
+    val incognitoMode: Boolean by lazy { getIncognitoState.await(manga?.source) }
     private val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading().get()
 
     init {
@@ -379,8 +373,6 @@ class ReaderViewModel @JvmOverloads constructor(
                     } else {
                         emptyMap()
                     }
-                    _currentManga.update { _ -> manga }
-                    _currentSource.update { _ -> source }
                     val relativeTime = uiPreferences.relativeTime().get()
                     val autoScrollFreq = readerPreferences.autoscrollInterval().get()
                     // SY <--
@@ -721,7 +713,7 @@ class ReaderViewModel @JvmOverloads constructor(
             if (readerChapter.pages?.lastIndex == pageIndex ||
                 // SY -->
                 (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
-                // SY <--
+            // SY <--
             ) {
                 updateChapterProgressOnComplete(readerChapter)
 
@@ -918,7 +910,6 @@ class ReaderViewModel @JvmOverloads constructor(
         val manga = manga ?: return
         runBlocking(Dispatchers.IO) {
             setMangaViewerFlags.awaitSetReadingMode(manga.id, readingMode.flagValue.toLong())
-            _currentManga.update { _ -> getManga.await(manga.id) }
             val currChapters = state.value.viewerChapters
             if (currChapters != null) {
                 // Save current page
