@@ -1569,10 +1569,8 @@ class ReaderActivity : BaseActivity() {
      * If false, the Discord RPC status is set to the current reader activity, displaying details such as the manga title, chapter number, and chapter title.
      */
     private fun updateDiscordRPC(exitingReader: Boolean) {
-        if (!connectionsPreferences.enableDiscordRPC().get()) return
-
-        DiscordRPCService.discordScope.launchIO {
-            try {
+        if (connectionsPreferences.enableDiscordRPC().get()) {
+            viewModel.viewModelScope.launchIO {
                 if (!exitingReader) {
                     val manga = viewModel.currentManga.value ?: return@launchIO
                     val chapter = viewModel.currentChapter.value ?: return@launchIO
@@ -1597,9 +1595,8 @@ class ReaderActivity : BaseActivity() {
                         setScreen(this@ReaderActivity)
                     }
                 }
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
             }
         }
     }
+    // <-- AM (DISCORD)
 }
