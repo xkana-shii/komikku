@@ -241,6 +241,7 @@ fun ReaderAppBars(
                                                 onClick = onToggleBookmarked,
                                             ),
                                         )
+                                        /* SY -->
                                         onOpenInWebView?.let {
                                             add(
                                                 AppBar.OverflowAction(
@@ -265,6 +266,7 @@ fun ReaderAppBars(
                                                 ),
                                             )
                                         }
+                                        SY <-- */
                                     }
                                     .build(),
                             )
