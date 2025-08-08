@@ -87,7 +87,6 @@ import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
-import eu.kanade.tachiyomi.source.isNsfw
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -1569,36 +1568,39 @@ class ReaderActivity : BaseActivity() {
      * If false, the Discord RPC status is set to the current reader activity, displaying details such as the manga title, chapter number, and chapter title.
      */
     private fun updateDiscordRPC(exitingReader: Boolean) {
-        if (!connectionsPreferences.enableDiscordRPC().get()) return
+        if (connectionsPreferences.enableDiscordRPC().get()) {
+            viewModel.viewModelScope.launchIO {
+                try {
+                    if (!exitingReader) {
+                        val manga = viewModel.currentManga.value ?: return@launchIO
+                        val chapter = viewModel.currentChapter.value ?: return@launchIO
 
-        DiscordRPCService.discordScope.launchIO {
-            try {
-                if (!exitingReader) {
-                    val manga = viewModel.currentManga.value ?: return@launchIO
-                    val chapter = viewModel.currentChapter.value ?: return@launchIO
-
-                    DiscordRPCService.setReaderActivity(
-                        context = this@ReaderActivity,
-                        ReaderData(
-                            incognitoMode = viewModel.currentSource.value?.isNsfw() == true || viewModel.incognitoMode,
-                            mangaId = manga.id,
-                            mangaTitle = manga.ogTitle,
-                            thumbnailUrl = manga.thumbnailUrl ?: "",
-                            chapterProgress = Pair(viewModel.state.value.currentPage, viewModel.state.value.totalPages),
-                            chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
-                                chapter.name
-                            } else {
-                                chapter.chapterNumber.toString()
-                            },
-                        ),
-                    )
-                } else {
-                    with(DiscordRPCService) {
-                        setScreen(this@ReaderActivity)
+                        DiscordRPCService.setReaderActivity(
+                            context = this@ReaderActivity,
+                            ReaderData(
+                                incognitoMode = viewModel.incognitoMode,
+                                mangaId = manga.id,
+                                mangaTitle = manga.ogTitle,
+                                thumbnailUrl = manga.thumbnailUrl ?: "",
+                                chapterProgress = Pair(
+                                    viewModel.state.value.currentPage,
+                                    viewModel.state.value.totalPages
+                                ),
+                                chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
+                                    chapter.name
+                                } else {
+                                    chapter.chapterNumber.toString()
+                                },
+                            ),
+                        )
+                    } else {
+                        with(DiscordRPCService) {
+                            setScreen(this@ReaderActivity)
+                        }
                     }
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
                 }
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
             }
         }
     }
