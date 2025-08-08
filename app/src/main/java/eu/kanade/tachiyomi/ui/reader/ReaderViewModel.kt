@@ -150,7 +150,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * The manga loaded in the reader. It can be null when instantiated for a short time.
      */
     val manga: Manga?
-        get() = state.value.manga
+        get() = currentManga.value
 
     private val _currentChapter = MutableStateFlow<Chapter?>(null)
     val currentChapter = _currentChapter.asStateFlow()
@@ -379,6 +379,8 @@ class ReaderViewModel @JvmOverloads constructor(
                     } else {
                         emptyMap()
                     }
+                    _currentManga.update { _ -> manga }
+                    _currentSource.update { _ -> source }
                     val relativeTime = uiPreferences.relativeTime().get()
                     val autoScrollFreq = readerPreferences.autoscrollInterval().get()
                     // SY <--
@@ -916,6 +918,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val manga = manga ?: return
         runBlocking(Dispatchers.IO) {
             setMangaViewerFlags.awaitSetReadingMode(manga.id, readingMode.flagValue.toLong())
+            _currentManga.update { _ -> getManga.await(manga.id) }
             val currChapters = state.value.viewerChapters
             if (currChapters != null) {
                 // Save current page
