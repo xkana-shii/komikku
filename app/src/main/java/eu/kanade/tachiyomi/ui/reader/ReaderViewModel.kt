@@ -152,9 +152,6 @@ class ReaderViewModel @JvmOverloads constructor(
     val manga: Manga?
         get() = state.value.manga
 
-    val currentSource: Source?
-        get() = state.value.source
-
     /**
      * The chapter id of the currently loaded chapter. Used to restore from process kill.
      */
