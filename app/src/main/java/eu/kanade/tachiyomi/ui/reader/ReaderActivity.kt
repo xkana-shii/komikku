@@ -87,7 +87,6 @@ import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
-import eu.kanade.tachiyomi.source.isNsfw
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -1579,23 +1578,26 @@ class ReaderActivity : BaseActivity() {
      * If false, the Discord RPC status is set to the current reader activity, displaying details such as the manga title, chapter number, and chapter title.
      */
     private fun updateDiscordRPC(exitingReader: Boolean) {
-        if (connectionsPreferences.enableDiscordRPC().get()) {
-            viewModel.viewModelScope.launchIO {
+        if (!connectionsPreferences.enableDiscordRPC().get()) return
+
+        DiscordRPCService.discordScope.launchIO {
+            try {
                 if (!exitingReader) {
+                    val manga = viewModel.currentManga.value ?: return@launchIO
+                    val chapter = viewModel.currentChapter.value ?: return@launchIO
+
                     DiscordRPCService.setReaderActivity(
                         context = this@ReaderActivity,
                         ReaderData(
-                            incognitoMode = viewModel.currentSource.value?.isNsfw() == true || viewModel.incognitoMode,
-                            mangaId = viewModel.manga?.id,
-                            // AM (CU)>
-                            mangaTitle = viewModel.manga?.ogTitle,
-                            thumbnailUrl = viewModel.manga?.thumbnailUrl,
+                            incognitoMode = viewModel.incognitoMode,
+                            mangaId = manga.id,
+                            mangaTitle = manga.ogTitle,
+                            thumbnailUrl = manga.thumbnailUrl ?: "",
                             chapterProgress = Pair(viewModel.state.value.currentPage, viewModel.state.value.totalPages),
-                            chapterNumber =
-                            if (connectionsPreferences.useChapterTitles().get()) {
-                                viewModel.state.value.currentChapter?.chapter?.name
+                            chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
+                                chapter.name
                             } else {
-                                viewModel.state.value.currentChapter?.chapter?.chapter_number.toString()
+                                chapter.chapterNumber.toString()
                             },
                         ),
                     )
@@ -1603,8 +1605,9 @@ class ReaderActivity : BaseActivity() {
                     val lastUsedScreen = DiscordRPCService.lastUsedScreen
                     DiscordRPCService.setScreen(this@ReaderActivity, lastUsedScreen)
                 }
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR) { "Error updating Discord RPC: ${e.message}" }
             }
         }
     }
-    // <-- AM (DISCORD)
 }
