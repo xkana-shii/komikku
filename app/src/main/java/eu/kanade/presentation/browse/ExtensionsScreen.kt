@@ -92,11 +92,9 @@ fun ExtensionScreen(
     onRefresh: () -> Unit,
     onSearchQueryChange: (String?) -> Unit,
 ) {
-
     BackHandler(!state.searchQuery.isNullOrEmpty()) {
         onSearchQueryChange(null)
     }
-
 
     val navigator = LocalNavigator.currentOrThrow
 
