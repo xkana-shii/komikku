@@ -35,26 +35,7 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()
         start_date = this@toTrackSearch.year.toString()
-
-        val sourceAuthorsList: List<MUAuthor> = this@toTrackSearch.authors ?: emptyList()
-
-        this.authors = sourceAuthorsList
-            .filter { author ->
-                author.type.equals("Author", ignoreCase = true) && author.name != null
-            }
-            .map { author -> author.name!!.trim() }
-            .filter { name -> name.isNotBlank() }
-            .distinct()
-            .ifEmpty { emptyList() }
-
-        this.artists = sourceAuthorsList
-            .filter { author ->
-                author.type.equals("Artist", ignoreCase = true) && author.name != null
-            }
-            .map { author -> author.name!!.trim() }
-            .filter { name -> name.isNotBlank() }
-            .distinct()
-            .ifEmpty { emptyList() }
+        authors = listOf(this@toTrackSearch.authors.toString())
     }
 }
 
