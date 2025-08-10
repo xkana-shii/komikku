@@ -16,6 +16,7 @@ import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import exh.source.EH_SOURCE_ID
@@ -65,6 +66,7 @@ class UpdatesScreenModel(
     // SY -->
     readerPreferences: ReaderPreferences = Injekt.get(),
     // SY <--
+    private val libraryUpdateStatus: LibraryUpdateStatus = Injekt.get(),
 ) : StateScreenModel<UpdatesScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
@@ -154,6 +156,9 @@ class UpdatesScreenModel(
     fun updateLibrary(): Boolean {
         val started = LibraryUpdateJob.startNow(Injekt.get<Application>())
         screenModelScope.launch {
+            if (started) {
+                libraryUpdateStatus.start()
+            }
             _events.send(Event.LibraryUpdateTriggered(started))
         }
         return started
@@ -161,7 +166,9 @@ class UpdatesScreenModel(
 
     fun cancelLibraryUpdate(context: Context): Boolean {
         LibraryUpdateJob.stop(context)
-        mutableState.update { it.copy(isLoading = false) }
+        screenModelScope.launch {
+            libraryUpdateStatus.stop()
+        }
         return true
     }
 

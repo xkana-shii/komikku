@@ -53,9 +53,9 @@ fun UpdateScreen(
     // SY -->
     preserveReadingPosition: Boolean,
     // SY <--
+    libraryUpdateInProgress: Boolean,
     onClickCover: (UpdatesItem) -> Unit,
     onSelectAll: (Boolean) -> Unit,
-    isLoading: Boolean,
     onInvertSelection: () -> Unit,
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Boolean,
@@ -86,7 +86,7 @@ fun UpdateScreen(
                 onCalendarClicked = { onCalendarClicked() },
                 onUpdateLibrary = { onUpdateLibrary() },
                 onCancelUpdateLibrary = { onCancelUpdateLibrary() },
-                isLoading = isLoading,
+                isUpdatingLibrary = libraryUpdateInProgress,
                 actionModeCounter = state.selected.size,
                 onSelectAll = { onSelectAll(true) },
                 onInvertSelection = { onInvertSelection() },
@@ -172,7 +172,7 @@ private fun UpdatesAppBar(
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
     onCancelUpdateLibrary: () -> Unit,
-    isLoading: Boolean,
+    isUpdatingLibrary: Boolean,
     // For action mode
     actionModeCounter: Int,
     onSelectAll: () -> Unit,
@@ -205,10 +205,10 @@ private fun UpdatesAppBar(
                         onClick = onCalendarClicked,
                     ),
                     AppBar.Action(
-                        title = if (isLoading) stringResource(KMR.strings.action_cancel_update) else stringResource(MR.strings.action_update_library),
-                        icon = if (isLoading) Icons.Outlined.Close else Icons.Outlined.Refresh,
+                        title = if (isUpdatingLibrary) stringResource(KMR.strings.action_cancel_update) else stringResource(MR.strings.action_update_library),
+                        icon = if (isUpdatingLibrary) Icons.Outlined.Close else Icons.Outlined.Refresh,
                         onClick = {
-                            if (isLoading) {
+                            if (isUpdatingLibrary) {
                                 onCancelUpdateLibrary()
                             } else {
                                 onUpdateLibrary()
