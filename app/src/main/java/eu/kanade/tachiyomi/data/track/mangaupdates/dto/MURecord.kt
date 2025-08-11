@@ -4,7 +4,6 @@ import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import timber.log.Timber
 
 @Serializable
 data class MURecord(
@@ -26,7 +25,6 @@ data class MURecord(
 )
 
 fun MURecord.toTrackSearch(id: Long): TrackSearch {
-    Timber.d("Inside toTrackSearch. MURecord.authors: ${this.authors}")
     return TrackSearch.create(id).apply {
         remote_id = this@toTrackSearch.seriesId ?: 0L
         title = this@toTrackSearch.title?.htmlDecode() ?: ""
@@ -37,8 +35,6 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()
         start_date = this@toTrackSearch.year.toString()
-        authors = this@toTrackSearch.authors?.mapNotNull { it.name } ?: emptyList()
-        Timber.d("Mapped authors in TrackSearch: $authors")
     }
 }
 
