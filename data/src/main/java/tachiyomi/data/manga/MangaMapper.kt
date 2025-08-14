@@ -105,8 +105,8 @@ object MangaMapper {
         // KMK -->
         bookmarkedReadCount: Long,
         fillermarkedReadCount: Long,
-        // KMK -->
-        category: Long,
+        // KMK <--
+        categories: String,
     ): LibraryManga = LibraryManga(
         manga = mapManga(
             id,
@@ -138,7 +138,7 @@ object MangaMapper {
             isSyncing,
             notes,
         ),
-        category = category,
+        categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
         readCount = readCount.toLong(),
         bookmarkCount = bookmarkCount.toLong(),
