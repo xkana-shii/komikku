@@ -13,12 +13,10 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
-import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FileDownloadOff
-import androidx.compose.material.icons.outlined.HideSource
 import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -77,6 +75,8 @@ fun MangaChapterListItem(
 ) {
     // KMK -->
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
+    val fillermarkIcon = ImageVector.vectorResource(R.drawable.ic_fillermark_24dp)
+    val fillermarkBorderIcon = ImageVector.vectorResource(R.drawable.ic_fillermark_border_24dp)
     val swipeStart = remember(chapterSwipeStartAction, read, bookmark, downloadStateProvider()) {
         // KMK <--
         getSwipeAction(
@@ -87,6 +87,8 @@ fun MangaChapterListItem(
             downloadState = downloadStateProvider(),
             background = swipeBackground,
             onSwipe = { onChapterSwipe(chapterSwipeStartAction) },
+            fillermarkIcon = fillermarkIcon,
+            fillermarkBorderIcon = fillermarkBorderIcon,
         )
     }
     // KMK -->
@@ -100,6 +102,8 @@ fun MangaChapterListItem(
             downloadState = downloadStateProvider(),
             background = swipeBackground,
             onSwipe = { onChapterSwipe(chapterSwipeEndAction) },
+            fillermarkIcon = fillermarkIcon,
+            fillermarkBorderIcon = fillermarkBorderIcon,
         )
     }
 
@@ -235,6 +239,8 @@ internal fun getSwipeAction(
     downloadState: Download.State,
     background: Color,
     onSwipe: () -> Unit,
+    fillermarkIcon: ImageVector,
+    fillermarkBorderIcon: ImageVector,
 ): me.saket.swipe.SwipeAction? {
     return when (action) {
         LibraryPreferences.ChapterSwipeAction.ToggleRead -> swipeAction(
@@ -250,7 +256,7 @@ internal fun getSwipeAction(
             onSwipe = onSwipe,
         )
         LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> swipeAction(
-            icon = if (!fillermark) Icons.Outlined.Circle else Icons.Outlined.HideSource,
+            icon = if (!fillermark) fillermarkIcon else fillermarkBorderIcon,
             background = background,
             isUndo = fillermark,
             onSwipe = onSwipe,
