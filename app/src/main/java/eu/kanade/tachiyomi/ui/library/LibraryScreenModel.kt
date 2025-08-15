@@ -625,7 +625,7 @@ class LibraryScreenModel(
             // SY -->
             val sort = groupSort ?: this
             // SY <--
-            when (this.type) {
+            when (sort.type) {
                 LibrarySort.Type.Alphabetical -> {
                     sortAlphabetically(manga1, manga2)
                 }
