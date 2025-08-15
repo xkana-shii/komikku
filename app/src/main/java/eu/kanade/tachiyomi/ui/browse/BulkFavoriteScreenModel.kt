@@ -250,6 +250,12 @@ class BulkFavoriteScreenModel(
 
         screenModelScope.launchIO {
             updateManga.awaitUpdateFavorite(manga.id, true)
+            setMangaDefaultChapterFlags.await(manga)
+            val updated = manga.copy(
+                favorite = true,
+                dateAdded = Instant.now().toEpochMilli(),
+            )
+            updateManga.await(updated.toMangaUpdate().copy(chapterFlags = null))
         }
     }
 
@@ -332,7 +338,7 @@ class BulkFavoriteScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate())
+            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             // KMK -->
             if (new.favorite) {
                 withIOContext {
