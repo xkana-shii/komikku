@@ -26,11 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
-import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.HideSource
 import androidx.compose.material.icons.outlined.Merge
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.RemoveDone
@@ -140,7 +138,7 @@ fun MangaBottomActionMenu(
                 if (onFillermarkClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_fillermark_chapter),
-                        icon = Icons.Outlined.Circle,
+                        icon = ImageVector.vectorResource(R.drawable.ic_fillermark_24dp),
                         toConfirm = confirm[2],
                         onLongClick = { onLongClickItem(2) },
                         onClick = onFillermarkClicked,
@@ -149,7 +147,7 @@ fun MangaBottomActionMenu(
                 if (onRemoveFillermarkClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_remove_fillermark_chapter),
-                        icon = Icons.Outlined.HideSource,
+                        icon = ImageVector.vectorResource(R.drawable.ic_fillermark_border_24dp),
                         toConfirm = confirm[3],
                         onLongClick = { onLongClickItem(3) },
                         onClick = onRemoveFillermarkClicked,
