@@ -90,7 +90,6 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.interactor.GetCategoriesPerLibraryManga
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -158,7 +157,6 @@ class LibraryScreenModel(
     // SY <--
     // KMK -->
     private val smartSearchMerge: SmartSearchMerge = Injekt.get(),
-    private val getCategoriesPerLibraryManga: GetCategoriesPerLibraryManga = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<LibraryScreenModel.State>(State()) {
 
@@ -188,9 +186,13 @@ class LibraryScreenModel(
                     ::Triple,
                 ),
                 // KMK -->
-                getCategoriesPerLibraryManga.subscribe(),
+                combine(
+                    state.map { it.includedCategories }.distinctUntilChanged(),
+                    state.map { it.includedCategories }.distinctUntilChanged(),
+                    ::Pair,
+                ),
                 // KMK <--
-            ) { (searchQuery, categories, favorites), (tracksMap, trackingFilters, itemPreferences), categoriesPerManga ->
+            ) { (searchQuery, categories, favorites), (tracksMap, trackingFilters, itemPreferences), (includedCategories, excludedCategories) ->
                 val showSystemCategory = favorites.any { it.libraryManga.categories.contains(0) }
                 val filteredFavorites = favorites
                     .applyFilters(
@@ -198,7 +200,8 @@ class LibraryScreenModel(
                         trackingFilters,
                         itemPreferences,
                         // KMK -->
-                        categoriesPerManga,
+                        includedCategories,
+                        excludedCategories,
                         // KMK <--
                     )
                     .let {
@@ -422,7 +425,8 @@ class LibraryScreenModel(
         trackingFilter: Map<Long, TriState>,
         preferences: ItemPreferences,
         // KMK -->
-        categoriesPerManga: Map<Long, Set<Long>>,
+        includedCategories: ImmutableSet<Long>,
+        excludedCategories: ImmutableSet<Long>,
         // KMK <--
     ): List<LibraryItem> {
         val downloadedOnly = preferences.globalFilterDownloaded
@@ -511,15 +515,16 @@ class LibraryScreenModel(
         val filterFnCategories: (LibraryItem) -> Boolean = categories@{ item ->
             if (!state.value.filterCategory) return@categories true
 
-            val mangaCategories = categoriesPerManga[item.libraryManga.id].orEmpty()
+            // TODO: Should we exclude system categories?
+            val mangaCategories = item.libraryManga.categories.toSet()
 
             // Early return
             if (mangaCategories.isEmpty()) {
-                return@categories state.value.includedCategories.isEmpty()
+                return@categories includedCategories.isEmpty()
             }
 
-            val isExcluded = state.value.excludedCategories.any { it in mangaCategories }
-            val isIncluded = state.value.includedCategories.isEmpty() || state.value.includedCategories.all { it in mangaCategories }
+            val isExcluded = excludedCategories.any { it in mangaCategories }
+            val isIncluded = includedCategories.isEmpty() || includedCategories.all { it in mangaCategories }
 
             !isExcluded && isIncluded
         }
