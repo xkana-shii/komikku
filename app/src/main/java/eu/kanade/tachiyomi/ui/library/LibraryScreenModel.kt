@@ -547,7 +547,7 @@ class LibraryScreenModel(
                     // KMK -->
                     .filterNot { !showHiddenCategories && it.hidden }
                     // KMK <--
-                    .associateWith { groupCache[it.id]?.toList().orEmpty() }
+                    .associateWith { groupCache[it.id]?.toList()?.distinct().orEmpty() }
             }
             // KMK -->
             LibraryGroup.UNGROUPED -> {
@@ -561,7 +561,7 @@ class LibraryScreenModel(
                         false,
                         // KMK <--
                     ) to
-                        this.map { it.id },
+                        this.map { it.id }.distinct(),
                 )
             }
 
@@ -1418,22 +1418,24 @@ class LibraryScreenModel(
                         groupCache.getOrPut(status.int) { mutableListOf() }.add(item.id)
                     }
                 }
-                return groupCache.mapKeys { (id) ->
-                    Category(
-                        id = id.toLong(),
-                        name = TrackStatus.entries
-                            .find { it.int == id }
-                            .let { it ?: TrackStatus.OTHER }
-                            .let { context.stringResource(it.res) },
-                        order = TrackStatus.entries.indexOfFirst {
-                            it.int == id
-                        }.takeUnless { it == -1 }?.toLong() ?: TrackStatus.OTHER.ordinal.toLong(),
-                        flags = 0,
-                        // KMK -->
-                        hidden = false,
-                        // KMK <--
-                    )
-                }
+                return groupCache
+                    .mapKeys { (id) ->
+                        Category(
+                            id = id.toLong(),
+                            name = TrackStatus.entries
+                                .find { it.int == id }
+                                .let { it ?: TrackStatus.OTHER }
+                                .let { context.stringResource(it.res) },
+                            order = TrackStatus.entries.indexOfFirst {
+                                it.int == id
+                            }.takeUnless { it == -1 }?.toLong() ?: TrackStatus.OTHER.ordinal.toLong(),
+                            flags = 0,
+                            // KMK -->
+                            hidden = false,
+                            // KMK <--
+                        )
+                    }
+                    .mapValues { (_, values) -> values.distinct() }
             }
             LibraryGroup.BY_SOURCE -> {
                 val groupCache = mutableMapOf</* Source.id */ Long, MutableList</* LibraryItem */ Long>>()
@@ -1448,22 +1450,24 @@ class LibraryScreenModel(
                     .associateBy { it.id }
                 val sourceIds = sources.map { it.key }
 
-                return groupCache.mapKeys {
-                    Category(
-                        id = it.key,
-                        name = if (it.key == LocalSource.ID) {
-                            context.stringResource(MR.strings.local_source)
-                        } else {
-                            val source = sources[it.key]
-                            source?.let { it.name.ifBlank { it.id.toString() } } ?: it.key.toString()
-                        },
-                        order = sourceIds.indexOf(it.key).takeUnless { it == -1 }?.toLong() ?: Long.MAX_VALUE,
-                        flags = 0,
-                        // KMK -->
-                        hidden = false,
-                        // KMK <--
-                    )
-                }
+                return groupCache
+                    .mapKeys {
+                        Category(
+                            id = it.key,
+                            name = if (it.key == LocalSource.ID) {
+                                context.stringResource(MR.strings.local_source)
+                            } else {
+                                val source = sources[it.key]
+                                source?.let { it.name.ifBlank { it.id.toString() } } ?: it.key.toString()
+                            },
+                            order = sourceIds.indexOf(it.key).takeUnless { it == -1 }?.toLong() ?: Long.MAX_VALUE,
+                            flags = 0,
+                            // KMK -->
+                            hidden = false,
+                            // KMK <--
+                        )
+                    }
+                    .mapValues { (_, values) -> values.distinct() }
             }
             LibraryGroup.BY_STATUS -> {
                 libraryManga.groupBy { item ->
@@ -1496,6 +1500,7 @@ class LibraryScreenModel(
                             // KMK <--
                         )
                     }
+                    .mapValues { (_, values) -> values.distinct() }
             }
             else -> emptyMap()
         }.toSortedMap(compareBy { it.order })
