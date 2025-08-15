@@ -1443,31 +1443,25 @@ class LibraryScreenModel(
                     groupCache.getOrPut(item.libraryManga.manga.source) { mutableListOf() }.add(item.id)
                 }
                 val sources = groupCache.keys
-                    .map {
-                        sourceManager.getOrStub(it)
-                    }
+                    .map { sourceManager.getOrStub(it) }
                     .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id.toString() } })
-                    .associateBy { it.id }
-                val sourceIds = sources.map { it.key }
 
-                return groupCache
-                    .mapKeys {
-                        Category(
-                            id = it.key,
-                            name = if (it.key == LocalSource.ID) {
-                                context.stringResource(MR.strings.local_source)
-                            } else {
-                                val source = sources[it.key]
-                                source?.let { it.name.ifBlank { it.id.toString() } } ?: it.key.toString()
-                            },
-                            order = sourceIds.indexOf(it.key).takeUnless { it == -1 }?.toLong() ?: Long.MAX_VALUE,
-                            flags = 0,
-                            // KMK -->
-                            hidden = false,
-                            // KMK <--
-                        )
-                    }
-                    .mapValues { (_, values) -> values.distinct() }
+                return sources.associate {
+                    val category = Category(
+                        id = it.id,
+                        name = if (it.id == LocalSource.ID) {
+                            context.stringResource(MR.strings.local_source)
+                        } else {
+                            it.name.ifBlank { it.id.toString() }
+                        },
+                        order = sources.indexOf(it).toLong(),
+                        flags = 0,
+                        // KMK -->
+                        hidden = false,
+                        // KMK <--
+                    )
+                    category to groupCache[it.id]?.distinct().orEmpty()
+                }
             }
             LibraryGroup.BY_STATUS -> {
                 libraryManga.groupBy { item ->
