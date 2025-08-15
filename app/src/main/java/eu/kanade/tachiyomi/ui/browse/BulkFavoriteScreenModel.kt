@@ -342,6 +342,8 @@ class BulkFavoriteScreenModel(
             // KMK -->
             if (new.favorite) {
                 withIOContext {
+                    val networkManga = source.getMangaDetails(new.toSManga())
+                    updateManga.awaitUpdateFromSource(manga, networkManga, manualFetch = false, coverCache)
                     val chapters = source.getChapterList(new.toSManga())
                     syncChaptersWithSource.await(chapters, new, source, false)
                 }
