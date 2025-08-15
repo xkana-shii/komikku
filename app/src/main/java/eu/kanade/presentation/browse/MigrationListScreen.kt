@@ -173,7 +173,7 @@ fun MigrationListScreen(
                     MigrationActionIcon(
                         modifier = Modifier
                             .weight(0.2f)
-                            .offset(y = (-4).dp), // Adjust the negative value to move it up
+                            .offset(y = (-16).dp),
                         result = result,
                         skipManga = { skipManga(migrationItem.manga.id) },
                         // KMK -->
