@@ -95,7 +95,6 @@ FROM chapters
 WHERE fillermark
 AND manga_id = :mangaId;
 
-
 getChapterByUrl:
 SELECT *
 FROM chapters
