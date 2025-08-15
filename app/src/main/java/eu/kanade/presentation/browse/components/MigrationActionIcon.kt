@@ -2,6 +2,7 @@ package eu.kanade.presentation.browse.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -12,6 +13,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import eu.kanade.tachiyomi.ui.browse.migration.advanced.process.MigratingManga
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -27,8 +31,12 @@ fun MigrationActionIcon(
     searchManually: () -> Unit,
     migrateNow: () -> Unit,
     copyNow: () -> Unit,
+    verticalOffset: Dp = (-16).dp
 ) {
-    Box(modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.TopCenter
+    ) {
         if (result is MigratingManga.SearchResult.Searching) {
             // KMK -->
             IconButton(onClick = cancelManga) {
@@ -39,7 +47,9 @@ fun MigrationActionIcon(
                 )
             }
         } else if (result is MigratingManga.SearchResult.Result || result is MigratingManga.SearchResult.NotFound) {
-            Column {
+            Column(
+                modifier = Modifier.offset(y = verticalOffset)
+            ) {
                 IconButton(onClick = searchManually) {
                     Icon(
                         imageVector = Icons.Outlined.Search,
