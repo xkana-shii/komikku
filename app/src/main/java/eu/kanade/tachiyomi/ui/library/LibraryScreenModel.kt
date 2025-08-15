@@ -939,7 +939,7 @@ class LibraryScreenModel(
                 thumbnailUrl = manga.thumbnailUrl.takeUnless { it == manga.ogThumbnailUrl },
                 description = manga.description.takeUnless { it == manga.ogDescription },
                 genre = manga.genre.takeUnless { it == manga.ogGenre },
-                status = manga.status.takeUnless { it == manga.ogStatus }?.toLong(),
+                status = manga.status.takeUnless { it == manga.ogStatus },
             )
 
             setCustomMangaInfo.set(mangaInfo)
