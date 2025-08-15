@@ -26,11 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
-import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.HideSource
 import androidx.compose.material.icons.outlined.Merge
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.RemoveDone
@@ -99,15 +97,11 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm =
-                remember {
-                    mutableStateListOf(false, false, false, false, false, false, false, false, false, false, false)
-                }
-            val confirmRange = 0..<11
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false) }
             var resetJob: Job? = remember { null }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                (confirmRange).forEach { i -> confirm[i] = i == toConfirmIndex }
+                (0..<8).forEach { i -> confirm[i] = i == toConfirmIndex }
                 resetJob?.cancel()
                 resetJob = scope.launch {
                     delay(1.seconds)
@@ -144,7 +138,7 @@ fun MangaBottomActionMenu(
                 if (onFillermarkClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_fillermark_chapter),
-                        icon = Icons.Outlined.Circle,
+                        icon = ImageVector.vectorResource(R.drawable.ic_fillermark_24dp),
                         toConfirm = confirm[2],
                         onLongClick = { onLongClickItem(2) },
                         onClick = onFillermarkClicked,
@@ -153,7 +147,7 @@ fun MangaBottomActionMenu(
                 if (onRemoveFillermarkClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_remove_fillermark_chapter),
-                        icon = Icons.Outlined.HideSource,
+                        icon = ImageVector.vectorResource(R.drawable.ic_fillermark_border_24dp),
                         toConfirm = confirm[3],
                         onLongClick = { onLongClickItem(3) },
                         onClick = onRemoveFillermarkClicked,
@@ -222,7 +216,7 @@ internal fun RowScope.Button(
     content: (@Composable () -> Unit)? = null,
 ) {
     val animatedWeight by animateFloatAsState(
-        targetValue = if (toConfirm) 3f else 1f,
+        targetValue = if (toConfirm) 2f else 1f,
         label = "weight",
     )
     // KMK -->
