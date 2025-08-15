@@ -245,17 +245,29 @@ class BulkFavoriteScreenModel(
     }
 
     private fun moveMangaToCategoriesAndAddToLibrary(manga: Manga, categories: List<Long>) {
+        val source = sourceManager.getOrStub(manga.source)
         moveMangaToCategory(manga.id, categories)
         if (manga.favorite) return
 
         screenModelScope.launchIO {
             updateManga.awaitUpdateFavorite(manga.id, true)
             setMangaDefaultChapterFlags.await(manga)
-            val updated = manga.copy(
-                favorite = true,
-                dateAdded = Instant.now().toEpochMilli(),
+            val new = manga.copy(
+                favorite = !manga.favorite,
+                dateAdded = when (manga.favorite) {
+                    true -> 0
+                    false -> Instant.now().toEpochMilli()
+                },
             )
-            updateManga.await(updated.toMangaUpdate().copy(chapterFlags = null))
+            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
+            if (new.favorite) {
+                withIOContext {
+                    val networkManga = source.getMangaDetails(new.toSManga())
+                    updateManga.awaitUpdateFromSource(manga, networkManga, manualFetch = false, coverCache)
+                    val chapters = source.getChapterList(new.toSManga())
+                    syncChaptersWithSource.await(chapters, new, source, false)
+                }
+            }
         }
     }
 
