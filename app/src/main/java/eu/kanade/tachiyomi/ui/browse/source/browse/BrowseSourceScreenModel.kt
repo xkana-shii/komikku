@@ -26,6 +26,7 @@ import eu.kanade.domain.source.interactor.ToggleIncognito
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -60,6 +61,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import logcat.LogPriority
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
@@ -88,6 +90,7 @@ import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.repository.SourcePagingSource
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
@@ -435,11 +438,9 @@ open class BrowseSourceScreenModel(
                     }
                 } catch (e: Throwable) {
                     val message = if (e is NoChaptersException) {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
                         "No Chapters found"
                     } else {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        logcat(LogPriority.ERROR, e) { "Error while syncing chapters" }
+                        logcat(LogPriority.ERROR, e) {"Error while syncing chapters"}
                     }
                     screenModelScope.launch {
                         snackbarHostState.showSnackbar(message = message.toString())
