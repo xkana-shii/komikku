@@ -1,9 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.source.browse
 
-import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +25,6 @@ import eu.kanade.domain.source.interactor.ToggleIncognito
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.domain.ui.UiPreferences
-import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -61,21 +58,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import logcat.LogPriority
-import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
-import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
-import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -91,7 +84,6 @@ import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.repository.SourcePagingSource
 import tachiyomi.domain.source.service.SourceManager
-import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
@@ -107,9 +99,7 @@ open class BrowseSourceScreenModel(
     // SY -->
     private val filtersJson: String? = null,
     private val savedSearch: Long? = null,
-    val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // SY <--
-    private val context: Context,
     private val sourceManager: SourceManager = Injekt.get(),
     sourcePreferences: SourcePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
@@ -431,24 +421,11 @@ open class BrowseSourceScreenModel(
             updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             // KMK -->
             if (new.favorite) {
-                try {
-                    withIOContext {
-                        val networkManga = source.getMangaDetails(new.toSManga())
-                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
-                        val chapters = source.getChapterList(new.toSManga())
-                        syncChaptersWithSource.await(chapters, new, source, false)
-                    }
-                } catch (e: Throwable) {
-                    val message = if (e is NoChaptersException) {
-                        context.stringResource(MR.strings.no_chapters_error)
-                    } else {
-                        logcat(LogPriority.ERROR, e)
-                        with(context) { e.formattedMessage }
-                    }
-
-                    screenModelScope.launch {
-                        snackbarHostState.showSnackbar(message = message)
-                    }
+                withIOContext {
+                    val networkManga = source.getMangaDetails(new.toSManga())
+                    updateManga.awaitUpdateFromSource(manga, networkManga, manualFetch = false, coverCache)
+                    val chapters = source.getChapterList(new.toSManga())
+                    syncChaptersWithSource.await(chapters, new, source, false)
                 }
             }
             // KMK <--
