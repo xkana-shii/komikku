@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.browse.source.browse
 
 import android.content.res.Configuration
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,17 +59,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import logcat.LogPriority
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
+import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -117,6 +121,7 @@ open class BrowseSourceScreenModel(
     private val toggleIncognito: ToggleIncognito = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
     private val syncChaptersWithSource: SyncChaptersWithSource = Injekt.get(),
+    val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // KMK <--
 
     // SY -->
@@ -421,12 +426,24 @@ open class BrowseSourceScreenModel(
             updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             // KMK -->
             if (new.favorite) {
-                withIOContext {
-                    val networkManga = source.getMangaDetails(new.toSManga())
-                    updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
-                    val chapters = source.getChapterList(new.toSManga())
-                    if (chapters.isEmpty()) return@withIOContext
-                    syncChaptersWithSource.await(chapters, new, source, false)
+                try {
+                    withIOContext {
+                        val networkManga = source.getMangaDetails(new.toSManga())
+                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
+                        val chapters = source.getChapterList(new.toSManga())
+                        syncChaptersWithSource.await(chapters, new, source, false)
+                    }
+                } catch (e: Throwable) {
+                    val message = if (e is NoChaptersException) {
+                        @Suppress("IMPLICIT_CAST_TO_ANY")
+                        "No Chapters found"
+                    } else {
+                        @Suppress("IMPLICIT_CAST_TO_ANY")
+                        logcat(LogPriority.ERROR, e) { "Error while syncing chapters" }
+                    }
+                    screenModelScope.launch {
+                        snackbarHostState.showSnackbar(message = message.toString())
+                    }
                 }
             }
             // KMK <--
