@@ -64,7 +64,7 @@ class BulkFavoriteScreenModel(
     private val coverCache: CoverCache = Injekt.get(),
     private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags = Injekt.get(),
     private val addTracks: AddTracks = Injekt.get(),
-    private val context: Context = Injekt.get(),
+    private val context: Context,
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // KMK -->
     private val syncChaptersWithSource: SyncChaptersWithSource = Injekt.get(),
