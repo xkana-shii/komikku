@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material3.Icon
@@ -39,11 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -256,8 +255,6 @@ private fun UpdatesUiItem(
 
     // KMK -->
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
-    val fillermarkIcon = ImageVector.vectorResource(R.drawable.ic_fillermark_24dp)
-    val fillermarkBorderIcon = ImageVector.vectorResource(R.drawable.ic_fillermark_border_24dp)
     val swipeStart = remember(updateSwipeStartAction, update.read, update.bookmark, downloadStateProvider()) {
         getSwipeAction(
             action = updateSwipeStartAction,
@@ -267,8 +264,6 @@ private fun UpdatesUiItem(
             downloadState = downloadStateProvider(),
             background = swipeBackground,
             onSwipe = { onUpdateSwipe(updateSwipeStartAction) },
-            fillermarkIcon = fillermarkIcon,
-            fillermarkBorderIcon = fillermarkBorderIcon,
         )
     }
     val swipeEnd = remember(updateSwipeEndAction, update.read, update.bookmark, downloadStateProvider()) {
@@ -280,8 +275,6 @@ private fun UpdatesUiItem(
             downloadState = downloadStateProvider(),
             background = swipeBackground,
             onSwipe = { onUpdateSwipe(updateSwipeEndAction) },
-            fillermarkIcon = fillermarkIcon,
-            fillermarkBorderIcon = fillermarkBorderIcon,
         )
     }
 
@@ -412,7 +405,7 @@ private fun UpdatesUiItem(
                     }
                     if (update.fillermark) {
                         Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_fillermark_24dp),
+                            imageVector = Icons.Filled.Bedtime,
                             contentDescription = stringResource(KMR.strings.action_fillermark_chapter),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
