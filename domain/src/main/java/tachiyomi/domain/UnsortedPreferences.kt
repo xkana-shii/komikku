@@ -50,6 +50,8 @@ class UnsortedPreferences(
 
     fun useJapaneseTitle() = preferenceStore.getBoolean("use_jp_title", false)
 
+    fun useCleanTitle() = preferenceStore.getBoolean("use_clean_title", true)
+
     fun exhUseOriginalImages() = preferenceStore.getBoolean("eh_useOrigImages", false)
 
     fun ehTagFilterValue() = preferenceStore.getInt("eh_tag_filtering_value", 0)
