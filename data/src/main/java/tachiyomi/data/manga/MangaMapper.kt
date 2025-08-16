@@ -138,7 +138,7 @@ object MangaMapper {
             isSyncing,
             notes,
         ),
-        category = category,
+        categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
         readCount = readCount.toLong(),
         bookmarkCount = bookmarkCount.toLong(),
