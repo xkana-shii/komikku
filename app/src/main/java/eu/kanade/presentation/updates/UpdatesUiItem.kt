@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material3.Icon
@@ -404,7 +405,7 @@ private fun UpdatesUiItem(
                     }
                     if (update.fillermark) {
                         Icon(
-                            imageVector = Icons.Filled.Circle,
+                            imageVector = Icons.Filled.Bedtime,
                             contentDescription = stringResource(KMR.strings.action_fillermark_chapter),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
