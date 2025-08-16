@@ -109,7 +109,7 @@ open class BrowseSourceScreenModel(
     private val savedSearch: Long? = null,
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // SY <--
-    private val context: Context,
+    private val context: Context = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     sourcePreferences: SourcePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
