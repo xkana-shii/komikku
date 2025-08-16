@@ -425,6 +425,7 @@ open class BrowseSourceScreenModel(
                     val networkManga = source.getMangaDetails(new.toSManga())
                     updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
                     val chapters = source.getChapterList(new.toSManga())
+                    if (chapters.isEmpty()) return@withIOContext
                     syncChaptersWithSource.await(chapters, new, source, false)
                 }
             }
