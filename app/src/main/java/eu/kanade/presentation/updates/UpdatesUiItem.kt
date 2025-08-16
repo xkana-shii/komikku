@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material3.Icon
@@ -66,6 +67,7 @@ import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -258,6 +260,7 @@ private fun UpdatesUiItem(
             action = updateSwipeStartAction,
             read = update.read,
             bookmark = update.bookmark,
+            fillermark = update.fillermark,
             downloadState = downloadStateProvider(),
             background = swipeBackground,
             onSwipe = { onUpdateSwipe(updateSwipeStartAction) },
@@ -268,6 +271,7 @@ private fun UpdatesUiItem(
             action = updateSwipeEndAction,
             read = update.read,
             bookmark = update.bookmark,
+            fillermark = update.fillermark,
             downloadState = downloadStateProvider(),
             background = swipeBackground,
             onSwipe = { onUpdateSwipe(updateSwipeEndAction) },
@@ -393,6 +397,16 @@ private fun UpdatesUiItem(
                         Icon(
                             imageVector = Icons.Filled.Bookmark,
                             contentDescription = stringResource(MR.strings.action_filter_bookmarked),
+                            modifier = Modifier
+                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                    }
+                    if (update.fillermark) {
+                        Icon(
+                            imageVector = Icons.Filled.Bedtime,
+                            contentDescription = stringResource(KMR.strings.action_fillermark_chapter),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
                             tint = MaterialTheme.colorScheme.primary,
