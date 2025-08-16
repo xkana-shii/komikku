@@ -436,7 +436,7 @@ class LibraryScreenModel(
         val filterUnread = preferences.filterUnread
         val filterStarted = preferences.filterStarted
         val filterBookmarked = preferences.filterBookmarked
-        val filterFillermarked = prefs.filterFillermarked
+        val filterFillermarked = preferences.filterFillermarked
         val filterCompleted = preferences.filterCompleted
         val filterIntervalCustom = preferences.filterIntervalCustom
 
