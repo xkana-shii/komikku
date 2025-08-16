@@ -105,8 +105,8 @@ object MangaMapper {
         // KMK -->
         bookmarkedReadCount: Long,
         fillermarkedReadCount: Long,
-        // KMK -->
-        category: Long,
+        // KMK <--
+        categories: String,
     ): LibraryManga = LibraryManga(
         manga = mapManga(
             id,
