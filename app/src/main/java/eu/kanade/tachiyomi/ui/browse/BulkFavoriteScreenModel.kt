@@ -263,7 +263,7 @@ class BulkFavoriteScreenModel(
             if (new.favorite) {
                 withIOContext {
                     val networkManga = source.getMangaDetails(new.toSManga())
-                    updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
+                    updateManga.awaitUpdateFromSource(manga, networkManga, manualFetch = false, coverCache)
                     val chapters = source.getChapterList(new.toSManga())
                     if (chapters.isEmpty()) return@withIOContext
                     syncChaptersWithSource.await(chapters, new, source, false)
