@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse
 
+import android.content.Context
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -15,6 +17,7 @@ import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.manga.DuplicateMangaDialog
+import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.util.removeCovers
 import kotlinx.collections.immutable.ImmutableList
@@ -26,21 +29,26 @@ import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import logcat.LogPriority
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
+import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.toMangaUpdate
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.Instant
@@ -56,6 +64,8 @@ class BulkFavoriteScreenModel(
     private val coverCache: CoverCache = Injekt.get(),
     private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags = Injekt.get(),
     private val addTracks: AddTracks = Injekt.get(),
+    private val context: Context,
+    val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // KMK -->
     private val syncChaptersWithSource: SyncChaptersWithSource = Injekt.get(),
     // KMK <--
@@ -261,11 +271,24 @@ class BulkFavoriteScreenModel(
             )
             updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             if (new.favorite) {
-                withIOContext {
-                    val networkManga = source.getMangaDetails(new.toSManga())
-                    updateManga.awaitUpdateFromSource(manga, networkManga, manualFetch = false, coverCache)
-                    val chapters = source.getChapterList(new.toSManga())
-                    syncChaptersWithSource.await(chapters, new, source, false)
+                try {
+                    withIOContext {
+                        val networkManga = source.getMangaDetails(new.toSManga())
+                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
+                        val chapters = source.getChapterList(new.toSManga())
+                        syncChaptersWithSource.await(chapters, new, source, false)
+                    }
+                } catch (e: Throwable) {
+                    val message = if (e is NoChaptersException) {
+                        context.stringResource(MR.strings.no_chapters_error)
+                    } else {
+                        logcat(LogPriority.ERROR, e)
+                        with(context) { e.formattedMessage }
+                    }
+
+                    screenModelScope.launch {
+                        snackbarHostState.showSnackbar(message = message)
+                    }
                 }
             }
         }
@@ -353,11 +376,24 @@ class BulkFavoriteScreenModel(
             updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             // KMK -->
             if (new.favorite) {
-                withIOContext {
-                    val networkManga = source.getMangaDetails(new.toSManga())
-                    updateManga.awaitUpdateFromSource(manga, networkManga, manualFetch = false, coverCache)
-                    val chapters = source.getChapterList(new.toSManga())
-                    syncChaptersWithSource.await(chapters, new, source, false)
+                try {
+                    withIOContext {
+                        val networkManga = source.getMangaDetails(new.toSManga())
+                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
+                        val chapters = source.getChapterList(new.toSManga())
+                        syncChaptersWithSource.await(chapters, new, source, false)
+                    }
+                } catch (e: Throwable) {
+                    val message = if (e is NoChaptersException) {
+                        context.stringResource(MR.strings.no_chapters_error)
+                    } else {
+                        logcat(LogPriority.ERROR, e)
+                        with(context) { e.formattedMessage }
+                    }
+
+                    screenModelScope.launch {
+                        snackbarHostState.showSnackbar(message = message)
+                    }
                 }
             }
             // KMK <--
