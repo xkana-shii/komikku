@@ -25,6 +25,7 @@ import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.DiscordScreen
+import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
@@ -75,6 +76,8 @@ data object UpdatesTab : Tab {
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel { UpdatesScreenModel() }
         val state by screenModel.state.collectAsState()
+        val libraryUpdateStatus = Injekt.get<LibraryUpdateStatus>()
+        val libraryUpdateInProgress by libraryUpdateStatus.isRunning.collectAsState(initial = false)
 
         UpdateScreen(
             state = state,
@@ -83,10 +86,12 @@ data object UpdatesTab : Tab {
             // SY -->
             preserveReadingPosition = screenModel.preserveReadingPosition,
             // SY <--
+            libraryUpdateInProgress = libraryUpdateInProgress,
             onClickCover = { item -> navigator.push(MangaScreen(item.update.mangaId)) },
             onSelectAll = screenModel::toggleAllSelection,
             onInvertSelection = screenModel::invertSelection,
             onUpdateLibrary = screenModel::updateLibrary,
+            onCancelUpdateLibrary = { screenModel.cancelLibraryUpdate(context) },
             onDownloadChapter = screenModel::downloadChapters,
             onMultiBookmarkClicked = screenModel::bookmarkUpdates,
             onMultiFillermarkClicked = screenModel::fillermarkUpdates,
