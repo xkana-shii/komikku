@@ -24,8 +24,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Label
-import androidx.compose.material.icons.outlined.Bedtime
-import androidx.compose.material.icons.outlined.BedtimeOff
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
 import androidx.compose.material.icons.outlined.Delete
@@ -51,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.VectorPainter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -99,10 +99,7 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm =
-                remember {
-                    mutableStateListOf(false, false, false, false, false, false, false, false, false, false, false)
-                }
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false, false, false, false) }
             val confirmRange = 0..<11
             var resetJob: Job? = remember { null }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
@@ -144,7 +141,7 @@ fun MangaBottomActionMenu(
                 if (onFillermarkClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_fillermark_chapter),
-                        icon = Icons.Outlined.Bedtime,
+                        painter = rememberVectorPainter(ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)),
                         toConfirm = confirm[2],
                         onLongClick = { onLongClickItem(2) },
                         onClick = onFillermarkClicked,
@@ -153,7 +150,7 @@ fun MangaBottomActionMenu(
                 if (onRemoveFillermarkClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_remove_fillermark_chapter),
-                        icon = Icons.Outlined.BedtimeOff,
+                        painter = rememberVectorPainter(ImageVector.vectorResource(id = R.drawable.ic_fillermark_border_24dp)),
                         toConfirm = confirm[3],
                         onLongClick = { onLongClickItem(3) },
                         onClick = onRemoveFillermarkClicked,
@@ -221,6 +218,31 @@ internal fun RowScope.Button(
     // KMK <--
     content: (@Composable () -> Unit)? = null,
 ) {
+    Button(
+        title = title,
+        painter = rememberVectorPainter(icon),
+        toConfirm = toConfirm,
+        onLongClick = onLongClick,
+        onClick = onClick,
+        // KMK -->
+        enabled = enabled,
+        // KMK <--
+        content = content,
+    )
+}
+
+@Composable
+internal fun RowScope.Button(
+    title: String,
+    painter: VectorPainter,
+    toConfirm: Boolean,
+    onLongClick: () -> Unit,
+    onClick: () -> Unit,
+    // KMK -->
+    enabled: Boolean = true,
+    // KMK <--
+    content: (@Composable () -> Unit)? = null,
+) {
     val animatedWeight by animateFloatAsState(
         targetValue = if (toConfirm) 2f else 1f,
         label = "weight",
@@ -251,7 +273,7 @@ internal fun RowScope.Button(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
-            imageVector = icon,
+            painter = painter,
             contentDescription = title,
             // KMK -->
             tint = animatedColor,
