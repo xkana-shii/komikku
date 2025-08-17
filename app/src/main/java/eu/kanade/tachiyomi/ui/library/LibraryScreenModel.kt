@@ -188,7 +188,7 @@ class LibraryScreenModel(
                 // KMK -->
                 combine(
                     state.map { it.includedCategories }.distinctUntilChanged(),
-                    state.map { it.includedCategories }.distinctUntilChanged(),
+                    state.map { it.excludedCategories }.distinctUntilChanged(),
                     ::Pair,
                 ),
                 // KMK <--
@@ -439,6 +439,7 @@ class LibraryScreenModel(
         val filterFillermarked = preferences.filterFillermarked
         val filterCompleted = preferences.filterCompleted
         val filterIntervalCustom = preferences.filterIntervalCustom
+        val filterCategories = preferences.filterCategories
 
         val isNotLoggedInAnyTrack = trackingFilter.isEmpty()
 
@@ -519,10 +520,9 @@ class LibraryScreenModel(
 
         // KMK -->
         val filterFnCategories: (LibraryItem) -> Boolean = categories@{ item ->
-            if (!state.value.filterCategory) return@categories true
+            if (!filterCategories) return@categories true
 
-            // TODO: Should we exclude system categories?
-            val mangaCategories = item.libraryManga.categories.toSet()
+            val mangaCategories = item.libraryManga.categories.filterNot { it == 0L }.toSet()
 
             // Early return
             if (mangaCategories.isEmpty()) {
