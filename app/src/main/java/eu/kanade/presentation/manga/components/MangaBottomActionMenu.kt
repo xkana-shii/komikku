@@ -222,7 +222,7 @@ internal fun RowScope.Button(
     content: (@Composable () -> Unit)? = null,
 ) {
     val animatedWeight by animateFloatAsState(
-        targetValue = if (toConfirm) 3f else 1f,
+        targetValue = if (toConfirm) 2f else 1f,
         label = "weight",
     )
     // KMK -->
