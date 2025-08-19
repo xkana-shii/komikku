@@ -56,7 +56,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewModelScope
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.elevation.SurfaceColors
 import com.google.android.material.transition.platform.MaterialContainerTransform
@@ -310,12 +309,6 @@ class ReaderActivity : BaseActivity() {
                 }
             }
             .launchIn(lifecycleScope)
-
-        // AM (DISCORD) -->
-        viewModel.viewModelScope.launchIO {
-            updateDiscordRPC(exitingReader = false)
-        }
-        // <-- AM (DISCORD)
     }
 
     /**
@@ -327,17 +320,13 @@ class ReaderActivity : BaseActivity() {
         config = null
         menuToggleToast?.cancel()
         readingModeToast?.cancel()
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = true)
-        // <-- AM (DISCORD)
     }
 
     override fun onPause() {
         viewModel.flushReadTimer()
 
         // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = false)
+        updateDiscordRPC(exitingReader = true)
         // <-- AM (DISCORD)
 
         super.onPause()
@@ -366,14 +355,6 @@ class ReaderActivity : BaseActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             setMenuVisibility(viewModel.state.value.menuVisible)
-
-            // AM (DISCORD) -->
-            updateDiscordRPC(exitingReader = false)
-            // <-- AM (DISCORD)
-        } else {
-            // AM (DISCORD) -->
-            updateDiscordRPC(exitingReader = true)
-            // <-- AM (DISCORD)
         }
     }
 
@@ -388,11 +369,6 @@ class ReaderActivity : BaseActivity() {
      */
     override fun finish() {
         viewModel.onActivityFinish()
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = true)
-        // <-- AM (DISCORD)
-
         super.finish()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
@@ -969,10 +945,6 @@ class ReaderActivity : BaseActivity() {
         viewModel.state.value.viewerChapters?.let {
             viewer.setChaptersInternal(it)
         }
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = false)
-        // <-- AM (DISCORD)
     }
 
     private fun setDoublePageMode(viewer: PagerViewer) {
@@ -1076,10 +1048,6 @@ class ReaderActivity : BaseActivity() {
         binding.readerContainer.addView(loadingIndicator)
 
         startPostponedEnterTransition()
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = false)
-        // <-- AM (DISCORD)
     }
 
     private fun openMangaScreen() {
@@ -1190,10 +1158,6 @@ class ReaderActivity : BaseActivity() {
         } else {
             viewModel.closeDialog()
         }
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = false)
-        // <-- AM (DISCORD)
     }
 
     /**
@@ -1215,10 +1179,6 @@ class ReaderActivity : BaseActivity() {
         lifecycleScope.launch {
             viewModel.loadNextChapter()
             moveToPageIndex(0)
-
-            // AM (DISCORD) -->
-            updateDiscordRPC(exitingReader = false)
-            // <-- AM (DISCORD)
         }
     }
 
@@ -1230,10 +1190,6 @@ class ReaderActivity : BaseActivity() {
         lifecycleScope.launch {
             viewModel.loadPreviousChapter()
             moveToPageIndex(0)
-
-            // AM (DISCORD) -->
-            updateDiscordRPC(exitingReader = false)
-            // <-- AM (DISCORD)
         }
     }
 
@@ -1258,10 +1214,6 @@ class ReaderActivity : BaseActivity() {
         }
         viewModel.onPageSelected(page, currentPageText, hasExtraPage)
         // SY <--
-
-        // AM (DISCORD) -->
-        updateDiscordRPC(exitingReader = false)
-        // <-- AM (DISCORD)
     }
 
     /**
@@ -1624,13 +1576,13 @@ class ReaderActivity : BaseActivity() {
                             incognitoMode = viewModel.incognitoMode,
                             mangaId = manga.id,
                             mangaTitle = manga.ogTitle,
-                            thumbnailUrl = manga.thumbnailUrl ?: "",
-                            chapterProgress = Pair(viewModel.state.value.currentPage, viewModel.state.value.totalPages),
+                            thumbnailUrl = manga.thumbnailUrl,
                             chapterNumber = if (connectionsPreferences.useChapterTitles().get()) {
                                 chapter.name
                             } else {
                                 chapter.chapterNumber.toString()
                             },
+                            startTimestamp = System.currentTimeMillis(),
                         ),
                     )
                 } else {

@@ -32,7 +32,6 @@ import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.coroutines.runBlocking
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -42,6 +41,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 object SettingsDiscordScreen : SearchableSettings {
+    @Suppress("unused")
     private fun readResolve(): Any = SettingsDiscordScreen
 
     @ReadOnlyComposable
@@ -69,6 +69,7 @@ object SettingsDiscordScreen : SearchableSettings {
         val discordRPCStatus = connectionsPreferences.discordRPCStatus()
         val customMessagePref = connectionsPreferences.discordCustomMessage()
         val showProgressPref = connectionsPreferences.discordShowProgress()
+        val showTimestampPref = connectionsPreferences.discordShowTimestamp()
         val showButtonsPref = connectionsPreferences.discordShowButtons()
         val showDownloadButtonPref = connectionsPreferences.discordShowDownloadButton()
         val showDiscordButtonPref = connectionsPreferences.discordShowDiscordButton()
@@ -176,6 +177,7 @@ object SettingsDiscordScreen : SearchableSettings {
                             0 to stringResource(KMR.strings.pref_discord_idle),
                             1 to stringResource(KMR.strings.pref_discord_online),
                         ),
+                        enabled = enableDRPC,
                     ),
                 ),
             ),
@@ -196,6 +198,11 @@ object SettingsDiscordScreen : SearchableSettings {
                         preference = showProgressPref,
                         title = stringResource(KMR.strings.pref_discord_show_progress),
                         subtitle = stringResource(KMR.strings.pref_discord_show_progress_summary),
+                    ),
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = showTimestampPref,
+                        title = stringResource(KMR.strings.pref_discord_show_timestamp),
+                        subtitle = stringResource(KMR.strings.pref_discord_show_timestamp_summary),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
                         preference = showButtonsPref,
@@ -229,9 +236,7 @@ object SettingsDiscordScreen : SearchableSettings {
         enabled: Boolean,
     ): Preference.PreferenceGroup {
         val getCategories = remember { Injekt.get<GetCategories>() }
-        val allCategories by getCategories.subscribe().collectAsState(
-            initial = runBlocking { getCategories.await() },
-        )
+        val allCategories by getCategories.subscribe().collectAsState(initial = emptyList())
 
         val discordRPCIncognitoPref = connectionsPreferences.discordRPCIncognito()
         val discordRPCIncognitoCategoriesPref = connectionsPreferences.discordRPCIncognitoCategories()
