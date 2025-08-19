@@ -490,7 +490,6 @@ private fun MangaScreenSmallImpl(
             )
             MangaToolbar(
                 title = state.manga.title,
-                hasFilters = state.filterActive,
                 navigateUp = navigateUp,
                 onClickFilter = onFilterClicked,
                 onClickShare = onShareClicked,
@@ -799,6 +798,7 @@ private fun MangaScreenSmallImpl(
                         }
                         ChapterHeader(
                             enabled = !isAnySelected,
+                            hasFilters = state.filterActive,
                             chapterCount = chapters.size,
                             missingChapterCount = missingChapterCount,
                             onClick = onFilterClicked,
@@ -954,7 +954,6 @@ private fun MangaScreenLargeImpl(
             MangaToolbar(
                 modifier = Modifier.onSizeChanged { topBarHeight = it.height },
                 title = state.manga.title,
-                hasFilters = state.filterActive,
                 navigateUp = navigateUp,
                 onClickFilter = onFilterButtonClicked,
                 onClickShare = onShareClicked,
@@ -1247,6 +1246,7 @@ private fun MangaScreenLargeImpl(
                                 }
                                 ChapterHeader(
                                     enabled = !isAnySelected,
+                                    hasFilters = state.filterActive,
                                     chapterCount = chapters.size,
                                     missingChapterCount = missingChapterCount,
                                     onClick = onFilterButtonClicked,
