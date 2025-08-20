@@ -43,7 +43,7 @@ fun ChapterHeader(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-        // KMK -->
+            // KMK -->
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -66,13 +66,13 @@ fun ChapterHeader(
             Icon(
                 imageVector = Icons.Outlined.FilterList,
                 contentDescription = null,
-                tint =  if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                tint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
             )
         }
 
-            MissingChaptersWarning(missingChapterCount)
-        }
+        MissingChaptersWarning(missingChapterCount)
     }
+}
 
 @Composable
 private fun MissingChaptersWarning(count: Int) {
