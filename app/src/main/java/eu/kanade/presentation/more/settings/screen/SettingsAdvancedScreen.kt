@@ -38,6 +38,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.advanced.ClearDatabaseScreen
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.download.DownloadCache
@@ -740,6 +741,23 @@ object SettingsAdvancedScreen : SearchableSettings {
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.developer_tools),
             preferenceItems = persistentListOf(
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = unsortedPreferences.devOptionsPassword(),
+                    title = "Dev Options Password",
+                    subtitle = "Enter password to unlock dev features",
+                    onValueChanged = { password ->
+                        val valid = password == BuildConfig.DEV_OPTIONS
+                        if (valid) {
+                            unsortedPreferences.devOptionsEnabled().set(true)
+                            context.toast("Dev Options enabled!")
+                        } else {
+                            unsortedPreferences.devOptionsEnabled().set(false)
+                            context.toast("Incorrect password.")
+                            return@EditTextPreference false
+                        }
+                        true
+                    },
+                ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = unsortedPreferences.isHentaiEnabled(),
                     title = stringResource(SYMR.strings.toggle_hentai_features),
