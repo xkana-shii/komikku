@@ -65,6 +65,7 @@ import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import tachiyomi.domain.UnsortedPreferences
 import java.io.File
 import java.util.Locale
 
@@ -380,9 +381,12 @@ class Downloader(
             download.status = Download.State.DOWNLOADING
 
             // Start downloading images, consider we can have downloaded images already
-            // Concurrently do 2 pages at a time
+            // Concurrently do 2 pages at a time normally, or 16 if dev options are enabled
+            val devOptionsEnabled = Injekt.get<UnsortedPreferences>().devOptionsEnabled().get()
+            val concurrency = if (devOptionsEnabled) 16 else 2
+
             pageList.asFlow()
-                .flatMapMerge(concurrency = 2) { page ->
+                .flatMapMerge(concurrency = concurrency) { page ->
                     flow {
                         // Fetch image URL if necessary
                         if (page.imageUrl.isNullOrEmpty()) {
