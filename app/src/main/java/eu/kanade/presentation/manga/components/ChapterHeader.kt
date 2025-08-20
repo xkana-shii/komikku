@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,12 +18,10 @@ import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
-import tachiyomi.presentation.core.theme.active
 
 @Composable
 fun ChapterHeader(
     enabled: Boolean,
-    hasFilters: Boolean,
     chapterCount: Int?,
     missingChapterCount: Int,
     onClick: () -> Unit,
@@ -43,8 +37,8 @@ fun ChapterHeader(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            // KMK -->
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        // KMK -->
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -60,17 +54,10 @@ fun ChapterHeader(
                 },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
             )
 
-            Icon(
-                imageVector = Icons.Outlined.FilterList,
-                contentDescription = null,
-                tint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
-            )
+            MissingChaptersWarning(missingChapterCount)
         }
-
-        MissingChaptersWarning(missingChapterCount)
     }
 }
 
