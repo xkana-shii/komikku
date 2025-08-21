@@ -118,7 +118,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        run: ./gradlew assembleRelease -Pinclude-telemetry -Penable-updater
+        run: ./gradlew assembleRelease -Pinclude-telemetry -Penable-updater -PdevSecret="${{ secrets.DEV_SECRETS }}"
 
       - name: Run unit tests
         run: ./gradlew testReleaseUnitTest
