@@ -380,10 +380,15 @@ class Downloader(
 
             download.status = Download.State.DOWNLOADING
 
-            // Start downloading images, consider we can have downloaded images already
-            // Concurrently do 2 pages at a time normally, or 16 if dev options are enabled
-            val devOptionsEnabled = Injekt.get<UnsortedPreferences>().devOptionsEnabled().get()
-            val concurrency = if (devOptionsEnabled) 16 else 2
+            val isFastDownloadEnabled = Injekt.get<UnsortedPreferences>().fastDownloadEnabled().get()
+
+            val concurrency = if (isFastDownloadEnabled) {
+                16
+            } else {
+                2
+            }
+
+            logcat(LogPriority.DEBUG) { "Downloader: Concurrency set to $concurrency (Fast Download enabled: $isFastDownloadEnabled)" }
 
             pageList.asFlow()
                 .flatMapMerge(concurrency = concurrency) { page ->

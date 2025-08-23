@@ -738,26 +738,41 @@ object SettingsAdvancedScreen : SearchableSettings {
         val unsortedPreferences = remember { Injekt.get<UnsortedPreferences>() }
         val delegateSourcePreferences = remember { Injekt.get<DelegateSourcePreferences>() }
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
+
+        val devOptionsAreEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
+
+        val conditionalPreferenceItems = if (devOptionsAreEnabled) {
+            listOf<Preference.PreferenceItem<out Any>>( // Use listOf, then convert if needed by outer persistentListOf
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = unsortedPreferences.fastDownloadEnabled(),
+                    title = "Fast Download", // Consider stringResource
+                    subtitle = "Increases concurrent page downloads to 16", // Consider stringResource
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.developer_tools),
-            preferenceItems = persistentListOf(
+            preferenceItems = persistentListOf<Preference.PreferenceItem<out Any>>(
                 Preference.PreferenceItem.EditTextPreference(
                     preference = unsortedPreferences.devOptionsPassword(),
                     title = "Dev Options Password",
                     subtitle = "Enter password to unlock dev features",
                     onValueChanged = { password ->
                         val valid = password == BuildConfig.DEV_OPTIONS
+                        unsortedPreferences.devOptionsEnabled().set(valid)
                         if (valid) {
-                            unsortedPreferences.devOptionsEnabled().set(true)
-                            context.toast("Dev Options enabled!")
+                            context.toast("Dev Options enabled!") // Consider stringResource
                         } else {
-                            unsortedPreferences.devOptionsEnabled().set(false)
-                            context.toast("Incorrect password.")
-                            return@EditTextPreference false
+                            unsortedPreferences.fastDownloadEnabled().set(false)
+                            context.toast("Incorrect password.") // Consider stringResource
                         }
-                        true
+                        valid
                     },
                 ),
+                *conditionalPreferenceItems.toTypedArray(),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = unsortedPreferences.isHentaiEnabled(),
                     title = stringResource(SYMR.strings.toggle_hentai_features),

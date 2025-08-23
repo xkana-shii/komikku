@@ -22,6 +22,8 @@ class UnsortedPreferences(
 
     fun devOptionsEnabled() = preferenceStore.getBoolean("dev_options_enabled", false)
 
+    fun fastDownloadEnabled() = preferenceStore.getBoolean("fast_download_enabled", false)
+
     fun migrateFlags() = preferenceStore.getInt("migrate_flags", Int.MAX_VALUE)
 
     fun defaultMangaOrder() = preferenceStore.getString("default_manga_order", "")
