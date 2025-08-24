@@ -216,7 +216,7 @@
     <string name="pref_discord_show_download_button_summary">Displays a button to download the app</string>
     <string name="pref_discord_show_discord_button">Show Discord Button</string>
     <string name="pref_discord_show_discord_button_summary">Displays a button to join the Discord server</string>
-    
+
     <string name="dev_fast_download">Fast Downloads</string>
     <string name="dev_concurrent_pages">Increases concurrent page downloads</string>
     <string name="dev_options_password">Unlock Developer Features</string>
