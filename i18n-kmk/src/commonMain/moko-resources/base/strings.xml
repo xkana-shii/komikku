@@ -164,4 +164,13 @@
     <string name="label_to_be_updated">To be updated</string>
     <string name="sponsor_me">Sponsor Me</string>
     <string name="batch_add_description">Support: MangaDex, E-H, ExH, nH, 8Muses, Tsumino</string>
+
+    <string name="dev_fast_download">Fast Downloads</string>
+    <string name="dev_concurrent_pages">Increases concurrent page downloads</string>
+    <string name="dev_options_password">Unlock Developer Features</string>
+    <string name="dev_options_password_subtitle_enabled">Options enabled. Leave blank and confirm to disable.</string>
+    <string name="dev_options_password_subtitle_disabled">Enter password to unlock developer features.</string>
+    <string name="dev_options_disabled_by_clear">Developer options disabled.</string>
+    <string name="dev_options_enabled">Developer options enabled.</string>
+    <string name="dev_options_incorrect_password">Incorrect password.</string>
 </resources>
