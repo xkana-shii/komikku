@@ -742,11 +742,11 @@ object SettingsAdvancedScreen : SearchableSettings {
         val devOptionsAreEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
 
         val conditionalPreferenceItems = if (devOptionsAreEnabled) {
-            listOf<Preference.PreferenceItem<out Any>>( // Use listOf, then convert if needed by outer persistentListOf
+            listOf<Preference.PreferenceItem<out Any>>(
                 Preference.PreferenceItem.SwitchPreference(
                     preference = unsortedPreferences.fastDownloadEnabled(),
-                    title = "Fast Download", // Consider stringResource
-                    subtitle = "Increases concurrent page downloads to 16", // Consider stringResource
+                    title = stringResource(KMR.strings.dev_fast_download),
+                    subtitle = stringResource(KMR.strings.dev_concurrent_pages),
                 ),
             )
         } else {
@@ -755,21 +755,34 @@ object SettingsAdvancedScreen : SearchableSettings {
 
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.developer_tools),
-            preferenceItems = persistentListOf<Preference.PreferenceItem<out Any>>(
+            preferenceItems = persistentListOf(
                 Preference.PreferenceItem.EditTextPreference(
                     preference = unsortedPreferences.devOptionsPassword(),
-                    title = "Dev Options Password",
-                    subtitle = "Enter password to unlock dev features",
+                    title = stringResource(KMR.strings.dev_options_password),
+                    subtitle = if (devOptionsAreEnabled) {
+                        stringResource(KMR.strings.dev_options_password_subtitle_enabled)
+                    } else {
+                        stringResource(KMR.strings.dev_options_password_subtitle_disabled)
+                    },
                     onValueChanged = { password ->
-                        val valid = password == BuildConfig.DEV_OPTIONS
-                        unsortedPreferences.devOptionsEnabled().set(valid)
-                        if (valid) {
-                            context.toast("Dev Options enabled!") // Consider stringResource
+                        if (password.isBlank()) {
+                            if (devOptionsAreEnabled) {
+                                unsortedPreferences.devOptionsEnabled().set(false)
+                                unsortedPreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_disabled_by_clear)
+                            }
+                            true
                         } else {
-                            unsortedPreferences.fastDownloadEnabled().set(false)
-                            context.toast("Incorrect password.") // Consider stringResource
+                            val valid = password == BuildConfig.DEV_OPTIONS
+                            unsortedPreferences.devOptionsEnabled().set(valid)
+                            if (valid) {
+                                context.toast(KMR.strings.dev_options_enabled)
+                            } else {
+                                unsortedPreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_incorrect_password)
+                            }
+                            valid
                         }
-                        valid
                     },
                 ),
                 *conditionalPreferenceItems.toTypedArray(),

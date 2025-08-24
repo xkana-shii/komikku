@@ -388,8 +388,6 @@ class Downloader(
                 2
             }
 
-            logcat(LogPriority.DEBUG) { "Downloader: Concurrency set to $concurrency (Fast Download enabled: $isFastDownloadEnabled)" }
-
             pageList.asFlow()
                 .flatMapMerge(concurrency = concurrency) { page ->
                     flow {
