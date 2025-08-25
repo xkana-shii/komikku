@@ -162,6 +162,7 @@ sealed class Preference {
         data class ConnectionPreference(
             val service: ConnectionsService,
             override val title: String,
+            val subtitles: String? = null,
             val login: () -> Unit,
             val openSettings: () -> Unit,
         ) : PreferenceItem<String>() {
