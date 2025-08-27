@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
+import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -42,7 +43,6 @@ import eu.kanade.tachiyomi.ui.setting.connections.DiscordLoginScreen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.logcat
-import mihon.core.migration.Migrator.scope
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -100,15 +100,16 @@ private fun DiscordAccountsScreenContent() {
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
+            val (isLoading, error, accounts) = state.let { Triple(it.isLoading, it.error, it.accounts) }
             when {
-                state.isLoading -> {
+                isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
-                state.error != null -> {
+                error != null -> {
                     Text(
-                        text = state.error!!,
+                        text = error,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -121,7 +122,7 @@ private fun DiscordAccountsScreenContent() {
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(16.dp),
                     ) {
-                        items(state.accounts) { account ->
+                        items(accounts) { account ->
                             DiscordAccountItem(
                                 account = account,
                                 onRemove = { screenModel.removeAccount(account.id) },
@@ -146,7 +147,7 @@ class DiscordAccountsScreenModel : StateScreenModel<DiscordAccountsScreenState>(
     private var noAccountsFoundString: String = ""
 
     init {
-        scope.launch {
+        screenModelScope.launch {
             connectionsPreferences.discordAccounts().changes()
                 .collect { loadAccounts() }
         }
@@ -158,7 +159,7 @@ class DiscordAccountsScreenModel : StateScreenModel<DiscordAccountsScreenState>(
     }
 
     private fun loadAccounts() {
-        scope.launch {
+        screenModelScope.launch {
             mutableState.update { it.copy(isLoading = true, error = null) }
             runCatching {
                 val accounts = discord.getAccounts()
@@ -191,7 +192,7 @@ class DiscordAccountsScreenModel : StateScreenModel<DiscordAccountsScreenState>(
     }
 
     fun removeAccount(accountId: String) {
-        scope.launch {
+        screenModelScope.launch {
             mutableState.update { it.copy(isLoading = true, error = null) }
             runCatching {
                 discord.removeAccount(accountId)
@@ -203,7 +204,7 @@ class DiscordAccountsScreenModel : StateScreenModel<DiscordAccountsScreenState>(
     }
 
     fun setActiveAccount(accountId: String) {
-        scope.launch {
+        screenModelScope.launch {
             mutableState.update { it.copy(isLoading = true, error = null) }
             runCatching {
                 discord.setActiveAccount(accountId)
