@@ -62,6 +62,7 @@ import exh.recs.batch.RecommendationSearchProgressDialog
 import exh.recs.batch.SearchStatus
 import exh.source.MERGED_SOURCE_ID
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -204,8 +205,9 @@ data object LibraryTab : Tab {
                     // SY -->
                     onClickCleanTitles = screenModel::cleanTitles.takeIf { state.showCleanTitles },
                     onClickMigrate = {
-                        val selectedMangaIds = state.selection
-                            .filterNot { it == MERGED_SOURCE_ID }
+                        val selectedMangaIds = state.selectedManga
+                            .filterNot { it.source == MERGED_SOURCE_ID }
+                            .map { it.id }
                         screenModel.clearSelection()
                         if (selectedMangaIds.isNotEmpty()) {
                             PreMigrationScreen.navigateToMigration(
@@ -235,7 +237,7 @@ data object LibraryTab : Tab {
                             screenModel.clearSelection()
                             scope.launchIO {
                                 val mergingMangas = selectedManga.filterNot { it.source == MERGED_SOURCE_ID }
-                                val mergedMangaId = screenModel.smartSearchMerge(selectedManga)
+                                val mergedMangaId = screenModel.smartSearchMerge(selectedManga.toPersistentList())
                                 snackbarHostState.showSnackbar(context.stringResource(SYMR.strings.entry_merged))
                                 if (mergedMangaId != null) {
                                     val result = snackbarHostState.showSnackbar(
