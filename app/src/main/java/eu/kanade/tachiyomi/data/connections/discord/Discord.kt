@@ -9,9 +9,8 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsService
 import exh.log.xLogE
 import kotlinx.serialization.json.Json
-import logcat.LogPriority
-import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.kmk.KMR
+import timber.log.Timber
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -33,6 +32,13 @@ class Discord(id: Long) : ConnectionsService(id) {
         // Not Needed
     }
 
+    override val isLogged: Boolean
+        get() = getToken().isNotBlank()
+
+    override fun getToken(): String {
+        return connectionsPreferences.connectionsToken(this).get()
+    }
+
     private val json = Injekt.get<Json>()
 
     fun getAccounts(): List<DiscordAccount> {
@@ -44,13 +50,14 @@ class Discord(id: Long) : ConnectionsService(id) {
                 emptyList()
             }
         } catch (e: Exception) {
+            Timber.e(e, "Failed to parse Discord accounts")
             emptyList()
         }
     }
 
     fun addAccount(account: DiscordAccount) {
         val accounts = getAccounts().toMutableList()
-        logcat(LogPriority.DEBUG) { "Debug: Adding account: $account" }
+        Timber.d("Debug: Adding account: $account")
 
         if (account.isActive) {
             accounts.replaceAll { it.copy(isActive = false) }
@@ -64,7 +71,7 @@ class Discord(id: Long) : ConnectionsService(id) {
             accounts.add(account)
         }
 
-        logcat(LogPriority.DEBUG) { "Debug: Updated accounts: $accounts" } // Debug log
+        Timber.d("Debug: Updated accounts: $accounts")
         saveAccounts(accounts)
     }
 

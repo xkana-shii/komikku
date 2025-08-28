@@ -65,10 +65,10 @@ data class Activity(
 
 @Serializable
 data class Presence(
-    val activities: List<Activity> = listOf(),
-    val afk: Boolean = true,
-    val since: Long? = null,
     val status: String? = null,
+    val afk: Boolean = true,
+    val activities: List<Activity> = listOf(),
+    val since: Long? = null,
 ) {
     @Serializable
     data class Response(
@@ -200,8 +200,7 @@ enum class DiscordScreen(
 private const val KOMIKKU_IMAGE_URL = "emojis/1401719615536500916.webp?quality=lossless"
 private const val KOMIKKU_PREVIEW_IMAGE_URL = "emojis/1401732831314575401.webp?quality=lossless"
 
-@Suppress("SimplifyBooleanWithConstants")
-private val KOMIKKU_IMAGE = if (isPreviewBuildType == true) KOMIKKU_PREVIEW_IMAGE_URL else KOMIKKU_IMAGE_URL
+private val KOMIKKU_IMAGE = if (isPreviewBuildType) KOMIKKU_PREVIEW_IMAGE_URL else KOMIKKU_IMAGE_URL
 private const val LIBRARY_IMAGE_URL = "emojis/1401723992963940443.webp?quality=lossless"
 private const val UPDATES_IMAGE_URL = "emojis/1401723857571938424.webp?quality=lossless"
 private const val HISTORY_IMAGE_URL = "emojis/1401724070369689620.webp?quality=lossless"
