@@ -173,24 +173,6 @@ class ReaderViewModel @JvmOverloads constructor(
             savedState["page_index"] = value
             field = value
         }
-    fun handleDownloadAction(chapters: List<Chapter>, action: ChapterDownloadAction) {
-        val manga = manga ?: return
-        val source = sourceManager.get(manga.source) ?: return
-        viewModelScope.launch {
-            when (action) {
-                ChapterDownloadAction.START -> downloadManager.downloadChapters(manga, chapters)
-                ChapterDownloadAction.START_NOW -> {
-                    val downloads = chapters.map { Download(source as HttpSource, manga, it) }
-                    downloadManager.addDownloadsToStartOfQueue(downloads)
-                }
-                ChapterDownloadAction.CANCEL -> {
-                    val downloads = chapters.map { Download(source as HttpSource, manga, it) }
-                    downloadManager.cancelQueuedDownloads(downloads)
-                }
-                ChapterDownloadAction.DELETE -> downloadManager.deleteChapters(chapters, manga, source)
-            }
-        }
-    }
 
     // KMK -->
     fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction) {
@@ -233,14 +215,14 @@ class ReaderViewModel @JvmOverloads constructor(
         viewModelScope.launchNonCancellable {
             try {
                 if (manga.source == MERGED_SOURCE_ID) {
-                        val manga = state.value.mergedManga?.get(chapter.mangaId) ?: return@launchNonCancellable
-                        val source = sourceManager.get(manga.source) ?: return@launchNonCancellable
-                        downloadManager.deleteChapters(
-                            listOf(chapter),
-                            manga,
-                            source,
-                            ignoreCategoryExclusion = true,
-                        )
+                    val manga = state.value.mergedManga?.get(chapter.mangaId) ?: return@launchNonCancellable
+                    val source = sourceManager.get(manga.source) ?: return@launchNonCancellable
+                    downloadManager.deleteChapters(
+                        listOf(chapter),
+                        manga,
+                        source,
+                        ignoreCategoryExclusion = true,
+                    )
 //                        // KMK -->
 //                        if (source.isLocal()) {
 //                            // Refresh chapters state for Local source
@@ -975,27 +957,6 @@ class ReaderViewModel @JvmOverloads constructor(
         mutableState.update {
             it.copy(
                 bookmarked = bookmarked,
-            )
-        }
-    }
-
-    fun toggleChapterFillermark() {
-        val chapter = getCurrentChapter()?.chapter ?: return
-        val fillermarked = !chapter.fillermark
-        chapter.fillermark = fillermarked
-
-        viewModelScope.launchNonCancellable {
-            updateChapter.await(
-                ChapterUpdate(
-                    id = chapter.id!!.toLong(),
-                    fillermark = fillermarked,
-                ),
-            )
-        }
-
-        mutableState.update {
-            it.copy(
-                fillermarked = fillermarked,
             )
         }
     }
