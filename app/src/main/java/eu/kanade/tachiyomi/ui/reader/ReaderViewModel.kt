@@ -406,7 +406,6 @@ class ReaderViewModel @JvmOverloads constructor(
                 .catch { logcat(LogPriority.ERROR, it) }
                 .collect(::updateDownloadState)
         }
-
     }
 
     override fun onCleared() {
@@ -589,7 +588,6 @@ class ReaderViewModel @JvmOverloads constructor(
             )
         }
     }
-
 
     // SY -->
     fun getChapters(): List<ReaderChapterItem> {
@@ -1576,6 +1574,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val totalPages: Int
             get() = currentChapter?.pages?.size ?: -1
     }
+
     @Immutable
     sealed class ChapterList {
         @Immutable
@@ -1589,7 +1588,6 @@ class ReaderViewModel @JvmOverloads constructor(
             // SY <--
         )
     }
-
 
     sealed interface Dialog {
         data object Loading : Dialog
