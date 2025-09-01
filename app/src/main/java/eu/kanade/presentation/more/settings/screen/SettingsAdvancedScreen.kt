@@ -740,6 +740,8 @@ object SettingsAdvancedScreen : SearchableSettings {
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
 
         val devOptionsAreEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
+        val devOptionsPasswordPref = unsortedPreferences.devOptionsPassword()
+        val devOptionsPassword by devOptionsPasswordPref.collectAsState()
 
         val conditionalPreferenceItems = if (devOptionsAreEnabled) {
             listOf<Preference.PreferenceItem<out Any>>(
@@ -757,7 +759,7 @@ object SettingsAdvancedScreen : SearchableSettings {
             title = stringResource(SYMR.strings.developer_tools),
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.EditTextPreference(
-                    preference = unsortedPreferences.devOptionsPassword(),
+                    preference = devOptionsPasswordPref,
                     title = stringResource(KMR.strings.dev_options_password),
                     subtitle = if (devOptionsAreEnabled) {
                         stringResource(KMR.strings.dev_options_password_subtitle_enabled)
@@ -783,6 +785,16 @@ object SettingsAdvancedScreen : SearchableSettings {
                             }
                             valid
                         }
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(KMR.strings.dev_options_password_reset),
+                    enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
+                    onClick = {
+                        devOptionsPasswordPref.delete()
+                        unsortedPreferences.devOptionsEnabled().set(false)
+                        unsortedPreferences.fastDownloadEnabled().set(false)
+                        context.toast(KMR.strings.dev_options_password_reset_toast)
                     },
                 ),
                 *conditionalPreferenceItems.toTypedArray(),

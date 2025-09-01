@@ -225,4 +225,7 @@
     <string name="dev_options_disabled_by_clear">Developer options disabled.</string>
     <string name="dev_options_enabled">Developer options enabled.</string>
     <string name="dev_options_incorrect_password">Incorrect password.</string>
+    <string name="dev_options_password_reset">Incorrect password.</string>
+    <string name="dev_options_password_reset_toast">Incorrect password.</string>
+    
 </resources>
