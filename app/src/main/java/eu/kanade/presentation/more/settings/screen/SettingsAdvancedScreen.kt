@@ -740,8 +740,8 @@ object SettingsAdvancedScreen : SearchableSettings {
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
 
         val devOptionsAreEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
-        val devOptionsPasswordPref = unsortedPreferences.devOptionsPassword() // Store the preference instance
-        val devOptionsPassword by devOptionsPasswordPref.collectAsState() // Collect its state
+        val devOptionsPasswordPref = unsortedPreferences.devOptionsPassword()
+        val devOptionsPassword by devOptionsPasswordPref.collectAsState()
 
         val conditionalPreferenceItems = if (devOptionsAreEnabled) {
             listOf<Preference.PreferenceItem<out Any>>(
@@ -759,7 +759,7 @@ object SettingsAdvancedScreen : SearchableSettings {
             title = stringResource(SYMR.strings.developer_tools),
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.EditTextPreference(
-                    preference = devOptionsPasswordPref, // Use the stored preference
+                    preference = devOptionsPasswordPref,
                     title = stringResource(KMR.strings.dev_options_password),
                     subtitle = if (devOptionsAreEnabled) {
                         stringResource(KMR.strings.dev_options_password_subtitle_enabled)
@@ -789,13 +789,13 @@ object SettingsAdvancedScreen : SearchableSettings {
                 ),
                 // Add the reset button here
                 Preference.PreferenceItem.TextPreference(
-                    title = stringResource(KMR.strings.dev_options_password_reset), // You'll need to add this string resource
+                    title = stringResource(KMR.strings.dev_options_password_reset),
                     enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
                     onClick = {
-                        devOptionsPasswordPref.delete() // Resets to default value, which is ""
-                        unsortedPreferences.devOptionsEnabled().set(false) // Also disable dev options
-                        unsortedPreferences.fastDownloadEnabled().set(false) // And any related options
-                        context.toast(KMR.strings.dev_options_password_reset_toast) // Add a toast message
+                        devOptionsPasswordPref.delete()
+                        unsortedPreferences.devOptionsEnabled().set(false)
+                        unsortedPreferences.fastDownloadEnabled().set(false)
+                        context.toast(KMR.strings.dev_options_password_reset_toast)
                     },
                 ),
                 *conditionalPreferenceItems.toTypedArray(),
