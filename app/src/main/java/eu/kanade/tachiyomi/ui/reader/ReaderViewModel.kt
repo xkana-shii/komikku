@@ -187,7 +187,7 @@ class ReaderViewModel @JvmOverloads constructor(
     // KMK -->
     fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction) {
         when (action) {
-            ChapterDownloadAction.START -> downloadChapter(chapter)
+            ChapterDownloadAction.START -> downloadChapters(chapter)
             ChapterDownloadAction.START_NOW -> downloadManager.startDownloadNow(chapter.id)
             ChapterDownloadAction.CANCEL -> cancelDownload(chapter.id)
             ChapterDownloadAction.DELETE -> deleteChapter(chapter)
@@ -197,7 +197,7 @@ class ReaderViewModel @JvmOverloads constructor(
     /**
      * @param chapter the chapter to download.
      */
-    private fun downloadChapter(chapter: Chapter) {
+    private fun downloadChapters(chapter: Chapter) {
         viewModelScope.launch {
             val manga = manga?.let {
                 if (it.source == MERGED_SOURCE_ID) {
