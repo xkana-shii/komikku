@@ -27,10 +27,12 @@ import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
+import eu.kanade.tachiyomi.ui.manga.MergedMangaData
 import eu.kanade.tachiyomi.ui.reader.chapter.ReaderChapterItem
 import eu.kanade.tachiyomi.ui.reader.loader.ChapterLoader
 import eu.kanade.tachiyomi.ui.reader.loader.DownloadPageLoader
@@ -58,11 +60,15 @@ import exh.source.getMainSource
 import exh.source.isEhBasedManga
 import exh.util.defaultReaderType
 import exh.util.mangaType
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.mutate
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -70,6 +76,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -107,6 +114,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.Instant
 import java.util.Date
+import kotlin.collections.map
 
 /**
  * Presenter used by the activity to perform background operations.
@@ -205,7 +213,7 @@ class ReaderViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return@launch
             downloadManager.cancelQueuedDownloads(listOf(activeDownload))
-            // updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+            updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
         }
     }
 
@@ -392,6 +400,13 @@ class ReaderViewModel @JvmOverloads constructor(
             }
             .launchIn(viewModelScope)
         // SY <--
+
+        viewModelScope.launchIO {
+            merge(downloadManager.statusFlow(), downloadManager.progressFlow())
+                .catch { logcat(LogPriority.ERROR, it) }
+                .collect(::updateDownloadState)
+        }
+
     }
 
     override fun onCleared() {
@@ -509,6 +524,72 @@ class ReaderViewModel @JvmOverloads constructor(
             }
         }
     }
+
+    private fun updateDownloadState(download: Download) {
+        mutableState.update { state ->
+            val newItems = state.items.mutate { list ->
+                val modifiedIndex = list.indexOfFirst { it.chapter.id == download.chapter.id }
+                if (modifiedIndex < 0) return@mutate
+
+                val item = list[modifiedIndex]
+                list[modifiedIndex] = item.copy(downloadState = download.status, downloadProgress = download.progress)
+            }
+            state.copy(items = newItems)
+        }
+    }
+
+    private fun List<Chapter>.toChapterListItems(
+        manga: Manga,
+        // SY -->
+        mergedData: MergedMangaData?,
+        // SY <--
+    ): List<ChapterList.ReaderItem> {
+        val isLocal = manga.isLocal()
+        // SY -->
+        val isExhManga = manga.isEhBasedManga()
+        // SY <--
+        return map { chapter ->
+            val activeDownload = if (isLocal) {
+                null
+            } else {
+                downloadManager.getQueuedDownloadOrNull(chapter.id)
+            }
+
+            // SY -->
+            @Suppress("NAME_SHADOWING")
+            val manga = mergedData?.manga?.get(chapter.mangaId) ?: manga
+            val source = mergedData?.sources?.find { manga.source == it.id }?.takeIf { mergedData.sources.size > 2 }
+            // SY <--
+            val downloaded = if (manga.isLocal()) {
+                true
+            } else {
+                downloadManager.isChapterDownloaded(
+                    // SY -->
+                    chapter.name,
+                    chapter.scanlator,
+                    manga.ogTitle,
+                    manga.source,
+                    // SY <--
+                )
+            }
+            val downloadState = when {
+                activeDownload != null -> activeDownload.status
+                downloaded -> Download.State.DOWNLOADED
+                else -> Download.State.NOT_DOWNLOADED
+            }
+
+            ChapterList.ReaderItem(
+                chapter = chapter,
+                downloadState = downloadState,
+                downloadProgress = activeDownload?.progress ?: 0,
+                // SY -->
+                sourceName = source?.getNameForMangaInfo(),
+                showScanlator = !isExhManga,
+                // SY <--
+            )
+        }
+    }
+
 
     // SY -->
     fun getChapters(): List<ReaderChapterItem> {
@@ -1463,6 +1544,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val fillermarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
+        val items: PersistentList<ChapterList.ReaderItem> = persistentListOf(),
 
         /**
          * Viewer used to display the pages (pager, webtoon, ...).
@@ -1494,6 +1576,20 @@ class ReaderViewModel @JvmOverloads constructor(
         val totalPages: Int
             get() = currentChapter?.pages?.size ?: -1
     }
+    @Immutable
+    sealed class ChapterList {
+        @Immutable
+        data class ReaderItem(
+            val chapter: Chapter,
+            val downloadState: Download.State,
+            val downloadProgress: Int,
+            // SY -->
+            val sourceName: String?,
+            val showScanlator: Boolean,
+            // SY <--
+        )
+    }
+
 
     sealed interface Dialog {
         data object Loading : Dialog
