@@ -32,7 +32,7 @@ android {
         applicationId = "app.komikku.kns"
 
         versionCode = 75
-        versionName = "1.16.3"
+        versionName = "1.16.4"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
