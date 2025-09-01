@@ -787,7 +787,6 @@ object SettingsAdvancedScreen : SearchableSettings {
                         }
                     },
                 ),
-                // Add the reset button here
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(KMR.strings.dev_options_password_reset),
                     enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
