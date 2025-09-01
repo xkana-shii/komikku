@@ -115,6 +115,7 @@ import eu.kanade.tachiyomi.util.view.setComposeContent
 import exh.source.isEhBasedSource
 import exh.util.defaultReaderType
 import exh.util.mangaType
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -686,6 +687,8 @@ class ReaderActivity : BaseActivity() {
                     var chapters by remember {
                         mutableStateOf(viewModel.getChapters().toImmutableList())
                     }
+                    val chapterListItems by viewModel.state.map { it.items }
+                        .collectAsState(initial = persistentListOf())
                     ChapterListDialog(
                         onDismissRequest = onDismissRequest,
                         screenModel = settingsScreenModel,
@@ -716,9 +719,10 @@ class ReaderActivity : BaseActivity() {
                         },
                         state.dateRelativeTime,
                         // KMK -->
-                        onDownloadAction = { chapter, action ->
-                            viewModel.handleDownloadAction(chapter, action)
+                        onDownloadAction = { chapter, action, itmstate ->
+                            viewModel.handleDownloadAction(chapter, action, itmstate)
                         },
+                        chapterListItems = chapterListItems.toList(),
                         // KMK <--
                     )
                 }

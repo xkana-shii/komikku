@@ -17,6 +17,7 @@ import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.MangaChapterListItem
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
+import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
 import eu.kanade.tachiyomi.ui.reader.chapter.ReaderChapterItem
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.util.lang.toRelativeString
@@ -45,7 +46,8 @@ fun ChapterListDialog(
     onFillermark: (Chapter) -> Unit,
     dateRelativeTime: Boolean,
     // KMK -->
-    onDownloadAction: ((Chapter, ChapterDownloadAction) -> Unit)? = null,
+    onDownloadAction: ((Chapter, ChapterDownloadAction, List<ReaderViewModel.ChapterList.ReaderItem>) -> Unit)? = null,
+    chapterListItems: List<ReaderViewModel.ChapterList.ReaderItem>,
     // KMK <--
 ) {
     val manga by screenModel.mangaFlow.collectAsState()
@@ -123,7 +125,7 @@ fun ChapterListDialog(
                     onClick = { onClickChapter(chapterItem.chapter) },
                     // KMK -->
                     onDownloadClick = if (onDownloadAction != null) {
-                        { action -> onDownloadAction(chapterItem.chapter, action) }
+                        { action -> onDownloadAction(chapterItem.chapter, action, chapterListItems) }
                     } else {
                         null
                     },

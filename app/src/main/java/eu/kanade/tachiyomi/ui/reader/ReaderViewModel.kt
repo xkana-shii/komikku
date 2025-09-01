@@ -185,11 +185,11 @@ class ReaderViewModel @JvmOverloads constructor(
         }
 
     // KMK -->
-    fun handleDownloadAction(items: List<ChapterList.ReaderItem>, action: ChapterDownloadAction, chapter: Chapter) {
+    fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction, itmstate: List<ChapterList.ReaderItem>) {
         when (action) {
             ChapterDownloadAction.START -> {
                 downloadChapters(chapter)
-                if (items.any { it.downloadState == Download.State.ERROR }) {
+                if (itmstate.any { it.downloadState == Download.State.ERROR }) {
                     downloadManager.startDownloads()
                 }
             }
