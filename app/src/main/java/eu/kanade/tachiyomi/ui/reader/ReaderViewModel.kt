@@ -185,14 +185,9 @@ class ReaderViewModel @JvmOverloads constructor(
         }
 
     // KMK -->
-    fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction, itmstate: List<ChapterList.ReaderItem>) {
+    fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction) {
         when (action) {
-            ChapterDownloadAction.START -> {
-                downloadChapters(chapter)
-                if (itmstate.any { it.downloadState == Download.State.ERROR }) {
-                    downloadManager.startDownloads()
-                }
-            }
+            ChapterDownloadAction.START -> downloadChapter(chapter)
             ChapterDownloadAction.START_NOW -> downloadManager.startDownloadNow(chapter.id)
             ChapterDownloadAction.CANCEL -> cancelDownload(chapter.id)
             ChapterDownloadAction.DELETE -> deleteChapter(chapter)
@@ -202,7 +197,7 @@ class ReaderViewModel @JvmOverloads constructor(
     /**
      * @param chapter the chapter to download.
      */
-    private fun downloadChapters(chapter: Chapter) {
+    private fun downloadChapter(chapter: Chapter) {
         viewModelScope.launch {
             val manga = manga?.let {
                 if (it.source == MERGED_SOURCE_ID) {
@@ -220,46 +215,32 @@ class ReaderViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return@launch
             downloadManager.cancelQueuedDownloads(listOf(activeDownload))
-            updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
+            // TODO: updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
         }
     }
 
-    fun deleteChapter(chapter: Chapter) {
-        val manga = manga ?: return
-
+    private fun deleteChapter(chapter: Chapter) {
         viewModelScope.launchNonCancellable {
             try {
-                if (manga.source == MERGED_SOURCE_ID) {
-                    val manga = state.value.mergedManga?.get(chapter.mangaId) ?: return@launchNonCancellable
-                    val source = sourceManager.get(manga.source) ?: return@launchNonCancellable
-                    downloadManager.deleteChapters(
-                        listOf(chapter),
-                        manga,
-                        source,
-                        ignoreCategoryExclusion = true,
-                    )
-//                        // KMK -->
-//                        if (source.isLocal()) {
-//                            // Refresh chapters state for Local source
-//                            fetchChaptersFromSource()
-//                        }
-//                        // KMK <--
+                val manga = if (manga?.source == MERGED_SOURCE_ID) {
+                    state.value.mergedManga?.get(chapter.mangaId) ?: return@launchNonCancellable
                 } else {
-                    val source = sourceManager.get(manga.source) ?: return@launchNonCancellable
-                    downloadManager.deleteChapters(
-                        listOf(chapter),
-                        manga,
-                        source,
-                        ignoreCategoryExclusion = true,
-                    )
-//                    // KMK -->
-//                    if (source.isLocal()) {
-//                        // Refresh chapters state for Local source
-//                        fetchChaptersFromSource()
-//                    }
-//                    // KMK <--
+                    manga ?: return@launchNonCancellable
                 }
-            } catch (e: Throwable) {
+                val source = sourceManager.get(manga.source) ?: return@launchNonCancellable
+                downloadManager.deleteChapters(
+                    listOf(chapter),
+                    manga,
+                    source,
+                    ignoreCategoryExclusion = true,
+                )
+//                // KMK -->
+//                if (source.isLocal()) {
+//                    // TODO: Refresh chapters state for Local source
+//                    fetchChaptersFromSource()
+//                }
+//                // KMK <--
+            } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
             }
         }

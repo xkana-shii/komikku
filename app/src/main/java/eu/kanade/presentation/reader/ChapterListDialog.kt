@@ -46,8 +46,7 @@ fun ChapterListDialog(
     onFillermark: (Chapter) -> Unit,
     dateRelativeTime: Boolean,
     // KMK -->
-    onDownloadAction: ((Chapter, ChapterDownloadAction, List<ReaderViewModel.ChapterList.ReaderItem>) -> Unit)? = null,
-    chapterListItems: List<ReaderViewModel.ChapterList.ReaderItem>,
+    onDownloadAction: ((Chapter, ChapterDownloadAction) -> Unit)? = null,
     // KMK <--
 ) {
     val manga by screenModel.mangaFlow.collectAsState()
@@ -125,7 +124,7 @@ fun ChapterListDialog(
                     onClick = { onClickChapter(chapterItem.chapter) },
                     // KMK -->
                     onDownloadClick = if (onDownloadAction != null) {
-                        { action -> onDownloadAction(chapterItem.chapter, action, chapterListItems) }
+                        { action -> onDownloadAction(chapterItem.chapter, action) }
                     } else {
                         null
                     },
