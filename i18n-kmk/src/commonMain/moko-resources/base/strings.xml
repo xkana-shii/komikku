@@ -29,6 +29,9 @@
     <string name="action_copy_to_clipboard_combined_page">Copy combined page to clipboard</string>
     <string name="pref_viewer_nav_smaller_tap_zone">Smaller tap zones</string>
     <string name="error_opening_folder">Failed to open folder</string>
+    <string name="pref_pinch_to_zoom">Pinch to zoom</string>
+    <string name="pref_paged_disable_zoom_in">Disable zoom in</string>
+
     <!-- Preferences -->
       <!-- Appearance section -->
     <string name="pref_custom_theme_style">Custom theme style</string>
@@ -225,7 +228,6 @@
     <string name="dev_options_disabled_by_clear">Developer options disabled.</string>
     <string name="dev_options_enabled">Developer options enabled.</string>
     <string name="dev_options_incorrect_password">Incorrect password.</string>
-    <string name="dev_options_password_reset">Incorrect password.</string>
-    <string name="dev_options_password_reset_toast">Incorrect password.</string>
+    <string name="dev_options_password_reset">Reset default password string.</string>
 
 </resources>
