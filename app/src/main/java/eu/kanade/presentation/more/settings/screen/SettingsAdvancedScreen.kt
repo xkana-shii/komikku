@@ -794,7 +794,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                         devOptionsPasswordPref.delete()
                         unsortedPreferences.devOptionsEnabled().set(false)
                         unsortedPreferences.fastDownloadEnabled().set(false)
-                        context.toast(KMR.strings.dev_options_password_reset_toast)
+                        context.toast(MR.strings.requires_app_restart)
                     },
                 ),
                 *conditionalPreferenceItems.toTypedArray(),
