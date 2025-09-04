@@ -25,6 +25,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
 
+@Suppress("unused")
 object SettingsReaderScreen : SearchableSettings {
     private fun readResolve(): Any = SettingsReaderScreen
 
@@ -255,6 +256,10 @@ object SettingsReaderScreen : SearchableSettings {
         val dualPageSplit by dualPageSplitPref.collectAsState()
         val rotateToFit by rotateToFitPref.collectAsState()
 
+        // KMK -->
+        val pagedDisableZoomIn by readerPreferences.pagedDisableZoomIn().collectAsState()
+        // KMK <--
+
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pager_viewer),
             preferenceItems = persistentListOf(
@@ -310,6 +315,17 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_landscape_zoom),
                     enabled = imageScaleType == 1,
                 ),
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.pagedDisableZoomIn(),
+                    title = stringResource(KMR.strings.pref_paged_disable_zoom_in),
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.pagedDoubleTapZoomEnabled(),
+                    title = stringResource(MR.strings.pref_double_tap_zoom),
+                    enabled = !pagedDisableZoomIn,
+                ),
+                // KMK <--
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.navigateToPan(),
                     title = stringResource(MR.strings.pref_navigate_pan),
@@ -441,6 +457,12 @@ object SettingsReaderScreen : SearchableSettings {
                     preference = readerPreferences.webtoonDoubleTapZoomEnabled(),
                     title = stringResource(MR.strings.pref_double_tap_zoom),
                 ),
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.webtoonPinchToZoomEnabled(),
+                    title = stringResource(KMR.strings.pref_pinch_to_zoom),
+                ),
+                // KMK <--
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.webtoonDisableZoomOut(),
                     title = stringResource(MR.strings.pref_webtoon_disable_zoom_out),

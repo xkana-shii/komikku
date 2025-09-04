@@ -387,10 +387,12 @@ private fun ExtensionItemContent(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
         ) {
             ProvideTextStyle(value = MaterialTheme.typography.bodySmall) {
+                var hasAlreadyShownAnElement by remember { mutableStateOf(false) }
                 // KMK -->
                 extension.lang?.let {
                     if (it.isNotEmpty()) {
                         // KMK <--
+                        hasAlreadyShownAnElement = true
                         Text(
                             text = /* KMK --> */FlagEmoji.getEmojiLangFlag(it) + " " + /* KMK <-- */
                                 LocaleHelper.getSourceDisplayName(it, LocalContext.current),
@@ -399,6 +401,8 @@ private fun ExtensionItemContent(
                 }
 
                 if (extension.versionName.isNotEmpty()) {
+                    if (hasAlreadyShownAnElement) DotSeparatorNoSpaceText()
+                    hasAlreadyShownAnElement = true
                     Text(
                         text = extension.versionName,
                     )
@@ -418,11 +422,19 @@ private fun ExtensionItemContent(
                     else -> null
                 }
                 if (warning != null) {
+                    if (hasAlreadyShownAnElement) DotSeparatorNoSpaceText()
+                    hasAlreadyShownAnElement = true
                     Text(
                         text = stringResource(warning).uppercase(),
                         color = MaterialTheme.colorScheme.error,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (extension is Extension.Installed && !extension.isShared) {
+                    if (hasAlreadyShownAnElement) DotSeparatorNoSpaceText()
+                    Text(
+                        text = stringResource(MR.strings.ext_installer_private),
                     )
                 }
 
