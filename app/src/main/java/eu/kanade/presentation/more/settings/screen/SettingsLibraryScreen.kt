@@ -15,7 +15,6 @@ import androidx.core.content.ContextCompat
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
@@ -296,7 +295,7 @@ object SettingsLibraryScreen : SearchableSettings {
                     preference = libraryPreferences.autoFetchChapters(),
                     title = stringResource(KMR.strings.pref_auto_fetch_chapters),
                     subtitle = stringResource(KMR.strings.pref_auto_fetch_chapters_description),
-                )
+                ),
             ),
         )
     }
