@@ -38,7 +38,6 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
-import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.model.Manga
@@ -250,40 +249,23 @@ class BulkFavoriteScreenModel(
     }
 
     private fun moveMangaToCategoriesAndAddToLibrary(manga: Manga, categories: List<Long>) {
-        val source = sourceManager.getOrStub(manga.source)
         moveMangaToCategory(manga.id, categories)
         if (manga.favorite) return
 
         screenModelScope.launchIO {
             updateManga.awaitUpdateFavorite(manga.id, true)
-            setMangaDefaultChapterFlags.await(manga)
-            val new = manga.copy(
-                favorite = !manga.favorite,
-                dateAdded = when (manga.favorite) {
-                    true -> 0
-                    false -> Instant.now().toEpochMilli()
-                },
-            )
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
-            if (new.favorite) {
+            // KMK -->
+            if (libraryPreferences.syncOnAdd().get()) {
                 try {
-                    withIOContext {
-                        val networkManga = source.getMangaDetails(new.toSManga())
-                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
-                        val chapters = source.getChapterList(new.toSManga())
-                        syncChaptersWithSource.await(chapters, new, source, false)
-                    }
-                } catch (e: Throwable) {
-                    val message = if (e is NoChaptersException) {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        "No Chapters found"
-                    } else {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        logcat(LogPriority.ERROR, e) { "Error while syncing chapters" }
-                    }
-                    screenModelScope.launch {
-                        snackbarHostState.showSnackbar(message = message.toString())
-                    }
+                    val source = sourceManager.getOrStub(manga.source)
+                    val sManga = manga.toSManga()
+                    val remoteManga = source.getMangaDetails(sManga)
+                    val chapters = source.getChapterList(sManga)
+                    updateManga.awaitUpdateFromSource(manga, remoteManga, false, coverCache)
+                    syncChaptersWithSource.await(chapters, manga, source, false)
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e)
+                    snackbarHostState.showSnackbar(message = "Failed to sync manga: $e")
                 }
             }
             // KMK <--
@@ -369,26 +351,19 @@ class BulkFavoriteScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
+            updateManga.await(new.toMangaUpdate())
             // KMK -->
-            if (new.favorite) {
-                try {
-                    withIOContext {
-                        val networkManga = source.getMangaDetails(new.toSManga())
-                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
-                        val chapters = source.getChapterList(new.toSManga())
+            if (new.favorite && libraryPreferences.syncOnAdd().get()) {
+                withIOContext {
+                    try {
+                        val sManga = manga.toSManga()
+                        val remoteManga = source.getMangaDetails(sManga)
+                        val chapters = source.getChapterList(sManga)
+                        updateManga.awaitUpdateFromSource(new, remoteManga, false, coverCache)
                         syncChaptersWithSource.await(chapters, new, source, false)
-                    }
-                } catch (e: Throwable) {
-                    val message = if (e is NoChaptersException) {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        "No Chapters found"
-                    } else {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        logcat(LogPriority.ERROR, e) { "Error while syncing chapters" }
-                    }
-                    screenModelScope.launch {
-                        snackbarHostState.showSnackbar(message = message.toString())
+                    } catch (e: Exception) {
+                        logcat(LogPriority.ERROR, e)
+                        snackbarHostState.showSnackbar(message = "Failed to sync manga: $e")
                     }
                 }
             }

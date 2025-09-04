@@ -72,7 +72,6 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
-import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -423,26 +422,21 @@ open class BrowseSourceScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
+            updateManga.await(new.toMangaUpdate())
             // KMK -->
-            if (new.favorite) {
-                try {
-                    withIOContext {
-                        val networkManga = source.getMangaDetails(new.toSManga())
-                        updateManga.awaitUpdateFromSource(manga, networkManga, false, coverCache)
-                        val chapters = source.getChapterList(new.toSManga())
+            if (new.favorite && libraryPreferences.syncOnAdd().get()) {
+                withIOContext {
+                    try {
+                        val sManga = new.toSManga()
+                        val remoteManga = source.getMangaDetails(sManga)
+                        val chapters = source.getChapterList(sManga)
+                        updateManga.awaitUpdateFromSource(manga, remoteManga, false, coverCache)
                         syncChaptersWithSource.await(chapters, new, source, false)
-                    }
-                } catch (e: Throwable) {
-                    val message = if (e is NoChaptersException) {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        "No Chapters found"
-                    } else {
-                        @Suppress("IMPLICIT_CAST_TO_ANY")
-                        logcat(LogPriority.ERROR, e) { "Error while syncing chapters" }
-                    }
-                    screenModelScope.launch {
-                        snackbarHostState.showSnackbar(message = message.toString())
+                    } catch (e: Exception) {
+                        logcat(LogPriority.ERROR, e)
+                        screenModelScope.launch {
+                            snackbarHostState.showSnackbar(message = "Failed to sync manga: $e")
+                        }
                     }
                 }
             }
