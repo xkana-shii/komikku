@@ -47,6 +47,9 @@ class WebtoonConfig(
         private set
 
     var pinchToZoomChangedListener: ((Boolean) -> Unit)? = null
+
+    var webtoonScaleType = readerPreferences.webtoonScaleType().get()
+        private set
     // KMK <--
 
     // SY -->
@@ -114,6 +117,12 @@ class WebtoonConfig(
             .register(
                 { pinchToZoom = it },
                 { pinchToZoomChangedListener?.invoke(it) },
+            )
+
+        readerPreferences.webtoonScaleType()
+            .register(
+                { webtoonScaleType = it },
+                { imagePropertyChangedListener?.invoke() },
             )
         // KMK <--
 
