@@ -1493,7 +1493,7 @@ class LibraryScreenModel(
                     })
 
                 sources.associate { (source, lang) ->
-                    Category(
+                    val category = Category(
                         id = (source.id.toString() + "_" + lang).hashCode().toLong(),
                         name = (
                             if (source.id == LocalSource.ID) {
@@ -1507,7 +1507,8 @@ class LibraryScreenModel(
                         // KMK -->
                         hidden = false,
                         // KMK <--
-                    ) to groupCache[Pair(source.id, lang)]?.distinct().orEmpty()
+                    )
+                    category to groupCache[Pair(source.id, lang)]?.distinct().orEmpty()
                 }
                 // KMK <--
             }
