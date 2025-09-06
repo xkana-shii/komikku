@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.data.track.anilist
 
 import android.graphics.Color
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.track.model.AutoRereadState
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.database.models.Track
@@ -265,4 +266,32 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
     // KMK -->
     override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ
     // KMK <--
+
+    // Auto reread logic: called when starting a reread
+    override suspend fun handleReread(track: Track, askUser: suspend () -> Boolean): Boolean {
+        when (trackPreferences.autoReread().get()) {
+            AutoRereadState.ALWAYS -> {
+                track.last_chapter_read = 0.0
+                track.status = REREADING
+                track.finished_reading_date = 0L
+                track.started_reading_date = System.currentTimeMillis()
+                api.setRereadingStatus(track)
+                return true
+            }
+            AutoRereadState.ASK -> {
+                if (askUser()) {
+                    track.last_chapter_read = 0.0
+                    track.status = REREADING
+                    track.finished_reading_date = 0L
+                    track.started_reading_date = System.currentTimeMillis()
+                    api.setRereadingStatus(track)
+                    return true
+                }
+                return false
+            }
+            AutoRereadState.NEVER -> {
+                return false
+            }
+        }
+    }
 }

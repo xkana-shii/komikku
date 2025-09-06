@@ -1,5 +1,6 @@
 package eu.kanade.domain.track.service
 
+import eu.kanade.domain.track.model.AutoRereadState
 import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
@@ -55,4 +56,9 @@ class TrackPreferences(
     // KMK -->
     fun autoSyncProgressFromTrackers() = preferenceStore.getBoolean("pref_auto_sync_progress_from_trackers_key", true)
     // KMK <--
+
+    fun autoReread() = preferenceStore.getEnum(
+        "pref_auto_reread",
+        AutoRereadState.ALWAYS,
+    )
 }

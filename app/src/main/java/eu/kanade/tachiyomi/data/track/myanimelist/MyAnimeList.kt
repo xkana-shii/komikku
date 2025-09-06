@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.data.track.myanimelist
 
 import android.graphics.Color
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.track.model.AutoRereadState
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.BaseTracker
@@ -77,20 +78,27 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     }
 
     override suspend fun update(track: Track, didReadChapter: Boolean): Track {
-        if (track.status != COMPLETED) {
-            if (didReadChapter) {
-                if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
-                    track.status = COMPLETED
-                    track.finished_reading_date = System.currentTimeMillis()
-                } else if (track.status != REREADING) {
-                    track.status = READING
-                    if (track.last_chapter_read == 1.0) {
-                        track.started_reading_date = System.currentTimeMillis()
-                    }
+        // If user is rereading and finished, increment reread count
+        if (track.status == REREADING && track.last_chapter_read == track.total_chapters.toDouble() && track.total_chapters > 0) {
+            track.status = COMPLETED
+            track.num_times_reread = track.num_times_reread + 1
+        }
+        // If user is completed and starts over, switch to rereading
+        else if (track.status == COMPLETED && track.last_chapter_read == 1.0) {
+            track.status = REREADING
+        }
+        // If not completed, check for completion
+        else if (track.status != COMPLETED && didReadChapter) {
+            if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
+                track.status = COMPLETED
+                track.finished_reading_date = System.currentTimeMillis()
+            } else if (track.status != REREADING) {
+                track.status = READING
+                if (track.last_chapter_read == 1.0) {
+                    track.started_reading_date = System.currentTimeMillis()
                 }
             }
         }
-
         return api.updateItem(track)
     }
 
@@ -200,4 +208,23 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     // KMK -->
     override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ
     // KMK <--
+
+    override suspend fun handleReread(track: Track, askUser: suspend () -> Boolean): Boolean {
+        when (trackPreferences.autoReread().get()) {
+            AutoRereadState.ALWAYS -> {
+                api.setRereadingStatus(track)
+                return true
+            }
+            AutoRereadState.ASK -> {
+                if (askUser()) {
+                    api.setRereadingStatus(track)
+                    return true
+                }
+                return false
+            }
+            AutoRereadState.NEVER -> {
+                return false
+            }
+        }
+    }
 }

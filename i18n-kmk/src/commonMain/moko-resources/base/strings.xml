@@ -217,4 +217,11 @@
     <string name="pref_discord_show_download_button_summary">Displays a button to download the app</string>
     <string name="pref_discord_show_discord_button">Show Discord Button</string>
     <string name="pref_discord_show_discord_button_summary">Displays a button to join the Discord server</string>
+    <string name="pref_auto_reread">Auto Reread</string>
+    <string name="auto_reread_always">Always</string>
+    <string name="auto_reread_ask">Ask</string>
+    <string name="auto_reread_never">Never</string>
+    <string name="reread_confirm">Start rereading tracked services for this manga?</string>
+    <string name="all_marked_unread">All chapters marked as unread</string>
+
 </resources>
