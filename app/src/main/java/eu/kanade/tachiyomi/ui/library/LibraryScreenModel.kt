@@ -120,6 +120,7 @@ import tachiyomi.domain.track.interactor.GetTracksPerManga
 import tachiyomi.domain.track.model.Track
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
+import tachiyomi.presentation.core.icons.FlagEmoji
 import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
@@ -1481,10 +1482,14 @@ class LibraryScreenModel(
                 forEach { item ->
                     groupCache.getOrPut(Pair(item.libraryManga.manga.source, item.sourceLanguage)) { mutableListOf() }.add(item.id)
                 }
+                val useLangIcon = this.firstOrNull()?.useLangIcon == true
+
                 val sources = groupCache.keys
                     .map { (sourceId, lang) -> sourceManager.getOrStub(sourceId) to lang }
                     .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { (source, lang) ->
-                        source.name.ifBlank { source.id.toString() } + " (" + lang.uppercase() + ")"
+                        source.name.ifBlank { source.id.toString() } + " (" +
+                            (if (useLangIcon) FlagEmoji.getEmojiLangFlag(lang) else lang.uppercase()) +
+                            ")"
                     })
 
                 sources.associate { (source, lang) ->
@@ -1492,11 +1497,11 @@ class LibraryScreenModel(
                         id = (source.id.toString() + "_" + lang).hashCode().toLong(),
                         name = (
                             if (source.id == LocalSource.ID) {
-                                context.stringResource(MR.strings.local_source)
+                                preferences.context.stringResource(MR.strings.local_source)
                             } else {
                                 source.name.ifBlank { source.id.toString() }
                             }
-                            ) + " (${lang.uppercase()})",
+                            ) + " (" + (if (useLangIcon) FlagEmoji.getEmojiLangFlag(lang) else lang.uppercase()) + ")",
                         order = sources.indexOfFirst { it.first.id == source.id && it.second == lang }.toLong(),
                         flags = 0,
                         // KMK -->
