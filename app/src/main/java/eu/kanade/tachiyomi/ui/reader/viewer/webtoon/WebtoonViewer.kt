@@ -279,7 +279,7 @@ class WebtoonViewer(
                     // If ratio of width over height is greater than 9/16 then call onScale to maximum of height*9/16
                     val currentWidth = recycler.width.takeIf { it > 0 } ?: activity.window.decorView.width
                     val currentHeight = recycler.height.takeIf { it > 0 } ?: activity.window.decorView.height
-                    Timber.e("Current WxH: ${currentWidth}x${currentHeight}")
+                    Timber.e("Current WxH: ${currentWidth}x$currentHeight")
 
                     val desiredRatio = config.webtoonScaleType.ratio
                     Timber.e("Desired ratio: $desiredRatio")
