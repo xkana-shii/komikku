@@ -1250,7 +1250,7 @@ class LibraryScreenModel(
                                     (manga.author?.contains(query, true) != true) &&
                                     (manga.artist?.contains(query, true) != true) &&
                                     (manga.description?.contains(query, true) != true) &&
-                                    (source?.name?.contains(query, true) != true || (source?.lang != null && "${source?.name} (${source?.lang})".contains(query, true))) &&
+                                    (!(source?.name?.contains(query, true) == true && (source?.lang != null && "${source?.name} (${source?.lang})".contains(query, true)))) &&
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
                                         loggedInTrackServices.isEmpty() ||
