@@ -129,7 +129,6 @@ class SearchEngine {
     fun parseQuery(query: String, enableWildcard: Boolean = true) = queryCache.getOrPut(query) {
         val res = mutableListOf<QueryComponent>()
 
-        var inParentheses = false
         var inQuotes = false
         val queuedRawText = StringBuilder()
         val queuedText = mutableListOf<TextComponent>()
@@ -166,23 +165,17 @@ class SearchEngine {
         query.lowercase(Locale.getDefault()).forEach { char ->
             if (char == '"') {
                 inQuotes = !inQuotes
-            } else if (char == '(' && !inQuotes) {
-                inParentheses = true
-                queuedRawText.append(char)
-            } else if (char == ')' && inParentheses && !inQuotes) {
-                queuedRawText.append(char)
-                inParentheses = false
             } else if (enableWildcard && (char == '?' || char == '_')) {
                 flushText()
                 queuedText.add(SingleWildcard(char.toString()))
             } else if (enableWildcard && (char == '*' || char == '%')) {
                 flushText()
                 queuedText.add(MultiWildcard(char.toString()))
-            } else if (char == '-' && !inQuotes && !inParentheses && (queuedRawText.isBlank() || queuedRawText.last() == ' ')) {
+            } else if (char == '-' && !inQuotes && (queuedRawText.isBlank() || queuedRawText.last() == ' ')) {
                 nextIsExcluded = true
             } else if (char == '$') {
                 nextIsExact = true
-            } else if (char == ':' && !inParentheses) {
+            } else if (char == ':') {
                 flushText()
                 var flushed = flushToText().rawTextOnly()
                 // Map tag aliases
@@ -198,7 +191,7 @@ class SearchEngine {
                     else -> flushed
                 }
                 namespace = Namespace(flushed, null)
-            } else if (arrayOf(' ', ',').contains(char) && !inQuotes && !inParentheses) {
+            } else if (arrayOf(' ', ',').contains(char) && !inQuotes) {
                 flushAll()
             } else {
                 queuedRawText.append(char)
