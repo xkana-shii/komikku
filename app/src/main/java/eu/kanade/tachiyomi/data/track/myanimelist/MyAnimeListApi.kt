@@ -281,39 +281,70 @@ class MyAnimeListApi(
     suspend fun setRereadingStatus(track: Track): Track {
         val latestTrack = findListItem(track) ?: track
 
-        Timber.tag("REREAD").d("Previous MAL status: ${latestTrack.status}")
-        Timber.tag("REREAD").d("Previous MAL reread count: ${latestTrack.num_times_reread}")
+        val wasCompleted = latestTrack.status == MyAnimeList.COMPLETED
 
-        // Just set to REREADING, don't increment
-        latestTrack.status = MyAnimeList.REREADING
-        latestTrack.last_chapter_read = 0.0
+        // Only proceed if status is COMPLETED
+        if (wasCompleted) {
+            // Set status to REREADING and reset progress
+            latestTrack.status = MyAnimeList.REREADING
+            latestTrack.last_chapter_read = 0.0
 
-        val formBodyBuilder = FormBody.Builder()
-            .add("status", latestTrack.toMyAnimeListStatus() ?: "reading")
-            .add("is_rereading", "true")
-            .add("score", latestTrack.score.toString())
-            .add("num_chapters_read", latestTrack.last_chapter_read.toInt().toString())
-            .add("num_times_reread", latestTrack.num_times_reread.toString())
-        convertToIsoDate(latestTrack.started_reading_date)?.let {
-            formBodyBuilder.add("start_date", it)
+            val formBodyBuilder = FormBody.Builder()
+                .add("status", latestTrack.toMyAnimeListStatus() ?: "reading")
+                .add("is_rereading", "true")
+                .add("score", latestTrack.score.toString())
+                .add("num_chapters_read", latestTrack.last_chapter_read.toInt().toString())
+                .add("num_times_reread", latestTrack.num_times_reread.toString())
+            convertToIsoDate(latestTrack.started_reading_date)?.let {
+                formBodyBuilder.add("start_date", it)
+            }
+            convertToIsoDate(latestTrack.finished_reading_date)?.let {
+                formBodyBuilder.add("finish_date", it)
+            }
+
+            val request = Request.Builder()
+                .url(mangaUrl(latestTrack.remote_id).toString())
+                .put(formBodyBuilder.build())
+                .build()
+
+            with(json) {
+                authClient.newCall(request)
+                    .awaitSuccess()
+                    .parseAs<MALListItemStatus>()
+                    .let { parseMangaItem(it, latestTrack) }
+            }
+
+            // Fetch again to confirm status is REREADING
+            val updatedTrack = findListItem(latestTrack) ?: latestTrack
+            if (updatedTrack.status == MyAnimeList.REREADING) {
+                updatedTrack.num_times_reread += 1
+                Timber.tag("REREAD").d("Incrementing reread count to: ${updatedTrack.num_times_reread}")
+
+                // Submit the new reread count
+                val rereadFormBody = FormBody.Builder()
+                    .add("num_times_reread", updatedTrack.num_times_reread.toString())
+                    // ... (add other fields as needed)
+                    .build()
+
+                val rereadRequest = Request.Builder()
+                    .url(mangaUrl(updatedTrack.remote_id).toString())
+                    .put(rereadFormBody)
+                    .build()
+
+                with(json) {
+                    authClient.newCall(rereadRequest)
+                        .awaitSuccess()
+                        .parseAs<MALListItemStatus>()
+                        .let { parseMangaItem(it, updatedTrack) }
+                }
+            }
+
+            return updatedTrack
+        } else {
+            Timber.tag("REREAD").d("Not incrementing reread count (not transitioning from COMPLETED)")
+            // Optionally still update status to REREADING, but don't increment
+            return latestTrack
         }
-        convertToIsoDate(latestTrack.finished_reading_date)?.let {
-            formBodyBuilder.add("finish_date", it)
-        }
-
-        val request = Request.Builder()
-            .url(mangaUrl(latestTrack.remote_id).toString())
-            .put(formBodyBuilder.build())
-            .build()
-
-        with(json) {
-            authClient.newCall(request)
-                .awaitSuccess()
-                .parseAs<MALListItemStatus>()
-                .let { parseMangaItem(it, latestTrack) }
-        }
-
-        return latestTrack
     }
 
     // This is the function that should be called when marking as completed

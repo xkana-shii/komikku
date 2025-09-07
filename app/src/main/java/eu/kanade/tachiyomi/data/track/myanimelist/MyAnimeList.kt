@@ -78,27 +78,42 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     }
 
     override suspend fun update(track: Track, didReadChapter: Boolean): Track {
-        // If user is rereading and finished, increment reread count
-        if (track.status == REREADING && track.last_chapter_read == track.total_chapters.toDouble() && track.total_chapters > 0) {
-            track.status = COMPLETED
-            track.num_times_reread = track.num_times_reread + 1
-        }
-        // If user is completed and starts over, switch to rereading
-        else if (track.status == COMPLETED && track.last_chapter_read == 1.0) {
-            track.status = REREADING
-        }
-        // If not completed, check for completion
-        else if (track.status != COMPLETED && didReadChapter) {
-            if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
-                track.status = COMPLETED
-                track.finished_reading_date = System.currentTimeMillis()
-            } else if (track.status != REREADING) {
-                track.status = READING
-                if (track.last_chapter_read == 1.0) {
-                    track.started_reading_date = System.currentTimeMillis()
+        val previousStatus = track.status // Store the status before any changes
+
+        if (track.status != COMPLETED) {
+            if (didReadChapter) {
+                if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
+                    // Check if transitioning from REREADING to COMPLETED
+                    if (previousStatus == REREADING) {
+                        track.num_times_reread += 1
+                    }
+                    track.status = COMPLETED
+                    track.finished_reading_date = System.currentTimeMillis()
+                } else if (track.status != REREADING) { // No change here, status is already not REREADING
+                    track.status = READING
+                    if (track.last_chapter_read == 1.0) {
+                        track.started_reading_date = System.currentTimeMillis()
+                    }
                 }
+                // If track.status was REREADING and it's not completed yet, it remains REREADING
+                // and no specific logic is needed here for num_times_reread for that case.
             }
         }
+        // If the status was already COMPLETED, and didReadChapter is true,
+        // this could be an entry point for starting a reread.
+        // However, your current logic for setting to REREADING seems to be in `setRereadingStatus`
+        // If you want to handle starting a reread from here as well, you'd add logic:
+        // else if (track.status == COMPLETED && didReadChapter) {
+        //    // This implies starting a new reread after completion
+        //    track.status = REREADING
+        //    track.last_chapter_read = 1.0 // Or whatever your logic for starting reread chapter count is
+        //    track.started_reading_date = System.currentTimeMillis()
+        //    // track.num_times_reread is typically incremented when a reread *finishes*,
+        //    // or when explicitly starting a reread after a full completion.
+        //    // The MyAnimeList API handles num_times_reread when transitioning from REREADING to COMPLETED
+        //    // or by explicitly setting it.
+        // }
+
         return api.updateItem(track)
     }
 
