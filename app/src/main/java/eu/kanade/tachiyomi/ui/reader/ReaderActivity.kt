@@ -27,28 +27,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -61,7 +53,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
@@ -91,7 +82,6 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.ReaderData
-import eu.kanade.tachiyomi.data.database.models.toDomainChapter
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
@@ -512,47 +502,9 @@ class ReaderActivity : BaseActivity() {
                 leftHandedVerticalSeekbar -> NavBarType.VerticalLeft
                 else -> NavBarType.VerticalRight
             }
-            val snackbarHostState = remember { SnackbarHostState() }
-            val lifecycleOwner = LocalLifecycleOwner.current
+            // SY <--
 
-            LaunchedEffect(Unit) {
-                lifecycleOwner.lifecycleScope.launch {
-                    viewModel.rereadAskEvent.collect {
-                        val result = snackbarHostState.showSnackbar(
-                            message = stringResource(KMR.strings.reread_confirm),
-                            actionLabel = stringResource(MR.strings.action_ok),
-                            duration = SnackbarDuration.Short,
-                            withDismissAction = true
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            viewModel.confirmReread(viewModel.state.value.currentChapter?.chapter?.toDomainChapter())
-                        }
-                    }
-                }
-            }
-
-            LaunchedEffect(Unit) {
-                lifecycleOwner.lifecycleScope.launch {
-                    viewModel.showSnackbarEvent.collect { messageKey ->
-                        val message = when (messageKey) {
-                            "all_marked_unread" -> stringResource(KMR.strings.all_marked_unread)
-                            else -> messageKey // fallback if passed a raw string
-                        }
-                        snackbarHostState.showSnackbar(
-                            message = message,
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                }
-            }
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
-            }
-
+            // KMK -->
             val externalStoragePermissionNotGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
                 context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                 PackageManager.PERMISSION_DENIED

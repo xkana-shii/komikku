@@ -138,11 +138,4 @@ data class DummyTracker(
     // KMK -->
     override fun hasNotStartedReading(status: Long): Boolean = status == 2L
     // KMK <--
-
-    override suspend fun handleReread(
-        track: eu.kanade.tachiyomi.data.database.models.Track,
-        askUser: suspend () -> Boolean
-    ): Boolean {
-        return true
-    }
 }

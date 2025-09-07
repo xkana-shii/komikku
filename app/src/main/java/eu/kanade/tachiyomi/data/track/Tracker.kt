@@ -97,6 +97,4 @@ interface Tracker {
     // KMK -->
     fun hasNotStartedReading(status: Long): Boolean
     // KMK <--
-
-    suspend fun handleReread(track: Track, askUser: suspend () -> Boolean): Boolean
 }

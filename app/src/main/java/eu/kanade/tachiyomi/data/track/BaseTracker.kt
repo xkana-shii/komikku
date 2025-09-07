@@ -153,9 +153,4 @@ abstract class BaseTracker(
             withUIContext { Injekt.get<Application>().toast(e.message) }
         }
     }
-
-    override suspend fun handleReread(track: Track, askUser: suspend () -> Boolean): Boolean {
-        // Default: not supported
-        return false
-    }
 }
