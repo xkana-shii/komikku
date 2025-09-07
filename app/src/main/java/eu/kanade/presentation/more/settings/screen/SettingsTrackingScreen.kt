@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.track.model.AutoRereadState
 import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.presentation.more.settings.Preference
@@ -143,6 +144,13 @@ object SettingsTrackingScreen : SearchableSettings {
                     .associateWith { stringResource(it.titleRes) }
                     .toPersistentMap(),
                 title = stringResource(MR.strings.pref_auto_update_manga_on_mark_read),
+            ),
+            Preference.PreferenceItem.ListPreference(
+                preference = trackPreferences.autoReread(),
+                entries = AutoRereadState.entries
+                    .associateWith { stringResource(it.titleRes) }
+                    .toPersistentMap(),
+                title = stringResource(KMR.strings.pref_auto_reread),
             ),
             // KMK -->
             Preference.PreferenceItem.SwitchPreference(

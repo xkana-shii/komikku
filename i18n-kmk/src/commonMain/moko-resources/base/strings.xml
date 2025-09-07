@@ -238,5 +238,11 @@
     <string name="dev_options_enabled">Developer options enabled.</string>
     <string name="dev_options_incorrect_password">Incorrect password.</string>
     <string name="dev_options_password_reset">Reset default password string.</string>
+    <string name="pref_auto_reread">Auto Reread</string>
+    <string name="auto_reread_always">Always</string>
+    <string name="auto_reread_ask">Ask</string>
+    <string name="auto_reread_never">Never</string>
+    <string name="reread_confirm">Start rereading tracked services for this manga?</string>
+    <string name="all_marked_unread">All chapters marked as unread</string>
 
 </resources>

@@ -456,6 +456,31 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
         }
     }
 
+    suspend fun setRereadingStatus(track: Track) {
+        val query = """
+        mutation {
+            SaveMediaListEntry(
+                mediaId: ${track.remote_id},
+                status: REPEATING,
+                progress: 0
+            ) {
+                id
+                status
+                repeat
+            }
+        }
+        """
+        val payload = buildJsonObject {
+            put("query", query)
+        }
+        authClient.newCall(
+            POST(
+                API_URL,
+                body = payload.toString().toRequestBody(jsonMime),
+            ),
+        ).awaitSuccess()
+    }
+
     companion object {
         // Registered under KMK's MAL account
         private const val CLIENT_ID = "16801"

@@ -16,9 +16,12 @@ import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.track.interactor.TrackChapter
+import eu.kanade.domain.track.model.AutoRereadState
+import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
+import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.database.models.toDomainChapter
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
@@ -28,6 +31,7 @@ import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -67,7 +71,9 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -110,6 +116,7 @@ import tachiyomi.domain.manga.interactor.GetMergedMangaById
 import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -127,6 +134,8 @@ class ReaderViewModel @JvmOverloads constructor(
     private val downloadProvider: DownloadProvider = Injekt.get(),
     private val tempFileManager: UniFileTempFileManager = Injekt.get(),
     private val imageSaver: ImageSaver = Injekt.get(),
+    private val getTracks: GetTracks = Injekt.get(),
+    private val trackerManager: TrackerManager = Injekt.get(),
     val readerPreferences: ReaderPreferences = Injekt.get(),
     private val basePreferences: BasePreferences = Injekt.get(),
     private val downloadPreferences: DownloadPreferences = Injekt.get(),
@@ -846,9 +855,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private suspend fun updateChapterProgress(
         readerChapter: ReaderChapter,
         page: Page,
-        // SY -->
         hasExtraPage: Boolean,
-        // SY <--
     ) {
         val pageIndex = page.index
         val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
@@ -863,15 +870,28 @@ class ReaderViewModel @JvmOverloads constructor(
         if (!incognitoMode && page.status !is Page.State.Error) {
             readerChapter.chapter.last_page_read = pageIndex
 
+            // --- Begin: Auto Reread Tracker Logic ---
+            if (pageIndex == 0) { // User started reading first page (chapter 1)
+                val tracks = getTracks.await(manga?.id ?: return)
+                for (track in tracks) {
+                    val tracker = trackerManager.get(track.trackerId)
+                    if (tracker != null && track.status == tracker.getCompletionStatus()) {
+                        // Only trigger if status is COMPLETED
+                        // You can add user preference check here if needed
+                        viewModelScope.launchNonCancellable {
+                            tracker.handleReread(track.toDbTrack()) { true } // Always trigger, or ask if needed
+                        }
+                    }
+                }
+            }
+            // --- End: Auto Reread Tracker Logic ---
+
             if (readerChapter.pages?.lastIndex == pageIndex ||
-                // SY -->
                 (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
-                // SY <--
             ) {
                 updateChapterProgressOnComplete(readerChapter)
 
                 // SY -->
-                // Check if syncing is enabled for chapter read:
                 if (isSyncEnabled && syncTriggerOpt.syncOnChapterRead) {
                     SyncDataJob.startNow(Injekt.get<Application>())
                 }
@@ -887,7 +907,6 @@ class ReaderViewModel @JvmOverloads constructor(
             )
 
             // SY -->
-            // Check if syncing is enabled for chapter open:
             if (isSyncEnabled && syncTriggerOpt.syncOnChapterOpen && readerChapter.chapter.last_page_read == 0) {
                 SyncDataJob.startNow(Injekt.get<Application>())
             }
@@ -1487,7 +1506,77 @@ class ReaderViewModel @JvmOverloads constructor(
         val context = Injekt.get<Application>()
 
         viewModelScope.launchNonCancellable {
+            val tracks = getTracks.await(manga.id)
+            val autoRereadSetting = trackPreferences.autoReread().get()
+            var askNeeded = false
+            val eligibleTracks = mutableListOf<Track>()
+            for (track in tracks) {
+                val tracker = trackerManager.get(track.trackerId)
+                if (tracker != null && track.status == tracker.getCompletionStatus()) {
+                    when (autoRereadSetting) {
+                        AutoRereadState.ALWAYS -> {
+                            tracker.handleReread(track.toDbTrack()) { true }
+                        }
+                        AutoRereadState.ASK -> {
+                            askNeeded = true
+                            eligibleTracks.add(track.toDbTrack())
+                        }
+                        AutoRereadState.NEVER -> {
+                            // Do nothing
+                        }
+                    }
+                }
+            }
+            if (askNeeded) {
+                _rereadAskEvent.emit(Unit)
+            } else {
+                // If not ASK, or no eligible tracks, just update as usual
+                for (track in eligibleTracks) {
+                    val tracker = trackerManager.get(track.tracker_id)
+                    if (tracker != null) {
+                        tracker.handleReread(track) { true }
+                    }
+                }
+            }
             trackChapter.await(context, manga.id, readerChapter.chapter.chapter_number.toDouble())
+        }
+    }
+
+    private fun isFirstAvailableChapter(chapter: Chapter): Boolean {
+        val manga = manga ?: return false
+        val chapters = runBlocking { getChaptersByMangaId.await(manga.id, applyFilter = false) }
+        val sortedChapters = chapters.sortedWith(getChapterSort(manga, sortDescending = false))
+        return sortedChapters.firstOrNull()?.id == chapter.id
+    }
+
+    fun confirmReread(currentChapter: Chapter? = null) {
+        viewModelScope.launch {
+            val manga = manga ?: return@launch
+
+            // 1. Mark all chapters as unread
+            val chapters = getChaptersByMangaId.await(manga.id, applyFilter = false)
+            val updates = chapters.map { chapter ->
+                ChapterUpdate(
+                    id = chapter.id,
+                    read = false,
+                    lastPageRead = 0L // Optionally reset last page read
+                )
+            }
+            updateChapter.awaitAll(updates)
+
+            // 2. Handle reread for trackers (if needed, if you also want to restart progress there)
+            val tracks = getTracks.await(manga.id)
+            for (track in tracks) {
+                val tracker = trackerManager.get(track.trackerId)
+                if (tracker != null && track.status == tracker.getCompletionStatus()) {
+                    tracker.handleReread(track.toDbTrack()) { true }
+                }
+            }
+
+            // 3. Only show snackbar if this is the first available chapter
+            if (currentChapter != null && isFirstAvailableChapter(currentChapter)) {
+                _showSnackbarEvent.emit("all_marked_unread")
+            }
         }
     }
 
@@ -1576,6 +1665,13 @@ class ReaderViewModel @JvmOverloads constructor(
             // SY <--
         )
     }
+
+    private val _rereadAskEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val rereadAskEvent = _rereadAskEvent.asSharedFlow()
+
+
+    private val _showSnackbarEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val showSnackbarEvent = _showSnackbarEvent.asSharedFlow()
 
     sealed interface Dialog {
         data object Loading : Dialog
