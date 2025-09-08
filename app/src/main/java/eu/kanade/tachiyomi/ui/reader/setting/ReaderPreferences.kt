@@ -65,6 +65,7 @@ class ReaderPreferences(
 
     // KMK -->
     fun webtoonScaleType() = preferenceStore.getEnum("pref_webtoon_scale_type_key", WebtoonScaleType.FIT)
+    fun longStripGapSmartScale() = preferenceStore.getBoolean("pref_webtoon_smart_scale_long_strip_gap", false)
     // KMK <--
 
     fun zoomStart() = preferenceStore.getInt("pref_zoom_start_key", 1)
@@ -247,10 +248,10 @@ class ReaderPreferences(
         val ratio: Float,
     ) {
         FIT(MR.strings.scale_type_fit_screen, 0f),
-        R16_9(KMR.strings.scale_type_16_9, 9f / 16f),
-        R20_9(KMR.strings.scale_type_20_9, 9f / 20f),
         R4_3(KMR.strings.scale_type_4_3, 3f / 4f),
         R3_2(KMR.strings.scale_type_3_2, 2f / 3f),
+        R16_9(KMR.strings.scale_type_16_9, 9f / 16f),
+        R20_9(KMR.strings.scale_type_20_9, 9f / 20f),
     }
     // KMK <--
 
@@ -295,6 +296,14 @@ class ReaderPreferences(
         val zoomWideImagesAllowedList = listOf(
             SubsamplingScaleImageView.SCALE_TYPE_CENTER_INSIDE,
             SubsamplingScaleImageView.SCALE_TYPE_ORIGINAL_SIZE,
+        )
+
+        val webtoonScaleTypes = listOf(
+            WebtoonScaleType.FIT,
+            WebtoonScaleType.R4_3,
+            WebtoonScaleType.R3_2,
+            WebtoonScaleType.R16_9,
+            WebtoonScaleType.R20_9,
         )
         // KMK <--
 

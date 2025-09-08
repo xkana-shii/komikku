@@ -182,9 +182,13 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         Timber.e("onScale: $scaleFactor")
         // KMK ->
         if (!detector.isQuickScaling && !pinchToZoom) return
-        // KMK <--
 
-        currentScale *= scaleFactor
+        scaleTo(currentScale * scaleFactor)
+    }
+
+    fun scaleTo(scale: Float) {
+        // KMK <--
+        currentScale = scale
         currentScale = currentScale.coerceIn(
             minRate,
             MAX_SCALE_RATE,
