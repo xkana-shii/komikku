@@ -77,8 +77,6 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     }
 
     override suspend fun update(track: Track, didReadChapter: Boolean): Track {
-        val previousStatus = track.status
-
         if (track.status != COMPLETED) {
             if (didReadChapter) {
                 if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
@@ -93,10 +91,6 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
             }
         }
 
-        if (previousStatus == REREADING && track.status == COMPLETED) {
-            track.num_times_reread = track.num_times_reread + 1
-        }
-
         return api.updateItem(track)
     }
 
@@ -109,7 +103,6 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
         return if (remoteTrack != null) {
             track.copyPersonalFrom(remoteTrack)
             track.remote_id = remoteTrack.remote_id
-            track.num_times_reread = remoteTrack.num_times_reread
 
             if (track.status != COMPLETED) {
                 val isRereading = track.status == REREADING
@@ -121,7 +114,6 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
             // Set default fields if it's not found in the list
             track.status = if (hasReadChapters) READING else PLAN_TO_READ
             track.score = 0.0
-            track.num_times_reread = 0
             add(track)
         }
     }

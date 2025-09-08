@@ -34,8 +34,6 @@ interface Track : Serializable {
 
     var private: Boolean
 
-    var num_times_reread: Int
-
     fun copyPersonalFrom(other: Track, copyRemotePrivate: Boolean = true) {
         last_chapter_read = other.last_chapter_read
         score = other.score
