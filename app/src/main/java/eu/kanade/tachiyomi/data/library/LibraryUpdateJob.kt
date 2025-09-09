@@ -193,9 +193,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                     Result.failure()
                 }
             } finally {
-                if (target == Target.CHAPTERS) {
-                    libraryPreferences.lastUpdatedTimestamp().set(Date().time)
-                }
+                libraryPreferences.lastUpdatedTimestamp().set(Date().time)
                 notifier.cancelProgressNotification()
                 // KMK -->
                 libraryUpdateStatus.stop()
