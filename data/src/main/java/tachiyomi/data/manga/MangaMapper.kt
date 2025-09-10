@@ -101,8 +101,10 @@ object MangaMapper {
         chapterFetchedAt: Long,
         lastRead: Long,
         bookmarkCount: Double,
+        fillermarkCount: Double,
         // KMK -->
         bookmarkedReadCount: Long,
+        fillermarkedReadCount: Long,
         // KMK <--
         categories: String,
     ): LibraryManga = LibraryManga(
@@ -140,8 +142,10 @@ object MangaMapper {
         totalChapters = totalCount,
         readCount = readCount.toLong(),
         bookmarkCount = bookmarkCount.toLong(),
+        fillermarkCount = fillermarkCount.toLong(),
         // KMK -->
         bookmarkReadCount = bookmarkedReadCount,
+        fillermarkReadCount = fillermarkedReadCount,
         chapterFlags = chapterFlags,
         // KMK <--
         latestUpload = latestUpload,

@@ -19,6 +19,8 @@ class HistoryRepositoryImpl(
             historyViewQueries.history(
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
                 query,
                 HistoryMapper::mapHistoryWithRelations,
             )
@@ -30,6 +32,8 @@ class HistoryRepositoryImpl(
             historyViewQueries.getLatestHistory(
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
                 HistoryMapper::mapHistoryWithRelations,
             )
         }

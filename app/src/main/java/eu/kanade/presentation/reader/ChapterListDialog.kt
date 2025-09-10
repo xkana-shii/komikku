@@ -42,6 +42,7 @@ fun ChapterListDialog(
     chapters: ImmutableList<ReaderChapterItem>,
     onClickChapter: (Chapter) -> Unit,
     onBookmark: (Chapter) -> Unit,
+    onFillermark: (Chapter) -> Unit,
     dateRelativeTime: Boolean,
     // KMK -->
     onDownloadAction: ((Chapter, ChapterDownloadAction) -> Unit)? = null,
@@ -109,13 +110,14 @@ fun ChapterListDialog(
                     sourceName = null,
                     read = chapterItem.chapter.read,
                     bookmark = chapterItem.chapter.bookmark,
+                    fillermark = chapterItem.chapter.fillermark,
                     selected = false,
                     // KMK -->
                     downloadIndicatorEnabled = onDownloadAction != null,
                     // KMK <--
                     downloadStateProvider = { downloadState },
                     downloadProgressProvider = { progress },
-                    chapterSwipeStartAction = LibraryPreferences.ChapterSwipeAction.ToggleBookmark,
+                    chapterSwipeStartAction = LibraryPreferences.ChapterSwipeAction.ToggleFillermark,
                     chapterSwipeEndAction = LibraryPreferences.ChapterSwipeAction.ToggleBookmark,
                     onLongClick = { /*TODO*/ },
                     onClick = { onClickChapter(chapterItem.chapter) },
@@ -126,8 +128,13 @@ fun ChapterListDialog(
                         null
                     },
                     // KMK <--
-                    onChapterSwipe = {
-                        onBookmark(chapterItem.chapter)
+                    onChapterSwipe = { action ->
+                        if (action == LibraryPreferences.ChapterSwipeAction.ToggleBookmark) {
+                            onBookmark(chapterItem.chapter)
+                        }
+                        if (action == LibraryPreferences.ChapterSwipeAction.ToggleFillermark) {
+                            onFillermark(chapterItem.chapter)
+                        }
                     },
                 )
             }
