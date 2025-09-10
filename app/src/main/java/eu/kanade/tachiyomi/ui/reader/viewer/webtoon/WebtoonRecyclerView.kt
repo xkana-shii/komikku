@@ -180,13 +180,9 @@ class WebtoonRecyclerView @JvmOverloads constructor(
     fun onScale(scaleFactor: Float) {
         // KMK ->
         if (!detector.isQuickScaling && !pinchToZoom) return
-
-        scaleTo(currentScale * scaleFactor)
-    }
-
-    fun scaleTo(scale: Float) {
         // KMK <--
-        currentScale = scale
+
+        currentScale *= scaleFactor
         currentScale = currentScale.coerceIn(
             minRate,
             MAX_SCALE_RATE,

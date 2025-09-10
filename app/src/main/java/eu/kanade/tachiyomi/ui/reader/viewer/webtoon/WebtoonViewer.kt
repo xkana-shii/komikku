@@ -21,7 +21,6 @@ import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
-import exh.util.nullIfZero
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import tachiyomi.core.common.util.system.logcat
@@ -41,7 +40,6 @@ class WebtoonViewer(
     private val tapByPage: Boolean = false,
     // KMK -->
     @ColorInt private val seedColor: Int? = null,
-    private val readerPreferences: ReaderPreferences = Injekt.get(),
     // KMK <--
 ) : Viewer {
 
@@ -91,9 +89,7 @@ class WebtoonViewer(
     var currentPage: Any? = null
 
     private val threshold: Int =
-        // KMK -->
-        readerPreferences
-            // KMK <--
+        Injekt.get<ReaderPreferences>()
             .readerHideThreshold()
             .get()
             .threshold
@@ -176,32 +172,6 @@ class WebtoonViewer(
         // KMK -->
         config.pinchToZoomChangedListener = {
             frame.pinchToZoom = it
-        }
-
-        config.webtoonScaleTypeChangedListener = f@{ scaleType ->
-            if (!isContinuous && !readerPreferences.longStripGapSmartScale().get()) return@f
-
-            recycler.post {
-                if (scaleType == ReaderPreferences.WebtoonScaleType.FIT) {
-                    recycler.scaleTo(1f)
-                    return@post
-                }
-
-                // Call `scaleTo` after the view is loaded and visible
-                val currentWidth = recycler.width.takeIf { it > 0 } ?: activity.window.decorView.width.nullIfZero() ?: return@post
-                val currentHeight = recycler.originalHeight.takeIf { it > 0 } ?: activity.window.decorView.height.nullIfZero() ?: return@post
-
-                val desiredRatio = scaleType.ratio
-                val screenRatio = currentWidth.toFloat() / currentHeight
-                val desiredWidth = currentHeight * desiredRatio
-                val desiredScale = desiredWidth / currentWidth
-
-                if (screenRatio > desiredRatio) {
-                    recycler.scaleTo(desiredScale)
-                } else {
-                    recycler.scaleTo(1f)
-                }
-            }
         }
         // KMK <--
 
