@@ -12,10 +12,10 @@ import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.ui.browse.migration.advanced.process.MigratingManga
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -31,11 +31,11 @@ fun MigrationActionIcon(
     searchManually: () -> Unit,
     migrateNow: () -> Unit,
     copyNow: () -> Unit,
-    verticalOffset: Dp = (-16).dp
+    verticalOffset: Dp = (-16).dp,
 ) {
     Box(
         modifier = modifier,
-        contentAlignment = Alignment.TopCenter
+        contentAlignment = Alignment.TopCenter,
     ) {
         if (result is MigratingManga.SearchResult.Searching) {
             // KMK -->
@@ -48,7 +48,7 @@ fun MigrationActionIcon(
             }
         } else if (result is MigratingManga.SearchResult.Result || result is MigratingManga.SearchResult.NotFound) {
             Column(
-                modifier = Modifier.offset(y = verticalOffset)
+                modifier = Modifier.offset(y = verticalOffset),
             ) {
                 IconButton(onClick = searchManually) {
                     Icon(
