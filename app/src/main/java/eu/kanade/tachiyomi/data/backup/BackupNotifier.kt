@@ -23,6 +23,8 @@ import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class BackupNotifier(private val context: Context) {
 
@@ -32,36 +34,42 @@ class BackupNotifier(private val context: Context) {
     private val backupRestoreStatus: BackupRestoreStatus = Injekt.get()
     // KMK <--
 
-    private val progressNotificationBuilder = context.notificationBuilder(
-        Notifications.CHANNEL_BACKUP_RESTORE_PROGRESS,
-    ) {
-        setSmallIcon(R.drawable.ic_komikku)
-        setColor(ContextCompat.getColor(context, R.color.ic_launcher))
-        setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.komikku))
-        setAutoCancel(false)
-        setOngoing(true)
-        setOnlyAlertOnce(true)
+    private val lock = ReentrantLock()
+
+    private val largeIcon by lazy {
+        BitmapFactory.decodeResource(context.resources, R.drawable.komikku)
     }
 
-    private val completeNotificationBuilder = context.notificationBuilder(
-        Notifications.CHANNEL_BACKUP_RESTORE_COMPLETE,
-    ) {
-        setSmallIcon(R.drawable.ic_komikku)
-        setColor(ContextCompat.getColor(context, R.color.ic_launcher))
-        setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.komikku))
-        setAutoCancel(false)
+    private val completeNotificationBuilder by lazy {
+        context.notificationBuilder(Notifications.CHANNEL_BACKUP_RESTORE_COMPLETE) {
+            setSmallIcon(R.drawable.ic_komikku)
+            setColor(ContextCompat.getColor(context, R.color.ic_launcher))
+            setLargeIcon(largeIcon)
+            setAutoCancel(false)
+        }
     }
+
+    private fun newProgressBuilder(): NotificationCompat.Builder {
+        return context.notificationBuilder(Notifications.CHANNEL_BACKUP_RESTORE_PROGRESS) {
+            setSmallIcon(R.drawable.ic_komikku)
+            setColor(ContextCompat.getColor(context, R.color.ic_launcher))
+            setLargeIcon(largeIcon)
+            setAutoCancel(false)
+            setOngoing(true)
+            setOnlyAlertOnce(true)
+        }
+    }
+
+    private var progressNotificationBuilder: NotificationCompat.Builder? = null
 
     internal fun NotificationCompat.Builder.show(id: Int) {
         context.notify(id, build())
     }
 
     fun showBackupProgress(): NotificationCompat.Builder {
-        val builder = with(progressNotificationBuilder) {
-            setContentTitle(context.stringResource(MR.strings.creating_backup))
-
-            setProgress(0, 0, true)
-        }
+        val builder = newProgressBuilder()
+            .setContentTitle(context.stringResource(MR.strings.creating_backup))
+            .setProgress(0, 0, true)
 
         // KMK -->
         // Avoid calling show() before returning builder for ForegroundInfo.
@@ -105,40 +113,36 @@ class BackupNotifier(private val context: Context) {
         content: String = "",
         progress: Int = 0,
         maxAmount: Int = 100,
-        sync: Boolean = false,
+        isSync: Boolean = false,
     ): NotificationCompat.Builder {
-        val builder = with(progressNotificationBuilder) {
-            val contentTitle = if (sync) {
-                context.stringResource(MR.strings.syncing_library)
-            } else {
-                context.stringResource(MR.strings.restoring_backup)
+        val builder = lock.withLock {
+            val builder = (progressNotificationBuilder ?: newProgressBuilder().also { progressNotificationBuilder = it })
+            with(builder) {
+                setContentTitle(
+                    if (isSync) {
+                        context.stringResource(MR.strings.syncing_library)
+                    } else {
+                        context.stringResource(MR.strings.restoring_backup)
+                    },
+                )
+                setProgress(maxAmount, progress, false)
+                setOnlyAlertOnce(true)
+
+                clearActions()
+                addAction(
+                    R.drawable.ic_close_24dp,
+                    context.stringResource(MR.strings.action_cancel),
+                    NotificationReceiver.cancelRestorePendingBroadcast(context, Notifications.ID_RESTORE_PROGRESS),
+                )
+                if (!preferences.hideNotificationContent().get() && content.isNotEmpty()) {
+                    setContentText(content)
+                } else if (preferences.hideNotificationContent().get()) {
+                    setContentText(null)
+                }
             }
-            setContentTitle(contentTitle)
-
-            if (!preferences.hideNotificationContent().get()) {
-                setContentText(content)
-            }
-
-            setProgress(maxAmount, progress, false)
-            setOnlyAlertOnce(true)
-            // KMK -->
-            backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
-            // KMK <--
-
-            clearActions()
-            addAction(
-                R.drawable.ic_close_24dp,
-                context.stringResource(MR.strings.action_cancel),
-                NotificationReceiver.cancelRestorePendingBroadcast(context, Notifications.ID_RESTORE_PROGRESS),
-            )
+            builder
         }
-
-        // KMK -->
-        // Avoid calling show() before returning builder for ForegroundInfo.
-        // Calling show() here can cause duplicate notifications, as setForegroundSafely will display the notification using the returned builder.
-        // builder.show(Notifications.ID_RESTORE_PROGRESS)
-        // KMK <--
-
+        backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
         return builder
     }
 
@@ -158,9 +162,9 @@ class BackupNotifier(private val context: Context) {
         errorCount: Int,
         path: String?,
         file: String?,
-        sync: Boolean,
+        isSync: Boolean,
     ) {
-        val contentTitle = if (sync) {
+        val contentTitle = if (isSync) {
             context.stringResource(MR.strings.library_sync_complete)
         } else {
             context.stringResource(MR.strings.restore_completed)
