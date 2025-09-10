@@ -1,24 +1,22 @@
 package eu.kanade.presentation.browse.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import eu.kanade.tachiyomi.ui.browse.migration.advanced.process.MigratingManga
-import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -33,11 +31,12 @@ fun MigrationActionIcon(
     searchManually: () -> Unit,
     migrateNow: () -> Unit,
     copyNow: () -> Unit,
+    verticalOffset: Dp = (-16).dp
 ) {
-    var moreExpanded by remember { mutableStateOf(false) }
-    val closeMenu = { moreExpanded = false }
-
-    Box(modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.TopCenter
+    ) {
         if (result is MigratingManga.SearchResult.Searching) {
             // KMK -->
             IconButton(onClick = cancelManga) {
@@ -48,46 +47,34 @@ fun MigrationActionIcon(
                 )
             }
         } else if (result is MigratingManga.SearchResult.Result || result is MigratingManga.SearchResult.NotFound) {
-            IconButton(onClick = { moreExpanded = !moreExpanded }) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = stringResource(MR.strings.action_menu_overflow_description),
-                )
-            }
-            DropdownMenu(
-                expanded = moreExpanded,
-                onDismissRequest = closeMenu,
-                offset = DpOffset(8.dp, (-56).dp),
+            Column(
+                modifier = Modifier.offset(y = verticalOffset)
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(SYMR.strings.action_search_manually)) },
-                    onClick = {
-                        searchManually()
-                        closeMenu()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(SYMR.strings.action_skip_entry)) },
-                    onClick = {
-                        skipManga()
-                        closeMenu()
-                    },
-                )
+                IconButton(onClick = searchManually) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = stringResource(SYMR.strings.action_search_manually),
+                    )
+                }
+                IconButton(onClick = skipManga) {
+                    Icon(
+                        imageVector = Icons.Outlined.SkipNext,
+                        contentDescription = stringResource(SYMR.strings.action_skip_entry),
+                    )
+                }
                 if (result is MigratingManga.SearchResult.Result) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(SYMR.strings.action_migrate_now)) },
-                        onClick = {
-                            migrateNow()
-                            closeMenu()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(SYMR.strings.action_copy_now)) },
-                        onClick = {
-                            copyNow()
-                            closeMenu()
-                        },
-                    )
+                    IconButton(onClick = migrateNow) {
+                        Icon(
+                            imageVector = Icons.Outlined.Done,
+                            contentDescription = stringResource(SYMR.strings.action_migrate_now),
+                        )
+                    }
+                    IconButton(onClick = copyNow) {
+                        Icon(
+                            imageVector = Icons.Outlined.ContentCopy,
+                            contentDescription = stringResource(SYMR.strings.action_copy_now),
+                        )
+                    }
                 }
             }
         }
