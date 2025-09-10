@@ -50,6 +50,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 object SettingsLibraryScreen : SearchableSettings {
+    @Suppress("unused")
     private fun readResolve(): Any = SettingsLibraryScreen
 
     @Composable
@@ -300,6 +301,12 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_sync_manga_on_add),
                     subtitle = stringResource(KMR.strings.pref_sync_manga_on_add_description),
                 ),
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.showEmptyCategoriesSearch(),
+                    title = stringResource(KMR.strings.pref_show_empty_categories_search),
+                ),
+                // KMK <--
             ),
         )
     }

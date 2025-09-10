@@ -30,6 +30,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -253,7 +254,8 @@ class LibraryScreenModel(
                 combine(
                     libraryPreferences.sortingMode().changes(),
                     libraryPreferences.showHiddenCategories().changes(),
-                    ::Pair,
+                    libraryPreferences.showEmptyCategoriesSearch().changes(),
+                    ::Triple,
                 ),
                 combine(
                     state.map { it.filterCategory }.distinctUntilChanged(),
@@ -261,7 +263,7 @@ class LibraryScreenModel(
                     ::Pair,
                 ),
                 // KMK <--
-            ) { (data, groupType, noActiveFilterOrSearch), (sort, showHiddenCategories), (filterCategory, includedCategories) ->
+            ) { (data, groupType, noActiveFilterOrSearch), (sort, showHiddenCategories, showEmptyCategoriesSearch), (filterCategory, includedCategories) ->
                 data.favorites
                     .applyGrouping(
                         data.categories,
@@ -286,7 +288,7 @@ class LibraryScreenModel(
                     // KMK -->
                     .filter {
                         // Hide empty categories if no active filter or search
-                        noActiveFilterOrSearch || it.value.isNotEmpty()
+                        showEmptyCategoriesSearch || noActiveFilterOrSearch || it.value.isNotEmpty()
                     }
                     .let {
                         // Fall back to default category if no categories are present
@@ -944,7 +946,6 @@ class LibraryScreenModel(
                                 manga.ogTitle,
                                 // SY <--
                                 manga.source,
-
                             )
                     }
                     .let { if (amount != null) it.take(amount) else it }
@@ -956,17 +957,25 @@ class LibraryScreenModel(
 
     // SY -->
     fun cleanTitles() {
+        val regex1 = "\\[.*?]".toRegex()
+        val regex2 = "\\(.*?\\)".toRegex()
+        val regex3 = "\\{.*?\\}".toRegex()
+        val regex4 = ".*\\|".toRegex()
         state.value.selectedManga.fastFilter {
             it.isEhBasedManga() ||
                 it.source in nHentaiSourceIds
         }.fastForEach { manga ->
-            val editedTitle = manga.title.replace("\\[.*?]".toRegex(), "").trim().replace("\\(.*?\\)".toRegex(), "").trim().replace("\\{.*?\\}".toRegex(), "").trim().let {
-                if (it.contains("|")) {
-                    it.replace(".*\\|".toRegex(), "").trim()
-                } else {
-                    it
+            val editedTitle = manga.title
+                .replace(regex1, "").trim()
+                .replace(regex2, "").trim()
+                .replace(regex3, "").trim()
+                .let {
+                    if (it.contains("|")) {
+                        it.replace(regex4, "").trim()
+                    } else {
+                        it
+                    }
                 }
-            }
             if (manga.title == editedTitle) return@fastForEach
             val mangaInfo = CustomMangaInfo(
                 id = manga.id,
@@ -1217,7 +1226,9 @@ class LibraryScreenModel(
                             (manga.author?.contains(query, true) == true) ||
                             (manga.artist?.contains(query, true) == true) ||
                             (manga.description?.contains(query, true) == true) ||
-                            (source?.name?.contains(query, true) == true || (source?.lang != null && "${source.name} (${source.lang})".contains(query, true))) ||
+                            // KMK -->
+                            (source?.getNameForMangaInfo()?.contains(query, true) == true) ||
+                            // KMK <--
                             (sourceIdString != null && sourceIdString == query) ||
                             (
                                 loggedInTrackServices.isNotEmpty() &&
@@ -1250,7 +1261,9 @@ class LibraryScreenModel(
                                     (manga.author?.contains(query, true) != true) &&
                                     (manga.artist?.contains(query, true) != true) &&
                                     (manga.description?.contains(query, true) != true) &&
-                                    (source?.name?.contains(query, true) != true || (source?.lang == null || !"${source.name} (${source.lang})".contains(query, true))) &&
+                                    // KMK -->
+                                    (source?.getNameForMangaInfo()?.contains(query, true) != true) &&
+                                    // KMK <--
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
                                         loggedInTrackServices.isEmpty() ||
