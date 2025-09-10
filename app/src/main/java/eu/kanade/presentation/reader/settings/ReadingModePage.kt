@@ -54,7 +54,12 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
 
     val viewer by screenModel.viewerFlow.collectAsState()
     if (viewer is WebtoonViewer) {
-        WebtoonViewerSettings(screenModel)
+        WebtoonViewerSettings(
+            screenModel,
+            // KMK -->
+            readingMode,
+            // KMK <--
+        )
         // SY -->
         WebtoonWithGapsViewerSettings(screenModel)
         // SY <--
@@ -123,10 +128,14 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
         pref = screenModel.preferences.cropBorders(),
     )
 
-    CheckboxItem(
-        label = stringResource(MR.strings.pref_landscape_zoom),
-        pref = screenModel.preferences.landscapeZoom(),
-    )
+    // KMK -->
+    if (imageScaleType in ReaderPreferences.zoomWideImagesAllowedList) {
+        // KMK <--
+        CheckboxItem(
+            label = stringResource(MR.strings.pref_landscape_zoom),
+            pref = screenModel.preferences.landscapeZoom(),
+        )
+    }
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_navigate_pan),
@@ -198,7 +207,12 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
 }
 
 @Composable
-private fun WebtoonViewerSettings(screenModel: ReaderSettingsScreenModel) {
+private fun WebtoonViewerSettings(
+    screenModel: ReaderSettingsScreenModel,
+    // KMK -->
+    readingMode: ReadingMode,
+    // KMK <--
+) {
     val numberFormat = remember { NumberFormat.getPercentInstance() }
 
     HeadingItem(MR.strings.webtoon_viewer)
@@ -211,6 +225,23 @@ private fun WebtoonViewerSettings(screenModel: ReaderSettingsScreenModel) {
         invertMode = webtoonNavInverted,
         onSelectInvertMode = screenModel.preferences.webtoonNavInverted()::set,
     )
+
+    // KMK -->
+    val webtoonScaleTypePref = screenModel.preferences.webtoonScaleType()
+    val webtoonScaleType by webtoonScaleTypePref.collectAsState()
+    val webtoonSmartScaleLongStripGap = screenModel.preferences.longStripGapSmartScale().get()
+    if (readingMode != ReadingMode.CONTINUOUS_VERTICAL || webtoonSmartScaleLongStripGap) {
+        SettingsChipRow(KMR.strings.pref_webtoon_scale_type) {
+            ReaderPreferences.WebtoonScaleType.entries.forEach { scaleType ->
+                FilterChip(
+                    selected = webtoonScaleType == scaleType,
+                    onClick = { webtoonScaleTypePref.set(scaleType) },
+                    label = { Text(stringResource(scaleType.titleRes)) },
+                )
+            }
+        }
+    }
+    // KMK <--
 
     val webtoonSidePadding by screenModel.preferences.webtoonSidePadding().collectAsState()
     SliderItem(
