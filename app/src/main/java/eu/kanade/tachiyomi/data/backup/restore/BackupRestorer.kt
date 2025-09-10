@@ -59,7 +59,7 @@ class BackupRestorer(
     private var restoreProgress = AtomicInteger()
     private val errors = Collections.synchronizedList(mutableListOf<Pair<Date, String>>())
     private val dispatcher = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()).asCoroutineDispatcher()
-    private val MANGA_PROGRESS_BATCH = Runtime.getRuntime().availableProcessors() * 8
+    private val mangaProgressBatch = Runtime.getRuntime().availableProcessors() * 8
 
     /**
      * Mapping of source ID to source name from backup data
@@ -207,7 +207,7 @@ class BackupRestorer(
                     errors.add(Date() to "${it.title} [$sourceName]: ${e.message}")
                 } finally {
                     val currentProgress = restoreProgress.incrementAndGet()
-                    if (currentProgress == restoreAmount || currentProgress % MANGA_PROGRESS_BATCH == 0) {
+                    if (currentProgress == restoreAmount || currentProgress % mangaProgressBatch == 0) {
                         with(notifier) {
                             showRestoreProgress(it.title, currentProgress, restoreAmount, isSync)
                                 .show(Notifications.ID_RESTORE_PROGRESS)
