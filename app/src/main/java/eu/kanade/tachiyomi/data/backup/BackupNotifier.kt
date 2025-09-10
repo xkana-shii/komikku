@@ -34,15 +34,12 @@ class BackupNotifier(private val context: Context) {
     private val backupRestoreStatus: BackupRestoreStatus = Injekt.get()
     // KMK <--
 
-    // MIHON PATCH: ReentrantLock for thread safety
     private val lock = ReentrantLock()
 
-    // MIHON PATCH: large icon lazy property
     private val largeIcon by lazy {
         BitmapFactory.decodeResource(context.resources, R.drawable.komikku)
     }
 
-    // MIHON PATCH: completeNotificationBuilder lazy property
     private val completeNotificationBuilder by lazy {
         context.notificationBuilder(Notifications.CHANNEL_BACKUP_RESTORE_COMPLETE) {
             setSmallIcon(R.drawable.ic_komikku)
@@ -52,7 +49,6 @@ class BackupNotifier(private val context: Context) {
         }
     }
 
-    // MIHON PATCH: progress notification builder generator
     private fun newProgressBuilder(): NotificationCompat.Builder {
         return context.notificationBuilder(Notifications.CHANNEL_BACKUP_RESTORE_PROGRESS) {
             setSmallIcon(R.drawable.ic_komikku)
@@ -64,7 +60,6 @@ class BackupNotifier(private val context: Context) {
         }
     }
 
-    // MIHON PATCH: progress notification builder property
     private var progressNotificationBuilder: NotificationCompat.Builder? = null
 
     internal fun NotificationCompat.Builder.show(id: Int) {
@@ -114,14 +109,12 @@ class BackupNotifier(private val context: Context) {
         }
     }
 
-    // MIHON PATCH: sync -> isSync
     suspend fun showRestoreProgress(
         content: String = "",
         progress: Int = 0,
         maxAmount: Int = 100,
         isSync: Boolean = false,
     ): NotificationCompat.Builder {
-        // Build the notification inside the lock, but call updateProgress outside!
         val builder = lock.withLock {
             val builder = (progressNotificationBuilder ?: newProgressBuilder().also { progressNotificationBuilder = it })
             with(builder) {
@@ -146,14 +139,9 @@ class BackupNotifier(private val context: Context) {
                 } else if (preferences.hideNotificationContent().get()) {
                     setContentText(null)
                 }
-                // KMK -->
-                // Avoid calling show() before returning builder for ForegroundInfo.
-                // builder.show(Notifications.ID_RESTORE_PROGRESS)
-                // KMK <--
             }
             builder
         }
-        // Now outside the lock, safe to call blocking/suspend functions
         backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
         return builder
     }
@@ -169,7 +157,6 @@ class BackupNotifier(private val context: Context) {
         }
     }
 
-    // MIHON PATCH: sync -> isSync
     fun showRestoreComplete(
         time: Long,
         errorCount: Int,

@@ -183,7 +183,6 @@ class MangaRestorer(
         )
     }
 
-    // MIHON PATCH: restoreChapters refactored
     private suspend fun restoreChapters(manga: Manga, backupChapters: List<BackupChapter>) {
         val dbChaptersByUrl = getChaptersByMangaId.await(manga.id)
             .associateBy { it.url }
@@ -211,7 +210,6 @@ class MangaRestorer(
                         chapter.scanlator,
                         chapter.read,
                         chapter.bookmark,
-                        chapter.fillermark,
                         chapter.lastPageRead,
                         chapter.chapterNumber,
                         chapter.sourceOrder,
@@ -230,7 +228,6 @@ class MangaRestorer(
                         scanlator = null,
                         read = chapter.read,
                         bookmark = chapter.bookmark,
-                        fillermark = chapter.fillermark,
                         lastPageRead = chapter.lastPageRead,
                         chapterNumber = null,
                         dateFetch = null,
@@ -252,7 +249,6 @@ class MangaRestorer(
             chapter.copy(
                 id = dbChapter.id,
                 bookmark = chapter.bookmark || dbChapter.bookmark,
-                fillermark = chapter.fillermark || dbChapter.fillermark,
                 read = chapter.read,
                 lastPageRead = chapter.lastPageRead,
                 // KMK -->
@@ -266,7 +262,6 @@ class MangaRestorer(
                 .copy(
                     id = dbChapter.id,
                     bookmark = chapter.bookmark || dbChapter.bookmark,
-                    fillermark = chapter.fillermark || dbChapter.fillermark,
                     sourceOrder = max(chapter.sourceOrder, dbChapter.sourceOrder),
                     dateUpload = min(chapter.dateUpload, dbChapter.dateUpload),
                 )
@@ -283,7 +278,6 @@ class MangaRestorer(
         }
     }
 
-    // MIHON PATCH: forComparison stays the same, but moved for clarity
     private fun Chapter.forComparison() =
         this.copy(
             id = 0L,
