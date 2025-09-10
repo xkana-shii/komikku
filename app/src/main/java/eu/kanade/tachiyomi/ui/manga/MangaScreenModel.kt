@@ -457,7 +457,7 @@ class MangaScreenModel(
             }
 
             val needRefreshInfo = !manga.initialized
-            val needRefreshChapter = chapters.isEmpty()
+            val needRefreshChapter = chapters.isEmpty() || manga.initialized
 
             // Show what we have earlier
             mutableState.update {
