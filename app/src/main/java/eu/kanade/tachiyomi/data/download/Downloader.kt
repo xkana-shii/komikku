@@ -57,6 +57,7 @@ import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.core.metadata.comicinfo.COMIC_INFO_FILE
 import tachiyomi.core.metadata.comicinfo.ComicInfo
+import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.download.service.DownloadPreferences
@@ -389,10 +390,16 @@ class Downloader(
 
             download.status = Download.State.DOWNLOADING
 
-            // Start downloading images, consider we can have downloaded images already
-            // Concurrently do 2 pages at a time
+            val isFastDownloadEnabled = Injekt.get<UnsortedPreferences>().fastDownloadEnabled().get()
+
+            val concurrency = if (isFastDownloadEnabled) {
+                16
+            } else {
+                2
+            }
+
             pageList.asFlow()
-                .flatMapMerge(concurrency = 2) { page ->
+                .flatMapMerge(concurrency = concurrency) { page ->
                     flow {
                         // Fetch image URL if necessary
                         if (page.imageUrl.isNullOrEmpty()) {
