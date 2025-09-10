@@ -122,7 +122,8 @@ class BackupNotifier(private val context: Context) {
         maxAmount: Int = 100,
         isSync: Boolean = false,
     ): NotificationCompat.Builder {
-        lock.withLock {
+        // Build the notification inside the lock, but call updateProgress outside!
+        val builder = lock.withLock {
             val builder = (progressNotificationBuilder ?: newProgressBuilder().also { progressNotificationBuilder = it })
             with(builder) {
                 setContentTitle(
@@ -134,9 +135,6 @@ class BackupNotifier(private val context: Context) {
                 )
                 setProgress(maxAmount, progress, false)
                 setOnlyAlertOnce(true)
-                // KMK -->
-                backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
-                // KMK <--
 
                 clearActions()
                 addAction(
@@ -154,8 +152,11 @@ class BackupNotifier(private val context: Context) {
                 // builder.show(Notifications.ID_RESTORE_PROGRESS)
                 // KMK <--
             }
-            return builder
+            builder
         }
+        // Now outside the lock, safe to call blocking/suspend functions
+        backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
+        return builder
     }
 
     fun showRestoreError(error: String?) {
