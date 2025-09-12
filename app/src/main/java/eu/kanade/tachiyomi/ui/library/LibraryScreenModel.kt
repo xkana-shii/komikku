@@ -1523,7 +1523,7 @@ class LibraryScreenModel(
                         hidden = false,
                         // KMK <--
                     )
-                    category to groupCache[it.id]?.distinct().orEmpty()
+                    category to (groupCache[it.id]?.filter { itemId -> this.any { it.id == itemId } } ?: emptyList())
                 }
                 // KMK <--
             }
