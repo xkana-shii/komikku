@@ -1220,6 +1220,7 @@ class LibraryScreenModel(
                             (manga.description?.contains(query, true) == true) ||
                             // KMK -->
                             (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) == true) ||
+                            (source?.name?.contains(query, true) == true) ||
                             // KMK <--
                             (sourceIdString != null && sourceIdString == query) ||
                             (
@@ -1255,6 +1256,7 @@ class LibraryScreenModel(
                                     (manga.description?.contains(query, true) != true) &&
                                     // KMK -->
                                     (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) != true) &&
+                                    (source?.name?.contains(query, true) != true) &&
                                     // KMK <--
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
