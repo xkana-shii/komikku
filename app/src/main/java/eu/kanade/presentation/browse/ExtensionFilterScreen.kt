@@ -31,6 +31,11 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 
+// KMK: Added for UiPreferences injection
+import eu.kanade.domain.ui.UiPreferences
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
+
 @Composable
 fun ExtensionFilterScreen(
     navigateUp: () -> Unit,
@@ -68,6 +73,7 @@ private fun ExtensionFilterContent(
     onClickLang: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
     LazyColumn(
         contentPadding = contentPadding,
         // KMK -->
@@ -80,25 +86,33 @@ private fun ExtensionFilterContent(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val iconResId = getLanguageIconID(language) ?: R.drawable.globe
-                Icon(
-                    painter = painterResource(id = iconResId),
-                    tint = Color.Unspecified,
-                    contentDescription = language,
-                    modifier = Modifier
-                        .width(48.dp)
-                        .height(32.dp),
-                )
+                val showFlags = uiPreferences.showFlags().get()
+                if (showFlags) {
+                    val iconResId = getLanguageIconID(language) ?: R.drawable.globe
+                    Icon(
+                        painter = painterResource(id = iconResId),
+                        tint = Color.Unspecified,
+                        contentDescription = language,
+                        modifier = Modifier
+                            .width(48.dp)
+                            .height(32.dp),
+                    )
+                }
                 // KMK <--
-                SwitchPreferenceWidget(
-                    modifier = Modifier.animateItem(),
-                    title = LocaleHelper.getSourceDisplayName(language, context) +
+                val title = if (showFlags) {
+                    LocaleHelper.getSourceDisplayName(language, context) +
                         // KMK -->
                         (
                             " (${LocaleHelper.getDisplayName(language)})"
                                 .takeIf { language !in listOf("all", "other") } ?: ""
-                            ),
+                            )
                     // KMK <--
+                } else {
+                    LocaleHelper.getSourceDisplayName(language, context)
+                }
+                SwitchPreferenceWidget(
+                    modifier = Modifier.animateItem(),
+                    title = title,
                     checked = language in state.enabledLanguages,
                     onCheckedChanged = { onClickLang(language) },
                 )

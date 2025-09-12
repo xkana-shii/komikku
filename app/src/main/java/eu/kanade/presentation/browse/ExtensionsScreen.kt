@@ -75,6 +75,10 @@ import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
 import tachiyomi.presentation.core.util.secondaryItemAlpha
 
+import eu.kanade.domain.ui.UiPreferences
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
+
 @Composable
 fun ExtensionScreen(
     state: ExtensionsScreenModel.State,
@@ -369,6 +373,7 @@ private fun ExtensionItemContent(
     installStep: InstallStep,
     modifier: Modifier = Modifier,
 ) {
+    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
     Column(
         modifier = modifier.padding(start = MaterialTheme.padding.medium),
     ) {
@@ -389,11 +394,14 @@ private fun ExtensionItemContent(
                 // KMK -->
                 extension.lang?.let {
                     if (it.isNotEmpty()) {
-                        // KMK <--
                         hasAlreadyShownAnElement = true
+                        val showFlags = uiPreferences.showFlags().get()
                         Text(
-                            text = /* KMK --> */FlagEmoji.getEmojiLangFlag(it) + " " + /* KMK <-- */
-                                LocaleHelper.getSourceDisplayName(it, LocalContext.current),
+                            text = if (showFlags) {
+                                FlagEmoji.getEmojiLangFlag(it) + " " + LocaleHelper.getSourceDisplayName(it, LocalContext.current)
+                            } else {
+                                LocaleHelper.getSourceDisplayName(extension.lang, LocalContext.current)
+                            }
                         )
                     }
                 }
