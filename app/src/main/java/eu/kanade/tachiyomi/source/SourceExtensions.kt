@@ -18,7 +18,7 @@ fun Source.getNameForMangaInfo(
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
     val enabledLanguages = preferences.enabledLanguages().get()
-        .filterNot { it in listOf("all", "other") }
+        .filterNot { it in listOf("none") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
     return when {
