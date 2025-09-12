@@ -511,6 +511,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                 // KMK -->
                 Preference.PreferenceItem.InfoPreference(stringResource(KMR.strings.pref_private_installer_warning)),
                 // KMK <--
+                /*
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.ext_revoke_trust),
                     onClick = {
@@ -518,6 +519,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                         context.toast(MR.strings.requires_app_restart)
                     },
                 ),
+                 */
             ),
         )
     }
