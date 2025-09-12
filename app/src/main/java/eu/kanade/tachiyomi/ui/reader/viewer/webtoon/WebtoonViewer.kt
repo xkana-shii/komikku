@@ -9,6 +9,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.animation.LinearInterpolator
 import androidx.annotation.ColorInt
 import androidx.core.app.ActivityCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
@@ -39,7 +40,7 @@ class WebtoonViewer(
     val isContinuous: Boolean = true,
     private val tapByPage: Boolean = false,
     // KMK -->
-    @ColorInt private val seedColor: Int? = null,
+    @param:ColorInt private val seedColor: Int? = null,
     private val readerPreferences: ReaderPreferences = Injekt.get(),
     // KMK <--
 ) : Viewer {
@@ -181,24 +182,26 @@ class WebtoonViewer(
             if (!isContinuous && !readerPreferences.longStripGapSmartScale().get()) return@f
 
             recycler.post {
-                // Call `scaleTo` after the view is loaded and visible
-                val currentWidth = recycler.width.takeIf { it > 0 } ?: return@post
-                val currentHeight = recycler.originalHeight.takeIf { it > 0 } ?: return@post
+                recycler.doOnLayout doOnLayout@{
+                    val currentWidth = recycler.width
+                    val currentHeight = recycler.originalHeight
+                    if (currentWidth <= 0 || currentHeight <= 0) return@doOnLayout
 
-                if (scaleType == ReaderPreferences.WebtoonScaleType.FIT) {
-                    recycler.scaleTo(1f)
-                    return@post
-                }
+                    if (scaleType == ReaderPreferences.WebtoonScaleType.FIT) {
+                        recycler.scaleTo(1f)
+                        return@doOnLayout
+                    }
 
-                val desiredRatio = scaleType.ratio
-                val screenRatio = currentWidth.toFloat() / currentHeight
-                val desiredWidth = currentHeight * desiredRatio
-                val desiredScale = desiredWidth / currentWidth
+                    val desiredRatio = scaleType.ratio
+                    val screenRatio = currentWidth.toFloat() / currentHeight
+                    val desiredWidth = currentHeight * desiredRatio
+                    val desiredScale = desiredWidth / currentWidth
 
-                if (screenRatio > desiredRatio) {
-                    recycler.scaleTo(desiredScale)
-                } else {
-                    recycler.scaleTo(1f)
+                    if (screenRatio > desiredRatio) {
+                        recycler.scaleTo(desiredScale)
+                    } else {
+                        recycler.scaleTo(1f)
+                    }
                 }
             }
         }
@@ -299,10 +302,6 @@ class WebtoonViewer(
             val pages = chapters.currChapter.pages ?: return
             moveToPage(pages[min(chapters.currChapter.requestedPage, pages.lastIndex)])
             recycler.isVisible = true
-
-            // KMK -->
-            config.webtoonScaleTypeChangedListener?.invoke(config.webtoonScaleType)
-            // KMK <--
         }
     }
 
