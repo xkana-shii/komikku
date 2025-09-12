@@ -274,11 +274,6 @@ object SettingsAppearanceScreen : SearchableSettings {
                     preference = uiPreferences.imagesInDescription(),
                     title = stringResource(MR.strings.pref_display_images_description),
                 ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = uiPreferences.showFlags(),
-                    title = stringResource(KMR.strings.pref_language_flags),
-                    subtitle = stringResource(KMR.strings.pref_language_flags_summary),
-                ),
             ),
         )
     }

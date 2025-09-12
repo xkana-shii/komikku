@@ -50,8 +50,6 @@ class UiPreferences(
 
     fun imagesInDescription() = preferenceStore.getBoolean("pref_render_images_description", true)
 
-    fun showFlags() = preferenceStore.getBoolean("show_flags", true)
-
     // SY -->
 
     fun expandFilters() = preferenceStore.getBoolean("eh_expand_filters", false)
