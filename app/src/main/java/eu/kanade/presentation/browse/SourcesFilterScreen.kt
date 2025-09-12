@@ -27,6 +27,11 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.icons.FlagEmoji
 import tachiyomi.presentation.core.screens.EmptyScreen
 
+// KMK: Added for UiPreferences injection
+import eu.kanade.domain.ui.UiPreferences
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
+
 @Composable
 fun SourcesFilterScreen(
     navigateUp: () -> Unit,
@@ -75,6 +80,7 @@ private fun SourcesFilterContent(
     onClickSources: (Boolean, List<Source>) -> Unit,
     // SY <--
 ) {
+    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
     FastScrollLazyColumn(
         // KMK -->
         // Using modifier instead of contentPadding so we can use stickyHeader
@@ -98,6 +104,7 @@ private fun SourcesFilterContent(
                     language = language,
                     enabled = enabled,
                     onClickItem = onClickLanguage,
+                    uiPreferences = uiPreferences, // <-- pass preferences
                 )
             }
             if (enabled) {
@@ -125,6 +132,7 @@ private fun SourcesFilterContent(
                         onClickItem = {
                             onClickSources(!toggleEnabled, sources)
                         },
+                        uiPreferences = uiPreferences, // <-- pass preferences
                     )
                 }
                 // SY <--
@@ -154,17 +162,25 @@ private fun SourcesFilterHeader(
     language: String,
     enabled: Boolean,
     onClickItem: (String) -> Unit,
+    uiPreferences: UiPreferences, // <-- added
     modifier: Modifier = Modifier,
 ) {
-    SwitchPreferenceWidget(
-        modifier = modifier,
-        title = LocaleHelper.getSourceDisplayName(language, LocalContext.current) +
+    val showFlags = uiPreferences.showFlags().get()
+    val context = LocalContext.current
+    val title = if (showFlags) {
+        LocaleHelper.getSourceDisplayName(language, context) +
             // KMK -->
             (
                 " (${LocaleHelper.getDisplayName(language)} ${FlagEmoji.getEmojiLangFlag(language)})"
                     .takeIf { language !in listOf("all", "other") } ?: " (${FlagEmoji.getEmojiLangFlag(language)})"
-                ),
+                )
         // KMK <--
+    } else {
+        LocaleHelper.getSourceDisplayName(language, context)
+    }
+    SwitchPreferenceWidget(
+        modifier = modifier,
+        title = title,
         checked = enabled,
         onCheckedChanged = { onClickItem(language) },
     )
@@ -179,13 +195,19 @@ fun SourcesFilterToggle(
     language: String,
     // KMK <--
     onClickItem: () -> Unit,
+    uiPreferences: UiPreferences, // <-- added
 ) {
+    val showFlags = uiPreferences.showFlags().get()
+    val title = if (showFlags) {
+        stringResource(SYMR.strings.pref_category_all_sources) +
+            // KMK -->
+            " (${FlagEmoji.getEmojiLangFlag(language)})"
+    } else {
+        stringResource(SYMR.strings.pref_category_all_sources)
+    }
     SwitchPreferenceWidget(
         modifier = modifier,
-        title = stringResource(SYMR.strings.pref_category_all_sources) +
-            // KMK -->
-            " (${FlagEmoji.getEmojiLangFlag(language)})",
-        // KMK <--
+        title = title,
         checked = isEnabled,
         onCheckedChanged = { onClickItem() },
     )

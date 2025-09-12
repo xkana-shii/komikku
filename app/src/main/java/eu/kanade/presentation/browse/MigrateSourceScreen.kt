@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import eu.kanade.domain.ui.UiPreferences
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,6 +40,7 @@ import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.components.AnimatedFloatingSearchBox
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceScreenModel
+import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import exh.source.EHENTAI_EXT_SOURCES
 import exh.source.EXHENTAI_EXT_SOURCES
@@ -232,6 +236,7 @@ private fun MigrateSourceItem(
     onLongClickItem: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
     BaseSourceItem(
         modifier = modifier,
         source = source,
@@ -260,11 +265,16 @@ private fun MigrateSourceItem(
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val showFlags = uiPreferences.showFlags().get()
                     if (sourceLangString != null) {
                         Text(
                             modifier = Modifier.secondaryItemAlpha(),
-                            text = /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
-                                sourceLangString,
+                            text = if (showFlags) {
+                                /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
+                                    sourceLangString
+                            } else {
+                                sourceLangString
+                            },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall,

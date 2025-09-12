@@ -1450,6 +1450,7 @@ class LibraryScreenModel(
     }
 
     // SY -->
+    @Suppress("UnusedFlow")
     private fun List<LibraryItem>.getGroupedMangaItems(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
@@ -1493,6 +1494,7 @@ class LibraryScreenModel(
             }
             LibraryGroup.BY_SOURCE -> {
                 // KMK -->
+                uiPreferences.showFlags().changes()
                 val groupCache = mutableMapOf</* Source.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     groupCache.getOrPut(item.libraryManga.manga.source) { mutableListOf() }.add(item.id)
@@ -1526,7 +1528,7 @@ class LibraryScreenModel(
                         hidden = false,
                         // KMK <--
                     )
-                    category to (groupCache[it.id]?.filter { itemId -> this.any { it.id == itemId } } ?: emptyList())
+                    category to groupCache[it.id]?.distinct().orEmpty()
                 }
                 // KMK <--
             }
