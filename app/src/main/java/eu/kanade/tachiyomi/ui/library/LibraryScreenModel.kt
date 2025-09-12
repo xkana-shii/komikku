@@ -732,8 +732,6 @@ class LibraryScreenModel(
         }
     }
 
-    val uiPreferences = Injekt.get<UiPreferences>()
-
     private fun getLibraryItemPreferencesFlow(): Flow<ItemPreferences> {
         return combine(
             libraryPreferences.downloadBadge().changes(),
@@ -757,7 +755,6 @@ class LibraryScreenModel(
             libraryPreferences.sourceBadge().changes(),
             libraryPreferences.useLangIcon().changes(),
             libraryPreferences.filterCategories().changes(),
-            uiPreferences.showFlags().changes(),
             // KMK <--
         ) {
             ItemPreferences(
@@ -1232,7 +1229,6 @@ class LibraryScreenModel(
                             (manga.description?.contains(query, true) == true) ||
                             // KMK -->
                             (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) == true) ||
-                            (source?.name?.contains(query, true) == true) ||
                             // KMK <--
                             (sourceIdString != null && sourceIdString == query) ||
                             (
@@ -1268,7 +1264,6 @@ class LibraryScreenModel(
                                     (manga.description?.contains(query, true) != true) &&
                                     // KMK -->
                                     (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) != true) &&
-                                    (source?.name?.contains(query, true) != true) &&
                                     // KMK <--
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
@@ -1455,7 +1450,6 @@ class LibraryScreenModel(
     }
 
     // SY -->
-    @Suppress("UnusedFlow")
     private fun List<LibraryItem>.getGroupedMangaItems(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
@@ -1499,7 +1493,6 @@ class LibraryScreenModel(
             }
             LibraryGroup.BY_SOURCE -> {
                 // KMK -->
-                uiPreferences.showFlags().changes()
                 val groupCache = mutableMapOf</* Source.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     groupCache.getOrPut(item.libraryManga.manga.source) { mutableListOf() }.add(item.id)
