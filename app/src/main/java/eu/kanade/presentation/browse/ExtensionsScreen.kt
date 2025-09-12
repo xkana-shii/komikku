@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.components.BaseBrowseItem
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.components.WarningBanner
@@ -73,8 +74,6 @@ import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-
-import eu.kanade.domain.ui.UiPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -395,7 +394,7 @@ private fun ExtensionItemContent(
                                 FlagEmoji.getEmojiLangFlag(it) + " " + LocaleHelper.getSourceDisplayName(it, LocalContext.current)
                             } else {
                                 LocaleHelper.getSourceDisplayName(extension.lang, LocalContext.current)
-                            }
+                            },
                         )
                     }
                 }

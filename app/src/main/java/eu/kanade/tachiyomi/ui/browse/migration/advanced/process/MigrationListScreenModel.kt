@@ -108,7 +108,7 @@ class MigrationListScreenModel(
                                     } else {
                                         null
                                     },
-                                    uiPreferences // <-- pass this as the last argument
+                                    uiPreferences, // <-- pass this as the last argument
                                 ),
                                 parentContext = screenModelScope.coroutineContext,
                             )
