@@ -31,6 +31,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -1516,7 +1517,7 @@ class LibraryScreenModel(
                         hidden = false,
                         // KMK <--
                     )
-                    category to groupCache[it.id]?.distinct().orEmpty()
+                    category to (groupCache[it.id]?.filter { itemId -> this.any { it.id == itemId } } ?: emptyList())
                 }
                 // KMK <--
             }
