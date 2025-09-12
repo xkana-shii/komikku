@@ -630,7 +630,7 @@ private fun MangaScreenSmallImpl(
                             isTabletUi = false,
                             appBarPadding = topPadding,
                             manga = state.manga,
-                            sourceName = remember { state.source.getNameForMangaInfo(state.mergedData?.sources) },
+                            sourceName = remember { state.source.getNameForMangaInfo(state.mergedData?.sources, uiPreferences) },
                             isStubSource = remember { state.source is StubSource },
                             // KMK -->
                             isSourceIncognito = remember { state.source.isIncognitoModeEnabled() },
@@ -1091,7 +1091,7 @@ private fun MangaScreenLargeImpl(
                             isTabletUi = true,
                             appBarPadding = contentPadding.calculateTopPadding(),
                             manga = state.manga,
-                            sourceName = remember { state.source.getNameForMangaInfo(state.mergedData?.sources) },
+                            sourceName = remember { state.source.getNameForMangaInfo(state.mergedData?.sources, uiPreferences) },
                             isStubSource = remember { state.source is StubSource },
                             // KMK -->
                             isSourceIncognito = remember { state.source.isIncognitoModeEnabled() },

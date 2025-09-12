@@ -16,14 +16,14 @@ fun Source.getNameForMangaInfo(
     // SY -->
     mergeSources: List<Source>? = null,
     // SY <--
-    uiPreferences: UiPreferences? = null, // Optional UiPreferences for flag setting
+    uiPreferences: UiPreferences, // Optional UiPreferences for flag setting
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
     val enabledLanguages = preferences.enabledLanguages().get()
         .filterNot { it in listOf("none") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
-    val showFlags = uiPreferences?.showFlags()?.get() ?: true
+    val showFlags = uiPreferences.showFlags().get()
     return when {
         // SY -->
         !mergeSources.isNullOrEmpty() -> getMergedSourcesString(

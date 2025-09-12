@@ -20,6 +20,7 @@ import eu.kanade.domain.manga.interactor.SmartSearchMerge
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
@@ -1206,6 +1207,7 @@ class LibraryScreenModel(
         val sourceIdString = manga.source.takeUnless { it == LocalSource.ID }?.toString()
         val genre = if (checkGenre) manga.genre.orEmpty() else emptyList()
         val context = Injekt.get<Application>()
+        val uiPreferences = Injekt.get<UiPreferences>()
         return queries.all { queryComponent ->
             when (queryComponent.excluded) {
                 false -> when (queryComponent) {
@@ -1215,7 +1217,9 @@ class LibraryScreenModel(
                             (manga.author?.contains(query, true) == true) ||
                             (manga.artist?.contains(query, true) == true) ||
                             (manga.description?.contains(query, true) == true) ||
-                            (source?.name?.contains(query, true) == true) ||
+                            // KMK -->
+                            (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) == true) ||
+                            // KMK <--
                             (sourceIdString != null && sourceIdString == query) ||
                             (
                                 loggedInTrackServices.isNotEmpty() &&
@@ -1248,7 +1252,9 @@ class LibraryScreenModel(
                                     (manga.author?.contains(query, true) != true) &&
                                     (manga.artist?.contains(query, true) != true) &&
                                     (manga.description?.contains(query, true) != true) &&
-                                    (source?.name?.contains(query, true) != true) &&
+                                    // KMK -->
+                                    (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) != true) &&
+                                    // KMK <--
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
                                         loggedInTrackServices.isEmpty() ||
@@ -1438,6 +1444,7 @@ class LibraryScreenModel(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
         val context = preferences.context
+        val uiPreferences = Injekt.get<UiPreferences>()
         return when (groupType) {
             LibraryGroup.BY_TRACK_STATUS -> {
                 val tracks = runBlocking { getTracks.await() }.groupBy { it.mangaId }
@@ -1487,11 +1494,22 @@ class LibraryScreenModel(
                 sources.associate {
                     val category = Category(
                         id = it.id,
-                        name = if (it.id == LocalSource.ID) {
-                            context.stringResource(MR.strings.local_source)
-                        } else {
-                            it.name.ifBlank { it.id.toString() }
-                        },
+                        // TODO: Probably add condition for useLangIcon to `getNameForMangaInfo` too
+                        name = it.getNameForMangaInfo(uiPreferences = uiPreferences),
+//                        if (it.id == LocalSource.ID) {
+//                            context.stringResource(MR.strings.local_source)
+//                        } else {
+//                            // KMK -->
+//                            // FIXME: This useLangIcon should be moved out ouf LibraryItem & subscribe to changes() directly from preferences
+//                            val useLangIcon = groupCache[it.id]?.let { it.firstOrNull()?.let { itemId -> this.firstOrNull { it.id == itemId } } }?.useLangIcon == true
+//                            val langText = if (useLangIcon) FlagEmoji.getEmojiLangFlag(it.lang) else it.lang.uppercase()
+//                            // KMK <--
+//                            it.name.ifBlank { it.id.toString() }.let { sourceName ->
+//                                // KMK -->
+//                                "$sourceName ($langText)"
+//                                // KMK <--
+//                            }
+//                        },
                         order = sources.indexOf(it).toLong(),
                         flags = 0,
                         // KMK -->
