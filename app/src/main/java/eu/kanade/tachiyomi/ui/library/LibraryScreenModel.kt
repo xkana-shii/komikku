@@ -725,8 +725,6 @@ class LibraryScreenModel(
         }
     }
 
-    val uiPreferences = Injekt.get<UiPreferences>()
-
     private fun getLibraryItemPreferencesFlow(): Flow<ItemPreferences> {
         return combine(
             libraryPreferences.downloadBadge().changes(),
@@ -749,7 +747,6 @@ class LibraryScreenModel(
             libraryPreferences.sourceBadge().changes(),
             libraryPreferences.useLangIcon().changes(),
             libraryPreferences.filterCategories().changes(),
-            uiPreferences.showFlags().changes(),
             // KMK <--
         ) {
             ItemPreferences(
