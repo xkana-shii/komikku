@@ -1441,7 +1441,6 @@ class LibraryScreenModel(
     }
 
     // SY -->
-    @Suppress("UnusedFlow")
     private fun List<LibraryItem>.getGroupedMangaItems(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
@@ -1485,7 +1484,6 @@ class LibraryScreenModel(
             }
             LibraryGroup.BY_SOURCE -> {
                 // KMK -->
-                uiPreferences.showFlags().changes()
                 val groupCache = mutableMapOf</* Source.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     groupCache.getOrPut(item.libraryManga.manga.source) { mutableListOf() }.add(item.id)
