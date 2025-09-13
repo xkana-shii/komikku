@@ -23,7 +23,6 @@ import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
-import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.tachiyomi.data.database.models.toDomainChapter
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.DownloadProvider
@@ -82,7 +81,6 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
@@ -193,69 +191,6 @@ class ReaderViewModel @JvmOverloads constructor(
             savedState["page_index"] = value
             field = value
         }
-
-    // KMK -->
-    fun handleDownloadAction(chapter: Chapter, action: ChapterDownloadAction) {
-        when (action) {
-            ChapterDownloadAction.START -> downloadChapter(chapter)
-            ChapterDownloadAction.START_NOW -> downloadManager.startDownloadNow(chapter.id)
-            ChapterDownloadAction.CANCEL -> cancelDownload(chapter.id)
-            ChapterDownloadAction.DELETE -> deleteChapter(chapter)
-        }
-    }
-
-    /**
-     * @param chapter the chapter to download.
-     */
-    private fun downloadChapter(chapter: Chapter) {
-        viewModelScope.launch {
-            val manga = manga?.let {
-                if (it.source == MERGED_SOURCE_ID) {
-                    state.value.mergedManga?.get(chapter.mangaId) ?: return@launch
-                } else {
-                    it
-                }
-            } ?: return@launch
-            downloadManager.downloadChapters(manga, listOf(chapter))
-            downloadManager.startDownloads()
-        }
-    }
-
-    private fun cancelDownload(chapterId: Long) {
-        viewModelScope.launch {
-            val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return@launch
-            downloadManager.cancelQueuedDownloads(listOf(activeDownload))
-            // TODO: updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
-        }
-    }
-
-    private fun deleteChapter(chapter: Chapter) {
-        viewModelScope.launchNonCancellable {
-            try {
-                val manga = if (manga?.source == MERGED_SOURCE_ID) {
-                    state.value.mergedManga?.get(chapter.mangaId) ?: return@launchNonCancellable
-                } else {
-                    manga ?: return@launchNonCancellable
-                }
-                val source = sourceManager.get(manga.source) ?: return@launchNonCancellable
-                downloadManager.deleteChapters(
-                    listOf(chapter),
-                    manga,
-                    source,
-                    ignoreCategoryExclusion = true,
-                )
-//                // KMK -->
-//                if (source.isLocal()) {
-//                    // TODO: Refresh chapters state for Local source
-//                    fetchChaptersFromSource()
-//                }
-//                // KMK <--
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e)
-            }
-        }
-    }
-    // KMK <--
 
     /**
      * The chapter loader for the loaded manga. It'll be null until [manga] is set.
@@ -666,14 +601,37 @@ class ReaderViewModel @JvmOverloads constructor(
 
         val currentChapter = getCurrentChapter()
 
-        return chapterList.map {
+        return chapterList.map { chapter ->
+            val activeDownload = if (manga?.isLocal() == true) {
+                null
+            } else {
+                downloadManager.getQueuedDownloadOrNull(chapter.chapter.id!!)
+            }
+            val downloaded = if (manga?.isLocal() == true) {
+                true
+            } else {
+                downloadManager.isChapterDownloaded(
+                    chapterName = chapter.chapter.name,
+                    chapterScanlator = chapter.chapter.scanlator,
+                    mangaTitle = manga!!.ogTitle,
+                    sourceId = manga!!.source,
+                )
+            }
+            val downloadState = when {
+                activeDownload != null -> activeDownload.status
+                downloaded -> Download.State.DOWNLOADED
+                else -> Download.State.NOT_DOWNLOADED
+            }
+            val downloadProgress = activeDownload?.progress ?: 0
             ReaderChapterItem(
-                chapter = it.chapter.toDomainChapter()!!,
+                chapter = chapter.chapter.toDomainChapter()!!,
                 // KMK -->
-                manga = mangaList[it.chapter.manga_id] ?: manga,
+                manga = mangaList[chapter.chapter.manga_id] ?: manga,
                 // KMK <--
-                isCurrent = it.chapter.id == currentChapter?.chapter?.id,
+                isCurrent = chapter.chapter.id == currentChapter?.chapter?.id,
                 dateFormat = UiPreferences.dateFormat(uiPreferences.dateFormat().get()),
+                downloadState = downloadState,
+                downloadProgress = downloadProgress,
             )
         }
     }
@@ -1111,7 +1069,7 @@ class ReaderViewModel @JvmOverloads constructor(
         viewModelScope.launchNonCancellable {
             updateChapter.await(
                 ChapterUpdate(
-                    id = chapter.id!!,
+                    id = chapter.id!!.toLong(),
                     bookmark = bookmarked,
                 ),
             )
@@ -1257,7 +1215,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val chapter = page.chapter.chapter
         val filenameSuffix = " - ${page.number}"
         return DiskUtil.buildValidFilename(
-            "${manga.title} - ${chapter.name}".takeBytes(MAX_FILE_NAME_BYTES - filenameSuffix.byteSize()),
+            "${manga.title} - ${chapter.name}".takeBytes(DiskUtil.MAX_FILE_NAME_BYTES - filenameSuffix.byteSize()),
         ) + filenameSuffix
     }
 
@@ -1553,7 +1511,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 } else {
                     SetAsCoverResult.AddToLibraryFirst
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 SetAsCoverResult.Error
             }
             eventChannel.send(Event.SetCoverResult(result))
