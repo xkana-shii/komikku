@@ -117,6 +117,7 @@ fun ChapterListDialog(
                     when {
                         manuallyDeleted -> Download.State.NOT_DOWNLOADED to 0
                         // Completed if manager says so, or merged progress hit 100, or disk check confirms
+                        queueStatus == Download.State.ERROR -> Download.State.ERROR to 0
                         queueStatus == Download.State.DOWNLOADED || mergedProgress >= 100 || downloaded ->
                             Download.State.DOWNLOADED to 100
                         // Show ring while queued/downloading or when we have non-zero progress
