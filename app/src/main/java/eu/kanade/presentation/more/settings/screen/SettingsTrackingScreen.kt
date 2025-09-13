@@ -42,6 +42,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.domain.track.service.TrackPreferences
@@ -90,6 +92,7 @@ object SettingsTrackingScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val context = LocalContext.current
+        val navigator = LocalNavigator.currentOrThrow
         val trackPreferences = remember { Injekt.get<TrackPreferences>() }
         val trackerManager = remember { Injekt.get<TrackerManager>() }
         val sourceManager = remember { Injekt.get<SourceManager>() }
@@ -143,6 +146,10 @@ object SettingsTrackingScreen : SearchableSettings {
                     .associateWith { stringResource(it.titleRes) }
                     .toPersistentMap(),
                 title = stringResource(MR.strings.pref_auto_update_manga_on_mark_read),
+            ),
+            Preference.PreferenceItem.TextPreference(
+                title = stringResource(KMR.strings.pref_auto_reread_behavior),
+                onClick = { navigator.push(AutoRereadSettingsScreen) },
             ),
             // KMK -->
             Preference.PreferenceItem.SwitchPreference(
