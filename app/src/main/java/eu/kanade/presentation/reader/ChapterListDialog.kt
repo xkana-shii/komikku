@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AdaptiveSheet
-import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.MangaChapterListItem
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
@@ -43,9 +42,6 @@ fun ChapterListDialog(
     onClickChapter: (Chapter) -> Unit,
     onBookmark: (Chapter) -> Unit,
     dateRelativeTime: Boolean,
-    // KMK -->
-    onDownloadAction: ((Chapter, ChapterDownloadAction) -> Unit)? = null,
-    // KMK <--
 ) {
     val manga by screenModel.mangaFlow.collectAsState()
     val context = LocalContext.current
@@ -110,22 +106,14 @@ fun ChapterListDialog(
                     read = chapterItem.chapter.read,
                     bookmark = chapterItem.chapter.bookmark,
                     selected = false,
-                    // KMK -->
-                    downloadIndicatorEnabled = onDownloadAction != null,
-                    // KMK <--
+                    downloadIndicatorEnabled = false,
                     downloadStateProvider = { downloadState },
                     downloadProgressProvider = { progress },
                     chapterSwipeStartAction = LibraryPreferences.ChapterSwipeAction.ToggleBookmark,
                     chapterSwipeEndAction = LibraryPreferences.ChapterSwipeAction.ToggleBookmark,
                     onLongClick = { /*TODO*/ },
                     onClick = { onClickChapter(chapterItem.chapter) },
-                    // KMK -->
-                    onDownloadClick = if (onDownloadAction != null) {
-                        { action -> onDownloadAction(chapterItem.chapter, action) }
-                    } else {
-                        null
-                    },
-                    // KMK <--
+                    onDownloadClick = null,
                     onChapterSwipe = {
                         onBookmark(chapterItem.chapter)
                     },
