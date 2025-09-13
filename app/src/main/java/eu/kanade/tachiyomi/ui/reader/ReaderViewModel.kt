@@ -9,6 +9,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.domain.chapter.model.toDbChapter
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
 import eu.kanade.domain.manga.model.readerOrientation
@@ -16,6 +17,10 @@ import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.track.interactor.TrackChapter
+import eu.kanade.domain.track.model.AutoRereadResetMode
+import eu.kanade.domain.track.model.AutoTrackState
+import eu.kanade.domain.track.model.toDbTrack
+import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
@@ -27,6 +32,9 @@ import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.anilist.Anilist
+import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
@@ -76,6 +84,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.storage.UniFileTempFileManager
@@ -103,6 +112,8 @@ import tachiyomi.domain.manga.interactor.GetMergedMangaById
 import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.domain.track.interactor.GetTracks
+import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -139,8 +150,16 @@ class ReaderViewModel @JvmOverloads constructor(
     private val getMergedMangaById: GetMergedMangaById = Injekt.get(),
     private val getMergedReferencesById: GetMergedReferencesById = Injekt.get(),
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId = Injekt.get(),
+    private val setReadStatus: SetReadStatus = Injekt.get(),
+    private val trackerManager: TrackerManager = Injekt.get(),
+    private val getTracks: GetTracks = Injekt.get(),
+    private val insertTrack: InsertTrack = Injekt.get(),
     // SY <--
 ) : ViewModel() {
+
+    companion object {
+        private const val DEFAULT_CHAPTER_PROGRESS = 0.0
+    }
 
     private val mutableState = MutableStateFlow(State())
     val state = mutableState.asStateFlow()
@@ -385,6 +404,147 @@ class ReaderViewModel @JvmOverloads constructor(
             currentChapters.unref()
             chapterToDownload?.let {
                 downloadManager.addDownloadsToStartOfQueue(listOf(it))
+            }
+        }
+    }
+
+    private fun maybePromptRereadOnChapterComplete() {
+        val current = state.value
+        if (current.hasShownRereadPrompt) return
+        val manga = current.manga ?: return
+        if (incognitoMode) return
+
+        viewModelScope.launch {
+            try {
+                val tracks = withContext(Dispatchers.IO) { getTracks.await(manga.id) }
+                val malService = trackerManager.myAnimeList
+                val alService = trackerManager.aniList
+                val malTrack = tracks.firstOrNull { it.trackerId == malService.id }
+                val alTrack = tracks.firstOrNull { it.trackerId == alService.id }
+
+                val malCompleted = malTrack != null && malService.isLoggedIn && (malTrack.status == MyAnimeList.COMPLETED)
+                val alCompleted = alTrack != null && alService.isLoggedIn && (alTrack.status == Anilist.COMPLETED)
+
+                val shouldAct = malCompleted || alCompleted
+                if (shouldAct) {
+                    when (trackPreferences.autoRereadBehavior().get()) {
+                        AutoTrackState.ALWAYS -> {
+                            mutableState.update { it.copy(hasShownRereadPrompt = true) }
+                            confirmStartReread()
+                        }
+                        AutoTrackState.ASK -> {
+                            mutableState.update { it.copy(dialog = Dialog.RereadPrompt, hasShownRereadPrompt = true) }
+                        }
+                        AutoTrackState.NEVER -> {
+                            mutableState.update { it.copy(hasShownRereadPrompt = true) }
+                        }
+                    }
+                } else {
+                    mutableState.update { it.copy(hasShownRereadPrompt = true) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e)
+            }
+        }
+    }
+
+    fun cancelRereadPrompt() {
+        closeDialog()
+        mutableState.update { it.copy(hasShownRereadPrompt = true) }
+    }
+
+    /**
+     * Updates a tracker to reread status with the current chapter progress
+     */
+    private suspend fun updateTrackerForReread(
+        track: tachiyomi.domain.track.model.Track,
+        service: eu.kanade.tachiyomi.data.track.Tracker,
+        rereadStatus: Long,
+        chapterProgress: Double,
+    ) {
+        withContext(Dispatchers.IO) {
+            val refreshed = service.refresh(track.toDbTrack()).toDomainTrack(idRequired = true)!!
+            val updated = refreshed.copy(
+                status = rereadStatus,
+                lastChapterRead = chapterProgress,
+                startDate = System.currentTimeMillis(),
+                finishDate = 0L,
+            )
+            service.update(updated.toDbTrack(), didReadChapter = false)
+            insertTrack.await(updated)
+        }
+    }
+
+    fun confirmStartReread() {
+        val manga = manga ?: return
+        closeDialog()
+        mutableState.update { it.copy(hasShownRereadPrompt = true) }
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    // 1) Reset local chapters based on preference
+                    val resetMode = trackPreferences.autoRereadResetMode().get()
+                    val currentChapterId = state.value.currentChapter?.chapter?.id
+                    val orderedUnfiltered = unfilteredChapterList
+                        .sortedWith(getChapterSort(manga, sortDescending = true))
+                    when (resetMode) {
+                        AutoRereadResetMode.RESET_TO_ZERO -> {
+                            // Mark all chapters as unread
+                            val chaptersToUnread = orderedUnfiltered.toTypedArray()
+                            if (chaptersToUnread.isNotEmpty()) {
+                                setReadStatus.await(read = false, chapters = chaptersToUnread)
+                            }
+                        }
+                        AutoRereadResetMode.RESET_TO_CURRENT_CHAPTER -> {
+                            if (currentChapterId != null) {
+                                val currentIndex = orderedUnfiltered.indexOfFirst { it.id == currentChapterId }
+                                if (currentIndex > 0) {
+                                    val chaptersToUnread = orderedUnfiltered
+                                        .take(currentIndex)
+                                        .toTypedArray()
+                                    if (chaptersToUnread.isNotEmpty()) {
+                                        setReadStatus.await(read = false, chapters = chaptersToUnread)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 2) Update trackers to rereading and set progress
+                    val tracks = getTracks.await(manga.id)
+                    val openedChapterProgress = when (trackPreferences.autoRereadResetMode().get()) {
+                        AutoRereadResetMode.RESET_TO_ZERO -> DEFAULT_CHAPTER_PROGRESS
+                        AutoRereadResetMode.RESET_TO_CURRENT_CHAPTER -> state.value.currentChapter?.chapter?.chapter_number?.toDouble() ?: DEFAULT_CHAPTER_PROGRESS
+                    }
+
+                    // Update MyAnimeList tracker
+                    val malTrack = tracks.firstOrNull { it.trackerId == trackerManager.myAnimeList.id }
+                    if (malTrack != null && trackerManager.myAnimeList.isLoggedIn) {
+                        updateTrackerForReread(
+                            track = malTrack,
+                            service = trackerManager.myAnimeList,
+                            rereadStatus = MyAnimeList.REREADING,
+                            chapterProgress = openedChapterProgress,
+                        )
+                    }
+
+                    // Update AniList tracker
+                    val alTrack = tracks.firstOrNull { it.trackerId == trackerManager.aniList.id }
+                    if (alTrack != null && trackerManager.aniList.isLoggedIn) {
+                        updateTrackerForReread(
+                            track = alTrack,
+                            service = trackerManager.aniList,
+                            rereadStatus = Anilist.REREADING,
+                            chapterProgress = openedChapterProgress,
+                        )
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e)
             }
         }
     }
@@ -843,6 +1003,8 @@ class ReaderViewModel @JvmOverloads constructor(
         // SY <--
 
         updateTrackChapterRead(readerChapter)
+        // Trigger MAL reread flow after a chapter is completed
+        maybePromptRereadOnChapterComplete()
         deleteChapterIfNeeded(readerChapter)
 
         val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead().get()
@@ -1471,6 +1633,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val autoScroll: Boolean = false,
         val isAutoScrollEnabled: Boolean = false,
         val ehAutoscrollFreq: String = "",
+        val hasShownRereadPrompt: Boolean = false,
         // SY <--
     ) {
         val currentChapter: ReaderChapter?
@@ -1501,6 +1664,7 @@ class ReaderViewModel @JvmOverloads constructor(
         data object AutoScrollHelp : Dialog
         data object RetryAllHelp : Dialog
         data object BoostPageHelp : Dialog
+        data object RereadPrompt : Dialog
         // SY <--
     }
 
