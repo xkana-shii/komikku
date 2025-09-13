@@ -439,14 +439,37 @@ class ReaderViewModel @JvmOverloads constructor(
 
         val currentChapter = getCurrentChapter()
 
-        return chapterList.map {
+        return chapterList.map { chapter ->
+            val activeDownload = if (manga?.isLocal() == true) {
+                null
+            } else {
+                downloadManager.getQueuedDownloadOrNull(chapter.chapter.id!!)
+            }
+            val downloaded = if (manga?.isLocal() == true) {
+                true
+            } else {
+                downloadManager.isChapterDownloaded(
+                    chapterName = chapter.chapter.name,
+                    chapterScanlator = chapter.chapter.scanlator,
+                    mangaTitle = manga!!.ogTitle,
+                    sourceId = manga!!.source,
+                )
+            }
+            val downloadState = when {
+                activeDownload != null -> activeDownload.status
+                downloaded -> Download.State.DOWNLOADED
+                else -> Download.State.NOT_DOWNLOADED
+            }
+            val downloadProgress = activeDownload?.progress ?: 0
             ReaderChapterItem(
-                chapter = it.chapter.toDomainChapter()!!,
+                chapter = chapter.chapter.toDomainChapter()!!,
                 // KMK -->
-                manga = mangaList[it.chapter.manga_id] ?: manga,
+                manga = mangaList[chapter.chapter.manga_id] ?: manga,
                 // KMK <--
-                isCurrent = it.chapter.id == currentChapter?.chapter?.id,
+                isCurrent = chapter.chapter.id == currentChapter?.chapter?.id,
                 dateFormat = UiPreferences.dateFormat(uiPreferences.dateFormat().get()),
+                downloadState = downloadState,
+                downloadProgress = downloadProgress,
             )
         }
     }
@@ -680,7 +703,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * if setting is enabled and [currentChapter] is queued for download
      */
     private fun cancelQueuedDownloads(currentChapter: ReaderChapter): Download? {
-        return downloadManager.getQueuedDownloadOrNull(currentChapter.chapter.id!!.toLong())?.also {
+        return downloadManager.getQueuedDownloadOrNull(currentChapter.chapter.id!!)?.also {
             downloadManager.cancelQueuedDownloads(listOf(it))
         }
     }
