@@ -54,7 +54,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import logcat.LogPriority
 import mihon.domain.chapter.interactor.FilterChaptersForDownload
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.getAndSet
@@ -103,6 +102,29 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
+import java.util.concurrent.Executors
+import kotlinx.coroutines.asCoroutineDispatcher
+import androidx.core.content.edit
+
+private const val PREFS_PROGRESS = "library_update_progress"
+private const val PROGRESS_KEY = "processed_manga_ids"
+
+private fun getProcessedMangaIds(context: Context): Set<Long> {
+    val prefs = context.getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    return prefs.getStringSet(PROGRESS_KEY, emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
+}
+
+private fun addProcessedMangaId(context: Context, mangaId: Long) {
+    val prefs = context.getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    val mutableSet = prefs.getStringSet(PROGRESS_KEY, emptySet())!!.toMutableSet()
+    mutableSet.add(mangaId.toString())
+    prefs.edit { putStringSet(PROGRESS_KEY, mutableSet) }
+}
+
+private fun clearProcessedMangaIds(context: Context) {
+    val prefs = context.getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    prefs.edit {remove(PROGRESS_KEY)}
+}
 
 @OptIn(ExperimentalAtomicApi::class)
 class LibraryUpdateJob(private val context: Context, workerParams: WorkerParameters) :
@@ -140,6 +162,10 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     // KMK <--
 
     private var mangaToUpdate: List<LibraryManga> = mutableListOf()
+
+    // Dedicated thread pool for library updates
+    private val updateThreadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+    private val updateDispatcher = updateThreadPool.asCoroutineDispatcher()
 
     override suspend fun doWork(): Result {
         if (tags.contains(WORK_NAME_AUTO)) {
@@ -188,20 +214,13 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                     Target.PUSH_FAVORITES -> pushFavorites()
                     // SY <--
                 }
+
+                updateThreadPool.shutdown() // Shutdown the dedicated thread pool after work is completed
+                clearProcessedMangaIds(context) // Clear resume progress after successful update
                 Result.success()
-            } catch (e: Exception) {
-                if (e is CancellationException) {
-                    // Assume success although cancelled
-                    Result.success()
-                } else {
-                    logcat(LogPriority.ERROR, e)
-                    Result.failure()
-                }
-            } finally {
-                notifier.cancelProgressNotification()
-                // KMK -->
-                libraryUpdateStatus.stop()
-                // KMK <--
+            } catch (_: Exception) {
+                updateThreadPool.shutdown()
+                Result.failure()
             }
         }
     }
@@ -250,6 +269,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             return
         }
         // KMK <--
+
+        // Resume feature: filter out manga that were already processed in previous run
+        val processedIds = getProcessedMangaIds(context)
 
         val listToUpdate = if (categoryId != -1L) {
             libraryManga.filter { categoryId in it.categories }
@@ -314,6 +336,8 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             // SY -->
             .distinctBy { it.manga.id }
             // SY <--
+            // Resume feature: skip manga that were already processed
+            .filter { it.manga.id !in processedIds }
             .filter {
                 when {
                     it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {
@@ -402,7 +426,8 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
         val fetchWindow = fetchInterval.getWindow(ZonedDateTime.now())
 
-        coroutineScope {
+        // Use custom dispatcher for parallel updates
+        kotlinx.coroutines.withContext(updateDispatcher) {
             mangaToUpdate.groupBy { it.manga.source }
                 // SY -->
                 .filterNot { it.key in LIBRARY_UPDATE_EXCLUDED_SOURCES }
@@ -479,6 +504,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                                         }
                                         writeErrorToDB(manga to errorMessage)
                                         failedUpdates.add(manga to errorMessage)
+                                    } finally {
+                                        // Resume feature: mark manga as processed regardless of success or error
+                                        addProcessedMangaId(context, manga.id)
                                     }
                                 }
                             }
