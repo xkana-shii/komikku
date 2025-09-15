@@ -15,7 +15,6 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.DiskUtil.NOMEDIA_FILE
 import eu.kanade.tachiyomi.util.storage.saveTo
-import exh.source.MERGED_SOURCE_ID
 import exh.source.isEhBasedSource
 import exh.util.DataSaver
 import exh.util.DataSaver.Companion.getImage
@@ -159,6 +158,14 @@ class Downloader(
             .filter { it.status == Download.State.DOWNLOADING }
             .forEach { it.status = Download.State.ERROR }
 
+        // If stopping with a reason (e.g., no network / only Wi‑Fi), or if any item is already in ERROR,
+        // propagate ERROR to remaining queued items so the UI reflects the global failure.
+        if (reason != null || queueState.value.any { it.status == Download.State.ERROR }) {
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
+        }
+
         if (reason != null) {
             notifier.onWarning(reason)
             return
@@ -260,6 +267,10 @@ class Downloader(
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e)
             notifier.onError(e.message)
+            // Also mark queued items as ERROR so UI reflects global failure (e.g., no internet)
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
             stop()
         }
     }
@@ -283,11 +294,6 @@ class Downloader(
         if (chapters.isEmpty()) return
 
         val source = sourceManager.get(manga.source) as? HttpSource ?: return
-
-        // KMK -->
-        if (source.id == MERGED_SOURCE_ID) return
-        // KMK <--
-
         val wasEmpty = queueState.value.isEmpty()
         val chaptersToQueue = chapters.asSequence()
             // Filter out those already downloaded.
@@ -337,10 +343,6 @@ class Downloader(
      * @param download the chapter to be downloaded.
      */
     private suspend fun downloadChapter(download: Download) {
-        // KMK -->
-        if (download.source.id == MERGED_SOURCE_ID) return
-        // KMK <--
-
         val mangaDir = provider.getMangaDir(/* SY --> */ download.manga.ogTitle /* SY <-- */, download.source).getOrElse { e ->
             download.status = Download.State.ERROR
             notifier.onError(e.message, download.chapter.name, download.manga.title, download.manga.id)
