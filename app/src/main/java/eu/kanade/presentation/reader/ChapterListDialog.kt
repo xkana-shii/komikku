@@ -27,8 +27,6 @@ import eu.kanade.tachiyomi.util.lang.toRelativeString
 import exh.metadata.MetadataUtil
 import exh.source.isEhBasedManga
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.source.service.SourceManager
@@ -62,6 +60,8 @@ fun ChapterListDialog(
         }
     }
     val downloadProgressMap = remember { mutableStateMapOf<Long, Int>() }
+    // Track manual deletions
+    val manuallyDeletedMap = remember { mutableStateMapOf<Long, Boolean>() }
 
     // Observe download progress
     LaunchedEffect(Unit) {
@@ -97,8 +97,9 @@ fun ChapterListDialog(
                 items = chapters,
                 key = { "chapter-list-${it.chapter.id}" },
             ) { chapterItem ->
-                val activeDownload = downloadQueueState.find { it.chapter.id == chapterItem.chapter.id }
-                val progress = activeDownload?.progress ?: downloadProgressMap[chapterItem.chapter.id] ?: 0
+                // Observe per-ID progress
+                val observedProgress = downloadProgressMap[chapterItem.chapter.id] ?: 0
+                val manuallyDeleted = manuallyDeletedMap[chapterItem.chapter.id] == true
                 val downloaded = if (manga?.isLocal() == true) {
                     true
                 } else {
@@ -164,8 +165,14 @@ fun ChapterListDialog(
                     onClick = { onClickChapter(chapterItem.chapter) },
                     onDownloadClick = { action ->
                         when (action) {
-                            ChapterDownloadAction.START -> downloadManager.downloadChapters(chapterItem.manga, listOf(chapterItem.chapter))
-                            ChapterDownloadAction.START_NOW -> downloadManager.startDownloadNow(chapterItem.chapter.id)
+                            ChapterDownloadAction.START -> {
+                                manuallyDeletedMap.remove(chapterItem.chapter.id)
+                                downloadManager.downloadChapters(chapterItem.manga, listOf(chapterItem.chapter))
+                            }
+                            ChapterDownloadAction.START_NOW -> {
+                                manuallyDeletedMap.remove(chapterItem.chapter.id)
+                                downloadManager.startDownloadNow(chapterItem.chapter.id)
+                            }
                             ChapterDownloadAction.CANCEL -> {
                                 val queued = downloadQueueState.find { it.chapter.id == chapterItem.chapter.id }
                                 if (queued != null) {
@@ -179,6 +186,7 @@ fun ChapterListDialog(
                                 if (source != null) {
                                     downloadManager.deleteChapters(listOf(chapterItem.chapter), chapterItem.manga, source)
                                     downloadProgressMap.remove(chapterItem.chapter.id)
+                                    manuallyDeletedMap[chapterItem.chapter.id] = true
                                 }
                             }
                         }
