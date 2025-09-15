@@ -9,8 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -51,7 +53,9 @@ fun ChapterListDialog(
     val state = rememberLazyListState(chapters.indexOfFirst { it.isCurrent }.coerceAtLeast(0))
     val downloadManager: DownloadManager = remember { Injekt.get() }
     val downloadQueueState by downloadManager.queueState.collectAsState()
-    val downloadStates by remember(downloadQueueState) {
+    val isDownloaderRunning by downloadManager.isDownloaderRunning.collectAsState(initial = false)
+    var statusVersion by remember { mutableIntStateOf(0) }
+    val downloadStates by remember(downloadQueueState, statusVersion) {
         androidx.compose.runtime.derivedStateOf {
             downloadQueueState.associate { it.chapter.id to (it.status to it.progress) }
         }
@@ -67,6 +71,7 @@ fun ChapterListDialog(
                 downloadProgressMap[download.chapter.id] = download.progress
                 // Any progress update means it's not manually deleted anymore
                 manuallyDeletedMap.remove(download.chapter.id)
+                statusVersion++
             }
     }
     // Observe download status to force completion state and progress=100
@@ -114,12 +119,16 @@ fun ChapterListDialog(
 
                     when {
                         manuallyDeleted -> Download.State.NOT_DOWNLOADED to 0
-                        // Completed if manager says so, or merged progress hit 100, or disk check confirms
+                        // Explicitly show error state when downloader reports it
                         queueStatus == Download.State.ERROR -> Download.State.ERROR to 0
+                        // If queue shows QUEUE but downloader service isn't running, treat as error (e.g., offline)
+                        (!isDownloaderRunning && queueStatus == Download.State.QUEUE) -> Download.State.ERROR to 0
+                        // Completed if manager says so, or merged progress hit 100, or disk check confirms
                         queueStatus == Download.State.DOWNLOADED || mergedProgress >= 100 || downloaded ->
                             Download.State.DOWNLOADED to 100
                         // Show ring while queued/downloading or when we have non-zero progress
-                        queueStatus == Download.State.QUEUE || queueStatus == Download.State.DOWNLOADING || mergedProgress in 1..99 ->
+                        // Only show progress ring if actually in queue or downloading
+                        queueStatus == Download.State.QUEUE || queueStatus == Download.State.DOWNLOADING ->
                             Download.State.DOWNLOADING to mergedProgress
 
                         else -> Download.State.NOT_DOWNLOADED to 0

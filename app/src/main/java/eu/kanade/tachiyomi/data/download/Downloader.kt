@@ -159,6 +159,14 @@ class Downloader(
             .filter { it.status == Download.State.DOWNLOADING }
             .forEach { it.status = Download.State.ERROR }
 
+        // If stopping with a reason (e.g., no network / only Wi‑Fi), or if any item is already in ERROR,
+        // propagate ERROR to remaining queued items so the UI reflects the global failure.
+        if (reason != null || queueState.value.any { it.status == Download.State.ERROR }) {
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
+        }
+
         if (reason != null) {
             notifier.onWarning(reason)
             return
@@ -260,6 +268,10 @@ class Downloader(
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e)
             notifier.onError(e.message)
+            // Also mark queued items as ERROR so UI reflects global failure (e.g., no internet)
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
             stop()
         }
     }
