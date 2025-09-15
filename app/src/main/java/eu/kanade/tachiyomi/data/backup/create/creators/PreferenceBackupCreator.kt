@@ -29,11 +29,12 @@ class PreferenceBackupCreator(
 
     fun createSource(includePrivatePreferences: Boolean): List<BackupSourcePreferences> {
         return sourceManager.getCatalogueSources()
-            .filterIsInstance<ConfigurableSource>()
-            .map {
+            .map { source ->
+                val key = "source_${source.id}"
+                val prefs = sourcePreferences(key).all
                 BackupSourcePreferences(
-                    it.preferenceKey(),
-                    it.sourcePreferences().all.toBackupPreferences()
+                    key,
+                    prefs.toBackupPreferences()
                         .withPrivatePreferences(includePrivatePreferences),
                 )
             }
