@@ -291,24 +291,6 @@ class ReaderViewModel @JvmOverloads constructor(
                 chapterId = currentChapter.chapter.id!!
             }
             .launchIn(viewModelScope)
-
-        // SY -->
-        state.mapLatest { it.ehAutoscrollFreq }
-            .distinctUntilChanged()
-            .drop(1)
-            .onEach { text ->
-                val parsed = text.toDoubleOrNull()
-
-                if (parsed == null || parsed <= 0 || parsed > 9999) {
-                    readerPreferences.autoscrollInterval().set(-1f)
-                    mutableState.update { it.copy(isAutoScrollEnabled = false) }
-                } else {
-                    readerPreferences.autoscrollInterval().set(parsed.toFloat())
-                    mutableState.update { it.copy(isAutoScrollEnabled = true) }
-                }
-            }
-            .launchIn(viewModelScope)
-        // SY <--
     }
 
     override fun onCleared() {
@@ -370,7 +352,6 @@ class ReaderViewModel @JvmOverloads constructor(
                         emptyMap()
                     }
                     val relativeTime = uiPreferences.relativeTime().get()
-                    val autoScrollFreq = readerPreferences.autoscrollInterval().get()
                     // SY <--
                     mutableState.update {
                         it.copy(
@@ -379,13 +360,6 @@ class ReaderViewModel @JvmOverloads constructor(
                             meta = metadata,
                             mergedManga = mergedManga,
                             dateRelativeTime = relativeTime,
-                            ehAutoscrollFreq = if (autoScrollFreq == -1f) {
-                                ""
-                            } else {
-                                autoScrollFreq.toString()
-                            },
-                            isAutoScrollEnabled = autoScrollFreq != -1f,
-                            // SY <--
                         )
                     }
                     if (chapterId == -1L) chapterId = initialChapterId
@@ -1014,10 +988,6 @@ class ReaderViewModel @JvmOverloads constructor(
         mutableState.update { it.copy(doublePages = doublePages) }
     }
 
-    fun openAutoScrollHelpDialog() {
-        mutableState.update { it.copy(dialog = Dialog.AutoScrollHelp) }
-    }
-
     fun openBoostPageHelp() {
         mutableState.update { it.copy(dialog = Dialog.BoostPageHelp) }
     }
@@ -1026,13 +996,6 @@ class ReaderViewModel @JvmOverloads constructor(
         mutableState.update { it.copy(dialog = Dialog.RetryAllHelp) }
     }
 
-    fun toggleAutoScroll(enabled: Boolean) {
-        mutableState.update { it.copy(autoScroll = enabled) }
-    }
-
-    fun setAutoScrollFrequency(frequency: String) {
-        mutableState.update { it.copy(ehAutoscrollFreq = frequency) }
-    }
     // SY <--
 
     fun showLoadingDialog() {
@@ -1373,9 +1336,6 @@ class ReaderViewModel @JvmOverloads constructor(
         val indexChapterToShift: Long? = null,
         val doublePages: Boolean = false,
         val dateRelativeTime: Boolean = true,
-        val autoScroll: Boolean = false,
-        val isAutoScrollEnabled: Boolean = false,
-        val ehAutoscrollFreq: String = "",
         // SY <--
     ) {
         val currentChapter: ReaderChapter?
@@ -1403,7 +1363,6 @@ class ReaderViewModel @JvmOverloads constructor(
         ) : Dialog
 
         // SY -->
-        data object AutoScrollHelp : Dialog
         data object RetryAllHelp : Dialog
         data object BoostPageHelp : Dialog
         // SY <--
