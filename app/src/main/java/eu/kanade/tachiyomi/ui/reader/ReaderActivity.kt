@@ -565,12 +565,6 @@ class ReaderActivity : BaseActivity() {
                 // SY -->
                 isExhToolsVisible = state.ehUtilsVisible,
                 onSetExhUtilsVisibility = viewModel::showEhUtils,
-                isAutoScroll = state.autoScroll,
-                isAutoScrollEnabled = state.isAutoScrollEnabled,
-                onToggleAutoscroll = viewModel::toggleAutoScroll,
-                autoScrollFrequency = state.ehAutoscrollFreq,
-                onSetAutoScrollFrequency = viewModel::setAutoScrollFrequency,
-                onClickAutoScrollHelp = viewModel::openAutoScrollHelpDialog,
                 onClickRetryAll = ::exhRetryAll,
                 onClickRetryAllHelp = viewModel::openRetryAllHelp,
                 onClickBoostPage = ::exhBoostPage,
@@ -713,16 +707,6 @@ class ReaderActivity : BaseActivity() {
                     )
                 }
                 // SY -->
-                ReaderViewModel.Dialog.AutoScrollHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    title = { Text(text = stringResource(SYMR.strings.eh_autoscroll_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_autoscroll_help_message)) },
-                )
                 ReaderViewModel.Dialog.BoostPageHelp -> AlertDialog(
                     onDismissRequest = onDismissRequest,
                     confirmButton = {
@@ -795,7 +779,6 @@ class ReaderActivity : BaseActivity() {
         // Set initial visibility
         setMenuVisibility(viewModel.state.value.menuVisible)
 
-        enableExhAutoScroll()
     }
 
     // KMK -->
@@ -813,39 +796,6 @@ class ReaderActivity : BaseActivity() {
                 ?.let { ComposeColor(it) }
     }
     // KMK <--
-
-    private fun enableExhAutoScroll() {
-        readerPreferences.autoscrollInterval().changes()
-            .combine(viewModel.state.map { it.autoScroll }.distinctUntilChanged()) { interval, enabled ->
-                interval.toDouble() to enabled
-            }.mapLatest { (intervalFloat, enabled) ->
-                if (enabled) {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        val interval = intervalFloat.seconds
-                        while (true) {
-                            if (!viewModel.state.value.menuVisible) {
-                                viewModel.state.value.viewer.let { v ->
-                                    when (v) {
-                                        is PagerViewer -> v.moveToNext()
-                                        is WebtoonViewer -> {
-                                            if (readerPreferences.smoothAutoScroll().get()) {
-                                                v.linearScroll(interval)
-                                            } else {
-                                                v.scrollDown()
-                                            }
-                                        }
-                                    }
-                                }
-                                delay(interval)
-                            } else {
-                                delay(100)
-                            }
-                        }
-                    }
-                }
-            }
-            .launchIn(lifecycleScope)
-    }
 
     private fun exhRetryAll() {
         var retried = 0

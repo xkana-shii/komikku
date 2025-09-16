@@ -180,10 +180,6 @@ class ReaderPreferences(
 
     fun cacheSize() = preferenceStore.getString("eh_cache_size", "75")
 
-    fun autoscrollInterval() = preferenceStore.getFloat("eh_util_autoscroll_interval", 3f)
-
-    fun smoothAutoScroll() = preferenceStore.getBoolean("smooth_auto_scroll", true)
-
     fun preserveReadingPosition() = preferenceStore.getBoolean("eh_preserve_reading_position", false)
 
     fun preloadSize() = preferenceStore.getInt("eh_preload_size", 10)
