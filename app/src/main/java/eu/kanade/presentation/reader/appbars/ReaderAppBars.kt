@@ -293,6 +293,10 @@ fun ReaderAppBars(
                     modifier = modifierWithInsetsPadding,
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                 ) {
+                    Automation(
+                        readerPreferences = readerPreferences,
+                        viewer = viewer,
+                    )
                     if (navBarType == NavBarType.Bottom) {
                         ChapterNavigator(
                             isRtl = isRtl,
@@ -331,10 +335,6 @@ fun ReaderAppBars(
                         onClickShiftPage = onClickShiftPage,
                         // SY <--
                     )
-                    Automation(
-                    readerPreferences = readerPreferences,
-                    viewer = viewer,
-                )
                 }
             }
         }
