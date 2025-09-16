@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
-import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.reader.components.Automation
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
@@ -335,26 +334,6 @@ fun ReaderAppBars(
                     Automation(
                     readerPreferences = readerPreferences,
                     viewer = viewer,
-                )
-                ChapterNavigator(
-                    isRtl = isRtl,
-                    onNextChapter = onNextChapter,
-                    enabledNext = enabledNext,
-                    onPreviousChapter = onPreviousChapter,
-                    enabledPrevious = enabledPrevious,
-                    currentPage = currentPage,
-                    totalPages = totalPages,
-                    onPageIndexChange = onPageIndexChange,
-                )
-                BottomReaderBar(
-                    backgroundColor = backgroundColor,
-                    readingMode = readingMode,
-                    onClickReadingMode = onClickReadingMode,
-                    orientation = orientation,
-                    onClickOrientation = onClickOrientation,
-                    cropEnabled = cropEnabled,
-                    onClickCropBorder = onClickCropBorder,
-                    onClickSettings = onClickSettings,
                 )
                 }
             }
