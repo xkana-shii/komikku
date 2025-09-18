@@ -133,6 +133,7 @@ class UpdatesScreenModel(
                 val downloaded = downloadManager.isChapterDownloaded(
                     update.chapterName,
                     update.scanlator,
+                    update.chapterUrl,
                     // SY -->
                     update.ogMangaTitle,
                     // SY <--
