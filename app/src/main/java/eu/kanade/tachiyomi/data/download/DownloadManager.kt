@@ -462,7 +462,15 @@ class DownloadManager(
      * @param newChapter the target chapter with the new name.
      */
     suspend fun renameChapter(source: Source, manga: Manga, oldChapter: Chapter, newChapter: Chapter) {
-        val oldNames = provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, oldChapter.url)
+        // Get all possible old folder names, with and without URL (for migration)
+        val oldNames = buildList {
+            addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, oldChapter.url))
+            // For migration: also try without URL if not already included
+            if (oldChapter.url.isNullOrEmpty()) {
+                addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, ""))
+            }
+        }
+
         val mangaDir = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source).getOrElse { e ->
             logcat(LogPriority.ERROR, e) { "Manga download folder doesn't exist. Skipping renaming after source sync" }
             return

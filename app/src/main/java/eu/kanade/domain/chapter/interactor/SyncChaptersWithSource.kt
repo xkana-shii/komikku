@@ -114,24 +114,24 @@ class SyncChaptersWithSource(
                 }
                 newChapters.add(toAddChapter)
             } else {
+                // Always check and rename old-format downloads regardless of metadata changes
+                val shouldRenameChapter = downloadManager.isChapterDownloaded(
+                    dbChapter.name,
+                    dbChapter.scanlator,
+                    dbChapter.url,
+                    manga.ogTitle,
+                    manga.source,
+                ) &&
+                    downloadProvider.isChapterDirNameChanged(
+                        dbChapter.copy(url = ""), // simulate legacy download (no URL hash)
+                        chapter
+                    )
+
+                if (shouldRenameChapter) {
+                    downloadManager.renameChapter(source, manga, dbChapter.copy(url = ""), chapter)
+                }
+
                 if (shouldUpdateDbChapter.await(dbChapter, chapter)) {
-                    val shouldRenameChapter = downloadProvider.isChapterDirNameChanged(dbChapter, chapter) &&
-                        downloadManager.isChapterDownloaded(
-                            dbChapter.name,
-                            dbChapter.scanlator,
-                            dbChapter.url,
-                            // SY -->
-                            // manga.title,
-                            manga.ogTitle,
-                            // SY <--
-
-                            manga.source,
-                        )
-
-                    if (shouldRenameChapter) {
-                        downloadManager.renameChapter(source, manga, dbChapter, chapter)
-                    }
-
                     var toChangeChapter = dbChapter.copy(
                         name = chapter.name,
                         chapterNumber = chapter.chapterNumber,
