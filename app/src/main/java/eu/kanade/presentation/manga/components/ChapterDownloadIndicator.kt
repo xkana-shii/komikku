@@ -235,8 +235,7 @@ private fun ErrorIndicator(
             .commonClickable(
                 enabled = enabled,
                 hapticFeedback = LocalHapticFeedback.current,
-                onLongClick = { onClick(ChapterDownloadAction.START) },
-                // KMK: Show menu on click
+                onLongClick = { isMenuExpanded = true },
                 onClick = { isMenuExpanded = true },
             ),
         contentAlignment = Alignment.Center,
@@ -247,12 +246,11 @@ private fun ErrorIndicator(
             modifier = Modifier.size(IndicatorSize),
             tint = MaterialTheme.colorScheme.error,
         )
-        // KMK: Show Retry/Delete menu when error icon is clicked
         DropdownMenu(expanded = isMenuExpanded, onDismissRequest = { isMenuExpanded = false }) {
             DropdownMenuItem(
                 text = { Text(text = stringResource(MR.strings.action_retry)) },
                 onClick = {
-                    onClick(ChapterDownloadAction.START) // or a custom RETRY action
+                    onClick(ChapterDownloadAction.START_NOW)
                     isMenuExpanded = false
                 },
             )
