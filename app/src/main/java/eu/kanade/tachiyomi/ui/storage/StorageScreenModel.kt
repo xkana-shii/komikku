@@ -71,12 +71,12 @@ class StorageScreenModel(
                 downloadCacheFlow,
                 downloadCache.isInitializing,
                 getLibraryManga.subscribe().distinctUntilChanged { old, new ->
-                    old.map { Pair(it.id, it.category) }.toSet() == new.map { Pair(it.id, it.category) }.toSet()
+                    old.map { Pair(it.manga.id, it.categories) }.toSet() == new.map { Pair(it.manga.id, it.categories) }.toSet()
                 },
                 getCategories.subscribe(),
             ) { _, _, libraries, categories ->
                 val distinctEntries = libraries.fastDistinctBy {
-                    it.id
+                    it.manga.id
                 }
 
                 // If a manga is removed from the list, we don't want to recompute the size for all entries,
@@ -86,12 +86,12 @@ class StorageScreenModel(
                     val libraryIds = libraries.map { it.manga.id }
                     val newItems = items.filter { it.manga.id in libraryIds }
 
-                    entries.value = distinctEntries.map { it.id }
+                    entries.value = distinctEntries.map { it.manga.id }
 
                     return@combine newItems to categories
                 }
 
-                entries.value = distinctEntries.map { it.id }
+                entries.value = distinctEntries.map { it.manga.id }
 
                 val items = mutableListOf<StorageData>()
 

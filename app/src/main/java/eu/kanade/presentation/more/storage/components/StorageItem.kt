@@ -77,18 +77,7 @@ fun StorageItem(
                                 fontWeight = FontWeight.W700,
                                 maxLines = 1,
                             )
-                            // Show "!" symbol if there are _tmp chapters
-                            if (item.hasTmpChapters) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = "Temporary chapters detected",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier
-                                        .padding(start = 4.dp)
-                                        .size(16.dp)
-                                )
-                            }
-                        }
+                        },
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -98,6 +87,16 @@ fun StorageItem(
                                     .background(item.color, CircleShape)
                                     .size(12.dp),
                             )
+                            if (item.hasTmpChapters) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .padding(start = 4.dp)
+                                        .size(12.dp),
+                                )
+                            }
                             Spacer(Modifier.width(MaterialTheme.padding.small))
                             Text(
                                 text = item.size.toSize(),
