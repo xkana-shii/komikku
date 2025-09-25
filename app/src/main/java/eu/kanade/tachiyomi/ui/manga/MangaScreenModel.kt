@@ -1076,13 +1076,8 @@ class MangaScreenModel(
         // SY -->
         val isExhManga = manga.isEhBasedManga()
         // SY <--
-
         val mangaForSource = mergedData?.manga?.get(firstOrNull()?.mangaId ?: manga.id) ?: manga
-        val source = mergedData?.sources?.find { mangaForSource.source == it.id }
-            ?.takeIf { mergedData.sources.size > 2 }
-            ?: sourceManager.getOrStub(mangaForSource.source)
-
-        val mangaDir = downloadProvider.findMangaDir(mangaForSource.ogTitle, source)
+        val mangaDir = source?.let { downloadProvider.findMangaDir(mangaForSource.ogTitle, it) }
         val tmpFolders = mangaDir?.listFiles()
             ?.filter { it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true }
             ?.mapNotNull { it.name }
@@ -1106,15 +1101,13 @@ class MangaScreenModel(
                     manga.source,
                 )
             }
-            // PATCH: Check for _tmp folder using scanned list, not per-chapter disk access
             val isTmpFolder = if (!manga.isLocal()) {
-                val tmpName = downloadProvider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url) + Downloader.TMP_DIR_SUFFIX
+                val tmpName = downloadProvider.getChapterDirName(chapter.name, chapter.scanlator) + Downloader.TMP_DIR_SUFFIX
                 tmpName in tmpFolders
             } else {
                 false
             }
 
-            // PATCH: Add error state for _tmp folder
             val downloadState = when {
                 isTmpFolder -> Download.State.ERROR
                 activeDownload != null -> activeDownload.status
