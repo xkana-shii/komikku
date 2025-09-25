@@ -228,7 +228,6 @@ private fun ErrorIndicator(
     modifier: Modifier = Modifier,
     onClick: (ChapterDownloadAction) -> Unit,
 ) {
-    var isMenuExpanded by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
             .size(IconButtonTokens.StateLayerSize)
@@ -236,8 +235,7 @@ private fun ErrorIndicator(
                 enabled = enabled,
                 hapticFeedback = LocalHapticFeedback.current,
                 onLongClick = { onClick(ChapterDownloadAction.START) },
-                // KMK: Show menu on click
-                onClick = { isMenuExpanded = true },
+                onClick = { onClick(ChapterDownloadAction.START) },
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -247,23 +245,6 @@ private fun ErrorIndicator(
             modifier = Modifier.size(IndicatorSize),
             tint = MaterialTheme.colorScheme.error,
         )
-        // KMK: Show Retry/Delete menu when error icon is clicked
-        DropdownMenu(expanded = isMenuExpanded, onDismissRequest = { isMenuExpanded = false }) {
-            DropdownMenuItem(
-                text = { Text(text = stringResource(MR.strings.action_retry)) },
-                onClick = {
-                    onClick(ChapterDownloadAction.START) // or a custom RETRY action
-                    isMenuExpanded = false
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(text = stringResource(MR.strings.action_delete)) },
-                onClick = {
-                    onClick(ChapterDownloadAction.DELETE)
-                    isMenuExpanded = false
-                },
-            )
-        }
     }
 }
 

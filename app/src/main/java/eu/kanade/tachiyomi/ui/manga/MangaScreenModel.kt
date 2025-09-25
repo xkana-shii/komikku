@@ -53,7 +53,6 @@ import eu.kanade.tachiyomi.data.coil.getBestColor
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.DownloadProvider
-import eu.kanade.tachiyomi.data.download.Downloader
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
@@ -1076,13 +1075,6 @@ class MangaScreenModel(
         // SY -->
         val isExhManga = manga.isEhBasedManga()
         // SY <--
-        val mangaForSource = mergedData?.manga?.get(firstOrNull()?.mangaId ?: manga.id) ?: manga
-        val mangaDir = source?.let { downloadProvider.findMangaDir(mangaForSource.ogTitle, it) }
-        val tmpFolders = mangaDir?.listFiles()
-            ?.filter { it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true }
-            ?.mapNotNull { it.name }
-            ?.toSet() ?: emptySet()
-
         return map { chapter ->
             val activeDownload = if (isLocal) {
                 null
@@ -1107,15 +1099,7 @@ class MangaScreenModel(
                     // SY <--
                 )
             }
-            val isTmpFolder = if (!manga.isLocal()) {
-                val tmpName = downloadProvider.getChapterDirName(chapter.name, chapter.scanlator) + Downloader.TMP_DIR_SUFFIX
-                tmpName in tmpFolders
-            } else {
-                false
-            }
-
             val downloadState = when {
-                isTmpFolder -> Download.State.ERROR
                 activeDownload != null -> activeDownload.status
                 downloaded -> Download.State.DOWNLOADED
                 else -> Download.State.NOT_DOWNLOADED
