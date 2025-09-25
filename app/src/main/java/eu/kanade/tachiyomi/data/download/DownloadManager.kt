@@ -67,6 +67,10 @@ class DownloadManager(
     fun downloaderStart() = downloader.start()
     fun downloaderStop(reason: String? = null) = downloader.stop(reason)
 
+    fun hasTmpChapters(manga: Manga): Boolean {
+        return cache.hasTmpChapters(manga)
+    }
+
     val isDownloaderRunning
         get() = DownloadJob.isRunningFlow(context)
 
@@ -223,6 +227,15 @@ class DownloadManager(
         return cache.getDownloadCount(manga)
     }
 
+    /**
+     * Returns the size of downloaded chapters for a manga.
+     *
+     * @param manga the manga to check.
+     */
+    fun getDownloadSize(manga: Manga): Long {
+        return cache.getDownloadSize(manga)
+    }
+
     fun cancelQueuedDownloads(downloads: List<Download>) {
         removeFromDownloadQueue(downloads.map { it.chapter })
     }
@@ -259,6 +272,15 @@ class DownloadManager(
 
             val (mangaDir, chapterDirs) = provider.findChapterDirs(filteredChapters, manga, source)
             chapterDirs.forEach { it.delete() }
+            cache.removeChapters(filteredChapters, manga)
+            filteredChapters.forEach { chapter ->
+                val mangaDir = provider.findMangaDir(manga.ogTitle, source)
+                val tmpSuffix = Downloader.TMP_DIR_SUFFIX
+                val chapterDirName = provider.getChapterDirName(chapter.name, chapter.scanlator)
+                val tmpName = chapterDirName + tmpSuffix
+                val tmpDir = mangaDir?.findFile(tmpName)
+                tmpDir?.delete()
+            }
             cache.removeChapters(filteredChapters, manga)
 
             // Delete manga directory if empty

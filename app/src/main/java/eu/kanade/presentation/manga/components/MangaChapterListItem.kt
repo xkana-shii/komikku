@@ -76,6 +76,8 @@ fun MangaChapterListItem(
     onDownloadClick: ((ChapterDownloadAction) -> Unit)?,
     onChapterSwipe: (LibraryPreferences.ChapterSwipeAction) -> Unit,
     modifier: Modifier = Modifier,
+
+    isTmpFolder: Boolean = false, // new param
 ) {
     // KMK -->
     val fillermarkPainter = rememberVectorPainter(
@@ -229,7 +231,9 @@ fun MangaChapterListItem(
             ChapterDownloadIndicator(
                 enabled = downloadIndicatorEnabled,
                 modifier = Modifier.padding(start = 4.dp),
-                downloadStateProvider = downloadStateProvider,
+                downloadStateProvider = {
+                    if (isTmpFolder) Download.State.ERROR else downloadStateProvider()
+                },
                 downloadProgressProvider = downloadProgressProvider,
                 onClick = { onDownloadClick?.invoke(it) },
             )
