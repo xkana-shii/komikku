@@ -1107,7 +1107,6 @@ class MangaScreenModel(
                     // SY <--
                 )
             }
-            // PATCH: Check for _tmp folder using scanned list, not per-chapter disk access
             val isTmpFolder = if (!manga.isLocal()) {
                 val tmpName = downloadProvider.getChapterDirName(chapter.name, chapter.scanlator) + Downloader.TMP_DIR_SUFFIX
                 tmpName in tmpFolders
@@ -1115,7 +1114,6 @@ class MangaScreenModel(
                 false
             }
 
-            // PATCH: Add error state for _tmp folder
             val downloadState = when {
                 isTmpFolder -> Download.State.ERROR
                 activeDownload != null -> activeDownload.status
