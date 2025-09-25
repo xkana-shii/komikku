@@ -113,7 +113,7 @@ class StorageScreenModel(
                         StorageScreenState.Loading((((index + 1.0) / distinctEntries.size) * 100).toInt())
                     }
 
-                    if (size > 0) {
+                    if (size > 0 || hasTmpChapters) {
                         items.add(
                             StorageData(
                                 manga = manga,
