@@ -83,6 +83,7 @@ class PagerConfig(
     var pageCanvasColor = Color.WHITE
 
     var centerMarginType = CenterMarginType.NONE
+
     // SY <--
     var autoFlipEnabled = readerPreferences.autoFlip().get()
     var autoFlipInterval = readerPreferences.autoFlipInterval().get()

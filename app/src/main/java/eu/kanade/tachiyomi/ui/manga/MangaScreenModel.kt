@@ -1108,7 +1108,7 @@ class MangaScreenModel(
             }
             // PATCH: Check for _tmp folder using scanned list, not per-chapter disk access
             val isTmpFolder = if (!manga.isLocal()) {
-                val tmpName = downloadProvider.getChapterDirName(chapter.name, chapter.scanlator) + Downloader.TMP_DIR_SUFFIX
+                val tmpName = downloadProvider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url) + Downloader.TMP_DIR_SUFFIX
                 tmpName in tmpFolders
             } else {
                 false

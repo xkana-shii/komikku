@@ -166,6 +166,7 @@ class ReaderPreferences(
 
     // KMK -->
     fun smallerTapZone() = preferenceStore.getBoolean("reader_navigation_smaller_tap_zone", false)
+
     // KMK <--
     fun autoScroll() = preferenceStore.getBoolean("pref_auto_scroll", false)
 

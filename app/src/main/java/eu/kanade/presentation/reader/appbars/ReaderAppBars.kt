@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.reader.components.Automation
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
