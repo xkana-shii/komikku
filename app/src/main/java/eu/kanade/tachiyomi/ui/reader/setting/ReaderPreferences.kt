@@ -167,6 +167,17 @@ class ReaderPreferences(
     // KMK -->
     fun smallerTapZone() = preferenceStore.getBoolean("reader_navigation_smaller_tap_zone", false)
     // KMK <--
+    fun autoScroll() = preferenceStore.getBoolean("pref_auto_scroll", false)
+
+    fun autoScrollSpeed() = preferenceStore.getInt("pref_auto_scroll_speed", 5)
+
+    fun autoFlip() = preferenceStore.getBoolean("pref_auto_flip", false)
+
+    fun autoFlipInterval() = preferenceStore.getInt("pref_auto_flip_interval", 5)
+
+    fun automationMaxChapters() = preferenceStore.getInt("pref_automation_max_chapters", 5)
+
+    fun automationMaxMinutes() = preferenceStore.getInt("pref_automation_max_minutes", 15)
 
     // endregion
 
@@ -179,10 +190,6 @@ class ReaderPreferences(
     fun aggressivePageLoading() = preferenceStore.getBoolean("eh_aggressive_page_loading", false)
 
     fun cacheSize() = preferenceStore.getString("eh_cache_size", "75")
-
-    fun autoscrollInterval() = preferenceStore.getFloat("eh_util_autoscroll_interval", 3f)
-
-    fun smoothAutoScroll() = preferenceStore.getBoolean("smooth_auto_scroll", true)
 
     fun preserveReadingPosition() = preferenceStore.getBoolean("eh_preserve_reading_position", false)
 

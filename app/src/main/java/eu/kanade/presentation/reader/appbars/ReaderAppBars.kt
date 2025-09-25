@@ -31,9 +31,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
-import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.reader.components.Automation
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
@@ -103,12 +104,6 @@ fun ReaderAppBars(
     // SY -->
     isExhToolsVisible: Boolean,
     onSetExhUtilsVisibility: (Boolean) -> Unit,
-    isAutoScroll: Boolean,
-    isAutoScrollEnabled: Boolean,
-    onToggleAutoscroll: (Boolean) -> Unit,
-    autoScrollFrequency: String,
-    onSetAutoScrollFrequency: (String) -> Unit,
-    onClickAutoScrollHelp: () -> Unit,
     onClickRetryAll: () -> Unit,
     onClickRetryAllHelp: () -> Unit,
     onClickBoostPage: () -> Unit,
@@ -123,6 +118,7 @@ fun ReaderAppBars(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
+    readerPreferences: ReaderPreferences,
 ) {
     val isRtl = viewer is R2LPagerViewer
     val backgroundColor = MaterialTheme.colorScheme
@@ -277,12 +273,6 @@ fun ReaderAppBars(
                         isVisible = isExhToolsVisible,
                         onSetExhUtilsVisibility = onSetExhUtilsVisibility,
                         backgroundColor = backgroundColor,
-                        isAutoScroll = isAutoScroll,
-                        isAutoScrollEnabled = isAutoScrollEnabled,
-                        onToggleAutoscroll = onToggleAutoscroll,
-                        autoScrollFrequency = autoScrollFrequency,
-                        onSetAutoScrollFrequency = onSetAutoScrollFrequency,
-                        onClickAutoScrollHelp = onClickAutoScrollHelp,
                         onClickRetryAll = onClickRetryAll,
                         onClickRetryAllHelp = onClickRetryAllHelp,
                         onClickBoostPage = onClickBoostPage,
@@ -309,6 +299,10 @@ fun ReaderAppBars(
                     modifier = modifierWithInsetsPadding,
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                 ) {
+                    Automation(
+                        readerPreferences = readerPreferences,
+                        viewer = viewer,
+                    )
                     if (navBarType == NavBarType.Bottom) {
                         ChapterNavigator(
                             isRtl = isRtl,

@@ -61,6 +61,9 @@ class WebtoonConfig(
         private set
 
     // SY <--
+    var autoScrollEnabled = readerPreferences.autoScroll().get()
+    var autoScrollSpeed = readerPreferences.autoScrollSpeed().get()
+
     init {
         readerPreferences.cropBordersWebtoon()
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
@@ -141,6 +144,11 @@ class WebtoonConfig(
         readerPreferences.pageTransitionsWebtoon()
             .register({ usePageTransitions = it }, { imagePropertyChangedListener?.invoke() })
         // SY <--
+        readerPreferences.autoScroll()
+            .register({ autoScrollEnabled = it })
+
+        readerPreferences.autoScrollSpeed()
+            .register({ autoScrollSpeed = it })
     }
 
     override var navigator: ViewerNavigation = defaultNavigation()
