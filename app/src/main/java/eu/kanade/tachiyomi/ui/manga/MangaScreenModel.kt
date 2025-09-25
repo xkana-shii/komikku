@@ -1076,13 +1076,8 @@ class MangaScreenModel(
         // SY -->
         val isExhManga = manga.isEhBasedManga()
         // SY <--
-
         val mangaForSource = mergedData?.manga?.get(firstOrNull()?.mangaId ?: manga.id) ?: manga
-        val source = mergedData?.sources?.find { mangaForSource.source == it.id }
-            ?.takeIf { mergedData.sources.size > 2 }
-            ?: sourceManager.getOrStub(mangaForSource.source)
-
-        val mangaDir = downloadProvider.findMangaDir(mangaForSource.ogTitle, source)
+        val mangaDir = source?.let { downloadProvider.findMangaDir(mangaForSource.ogTitle, it) }
         val tmpFolders = mangaDir?.listFiles()
             ?.filter { it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true }
             ?.mapNotNull { it.name }
@@ -1095,6 +1090,11 @@ class MangaScreenModel(
                 downloadManager.getQueuedDownloadOrNull(chapter.id)
             }
 
+            // SY -->
+            @Suppress("NAME_SHADOWING")
+            val manga = mergedData?.manga?.get(chapter.mangaId) ?: manga
+            val source = mergedData?.sources?.find { manga.source == it.id }?.takeIf { mergedData.sources.size > 2 }
+            // SY <--
             val downloaded = if (manga.isLocal()) {
                 true
             } else {
@@ -1129,7 +1129,7 @@ class MangaScreenModel(
                 downloadProgress = activeDownload?.progress ?: 0,
                 selected = chapter.id in selectedChapterIds,
                 // SY -->
-                sourceName = source.getNameForMangaInfo(),
+                sourceName = source?.getNameForMangaInfo(),
                 showScanlator = !isExhManga,
                 // SY <--
             )
