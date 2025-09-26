@@ -310,16 +310,6 @@ class DownloadManager(
                     dir.findFile("$baseName.cbz" + Downloader.TMP_DIR_SUFFIX)?.delete()
                 }
             }
-            }
-            cache.removeChapters(filteredChapters, manga)
-            filteredChapters.forEach { chapter ->
-                val mangaDir = provider.findMangaDir(manga.ogTitle, source)
-                val tmpSuffix = Downloader.TMP_DIR_SUFFIX
-                val chapterDirName = provider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url)
-                val tmpName = chapterDirName + tmpSuffix
-                val tmpDir = mangaDir?.findFile(tmpName)
-                tmpDir?.delete()
-            }
             cache.removeChapters(filteredChapters, manga)
 
             // Delete manga directory if empty
