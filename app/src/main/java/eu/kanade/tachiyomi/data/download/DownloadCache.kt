@@ -169,12 +169,6 @@ class DownloadCache(
         return false
     }
 
-    fun hasTmpChapters(manga: Manga): Boolean {
-        val downloadDir = rootDownloadsDir.sourceDirs[manga.source]
-            ?.mangaDirs?.get(provider.getMangaDirName(manga.title))?.dir
-        return downloadDir?.listFiles()?.any { it.name?.endsWith("_tmp") == true } ?: false
-    }
-
     /**
      * Returns the amount of downloaded chapters.
      */
@@ -465,7 +459,7 @@ class DownloadCache(
                                 .mapNotNull {
                                     when {
                                         // Ignore incomplete downloads
-                                        // it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true -> null
+                                        it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true -> null
                                         // Folder of images
                                         it.isDirectory -> it.name
                                         // CBZ files

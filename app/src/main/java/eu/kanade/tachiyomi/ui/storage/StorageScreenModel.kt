@@ -107,13 +107,11 @@ class StorageScreenModel(
                     val chapterCount = getCount(manga)
                     val categories = getMangaCategoryIds(manga)
 
-                    val hasTmpChapters = checkForTmpChapters(manga)
-
                     mutableState.update {
                         StorageScreenState.Loading((((index + 1.0) / distinctEntries.size) * 100).toInt())
                     }
 
-                    if (size > 0 || hasTmpChapters) {
+                    if (size > 0) {
                         items.add(
                             StorageData(
                                 manga = manga,
@@ -125,7 +123,6 @@ class StorageScreenModel(
                                     random.nextInt(255),
                                     random.nextInt(255),
                                 ),
-                                hasTmpChapters = hasTmpChapters,
                             ),
                         )
                     }
@@ -163,10 +160,6 @@ class StorageScreenModel(
                 }
             }
             .launchIn(screenModelScope)
-    }
-
-    private fun checkForTmpChapters(manga: Manga): Boolean {
-        return downloadManager.hasTmpChapters(manga)
     }
 
     private suspend fun getMangaCategoryIds(manga: Manga): List<Long> {
