@@ -67,10 +67,6 @@ class DownloadManager(
     fun downloaderStart() = downloader.start()
     fun downloaderStop(reason: String? = null) = downloader.stop(reason)
 
-    fun hasTmpChapters(manga: Manga): Boolean {
-        return cache.hasTmpChapters(manga)
-    }
-
     val isDownloaderRunning
         get() = DownloadJob.isRunningFlow(context)
 
