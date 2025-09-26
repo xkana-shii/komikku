@@ -468,7 +468,7 @@ class DownloadCache(
                                 .mapNotNull {
                                     when {
                                         // Ignore incomplete downloads
-                                        // it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true -> null
+                                        it.name?.endsWith(Downloader.TMP_DIR_SUFFIX) == true -> null
                                         // Folder of images
                                         it.isDirectory -> it.name
                                         // CBZ files
