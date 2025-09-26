@@ -172,12 +172,6 @@ class DownloadCache(
         return false
     }
 
-    fun hasTmpChapters(manga: Manga): Boolean {
-        val downloadDir = rootDownloadsDir.sourceDirs[manga.source]
-            ?.mangaDirs?.get(provider.getMangaDirName(manga.title))?.dir
-        return downloadDir?.listFiles()?.any { it.name?.endsWith("_tmp") == true } ?: false
-    }
-
     /**
      * Returns the amount of downloaded chapters.
      */
