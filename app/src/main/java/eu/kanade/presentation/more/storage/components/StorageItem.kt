@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,17 +66,12 @@ fun StorageItem(
             Column(
                 modifier = Modifier.weight(1f),
                 content = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = {
-                            Text(
-                                text = item.manga.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                overflow = TextOverflow.Ellipsis,
-                                fontWeight = FontWeight.W700,
-                                maxLines = 1,
-                            )
-                        },
+                    Text(
+                        text = item.manga.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.W700,
+                        maxLines = 1,
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -87,16 +81,6 @@ fun StorageItem(
                                     .background(item.color, CircleShape)
                                     .size(12.dp),
                             )
-                            if (item.hasTmpChapters) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier
-                                        .padding(start = 4.dp)
-                                        .size(12.dp),
-                                )
-                            }
                             Spacer(Modifier.width(MaterialTheme.padding.small))
                             Text(
                                 text = item.size.toSize(),

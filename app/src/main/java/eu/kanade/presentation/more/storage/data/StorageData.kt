@@ -9,5 +9,4 @@ data class StorageData(
     val size: Long,
     val chapterCount: Int,
     val color: Color,
-    val hasTmpChapters: Boolean = false,
 )
