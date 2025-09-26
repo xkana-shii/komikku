@@ -241,7 +241,7 @@ class DownloadManager(
             val manga = download.manga
             val chapter = download.chapter
             val mangaDir = provider.findMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source) ?: return@forEach
-            val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator)
+            val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url)
             // Temp in-progress folder
             mangaDir.findFile(baseName + Downloader.TMP_DIR_SUFFIX)?.delete()
             // Temp CBZ file during archiving
@@ -299,7 +299,7 @@ class DownloadManager(
             // e.g., "<chapter>_tmp" directory or "<chapter>.cbz_tmp" temp zip
             mangaDir?.let { dir ->
                 filteredChapters.forEach { chapter ->
-                    val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator)
+                    val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url)
                     // Temp chapter folder during download
                     dir.findFile(baseName + Downloader.TMP_DIR_SUFFIX)?.delete()
                     // Temp CBZ file during archiving
