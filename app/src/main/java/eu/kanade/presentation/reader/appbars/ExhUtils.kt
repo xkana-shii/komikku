@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import tachiyomi.i18n.sy.SYMR
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
@@ -62,7 +62,7 @@ fun ExhUtils(
                             MR.strings.action_remove_bookmark
                         } else {
                             MR.strings.action_bookmark
-                        }
+                        },
                     ),
                     tint = MaterialTheme.colorScheme.primary,
                 )
