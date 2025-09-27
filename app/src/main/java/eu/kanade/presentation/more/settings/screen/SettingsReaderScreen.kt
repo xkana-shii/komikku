@@ -26,6 +26,7 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
+import tachiyomi.domain.UnsortedPreferences
 
 @Suppress("unused")
 object SettingsReaderScreen : SearchableSettings {
@@ -567,21 +568,32 @@ object SettingsReaderScreen : SearchableSettings {
     // SY -->
     @Composable
     private fun getPageDownloadingGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
+        // Get dev options state
+        val unsortedPreferences = remember { Injekt.get<UnsortedPreferences>() }
+        val devOptionsEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
+
+        // Build entries for preload size, adding 100 if dev options enabled
+        val preloadEntries = persistentMapOf(
+            4 to stringResource(SYMR.strings.reader_preload_amount_4_pages),
+            6 to stringResource(SYMR.strings.reader_preload_amount_6_pages),
+            8 to stringResource(SYMR.strings.reader_preload_amount_8_pages),
+            10 to stringResource(SYMR.strings.reader_preload_amount_10_pages),
+            12 to stringResource(SYMR.strings.reader_preload_amount_12_pages),
+            14 to stringResource(SYMR.strings.reader_preload_amount_14_pages),
+            16 to stringResource(SYMR.strings.reader_preload_amount_16_pages),
+            20 to stringResource(SYMR.strings.reader_preload_amount_20_pages),
+        ).toMutableMap()
+
+        if (devOptionsEnabled) {
+            preloadEntries[100] = "100 pages" // You may want to localize this string
+        }
+
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.page_downloading),
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.preloadSize(),
-                    entries = persistentMapOf(
-                        4 to stringResource(SYMR.strings.reader_preload_amount_4_pages),
-                        6 to stringResource(SYMR.strings.reader_preload_amount_6_pages),
-                        8 to stringResource(SYMR.strings.reader_preload_amount_8_pages),
-                        10 to stringResource(SYMR.strings.reader_preload_amount_10_pages),
-                        12 to stringResource(SYMR.strings.reader_preload_amount_12_pages),
-                        14 to stringResource(SYMR.strings.reader_preload_amount_14_pages),
-                        16 to stringResource(SYMR.strings.reader_preload_amount_16_pages),
-                        20 to stringResource(SYMR.strings.reader_preload_amount_20_pages),
-                    ),
+                    entries = preloadEntries.toImmutableMap(),
                     title = stringResource(SYMR.strings.reader_preload_amount),
                     subtitle = stringResource(SYMR.strings.reader_preload_amount_summary),
                 ),

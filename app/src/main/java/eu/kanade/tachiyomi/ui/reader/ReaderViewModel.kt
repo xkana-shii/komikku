@@ -1598,6 +1598,7 @@ class ReaderViewModel @JvmOverloads constructor(
             val extraPage: ReaderPage? = null,
             // SY <--
         ) : Dialog
+        data object RereadPrompt : Dialog
     }
 
     sealed interface Event {
