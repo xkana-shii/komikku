@@ -17,9 +17,9 @@ import eu.kanade.tachiyomi.data.backup.restore.restorers.FeedRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
-import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -54,11 +54,11 @@ class BackupRestorer(
     // KMK <--
 ) {
 
-    // MIHON PATCH
     private var restoreAmount = 0
     private var restoreProgress = AtomicInteger()
     private val errors = Collections.synchronizedList(mutableListOf<Pair<Date, String>>())
-    private val dispatcher = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()).asCoroutineDispatcher()
+    private val dispatcher: ExecutorCoroutineDispatcher = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()).asCoroutineDispatcher()
+
     private val mangaProgressBatch = Runtime.getRuntime().availableProcessors() * 8
 
     /**
@@ -69,19 +69,27 @@ class BackupRestorer(
     suspend fun restore(uri: Uri, options: RestoreOptions) {
         val startTime = System.currentTimeMillis()
 
-        restoreFromFile(uri, options)
+        try {
+            restoreFromFile(uri, options)
 
-        val time = System.currentTimeMillis() - startTime
+            val time = System.currentTimeMillis() - startTime
 
-        val logFile = writeErrorLog()
+            val logFile = writeErrorLog()
 
-        notifier.showRestoreComplete(
-            time,
-            errors.size,
-            logFile.parent,
-            logFile.name,
-            isSync,
-        )
+            notifier.showRestoreComplete(
+                time,
+                errors.size,
+                logFile.parent,
+                logFile.name,
+                isSync,
+            )
+        } finally {
+            try {
+                dispatcher.close()
+            } catch (_: Exception) {
+                // ignore
+            }
+        }
     }
 
     private suspend fun restoreFromFile(uri: Uri, options: RestoreOptions) {
@@ -143,8 +151,7 @@ class BackupRestorer(
         }
     }
 
-    context(CoroutineScope)
-    private /* KMK --> */suspend /* KMK <-- */ fun restoreCategories(backupCategories: List<BackupCategory>) {
+    private fun CoroutineScope.restoreCategories(backupCategories: List<BackupCategory>) = launch(dispatcher) {
         ensureActive()
         categoriesRestorer(backupCategories)
 
@@ -156,9 +163,6 @@ class BackupRestorer(
                 restoreAmount,
                 isSync,
             )
-                // KMK -->
-                .show(Notifications.ID_RESTORE_PROGRESS)
-            // KMK <--
         }
     }
 
@@ -183,14 +187,10 @@ class BackupRestorer(
                 restoreAmount,
                 isSync,
             )
-                // KMK -->
-                .show(Notifications.ID_RESTORE_PROGRESS)
-            // KMK <--
         }
     }
     // SY <--
 
-    // MIHON PATCH: parallel restoreManga
     private fun CoroutineScope.restoreManga(
         backupMangas: List<BackupManga>,
         backupCategories: List<BackupCategory>,
@@ -199,7 +199,6 @@ class BackupRestorer(
         sortedMangas.map {
             async {
                 ensureActive()
-
                 try {
                     mangaRestorer.restore(it, backupCategories)
                 } catch (e: Exception) {
@@ -208,10 +207,7 @@ class BackupRestorer(
                 } finally {
                     val currentProgress = restoreProgress.incrementAndGet()
                     if (currentProgress == restoreAmount || currentProgress % mangaProgressBatch == 0) {
-                        with(notifier) {
-                            showRestoreProgress(it.title, currentProgress, restoreAmount, isSync)
-                                .show(Notifications.ID_RESTORE_PROGRESS)
-                        }
+                        notifier.showRestoreProgress(it.title, currentProgress, restoreAmount, isSync)
                     }
                 }
             }
@@ -219,10 +215,7 @@ class BackupRestorer(
 
         val finalProgress = restoreProgress.get()
         if (finalProgress < restoreAmount) {
-            with(notifier) {
-                showRestoreProgress(context.stringResource(MR.strings.restoring_backup), finalProgress, restoreAmount, isSync)
-                    .show(Notifications.ID_RESTORE_PROGRESS)
-            }
+            notifier.showRestoreProgress(context.stringResource(MR.strings.restoring_backup), finalProgress, restoreAmount, isSync)
         }
     }
 
@@ -244,9 +237,6 @@ class BackupRestorer(
                 restoreAmount,
                 isSync,
             )
-                // KMK -->
-                .show(Notifications.ID_RESTORE_PROGRESS)
-            // KMK <--
         }
     }
 
@@ -262,9 +252,6 @@ class BackupRestorer(
                 restoreAmount,
                 isSync,
             )
-                // KMK -->
-                .show(Notifications.ID_RESTORE_PROGRESS)
-            // KMK <--
         }
     }
 
@@ -289,9 +276,6 @@ class BackupRestorer(
                         restoreAmount,
                         isSync,
                     )
-                        // KMK -->
-                        .show(Notifications.ID_RESTORE_PROGRESS)
-                    // KMK <--
                 }
             }
     }

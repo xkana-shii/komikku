@@ -28,16 +28,16 @@ import kotlin.concurrent.withLock
 
 class BackupNotifier(private val context: Context) {
 
+    private val lock = ReentrantLock()
+
     private val preferences: SecurityPreferences by injectLazy()
 
     // KMK -->
     private val backupRestoreStatus: BackupRestoreStatus = Injekt.get()
     // KMK <--
 
-    private val lock = ReentrantLock()
-
     private val largeIcon by lazy {
-        BitmapFactory.decodeResource(context.resources, R.drawable.komikku)
+        BitmapFactory.decodeResource(context.resources, R.mipmap.komikku)
     }
 
     private val completeNotificationBuilder by lazy {
@@ -113,13 +113,17 @@ class BackupNotifier(private val context: Context) {
         content: String = "",
         progress: Int = 0,
         maxAmount: Int = 100,
-        isSync: Boolean = false,
+        sync: Boolean = false,
     ): NotificationCompat.Builder {
-        val builder = lock.withLock {
-            val builder = (progressNotificationBuilder ?: newProgressBuilder().also { progressNotificationBuilder = it })
+        // KMK -->
+        backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
+        // KMK <--
+
+        lock.withLock {
+            val builder = progressNotificationBuilder ?: newProgressBuilder().also { progressNotificationBuilder = it }
             with(builder) {
                 setContentTitle(
-                    if (isSync) {
+                    if (sync) {
                         context.stringResource(MR.strings.syncing_library)
                     } else {
                         context.stringResource(MR.strings.restoring_backup)
@@ -127,7 +131,6 @@ class BackupNotifier(private val context: Context) {
                 )
                 setProgress(maxAmount, progress, false)
                 setOnlyAlertOnce(true)
-
                 clearActions()
                 addAction(
                     R.drawable.ic_close_24dp,
@@ -139,11 +142,10 @@ class BackupNotifier(private val context: Context) {
                 } else if (preferences.hideNotificationContent().get()) {
                     setContentText(null)
                 }
+                show(Notifications.ID_RESTORE_PROGRESS)
             }
-            builder
+            return builder
         }
-        backupRestoreStatus.updateProgress(progress.toFloat() / maxAmount)
-        return builder
     }
 
     fun showRestoreError(error: String?) {
@@ -162,9 +164,9 @@ class BackupNotifier(private val context: Context) {
         errorCount: Int,
         path: String?,
         file: String?,
-        isSync: Boolean,
+        sync: Boolean,
     ) {
-        val contentTitle = if (isSync) {
+        val contentTitle = if (sync) {
             context.stringResource(MR.strings.library_sync_complete)
         } else {
             context.stringResource(MR.strings.restore_completed)
