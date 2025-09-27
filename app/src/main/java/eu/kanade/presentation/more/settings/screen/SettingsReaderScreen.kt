@@ -17,6 +17,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
+import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -26,7 +27,6 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
-import tachiyomi.domain.UnsortedPreferences
 
 @Suppress("unused")
 object SettingsReaderScreen : SearchableSettings {
