@@ -560,12 +560,8 @@ class ReaderActivity : BaseActivity() {
                 },
                 onClickSettings = viewModel::openSettingsDialog,
                 // SY -->
-                isExhToolsVisible = state.ehUtilsVisible,
-                onSetExhUtilsVisibility = viewModel::showEhUtils,
                 onClickRetryAll = ::exhRetryAll,
-                onClickRetryAllHelp = viewModel::openRetryAllHelp,
                 onClickBoostPage = ::exhBoostPage,
-                onClickBoostPageHelp = viewModel::openBoostPageHelp,
                 currentPageText = state.currentPageText,
                 navBarType = navBarType,
                 enabledButtons = readerBottomButtons,
@@ -709,56 +705,6 @@ class ReaderActivity : BaseActivity() {
                         state.dateRelativeTime,
                     )
                 }
-                // SY -->
-                ReaderViewModel.Dialog.BoostPageHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    title = { Text(text = stringResource(SYMR.strings.eh_boost_page_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_boost_page_help_message)) },
-                )
-                ReaderViewModel.Dialog.RetryAllHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    title = { Text(text = stringResource(SYMR.strings.eh_retry_all_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_retry_all_help_message)) },
-                )
-                ReaderViewModel.Dialog.RereadPrompt -> AlertDialog(
-                    onDismissRequest = viewModel::cancelRereadPrompt,
-                    confirmButton = {
-                        TextButton(onClick = { viewModel.confirmStartReread() }) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = viewModel::cancelRereadPrompt) {
-                            Text(text = stringResource(MR.strings.action_cancel))
-                        }
-                    },
-                    title = { Text(text = stringResource(KMR.strings.reread_prompt_title)) },
-                    text = {
-                        val trackPreferences = remember { Injekt.get<TrackPreferences>() }
-                        val resetMode = trackPreferences.autoRereadResetMode().get()
-                        val chapterLabel = if (resetMode == AutoRereadResetMode.RESET_TO_ZERO) {
-                            stringResource(KMR.strings.chapter_label, "0")
-                        } else {
-                            val chapterNum = state.currentChapter?.chapter?.chapter_number
-                            chapterNum?.let {
-                                val intPart = it.toInt()
-                                val display = if (it == intPart.toFloat()) intPart.toString() else it.toString()
-                                stringResource(KMR.strings.chapter_label, display)
-                            } ?: stringResource(KMR.strings.this_chapter_label)
-                        }
-                        Text(text = stringResource(KMR.strings.reread_prompt_body, chapterLabel))
-                    },
-                )
                 // SY <--
                 null -> {}
             }

@@ -103,12 +103,10 @@ fun ReaderAppBars(
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
     // SY -->
-    isExhToolsVisible: Boolean,
-    onSetExhUtilsVisibility: (Boolean) -> Unit,
     onClickRetryAll: () -> Unit,
-    onClickRetryAllHelp: () -> Unit,
     onClickBoostPage: () -> Unit,
-    onClickBoostPageHelp: () -> Unit,
+    bookmarked: Boolean,
+    onToggleBookmarked: () -> Unit,
     navBarType: NavBarType,
     currentPageText: String,
     enabledButtons: ImmutableSet<String>,
@@ -271,13 +269,11 @@ fun ReaderAppBars(
                     )
                     // SY -->
                     ExhUtils(
-                        isVisible = isExhToolsVisible,
-                        onSetExhUtilsVisibility = onSetExhUtilsVisibility,
                         backgroundColor = backgroundColor,
                         onClickRetryAll = onClickRetryAll,
-                        onClickRetryAllHelp = onClickRetryAllHelp,
                         onClickBoostPage = onClickBoostPage,
-                        onClickBoostPageHelp = onClickBoostPageHelp,
+                        bookmarked = bookmarked,
+                        onToggleBookmarked = onToggleBookmarked,
                     )
                     // SY <--
                 }

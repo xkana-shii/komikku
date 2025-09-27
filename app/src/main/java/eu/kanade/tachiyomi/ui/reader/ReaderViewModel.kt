@@ -1212,11 +1212,6 @@ class ReaderViewModel @JvmOverloads constructor(
         mutableState.update { it.copy(menuVisible = visible) }
     }
 
-    // SY -->
-    fun showEhUtils(visible: Boolean) {
-        mutableState.update { it.copy(ehUtilsVisible = visible) }
-    }
-
     fun setIndexChapterToShift(index: Long?) {
         mutableState.update { it.copy(indexChapterToShift = index) }
     }
@@ -1231,14 +1226,6 @@ class ReaderViewModel @JvmOverloads constructor(
 
     fun setDoublePages(doublePages: Boolean) {
         mutableState.update { it.copy(doublePages = doublePages) }
-    }
-
-    fun openBoostPageHelp() {
-        mutableState.update { it.copy(dialog = Dialog.BoostPageHelp) }
-    }
-
-    fun openRetryAllHelp() {
-        mutableState.update { it.copy(dialog = Dialog.RetryAllHelp) }
     }
 
     // SY <--
@@ -1611,12 +1598,6 @@ class ReaderViewModel @JvmOverloads constructor(
             val extraPage: ReaderPage? = null,
             // SY <--
         ) : Dialog
-
-        // SY -->
-        data object RetryAllHelp : Dialog
-        data object BoostPageHelp : Dialog
-        data object RereadPrompt : Dialog
-        // SY <--
     }
 
     sealed interface Event {
