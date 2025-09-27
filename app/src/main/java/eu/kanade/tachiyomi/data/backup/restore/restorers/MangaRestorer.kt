@@ -200,50 +200,8 @@ class MangaRestorer(
             }
             .partition { it.id > 0 }
 
-        handler.await(inTransaction = true) {
-            if (newChapters.isNotEmpty()) {
-                newChapters.forEach { chapter ->
-                    chaptersQueries.insert(
-                        chapter.mangaId,
-                        chapter.url,
-                        chapter.name,
-                        chapter.scanlator,
-                        chapter.read,
-                        chapter.bookmark,
-                        chapter.fillermark,
-                        chapter.lastPageRead,
-                        chapter.chapterNumber,
-                        chapter.sourceOrder,
-                        chapter.dateFetch,
-                        chapter.dateUpload,
-                        chapter.version,
-                    )
-                }
-            }
-            if (existingChapters.isNotEmpty()) {
-                existingChapters.forEach { chapter ->
-                    chaptersQueries.update(
-                        mangaId = null,
-                        url = null,
-                        name = null,
-                        scanlator = null,
-                        read = chapter.read,
-                        bookmark = chapter.bookmark,
-                        fillermark = chapter.fillermark,
-                        lastPageRead = chapter.lastPageRead,
-                        chapterNumber = null,
-                        dateFetch = null,
-                        // KMK -->
-                        sourceOrder = chapter.sourceOrder,
-                        dateUpload = chapter.dateUpload,
-                        // KMK <--
-                        chapterId = chapter.id,
-                        version = chapter.version,
-                        isSyncing = 1,
-                    )
-                }
-            }
-        }
+        insertNewChapters(newChapters)
+        updateExistingChapters(existingChapters)
     }
 
     private fun updateChapterBasedOnSyncState(chapter: Chapter, dbChapter: Chapter): Chapter {
@@ -294,6 +252,54 @@ class MangaRestorer(
             lastModifiedAt = 0L,
             version = 0L,
         )
+
+    private suspend fun insertNewChapters(chapters: List<Chapter>) {
+        handler.await(true) {
+            chapters.forEach { chapter ->
+                chaptersQueries.insert(
+                    chapter.mangaId,
+                    chapter.url,
+                    chapter.name,
+                    chapter.scanlator,
+                    chapter.read,
+                    chapter.bookmark,
+                    chapter.fillermark,
+                    chapter.lastPageRead,
+                    chapter.chapterNumber,
+                    chapter.sourceOrder,
+                    chapter.dateFetch,
+                    chapter.dateUpload,
+                    chapter.version,
+                )
+            }
+        }
+    }
+
+    private suspend fun updateExistingChapters(chapters: List<Chapter>) {
+        handler.await(true) {
+            chapters.forEach { chapter ->
+                chaptersQueries.update(
+                    mangaId = null,
+                    url = null,
+                    name = null,
+                    scanlator = null,
+                    read = chapter.read,
+                    bookmark = chapter.bookmark,
+                    fillermark = chapter.fillermark,
+                    lastPageRead = chapter.lastPageRead,
+                    chapterNumber = null,
+                    dateFetch = null,
+                    // KMK -->
+                    sourceOrder = chapter.sourceOrder,
+                    dateUpload = chapter.dateUpload,
+                    // KMK <--
+                    chapterId = chapter.id,
+                    version = chapter.version,
+                    isSyncing = 1,
+                )
+            }
+        }
+    }
 
     /**
      * Inserts manga and returns id
