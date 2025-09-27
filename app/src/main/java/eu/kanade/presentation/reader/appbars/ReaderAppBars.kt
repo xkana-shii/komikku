@@ -105,8 +105,6 @@ fun ReaderAppBars(
     // SY -->
     onClickRetryAll: () -> Unit,
     onClickBoostPage: () -> Unit,
-    bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
     navBarType: NavBarType,
     currentPageText: String,
     enabledButtons: ImmutableSet<String>,
@@ -215,6 +213,7 @@ fun ReaderAppBars(
                         title = mangaTitle,
                         subtitle = chapterTitle,
                         navigateUp = navigateUp,
+                        /* SY -->
                         actions = {
                             AppBarActions(
                                 actions = persistentListOf<AppBar.AppBarAction>().builder()
@@ -236,7 +235,6 @@ fun ReaderAppBars(
                                                 onClick = onToggleBookmarked,
                                             ),
                                         )
-                                        /* SY -->
                                         onOpenInWebView?.let {
                                             add(
                                                 AppBar.OverflowAction(
@@ -261,11 +259,11 @@ fun ReaderAppBars(
                                                 ),
                                             )
                                         }
-                                        SY <-- */
                                     }
                                     .build(),
                             )
                         },
+                        SY <-- */
                     )
                     // SY -->
                     ExhUtils(
