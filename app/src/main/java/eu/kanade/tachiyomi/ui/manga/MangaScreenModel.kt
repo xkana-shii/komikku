@@ -452,7 +452,7 @@ class MangaScreenModel(
             val meta = getFlatMetadata.await(mangaId)
             // SY <--
 
-            if (!manga.favorite || needRefreshChapter) {
+            if (!manga.favorite || manga.initialized) {
                 setMangaDefaultChapterFlags.await(manga)
             }
 
