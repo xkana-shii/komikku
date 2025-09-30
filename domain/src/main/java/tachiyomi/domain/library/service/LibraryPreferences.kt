@@ -263,15 +263,6 @@ class LibraryPreferences(
 
     // endregion
 
-    // region Duplicates
-
-    fun duplicateMatchLevel() = preferenceStore.getEnum(
-        "pref_duplicate_automatic_match",
-        DuplicateMatchLevel.FuzzyTitle,
-    )
-
-    // endregion
-
     enum class ChapterSwipeAction {
         ToggleRead,
         ToggleBookmark,
@@ -289,11 +280,6 @@ class LibraryPreferences(
     fun groupLibraryBy() = preferenceStore.getInt("group_library_by", LibraryGroup.BY_DEFAULT)
 
     // SY <--
-    enum class DuplicateMatchLevel {
-        ExactMatch,
-        FuzzyTitle,
-        TitleSubstring,
-    }
 
     companion object {
         const val DEVICE_ONLY_ON_WIFI = "wifi"

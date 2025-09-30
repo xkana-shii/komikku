@@ -8,7 +8,6 @@ import tachiyomi.i18n.kmk.KMR
 data class RestoreOptions(
     val libraryEntries: Boolean = true,
     val categories: Boolean = true,
-    val hiddenDuplicates: Boolean = true,
     val appSettings: Boolean = true,
     val extensionRepoSettings: Boolean = true,
     val sourceSettings: Boolean = true,
@@ -20,7 +19,6 @@ data class RestoreOptions(
     fun asBooleanArray() = booleanArrayOf(
         libraryEntries,
         categories,
-        hiddenDuplicates,
         appSettings,
         extensionRepoSettings,
         sourceSettings,
@@ -48,11 +46,6 @@ data class RestoreOptions(
                 label = MR.strings.categories,
                 getter = RestoreOptions::categories,
                 setter = { options, enabled -> options.copy(categories = enabled) },
-            ),
-            Entry(
-                label = MR.strings.hidden_duplicates,
-                getter = RestoreOptions::hiddenDuplicates,
-                setter = { options, enabled -> options.copy(hiddenDuplicates = enabled) },
             ),
             Entry(
                 label = MR.strings.app_settings,
@@ -89,7 +82,6 @@ data class RestoreOptions(
             // SY -->
             savedSearchesFeeds = array[5],
             // SY <--
-            hiddenDuplicates = array[6],
         )
     }
 
