@@ -19,12 +19,22 @@ import tachiyomi.presentation.core.util.secondaryItemAlpha
 import java.text.NumberFormat
 
 @Composable
-fun LoadingScreen(modifier: Modifier = Modifier) {
+fun LoadingScreen(modifier: Modifier = Modifier, text: StringResource? = null) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            CircularProgressIndicator()
+            if (text != null) {
+                Text(
+                    text = stringResource(text),
+                    Modifier.padding(top = MaterialTheme.padding.small),
+                )
+            }
+        }
     }
 }
 

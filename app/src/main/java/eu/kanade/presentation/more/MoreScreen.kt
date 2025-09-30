@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.BurstMode
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.History
@@ -71,6 +72,7 @@ fun MoreScreen(
     onClickDownloadQueue: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
+    onClickManageDuplicates: () -> Unit,
     onClickDataAndStorage: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAbout: () -> Unit,
@@ -194,6 +196,13 @@ fun MoreScreen(
                 )
             }
             // KMK <--
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.label_duplicates),
+                    icon = Icons.Outlined.BurstMode,
+                    onPreferenceClick = onClickManageDuplicates,
+                )
+            }
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_data_storage),
