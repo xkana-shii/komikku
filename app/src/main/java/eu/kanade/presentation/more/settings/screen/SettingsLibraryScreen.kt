@@ -50,6 +50,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 object SettingsLibraryScreen : SearchableSettings {
+    @Suppress("unused")
     private fun readResolve(): Any = SettingsLibraryScreen
 
     @Composable
@@ -311,6 +312,16 @@ object SettingsLibraryScreen : SearchableSettings {
                     ),
                     title = stringResource(MR.strings.pref_mark_duplicate_read_chapter_read),
                 ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.hideMissingChapters(),
+                    title = stringResource(MR.strings.pref_hide_missing_chapter_indicators),
+                ),
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.showEmptyCategoriesSearch(),
+                    title = stringResource(KMR.strings.pref_show_empty_categories_search),
+                ),
+                // KMK <--
             ),
         )
     }

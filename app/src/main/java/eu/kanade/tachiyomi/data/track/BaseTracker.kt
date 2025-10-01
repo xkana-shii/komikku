@@ -7,6 +7,7 @@ import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
+import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.flow.Flow
@@ -92,7 +93,7 @@ abstract class BaseTracker(
         updateRemote(track)
     }
 
-    override suspend fun setRemoteLastChapterRead(track: Track, chapterNumber: Int) {
+    override suspend fun setRemoteLastChapterRead(track: Track, chapterNumber: Int): /* KMK --> */ Track /* KMK <-- */ {
         if (
             track.last_chapter_read == 0.0 &&
             track.last_chapter_read < chapterNumber &&
@@ -106,6 +107,9 @@ abstract class BaseTracker(
             track.finished_reading_date = System.currentTimeMillis()
         }
         updateRemote(track)
+        // KMK -->
+        return track
+        // KMK <--
     }
 
     override suspend fun setRemoteScore(track: Track, scoreString: String) {
@@ -131,6 +135,12 @@ abstract class BaseTracker(
     override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         throw NotImplementedError("Not implemented.")
     }
+
+    // SY -->
+    override suspend fun searchById(id: String): TrackSearch? {
+        throw NotImplementedError("Not implemented.")
+    }
+    // SY <--
 
     private suspend fun updateRemote(track: Track): Unit = withIOContext {
         try {

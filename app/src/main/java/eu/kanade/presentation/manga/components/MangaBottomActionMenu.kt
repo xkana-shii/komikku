@@ -66,6 +66,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import kotlin.time.Duration.Companion.seconds
@@ -260,11 +261,13 @@ fun LibraryBottomActionMenu(
     // SY -->
     onClickCleanTitles: (() -> Unit)?,
     onClickMigrate: (() -> Unit)?,
+    onClickCollectRecommendations: (() -> Unit)?,
     onClickAddToMangaDex: (() -> Unit)?,
     onClickResetInfo: (() -> Unit)?,
     // SY <--
     // KMK -->
     onClickMerge: (() -> Unit)?,
+    onClickRefreshSelected: (() -> Unit)?,
     // KMK <--
     modifier: Modifier = Modifier,
 ) {
@@ -300,8 +303,10 @@ fun LibraryBottomActionMenu(
                 onClickResetInfo != null ||
                 // KMK -->
                 onClickMigrate != null ||
-                onClickMerge != null
-            // KMK <--
+                onClickMerge != null ||
+                onClickRefreshSelected != null ||
+                // KMK <--
+                onClickCollectRecommendations != null
             val configuration = LocalConfiguration.current
             val isTabletUi = remember { configuration.isTabletUi() }
             var overFlowOpen by remember { mutableStateOf(false) }
@@ -397,6 +402,17 @@ fun LibraryBottomActionMenu(
                         offset = DpOffset((-10).dp, 0.dp),
                         // KMK <--
                     ) {
+                        // KMK -->
+                        if (onClickRefreshSelected != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(KMR.strings.action_update)) },
+                                onClick = {
+                                    overFlowOpen = false
+                                    onClickRefreshSelected()
+                                },
+                            )
+                        }
+                        // KMK <--
                         if (!isTabletUi) {
                             if (onClickMigrate != null) {
                                 DropdownMenuItem(
@@ -417,6 +433,12 @@ fun LibraryBottomActionMenu(
                             DropdownMenuItem(
                                 text = { Text(stringResource(SYMR.strings.action_clean_titles)) },
                                 onClick = onClickCleanTitles,
+                            )
+                        }
+                        if (onClickCollectRecommendations != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(SYMR.strings.rec_search_short)) },
+                                onClick = onClickCollectRecommendations,
                             )
                         }
                         if (onClickAddToMangaDex != null) {

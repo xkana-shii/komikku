@@ -5,8 +5,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.produceState
 import cafe.adriel.voyager.core.model.StateScreenModel
 import eu.kanade.presentation.util.ioCoroutineScope
+import exh.recs.sources.RECOMMENDS_SOURCE
 import exh.recs.sources.RecommendationPagingSource
-import exh.recs.sources.SourceCatalogue
+import exh.recs.sources.RecommendationSource
+import exh.recs.sources.StaticResultPagingSource
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentMapOf
@@ -29,15 +31,10 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 open class RecommendsScreenModel(
-    val mangaId: Long,
-    val sourceId: Long,
+    private val args: RecommendsScreen.Args,
     private val getManga: GetManga = Injekt.get(),
-    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    protected val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
 ) : StateScreenModel<RecommendsScreenModel.State>(State()) {
-
-    // KMK -->
-    private val sourceCatalogue = SourceCatalogue(sourceId)
-    // KMK <--
 
     private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(5)
 
@@ -51,14 +48,22 @@ open class RecommendsScreenModel(
 
     init {
         ioCoroutineScope.launch {
-            val manga = getManga.await(mangaId)!!
-            mutableState.update { it.copy(manga = manga) }
-            val recommendationSources = RecommendationPagingSource.createSources(
-                manga,
-                // KMK -->
-                sourceCatalogue,
-                // KMK <--
-            )
+            val recommendationSources = when (args) {
+                is RecommendsScreen.Args.SingleSourceManga -> {
+                    val manga = getManga.await(args.mangaId)!!
+                    mutableState.update { it.copy(title = manga.title) }
+
+                    RecommendationPagingSource.createSources(
+                        manga,
+                        // KMK -->
+                        RecommendationSource(args.sourceId),
+                        // KMK <--
+                    )
+                }
+                is RecommendsScreen.Args.MergedSourceMangas -> {
+                    args.mergedResults.map(::StaticResultPagingSource)
+                }
+            }
 
             updateItems(
                 recommendationSources
@@ -78,14 +83,14 @@ open class RecommendsScreenModel(
                         }
 
                         val recSourceId = recSource.associatedSourceId
-                        // KMK -->
-                        val titles = page.mangas.map {
+                        val titles = if (recSourceId != null) {
                             // If the recommendation is associated with a source, resolve it
+                            page.mangas.map { it.toDomainManga(recSourceId) }
+                                .let { networkToLocalManga(it) }
+                        } else {
                             // Otherwise, skip this step. The user will be prompted to choose a source via SmartSearch
-                            it.toDomainManga(recSourceId ?: RECOMMENDS_SOURCE)
+                            page.mangas.map { it.toDomainManga(RECOMMENDS_SOURCE) }
                         }
-                            /* KMK --> .let { networkToLocalManga(it) } KMK <-- */
-                            // KMK <--
                             .distinctBy { it.url }
 
                         if (isActive) {
@@ -131,7 +136,7 @@ open class RecommendsScreenModel(
 
     @Immutable
     data class State(
-        val manga: Manga? = null,
+        val title: String? = null,
         val items: PersistentMap<RecommendationPagingSource, RecommendationItemResult> = persistentMapOf(),
     ) {
         val progress: Int = items.count { it.value !is RecommendationItemResult.Loading }
@@ -159,5 +164,3 @@ sealed interface RecommendationItemResult {
         return !onlyShowHasResults || (this is Success && !this.isEmpty)
     }
 }
-
-const val RECOMMENDS_SOURCE = -1L

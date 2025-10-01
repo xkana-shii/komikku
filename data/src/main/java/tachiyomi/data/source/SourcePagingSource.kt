@@ -5,8 +5,10 @@ import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
+import exh.log.xLogE
 import exh.metadata.metadata.RaisedSearchMetadata
 import mihon.domain.manga.model.toDomainManga
+import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
@@ -20,33 +22,24 @@ class SourceSearchPagingSource(
     private val filters: FilterList,
 ) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source?.getSearchManga(currentPage, query, filters)
-            // KMK -->
-            ?: MangasPage(emptyList(), false)
-        // KMK <--
+        return source.getSearchManga(currentPage, query.sanitize(), filters)
     }
 }
 
 class SourcePopularPagingSource(source: CatalogueSource) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source?.getPopularManga(currentPage)
-            // KMK -->
-            ?: MangasPage(emptyList(), false)
-        // KMK <--
+        return source.getPopularManga(currentPage)
     }
 }
 
 class SourceLatestPagingSource(source: CatalogueSource) : BaseSourcePagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
-        return source?.getLatestUpdates(currentPage)
-            // KMK -->
-            ?: MangasPage(emptyList(), false)
-        // KMK <--
+        return source.getLatestUpdates(currentPage)
     }
 }
 
 abstract class BaseSourcePagingSource(
-    protected open val source: CatalogueSource?,
+    protected val source: CatalogueSource,
     protected val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
 ) : SourcePagingSource() {
 
@@ -70,6 +63,7 @@ abstract class BaseSourcePagingSource(
             getPageLoadResult(params, mangasPage)
             // SY <--
         } catch (e: Exception) {
+            xLogE("${this::class.simpleName}: Failed to load paging source", e)
             LoadResult.Error(e)
         }
     }
@@ -91,10 +85,10 @@ abstract class BaseSourcePagingSource(
 
         val manga = mangasPage.mangas
             // SY -->
-            .mapIndexed { index, sManga -> sManga.toDomainManga(source!!.id) to metadata.getOrNull(index) }
+            .mapIndexed { index, sManga -> sManga.toDomainManga(source.id) to metadata.getOrNull(index) }
             .filter { seenManga.add(it.first.url) }
-        // KMK -->
-        // .let { pairs -> pairs.zip(networkToLocalManga(pairs.map { it.first })).map { it.second to it.first.second } }
+            // KMK -->
+            .let { pairs -> networkToLocalManga(pairs.map { it.first }).zip(pairs.map { it.second }) }
         // KMK <--
         // SY <--
 

@@ -25,8 +25,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku"
 
-        versionCode = 74
-        versionName = "1.13.2"
+        versionCode = 76
+        versionName = "1.13.4"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
@@ -307,6 +307,7 @@ dependencies {
 
     // Tests
     testImplementation(libs.bundles.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     // For detecting memory leaks; see https://square.github.io/leakcanary/
     // debugImplementation(libs.leakcanary.android)
@@ -327,6 +328,9 @@ dependencies {
 
     // Google drive
     implementation(sylibs.google.api.services.drive)
+
+    // ZXing Android Embedded
+    implementation(sylibs.zxing.android.embedded)
 }
 
 androidComponents {

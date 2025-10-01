@@ -8,9 +8,12 @@ SELECT
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
-    coalesce(MC.category_id, 0) AS category
+    -- KMK -->
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    -- KMK <--
+    coalesce(MC.categories, '0') AS categories
 FROM mangas M
-LEFT JOIN(
+LEFT JOIN (
     SELECT
         chapters.manga_id,
         count(*) AS total,
@@ -19,6 +22,9 @@ LEFT JOIN(
         coalesce(max(history.last_read), 0) AS lastRead,
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
+        -- KMK -->
+        sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        -- KMK <--
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     LEFT JOIN excluded_scanlators
@@ -30,7 +36,11 @@ LEFT JOIN(
     GROUP BY chapters.manga_id
 ) AS C
 ON M._id = C.manga_id
-LEFT JOIN mangas_categories AS MC
+LEFT JOIN (
+    SELECT manga_id, group_concat(category_id) AS categories
+    FROM mangas_categories
+    GROUP BY manga_id
+) AS MC
 ON MC.manga_id = M._id
 WHERE M.source <> 6969
 UNION
@@ -42,7 +52,10 @@ SELECT
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
-    coalesce(MC.category_id, 0) AS category
+    -- KMK -->
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    -- KMK <--
+    coalesce(MC.categories, '0') AS categories
 FROM mangas M
 LEFT JOIN (
     SELECT merged.manga_id,merged.merge_id
@@ -59,6 +72,9 @@ LEFT JOIN(
         coalesce(max(history.last_read), 0) AS lastRead,
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
+        -- KMK -->
+        sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        -- KMK <--
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     LEFT JOIN excluded_scanlators
@@ -72,7 +88,11 @@ LEFT JOIN(
     GROUP BY ME.merge_id
 ) AS C
 ON M._id = C.merge_id  -- ON ME.merge_id = C.merge_id
-LEFT JOIN mangas_categories AS MC
+LEFT JOIN (
+    SELECT manga_id, group_concat(category_id) AS categories
+    FROM mangas_categories
+    GROUP BY manga_id
+) AS MC
 ON MC.manga_id = M._id
 WHERE M.source = 6969;
 

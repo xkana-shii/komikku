@@ -70,7 +70,6 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
-import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.toMangaUpdate
@@ -91,7 +90,8 @@ import java.time.Instant
 import eu.kanade.tachiyomi.source.model.Filter as SourceModelFilter
 
 open class BrowseSourceScreenModel(
-    private val sourceId: Long,
+    /* KMK --> */
+    protected /* KMK <-- */ val sourceId: Long,
     listingQuery: String?,
     // SY -->
     private val filtersJson: String? = null,
@@ -115,9 +115,6 @@ open class BrowseSourceScreenModel(
     private val extensionManager: ExtensionManager = Injekt.get(),
     // KMK <--
 
-    // KMK -->
-    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
-    // KMK <--
     // SY -->
     unsortedPreferences: UnsortedPreferences = Injekt.get(),
     uiPreferences: UiPreferences = Injekt.get(),

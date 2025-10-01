@@ -147,13 +147,15 @@ class MangaRestorer(
             mangasQueries.update(
                 source = manga.source,
                 url = manga.url,
-                artist = manga.artist,
-                author = manga.author,
-                description = manga.description,
-                genre = manga.genre?.joinToString(separator = ", "),
-                title = manga.title,
-                status = manga.status,
-                thumbnailUrl = manga.thumbnailUrl,
+                // SY -->
+                artist = manga.ogArtist,
+                author = manga.ogAuthor,
+                description = manga.ogDescription,
+                genre = manga.ogGenre?.joinToString(separator = ", "),
+                title = manga.ogTitle,
+                status = manga.ogStatus,
+                thumbnailUrl = manga.ogThumbnailUrl,
+                // SY <--
                 favorite = manga.favorite,
                 lastUpdate = manga.lastUpdate,
                 nextUpdate = null,
@@ -177,9 +179,7 @@ class MangaRestorer(
         manga: Manga,
     ): Manga {
         return manga.copy(
-            initialized = manga.description != null,
             id = insertManga(manga),
-            version = manga.version,
         )
     }
 
@@ -307,13 +307,15 @@ class MangaRestorer(
             mangasQueries.insert(
                 source = manga.source,
                 url = manga.url,
-                artist = manga.artist,
-                author = manga.author,
-                description = manga.description,
-                genre = manga.genre,
-                title = manga.title,
-                status = manga.status,
-                thumbnailUrl = manga.thumbnailUrl,
+                // SY -->
+                artist = manga.ogArtist,
+                author = manga.ogAuthor,
+                description = manga.ogDescription,
+                genre = manga.ogGenre,
+                title = manga.ogTitle,
+                status = manga.ogStatus,
+                thumbnailUrl = manga.ogThumbnailUrl,
+                // SY <--
                 favorite = manga.favorite,
                 lastUpdate = manga.lastUpdate,
                 nextUpdate = 0L,
@@ -605,10 +607,12 @@ class MangaRestorer(
         if (excludedScanlators.isEmpty()) return
         val existingExcludedScanlators = handler.awaitList {
             excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(manga.id)
-        }
-        val toInsert = excludedScanlators.filter { it !in existingExcludedScanlators }
+            // KMK -->
+        }.toSet()
+        val toInsert = excludedScanlators.toSet().subtract(existingExcludedScanlators)
         if (toInsert.isNotEmpty()) {
-            handler.await {
+            handler.await(inTransaction = true) {
+                // KMK <--
                 toInsert.forEach {
                     excluded_scanlatorsQueries.insert(manga.id, it)
                 }

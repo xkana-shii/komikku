@@ -47,7 +47,7 @@ interface MangaRepository {
 
     suspend fun updateAll(mangaUpdates: List<MangaUpdate>): Boolean
 
-    suspend fun insertNetworkManga(manga: List<Manga>): List<Manga>
+    suspend fun insertNetworkManga(manga: List<Manga>, updateInfo: Boolean = true): List<Manga>
 
     // SY -->
     suspend fun getMangaBySourceId(sourceId: Long): List<Manga>
