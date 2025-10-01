@@ -56,5 +56,4 @@ interface MangaRepository {
 
     suspend fun getReadMangaNotInLibraryView(): List<LibraryManga>
     // SY <--
-    
 }

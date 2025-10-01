@@ -188,6 +188,7 @@ class BackupRestorer(
             // KMK <--
         }
     }
+
     // SY <--
     private fun CoroutineScope.restoreHiddenDuplicates(backupHiddenDuplicates: List<BackupHiddenDuplicate>) = launch {
         ensureActive()
