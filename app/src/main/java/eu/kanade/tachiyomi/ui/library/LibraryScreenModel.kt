@@ -469,8 +469,10 @@ class LibraryScreenModel(
                     it.downloadCount > 0 ||
                     // KMK -->
                     if (it.libraryManga.manga.source == MERGED_SOURCE_ID) {
+                        // FIXME: Calling await in filter could lead to N+1 performance issues.
+                        //  Should include all the merged references in library query instead.
                         getMergedMangaById.await(it.libraryManga.manga.id)
-                            .sumOf { downloadManager.getDownloadCount(it) } > 0
+                            .sumOf { manga -> downloadManager.getDownloadCount(manga) } > 0
                     } else {
                         // KMK <--
                         downloadManager.getDownloadCount(it.libraryManga.manga) > 0
@@ -812,6 +814,8 @@ class LibraryScreenModel(
                     downloadCount = if (preferences.downloadBadge) {
                         // SY -->
                         if (manga.manga.source == MERGED_SOURCE_ID) {
+                            // FIXME: N+1 performance issues.
+                            //  Should include all the merged references in library query instead.
                             getMergedMangaById.await(manga.manga.id)
                                 .sumOf { downloadManager.getDownloadCount(it) }.toLong()
                         } else {
