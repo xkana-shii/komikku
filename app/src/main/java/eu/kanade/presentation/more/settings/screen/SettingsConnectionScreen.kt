@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,13 +81,15 @@ object SettingsConnectionScreen : SearchableSettings {
             }
         }
 
+        val isLoggedIn by connectionsManager.discord.isLoggedInFlow.collectAsState(connectionsManager.discord.isLogged)
+
         return listOf(
             Preference.PreferenceGroup(
                 title = stringResource(KMR.strings.special_services),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.ConnectionPreference(
                         title = stringResource(connectionsManager.discord.nameStrRes()),
-                        subtitle = stringResource(KMR.strings.pref_discord_configuration),
+                        subtitle = stringResource(KMR.strings.pref_discord_configuration).takeIf { isLoggedIn },
                         service = connectionsManager.discord,
                         login = {
                             navigator.push(DiscordLoginScreen())

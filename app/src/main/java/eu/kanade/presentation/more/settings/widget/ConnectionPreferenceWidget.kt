@@ -44,14 +44,14 @@ fun ConnectionPreferenceWidget(
                 .sizeIn(minHeight = minHeight)
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
                 .fillMaxWidth()
-                .padding(horizontal = PrefsVerticalPadding),
+                .padding(horizontal = PrefsHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ConnectionLogoIcon(service)
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = PrefsVerticalPadding),
+                    .padding(horizontal = PrefsHorizontalPadding),
             ) {
                 Text(
                     text = stringResource(service.nameStrRes()),
