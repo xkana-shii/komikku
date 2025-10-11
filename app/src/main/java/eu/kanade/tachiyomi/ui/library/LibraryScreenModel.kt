@@ -574,14 +574,17 @@ class LibraryScreenModel(
         // KMK -->
         when (groupType) {
             LibraryGroup.BY_DEFAULT -> {
+                var showSystemCategory = false
                 // KMK <--
                 var showSystemCategory = false
                 val groupCache = mutableMapOf</* Category.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     item.libraryManga.categories.forEach { categoryId ->
+                        // KMK -->
                         if (categoryId == UNCATEGORIZED_ID) {
                             showSystemCategory = true
                         }
+                        // KMK <--
                         groupCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
                     }
                 }
@@ -592,7 +595,7 @@ class LibraryScreenModel(
                     // KMK <--
                 }
                     .associateWith {
-                        groupCache[it.id]?.toList().orEmpty()
+                        groupCache[it.id]
                             // KMK -->
                             .distinct()
                         // KMK <--
