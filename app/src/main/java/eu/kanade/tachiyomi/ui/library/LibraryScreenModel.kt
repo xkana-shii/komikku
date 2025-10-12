@@ -576,7 +576,6 @@ class LibraryScreenModel(
         // KMK -->
         when (groupType) {
             LibraryGroup.BY_DEFAULT -> {
-                var showSystemCategory = false
                 // KMK <--
                 var showSystemCategory = false
                 val groupCache = mutableMapOf</* Category.id */ Long, MutableList</* LibraryItem */ Long>>()
@@ -597,7 +596,7 @@ class LibraryScreenModel(
                     // KMK <--
                 }
                     .associateWith {
-                        groupCache[it.id]
+                        groupCache[it.id]!!
                             // KMK -->
                             .distinct()
                         // KMK <--
