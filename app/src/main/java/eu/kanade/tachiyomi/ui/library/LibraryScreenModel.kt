@@ -581,11 +581,9 @@ class LibraryScreenModel(
                 val groupCache = mutableMapOf</* Category.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     item.libraryManga.categories.forEach { categoryId ->
-                        // KMK -->
                         if (categoryId == UNCATEGORIZED_ID) {
                             showSystemCategory = true
                         }
-                        // KMK <--
                         groupCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
                     }
                 }
@@ -596,7 +594,7 @@ class LibraryScreenModel(
                     // KMK <--
                 }
                     .associateWith {
-                        groupCache[it.id]!!
+                        groupCache[it.id]?.toList().orEmpty()
                             // KMK -->
                             .distinct()
                         // KMK <--
