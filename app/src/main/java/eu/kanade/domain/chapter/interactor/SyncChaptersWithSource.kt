@@ -124,7 +124,7 @@ class SyncChaptersWithSource(
                 ) &&
                     downloadProvider.isChapterDirNameChanged(
                         dbChapter.copy(url = ""), // simulate legacy download (no URL hash)
-                        chapter
+                        chapter,
                     )
 
                 if (shouldRenameChapter) {
