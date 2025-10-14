@@ -285,7 +285,7 @@ class LibraryScreenModel(
                     )
                     // KMK -->
                     .filter {
-                        // Hide empty categories if a filter or search is active
+                        // Hide empty categories unless the setting is enabled or there are no active filters/search
                         showEmptyCategoriesSearch || noActiveFilterOrSearch || it.value.isNotEmpty()
                     }
                     .let {
@@ -576,14 +576,17 @@ class LibraryScreenModel(
         // KMK -->
         when (groupType) {
             LibraryGroup.BY_DEFAULT -> {
+                var showSystemCategory = false
                 // KMK <--
                 var showSystemCategory = false
                 val groupCache = mutableMapOf</* Category.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     item.libraryManga.categories.forEach { categoryId ->
+                        // KMK -->
                         if (categoryId == UNCATEGORIZED_ID) {
                             showSystemCategory = true
                         }
+                        // KMK <--
                         groupCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
                     }
                 }
@@ -1542,7 +1545,7 @@ class LibraryScreenModel(
 //                                // KMK <--
 //                            }
 //                        },
-                        order = sources.indexOf(it).toLong(),
+                        order = sourceOrderMap[it.id] ?: Long.MAX_VALUE,
                         flags = 0,
                         // KMK -->
                         hidden = false,
@@ -1713,7 +1716,7 @@ class LibraryScreenModel(
         val displayedCategories: List<Category> = groupedFavorites.keys.toList()
 
         val coercedActiveCategoryIndex = /* KMK --> */ displayedCategories.indexOfFirst { it.id == activeCategoryId }
-            .let { if (it != -1) it else activeCategoryIndex }
+            .takeIf { it != -1 } ?: activeCategoryIndex
             // KMK <--
             .coerceIn(
                 minimumValue = 0,
