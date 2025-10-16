@@ -94,6 +94,7 @@ data object UpdatesTab : Tab {
             onCancelUpdateLibrary = { screenModel.cancelLibraryUpdate(context) },
             onDownloadChapter = screenModel::downloadChapters,
             onMultiBookmarkClicked = screenModel::bookmarkUpdates,
+            onMultiFillermarkClicked = screenModel::fillermarkUpdates,
             onMultiMarkAsReadClicked = screenModel::markUpdatesRead,
             onMultiDeleteClicked = screenModel::showConfirmDeleteChapters,
             // KMK -->

@@ -17,6 +17,8 @@ SELECT
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkReadCount,
+    coalesce(C.fillermarkCount, 0) AS fillermarkCount,
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkReadCount,
     -- KMK <--
     history.last_read AS readAt,
     history.time_read AS readDuration,
@@ -42,6 +44,8 @@ LEFT JOIN(
         sum(read) AS readCount,
         sum(bookmark) AS bookmarkCount,
         sum(CASE WHEN bookmark = 1 AND read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(fillermark) AS fillermarkCount,
+        sum(CASE WHEN fillermark = 1 AND read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     LEFT JOIN excluded_scanlators
@@ -70,11 +74,15 @@ lastPageRead,
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
+    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN totalCount - fillermarkCount
+    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkCount
     ELSE totalCount
 END AS totalCount,
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
+    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN readCount - fillermarkReadCount
+    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkReadCount
     ELSE readCount
 END AS readCount,
 -- KMK <--
@@ -103,11 +111,15 @@ lastPageRead,
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
+    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN totalCount - fillermarkCount
+    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkCount
     ELSE totalCount
 END AS totalCount,
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
+    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN readCount - fillermarkReadCount
+    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkReadCount
     ELSE readCount
 END AS readCount,
 -- KMK <--
