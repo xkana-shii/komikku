@@ -168,6 +168,7 @@ class DownloadManager(
             // SY -->
             manga.ogTitle,
             // SY <--
+            chapter.url,
             source,
         )
         val files = chapterDir?.listFiles().orEmpty()
@@ -195,11 +196,12 @@ class DownloadManager(
     fun isChapterDownloaded(
         chapterName: String,
         chapterScanlator: String?,
+        chapterUrl: String,
         mangaTitle: String,
         sourceId: Long,
         skipCache: Boolean = false,
     ): Boolean {
-        return cache.isChapterDownloaded(chapterName, chapterScanlator, mangaTitle, sourceId, skipCache)
+        return cache.isChapterDownloaded(chapterName, chapterScanlator, chapterUrl, mangaTitle, sourceId, skipCache)
     }
 
     /**
@@ -460,7 +462,15 @@ class DownloadManager(
      * @param newChapter the target chapter with the new name.
      */
     suspend fun renameChapter(source: Source, manga: Manga, oldChapter: Chapter, newChapter: Chapter) {
-        val oldNames = provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator)
+        // Get all possible old folder names, with and without URL (for migration)
+        val oldNames = buildList {
+            addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, oldChapter.url))
+            // For migration: also try without URL if not already included
+            if (oldChapter.url.isNullOrEmpty()) {
+                addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, ""))
+            }
+        }
+
         val mangaDir = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source).getOrElse { e ->
             logcat(LogPriority.ERROR, e) { "Manga download folder doesn't exist. Skipping renaming after source sync" }
             return
@@ -471,7 +481,7 @@ class DownloadManager(
             .mapNotNull { mangaDir.findFile(it) }
             .firstOrNull() ?: return
 
-        var newName = provider.getChapterDirName(newChapter.name, newChapter.scanlator)
+        var newName = provider.getChapterDirName(newChapter.name, newChapter.scanlator, newChapter.url)
         if (oldDownload.isFile && oldDownload.extension == "cbz") {
             newName += ".cbz"
         }
