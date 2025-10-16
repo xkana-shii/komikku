@@ -220,8 +220,42 @@ class DownloadManager(
         return cache.getDownloadCount(manga)
     }
 
+    /**
+     * Returns the size of downloaded chapters for a manga.
+     *
+     * @param manga the manga to check.
+     */
+    fun getDownloadSize(manga: Manga): Long {
+        return cache.getDownloadSize(manga)
+    }
+
     fun cancelQueuedDownloads(downloads: List<Download>) {
         removeFromDownloadQueue(downloads.map { it.chapter })
+
+        // clean up temp artifacts for the canceled downloads
+        downloads.forEach { download ->
+            val source = download.source
+            val manga = download.manga
+            val chapter = download.chapter
+            val mangaDir = provider.findMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source) ?: return@forEach
+            val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator)
+            // Temp in-progress folder
+            mangaDir.findFile(baseName + Downloader.TMP_DIR_SUFFIX)?.delete()
+            // Temp CBZ file during archiving
+            mangaDir.findFile("$baseName.cbz" + Downloader.TMP_DIR_SUFFIX)?.delete()
+
+            // If manga directory is empty, delete it and clean cache/source
+            if (mangaDir.listFiles()?.isEmpty() == true) {
+                mangaDir.delete()
+                launchIO { cache.removeManga(manga) }
+
+                val sourceDir = provider.findSourceDir(source)
+                if (sourceDir?.listFiles()?.isEmpty() == true) {
+                    sourceDir.delete()
+                    launchIO { cache.removeSource(source) }
+                }
+            }
+        }
     }
 
     /**
@@ -255,7 +289,21 @@ class DownloadManager(
             removeFromDownloadQueue(filteredChapters)
 
             val (mangaDir, chapterDirs) = provider.findChapterDirs(filteredChapters, manga, source)
+            // Delete finalized chapter directories/files
             chapterDirs.forEach { it.delete() }
+
+            // Also proactively delete any temporary artifacts for these chapters
+            // e.g., "<chapter>_tmp" directory or "<chapter>.cbz_tmp" temp zip
+            mangaDir?.let { dir ->
+                filteredChapters.forEach { chapter ->
+                    val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator)
+                    // Temp chapter folder during download
+                    dir.findFile(baseName + Downloader.TMP_DIR_SUFFIX)?.delete()
+                    // Temp CBZ file during archiving
+                    dir.findFile("$baseName.cbz" + Downloader.TMP_DIR_SUFFIX)?.delete()
+                }
+            }
+            }
             cache.removeChapters(filteredChapters, manga)
 
             // Delete manga directory if empty
