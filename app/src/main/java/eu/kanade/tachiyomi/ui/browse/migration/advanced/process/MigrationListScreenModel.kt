@@ -7,6 +7,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.toSManga
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.online.all.EHentai
@@ -82,6 +83,8 @@ class MigrationListScreenModel(
 
     private var migrateJob: Job? = null
 
+    val uiPreferences = Injekt.get<UiPreferences>()
+
     init {
         screenModelScope.launchIO {
             val mangaIds = when (val migration = config.migration) {
@@ -105,6 +108,7 @@ class MigrationListScreenModel(
                                     } else {
                                         null
                                     },
+                                    uiPreferences, // <-- pass this as the last argument
                                 ),
                                 parentContext = screenModelScope.coroutineContext,
                             )
@@ -128,7 +132,7 @@ class MigrationListScreenModel(
             chapterCount = chapters.size,
         )
     }
-    fun getSourceName(manga: Manga) = sourceManager.getOrStub(manga.source).getNameForMangaInfo()
+    fun getSourceName(manga: Manga) = sourceManager.getOrStub(manga.source).getNameForMangaInfo(uiPreferences = uiPreferences)
 
     fun getMigrationSources() = preferences.migrationSources().get().split("/").mapNotNull {
         val value = it.toLongOrNull() ?: return@mapNotNull null
