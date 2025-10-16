@@ -24,9 +24,11 @@ fun List<Chapter>.applyFilters(
     val unreadFilter = manga.unreadFilter
     val downloadedFilter = manga.downloadedFilter
     val bookmarkedFilter = manga.bookmarkedFilter
+    val fillermarkedFilter = manga.fillermarkedFilter
 
     return filter { chapter -> applyFilter(unreadFilter) { !chapter.read } }
         .filter { chapter -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
+        .filter { chapter -> applyFilter(fillermarkedFilter) { chapter.fillermark } }
         .filter { chapter ->
             // SY -->
             @Suppress("NAME_SHADOWING")
@@ -36,6 +38,7 @@ fun List<Chapter>.applyFilters(
                 val downloaded = downloadManager.isChapterDownloaded(
                     chapter.name,
                     chapter.scanlator,
+                    chapter.url,
                     // SY -->
                     manga.ogTitle,
                     // SY <--
@@ -56,9 +59,11 @@ fun List<ChapterList.Item>.applyFilters(manga: Manga): Sequence<ChapterList.Item
     val unreadFilter = manga.unreadFilter
     val downloadedFilter = manga.downloadedFilter
     val bookmarkedFilter = manga.bookmarkedFilter
+    val fillermarkedFilter = manga.fillermarkedFilter
     return asSequence()
         .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
         .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
+        .filter { (chapter) -> applyFilter(fillermarkedFilter) { chapter.fillermark } }
         .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
         .sortedWith { (chapter1), (chapter2) -> getChapterSort(manga).invoke(chapter1, chapter2) }
 }

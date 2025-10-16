@@ -38,6 +38,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.advanced.ClearDatabaseScreen
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.download.DownloadCache
@@ -389,6 +390,11 @@ object SettingsAdvancedScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_update_library_manga_titles),
                     subtitle = stringResource(MR.strings.pref_update_library_manga_titles_summary),
                 ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.disallowNonAsciiFilenames(),
+                    title = stringResource(MR.strings.pref_disallow_non_ascii_filenames),
+                    subtitle = stringResource(MR.strings.pref_disallow_non_ascii_filenames_details),
+                ),
             ),
         )
     }
@@ -510,6 +516,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                 // KMK -->
                 Preference.PreferenceItem.InfoPreference(stringResource(KMR.strings.pref_private_installer_warning)),
                 // KMK <--
+                /*
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.ext_revoke_trust),
                     onClick = {
@@ -517,6 +524,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                         context.toast(MR.strings.requires_app_restart)
                     },
                 ),
+                 */
             ),
         )
     }
@@ -737,9 +745,66 @@ object SettingsAdvancedScreen : SearchableSettings {
         val unsortedPreferences = remember { Injekt.get<UnsortedPreferences>() }
         val delegateSourcePreferences = remember { Injekt.get<DelegateSourcePreferences>() }
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
+
+        val devOptionsAreEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
+        val devOptionsPasswordPref = unsortedPreferences.devOptionsPassword()
+        val devOptionsPassword by devOptionsPasswordPref.collectAsState()
+
+        val conditionalPreferenceItems = if (devOptionsAreEnabled) {
+            listOf<Preference.PreferenceItem<out Any>>(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = unsortedPreferences.fastDownloadEnabled(),
+                    title = stringResource(KMR.strings.dev_fast_download),
+                    subtitle = stringResource(KMR.strings.dev_concurrent_pages),
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.developer_tools),
             preferenceItems = persistentListOf(
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = devOptionsPasswordPref,
+                    title = stringResource(KMR.strings.dev_options_password),
+                    subtitle = if (devOptionsAreEnabled) {
+                        stringResource(KMR.strings.dev_options_password_subtitle_enabled)
+                    } else {
+                        stringResource(KMR.strings.dev_options_password_subtitle_disabled)
+                    },
+                    onValueChanged = { password ->
+                        if (password.isBlank()) {
+                            if (devOptionsAreEnabled) {
+                                unsortedPreferences.devOptionsEnabled().set(false)
+                                unsortedPreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_disabled_by_clear)
+                            }
+                            true
+                        } else {
+                            val valid = password == BuildConfig.DEV_OPTIONS
+                            unsortedPreferences.devOptionsEnabled().set(valid)
+                            if (valid) {
+                                context.toast(KMR.strings.dev_options_enabled)
+                            } else {
+                                unsortedPreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_incorrect_password)
+                            }
+                            valid
+                        }
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(KMR.strings.dev_options_password_reset),
+                    enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
+                    onClick = {
+                        devOptionsPasswordPref.delete()
+                        unsortedPreferences.devOptionsEnabled().set(false)
+                        unsortedPreferences.fastDownloadEnabled().set(false)
+                        context.toast(MR.strings.requires_app_restart)
+                    },
+                ),
+                *conditionalPreferenceItems.toTypedArray(),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = unsortedPreferences.isHentaiEnabled(),
                     title = stringResource(SYMR.strings.toggle_hentai_features),

@@ -20,6 +20,7 @@ import eu.kanade.domain.manga.interactor.SmartSearchMerge
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
@@ -27,9 +28,13 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.anilist.Anilist
+import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -337,6 +342,7 @@ class LibraryScreenModel(
                 prefs.filterUnread,
                 prefs.filterStarted,
                 prefs.filterBookmarked,
+                prefs.filterFillermarked,
                 prefs.filterCompleted,
                 prefs.filterIntervalCustom,
                 // SY -->
@@ -418,6 +424,21 @@ class LibraryScreenModel(
                 mangaDexDmcaUuids = loadMangaDexDmcaUuids(context = Injekt.get<Application>())
             }
         }
+
+        screenModelScope.launchIO {
+            trackerManager.loggedInTrackersFlow().collectLatest { trackerList ->
+                mutableState.update { state ->
+                    state.copy(
+                        hasLoggedInTrackers = trackerList.filterNot { it is EnhancedTracker }.any { tracker ->
+                            tracker::class in listOf(
+                                Anilist::class,
+                                MyAnimeList::class,
+                            )
+                        },
+                    )
+                }
+            }
+        }
         // KMK <--
     }
 
@@ -436,6 +457,7 @@ class LibraryScreenModel(
         val filterUnread = preferences.filterUnread
         val filterStarted = preferences.filterStarted
         val filterBookmarked = preferences.filterBookmarked
+        val filterFillermarked = preferences.filterFillermarked
         val filterCompleted = preferences.filterCompleted
         val filterIntervalCustom = preferences.filterIntervalCustom
         val filterCategories = preferences.filterCategories
@@ -486,6 +508,10 @@ class LibraryScreenModel(
 
         val filterFnBookmarked: (LibraryItem) -> Boolean = {
             applyFilter(filterBookmarked) { it.libraryManga.hasBookmarks }
+        }
+
+        val filterFnFillermarked: (LibraryItem) -> Boolean = {
+            applyFilter(filterFillermarked) { it.libraryManga.hasFillermarks }
         }
 
         val filterFnCompleted: (LibraryItem) -> Boolean = {
@@ -545,6 +571,7 @@ class LibraryScreenModel(
                 filterFnUnread(it) &&
                 filterFnStarted(it) &&
                 filterFnBookmarked(it) &&
+                filterFnFillermarked(it) &&
                 filterFnCompleted(it) &&
                 filterFnIntervalCustom(it) &&
                 filterFnTracking(it) &&
@@ -750,6 +777,7 @@ class LibraryScreenModel(
             libraryPreferences.filterUnread().changes(),
             libraryPreferences.filterStarted().changes(),
             libraryPreferences.filterBookmarked().changes(),
+            libraryPreferences.filterFillermarked().changes(),
             libraryPreferences.filterCompleted().changes(),
             libraryPreferences.filterIntervalCustom().changes(),
             // SY -->
@@ -772,15 +800,16 @@ class LibraryScreenModel(
                 filterUnread = it[7] as TriState,
                 filterStarted = it[8] as TriState,
                 filterBookmarked = it[9] as TriState,
-                filterCompleted = it[10] as TriState,
-                filterIntervalCustom = it[11] as TriState,
+                filterFillermarked = it[10] as TriState,
+                filterCompleted = it[11] as TriState,
+                filterIntervalCustom = it[12] as TriState,
                 // SY -->
-                filterLewd = it[12] as TriState,
+                filterLewd = it[13] as TriState,
                 // SY <--
                 // KMK -->
-                sourceBadge = it[13] as Boolean,
-                useLangIcon = it[14] as Boolean,
-                filterCategories = it[15] as Boolean,
+                sourceBadge = it[14] as Boolean,
+                useLangIcon = it[15] as Boolean,
+                filterCategories = it[16] as Boolean,
             )
         }
     }
@@ -928,6 +957,7 @@ class LibraryScreenModel(
                                     downloadManager.isChapterDownloaded(
                                         chapter.name,
                                         chapter.scanlator,
+                                        chapter.url,
                                         mergedManga.ogTitle,
                                         mergedManga.source,
                                     )
@@ -946,6 +976,7 @@ class LibraryScreenModel(
                             downloadManager.isChapterDownloaded(
                                 chapter.name,
                                 chapter.scanlator,
+                                chapter.url,
                                 // SY -->
                                 manga.ogTitle,
                                 // SY <--
@@ -1221,6 +1252,7 @@ class LibraryScreenModel(
         val sourceIdString = manga.source.takeUnless { it == LocalSource.ID }?.toString()
         val genre = if (checkGenre) manga.genre.orEmpty() else emptyList()
         val context = Injekt.get<Application>()
+        val uiPreferences = Injekt.get<UiPreferences>()
         return queries.all { queryComponent ->
             when (queryComponent.excluded) {
                 false -> when (queryComponent) {
@@ -1230,7 +1262,9 @@ class LibraryScreenModel(
                             (manga.author?.contains(query, true) == true) ||
                             (manga.artist?.contains(query, true) == true) ||
                             (manga.description?.contains(query, true) == true) ||
-                            (source?.name?.contains(query, true) == true) ||
+                            // KMK -->
+                            (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) == true) ||
+                            // KMK <--
                             (sourceIdString != null && sourceIdString == query) ||
                             (
                                 loggedInTrackServices.isNotEmpty() &&
@@ -1263,7 +1297,9 @@ class LibraryScreenModel(
                                     (manga.author?.contains(query, true) != true) &&
                                     (manga.artist?.contains(query, true) != true) &&
                                     (manga.description?.contains(query, true) != true) &&
-                                    (source?.name?.contains(query, true) != true) &&
+                                    // KMK -->
+                                    (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) != true) &&
+                                    // KMK <--
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
                                         loggedInTrackServices.isEmpty() ||
@@ -1458,6 +1494,7 @@ class LibraryScreenModel(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
         val context = preferences.context
+        val uiPreferences = Injekt.get<UiPreferences>()
         return when (groupType) {
             LibraryGroup.BY_TRACK_STATUS -> {
                 val tracks = runBlocking { getTracks.await() }.groupBy { it.mangaId }
@@ -1508,12 +1545,23 @@ class LibraryScreenModel(
                 sources.associate {
                     val category = Category(
                         id = it.id,
-                        name = if (it.id == LocalSource.ID) {
-                            context.stringResource(MR.strings.local_source)
-                        } else {
-                            it.name.ifBlank { it.id.toString() }
-                        },
-                        order = sourceOrderMap[it.id] ?: Long.MAX_VALUE,
+                        // TODO: Probably add condition for useLangIcon to `getNameForMangaInfo` too
+                        name = it.getNameForMangaInfo(uiPreferences = uiPreferences),
+//                        if (it.id == LocalSource.ID) {
+//                            context.stringResource(MR.strings.local_source)
+//                        } else {
+//                            // KMK -->
+//                            // FIXME: This useLangIcon should be moved out ouf LibraryItem & subscribe to changes() directly from preferences
+//                            val useLangIcon = groupCache[it.id]?.let { it.firstOrNull()?.let { itemId -> this.firstOrNull { it.id == itemId } } }?.useLangIcon == true
+//                            val langText = if (useLangIcon) FlagEmoji.getEmojiLangFlag(it.lang) else it.lang.uppercase()
+//                            // KMK <--
+//                            it.name.ifBlank { it.id.toString() }.let { sourceName ->
+//                                // KMK -->
+//                                "$sourceName ($langText)"
+//                                // KMK <--
+//                            }
+//                        },
+                        order = sources.indexOf(it).toLong(),
                         flags = 0,
                         // KMK -->
                         hidden = false,
@@ -1627,6 +1675,7 @@ class LibraryScreenModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
+        val filterFillermarked: TriState,
         val filterCompleted: TriState,
         val filterIntervalCustom: TriState,
         // SY -->
@@ -1669,6 +1718,7 @@ class LibraryScreenModel(
         val showSyncExh: Boolean = false,
         val isSyncEnabled: Boolean = false,
         val groupType: Int = LibraryGroup.BY_DEFAULT,
+        val hasLoggedInTrackers: Boolean = false,
         // SY <--
         // KMK -->
         val filterCategory: Boolean = false,

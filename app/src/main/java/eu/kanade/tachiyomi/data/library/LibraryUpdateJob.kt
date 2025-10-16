@@ -95,8 +95,8 @@ import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.time.Instant
 import java.time.ZonedDateTime
+import java.util.Date
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.atomics.AtomicBoolean
@@ -167,11 +167,6 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
         val target = inputData.getString(KEY_TARGET)?.let { Target.valueOf(it) } ?: Target.CHAPTERS
 
-        // If this is a chapter update, set the last update time to now
-        if (target == Target.CHAPTERS) {
-            libraryPreferences.lastUpdatedTimestamp().set(Instant.now().toEpochMilli())
-        }
-
         val categoryId = inputData.getLong(KEY_CATEGORY, -1L)
         // SY -->
         val group = inputData.getInt(KEY_GROUP, LibraryGroup.BY_DEFAULT)
@@ -198,6 +193,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                     Result.failure()
                 }
             } finally {
+                libraryPreferences.lastUpdatedTimestamp().set(Date().time)
                 notifier.cancelProgressNotification()
                 // KMK -->
                 libraryUpdateStatus.stop()

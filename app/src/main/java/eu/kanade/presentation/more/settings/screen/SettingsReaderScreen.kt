@@ -114,6 +114,7 @@ object SettingsReaderScreen : SearchableSettings {
             getPageDownloadingGroup(readerPreferences = readerPref),
             getForkSettingsGroup(readerPreferences = readerPref),
             // SY <--
+            getAutomationGroup(readerPreferences = readerPref),
         )
     }
 
@@ -686,4 +687,100 @@ object SettingsReaderScreen : SearchableSettings {
         )
     }
     // SY <--
+
+    @Composable
+    private fun getAutomationGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
+        val autoScrollState by readerPreferences.autoScroll().collectAsState()
+        val autoFlipState by readerPreferences.autoFlip().collectAsState()
+
+        val autoScrollSpeedPref = readerPreferences.autoScrollSpeed()
+        val autoScrollSpeed by autoScrollSpeedPref.collectAsState()
+        val autoFlipIntervalPref = readerPreferences.autoFlipInterval()
+        val autoFlipInterval by autoFlipIntervalPref.collectAsState()
+        val automationMaxMinutesPref = readerPreferences.automationMaxMinutes()
+        val automationMaxMinutes by automationMaxMinutesPref.collectAsState()
+        val automationMaxChaptersPref = readerPreferences.automationMaxChapters()
+        val automationMaxChapters by automationMaxChaptersPref.collectAsState()
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.pref_reader_automation),
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.autoScroll(),
+                    title = stringResource(MR.strings.pref_auto_scroll),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = 11 - autoScrollSpeed,
+                    valueRange = 1..10,
+                    title = stringResource(MR.strings.pref_auto_scroll_speed),
+                    subtitle = pluralStringResource(
+                        MR.plurals.pref_auto_scroll_speed_summary,
+                        autoScrollSpeed,
+                        autoScrollSpeed,
+                    ),
+                    enabled = autoScrollState,
+                    onValueChanged = {
+                        autoScrollSpeedPref.set(11 - it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.autoFlip(),
+                    title = stringResource(MR.strings.pref_auto_flip),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = autoFlipInterval,
+                    valueRange = 1..30,
+                    title = stringResource(MR.strings.pref_auto_flip_interval),
+                    subtitle = pluralStringResource(
+                        MR.plurals.pref_auto_flip_interval_summary,
+                        autoFlipInterval,
+                        autoFlipInterval,
+                    ),
+                    enabled = autoFlipState,
+                    onValueChanged = {
+                        autoFlipIntervalPref.set(it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = readerPreferences.automationMaxMinutes().get(),
+                    valueRange = 0..60,
+                    title = stringResource(MR.strings.pref_reader_automation_max_minutes),
+                    subtitle = if (automationMaxMinutes == 0) {
+                        stringResource(MR.strings.disabled)
+                    } else {
+                        pluralStringResource(
+                            MR.plurals.pref_reader_automation_max_minutes_summary,
+                            automationMaxMinutes,
+                            automationMaxMinutes,
+                        )
+                    },
+                    enabled = autoScrollState || autoFlipState,
+                    onValueChanged = {
+                        automationMaxMinutesPref.set(it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = readerPreferences.automationMaxChapters().get(),
+                    valueRange = 0..10,
+                    title = stringResource(MR.strings.pref_reader_automation_max_chapters),
+                    subtitle = if (automationMaxChapters == 0) {
+                        stringResource(MR.strings.disabled)
+                    } else {
+                        pluralStringResource(
+                            MR.plurals.pref_reader_automation_max_chapters_summary,
+                            automationMaxChapters,
+                            automationMaxChapters,
+                        )
+                    },
+                    enabled = autoScrollState || autoFlipState,
+                    onValueChanged = {
+                        automationMaxChaptersPref.set(it)
+                        true
+                    },
+                ),
+            ),
+        )
+    }
 }

@@ -15,7 +15,6 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.DiskUtil.NOMEDIA_FILE
 import eu.kanade.tachiyomi.util.storage.saveTo
-import exh.source.MERGED_SOURCE_ID
 import exh.source.isEhBasedSource
 import exh.util.DataSaver
 import exh.util.DataSaver.Companion.getImage
@@ -57,6 +56,7 @@ import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.core.metadata.comicinfo.COMIC_INFO_FILE
 import tachiyomi.core.metadata.comicinfo.ComicInfo
+import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.download.service.DownloadPreferences
@@ -157,6 +157,14 @@ class Downloader(
         queueState.value
             .filter { it.status == Download.State.DOWNLOADING }
             .forEach { it.status = Download.State.ERROR }
+
+        // If stopping with a reason (e.g., no network / only Wi‑Fi), or if any item is already in ERROR,
+        // propagate ERROR to remaining queued items so the UI reflects the global failure.
+        if (reason != null || queueState.value.any { it.status == Download.State.ERROR }) {
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
+        }
 
         if (reason != null) {
             notifier.onWarning(reason)
@@ -259,6 +267,10 @@ class Downloader(
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e)
             notifier.onError(e.message)
+            // Also mark queued items as ERROR so UI reflects global failure (e.g., no internet)
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
             stop()
         }
     }
@@ -282,16 +294,11 @@ class Downloader(
         if (chapters.isEmpty()) return
 
         val source = sourceManager.get(manga.source) as? HttpSource ?: return
-
-        // KMK -->
-        if (source.id == MERGED_SOURCE_ID) return
-        // KMK <--
-
         val wasEmpty = queueState.value.isEmpty()
         val chaptersToQueue = chapters.asSequence()
             // Filter out those already downloaded.
             .filter {
-                provider.findChapterDir(it.name, it.scanlator, /* SY --> */ manga.ogTitle /* SY <-- */, source) == null
+                provider.findChapterDir(it.name, it.scanlator, it.url, /* SY --> */ manga.ogTitle /* SY <-- */, source) == null
             }
             // Add chapters to queue from the start.
             .sortedByDescending { it.sourceOrder }
@@ -336,10 +343,6 @@ class Downloader(
      * @param download the chapter to be downloaded.
      */
     private suspend fun downloadChapter(download: Download) {
-        // KMK -->
-        if (download.source.id == MERGED_SOURCE_ID) return
-        // KMK <--
-
         val mangaDir = provider.getMangaDir(/* SY --> */ download.manga.ogTitle /* SY <-- */, download.source).getOrElse { e ->
             download.status = Download.State.ERROR
             notifier.onError(e.message, download.chapter.name, download.manga.title, download.manga.id)
@@ -358,7 +361,11 @@ class Downloader(
             return
         }
 
-        val chapterDirname = provider.getChapterDirName(download.chapter.name, download.chapter.scanlator)
+        val chapterDirname = provider.getChapterDirName(
+            download.chapter.name,
+            download.chapter.scanlator,
+            download.chapter.url,
+        )
         val tmpDir = mangaDir.createDirectory(chapterDirname + TMP_DIR_SUFFIX)!!
 
         try {
@@ -389,10 +396,16 @@ class Downloader(
 
             download.status = Download.State.DOWNLOADING
 
-            // Start downloading images, consider we can have downloaded images already
-            // Concurrently do 2 pages at a time
+            val isFastDownloadEnabled = Injekt.get<UnsortedPreferences>().fastDownloadEnabled().get()
+
+            val concurrency = if (isFastDownloadEnabled) {
+                16
+            } else {
+                2
+            }
+
             pageList.asFlow()
-                .flatMapMerge(concurrency = 2) { page ->
+                .flatMapMerge(concurrency = concurrency) { page ->
                     flow {
                         // Fetch image URL if necessary
                         if (page.imageUrl.isNullOrEmpty()) {

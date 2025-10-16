@@ -23,6 +23,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.injectLazy
 import kotlin.math.min
@@ -109,6 +110,8 @@ abstract class PagerViewer(
         }
     }
 
+    override val automationInProgress = MutableStateFlow(false)
+
     init {
         pager.isVisible = false // Don't layout the pager yet
         pager.layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
@@ -118,6 +121,7 @@ abstract class PagerViewer(
         pager.adapter = adapter
         pager.addOnPageChangeListener(pagerListener)
         pager.tapListener = { event ->
+            automationInProgress.value = false
             val viewPosition = IntArray(2)
             pager.getLocationOnScreen(viewPosition)
             val viewPositionRelativeToWindow = IntArray(2)
@@ -164,6 +168,9 @@ abstract class PagerViewer(
         config.navigationModeChangedListener = {
             val showOnStart = config.navigationOverlayOnStart || config.forceNavigationOverlay
             activity.binding.navigationOverlay.setNavigation(config.navigator, showOnStart)
+        }
+        if (config.autoFlipEnabled) {
+            automatePager(activity, adapter, automationInProgress, config, scope) { moveToNext() }
         }
     }
 
@@ -279,6 +286,7 @@ abstract class PagerViewer(
         } else if (transition is ChapterTransition.Next) {
             // No more chapters, show menu because the user is probably going to close the reader
             activity.showMenu()
+            automationInProgress.value = false
         }
     }
 

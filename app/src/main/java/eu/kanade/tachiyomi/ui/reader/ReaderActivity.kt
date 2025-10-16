@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.reader
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.UiModeManager
 import android.app.assist.AssistContent
 import android.content.ClipData
@@ -32,7 +33,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,9 +52,7 @@ import androidx.core.transition.doOnEnd
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.elevation.SurfaceColors
 import com.google.android.material.transition.platform.MaterialContainerTransform
@@ -66,6 +64,8 @@ import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.manga.model.readingMode
+import eu.kanade.domain.track.model.AutoRereadResetMode
+import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
@@ -118,14 +118,11 @@ import exh.util.mangaType
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
@@ -148,7 +145,6 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.ByteArrayOutputStream
-import kotlin.time.Duration.Companion.seconds
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 class ReaderActivity : BaseActivity() {
@@ -215,7 +211,7 @@ class ReaderActivity : BaseActivity() {
         registerSecureActivity(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
-                OVERRIDE_TRANSITION_OPEN,
+                Activity.OVERRIDE_TRANSITION_OPEN,
                 R.anim.shared_axis_x_push_enter,
                 R.anim.shared_axis_x_push_exit,
             )
@@ -371,7 +367,7 @@ class ReaderActivity : BaseActivity() {
         super.finish()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
-                OVERRIDE_TRANSITION_CLOSE,
+                Activity.OVERRIDE_TRANSITION_CLOSE,
                 R.anim.shared_axis_x_pop_enter,
                 R.anim.shared_axis_x_pop_exit,
             )
@@ -529,8 +525,8 @@ class ReaderActivity : BaseActivity() {
                 chapterTitle = state.currentChapter?.chapter?.name,
                 navigateUp = onBackPressedDispatcher::onBackPressed,
                 onClickTopAppBar = ::openMangaScreen,
-                // bookmarked = state.bookmarked,
-                // onToggleBookmarked = viewModel::toggleChapterBookmark,
+                bookmarked = state.bookmarked,
+                onToggleBookmarked = viewModel::toggleChapterBookmark,
                 onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
                 onOpenInBrowser = ::openChapterInBrowser.takeIf { isHttpSource },
                 onShare = ::shareChapter.takeIf { isHttpSource },
@@ -563,18 +559,8 @@ class ReaderActivity : BaseActivity() {
                 },
                 onClickSettings = viewModel::openSettingsDialog,
                 // SY -->
-                isExhToolsVisible = state.ehUtilsVisible,
-                onSetExhUtilsVisibility = viewModel::showEhUtils,
-                isAutoScroll = state.autoScroll,
-                isAutoScrollEnabled = state.isAutoScrollEnabled,
-                onToggleAutoscroll = viewModel::toggleAutoScroll,
-                autoScrollFrequency = state.ehAutoscrollFreq,
-                onSetAutoScrollFrequency = viewModel::setAutoScrollFrequency,
-                onClickAutoScrollHelp = viewModel::openAutoScrollHelpDialog,
                 onClickRetryAll = ::exhRetryAll,
-                onClickRetryAllHelp = viewModel::openRetryAllHelp,
                 onClickBoostPage = ::exhBoostPage,
-                onClickBoostPageHelp = viewModel::openBoostPageHelp,
                 currentPageText = state.currentPageText,
                 navBarType = navBarType,
                 enabledButtons = readerBottomButtons,
@@ -596,6 +582,7 @@ class ReaderActivity : BaseActivity() {
                 },
                 onClickShiftPage = ::shiftDoublePages,
                 // SY <--
+                readerPreferences = readerPreferences,
             )
 
             if (flashOnPageChange) {
@@ -704,45 +691,19 @@ class ReaderActivity : BaseActivity() {
                                 }
                             }.toImmutableList()
                         },
-                        state.dateRelativeTime,
-                        // KMK -->
-                        onDownloadAction = { chapter, action ->
-                            viewModel.handleDownloadAction(chapter, action)
+                        onFillermark = { chapter ->
+                            viewModel.toggleFillermark(chapter.id, !chapter.fillermark)
+                            chapters = chapters.map {
+                                if (it.chapter.id == chapter.id) {
+                                    it.copy(chapter = chapter.copy(fillermark = !chapter.fillermark))
+                                } else {
+                                    it
+                                }
+                            }.toImmutableList()
                         },
-                        // KMK <--
+                        state.dateRelativeTime,
                     )
                 }
-                // SY -->
-                ReaderViewModel.Dialog.AutoScrollHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    title = { Text(text = stringResource(SYMR.strings.eh_autoscroll_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_autoscroll_help_message)) },
-                )
-                ReaderViewModel.Dialog.BoostPageHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    title = { Text(text = stringResource(SYMR.strings.eh_boost_page_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_boost_page_help_message)) },
-                )
-                ReaderViewModel.Dialog.RetryAllHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
-                        }
-                    },
-                    title = { Text(text = stringResource(SYMR.strings.eh_retry_all_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_retry_all_help_message)) },
-                )
                 // SY <--
                 null -> {}
             }
@@ -794,8 +755,6 @@ class ReaderActivity : BaseActivity() {
 
         // Set initial visibility
         setMenuVisibility(viewModel.state.value.menuVisible)
-
-        enableExhAutoScroll()
     }
 
     // KMK -->
@@ -813,39 +772,6 @@ class ReaderActivity : BaseActivity() {
                 ?.let { ComposeColor(it) }
     }
     // KMK <--
-
-    private fun enableExhAutoScroll() {
-        readerPreferences.autoscrollInterval().changes()
-            .combine(viewModel.state.map { it.autoScroll }.distinctUntilChanged()) { interval, enabled ->
-                interval.toDouble() to enabled
-            }.mapLatest { (intervalFloat, enabled) ->
-                if (enabled) {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        val interval = intervalFloat.seconds
-                        while (true) {
-                            if (!viewModel.state.value.menuVisible) {
-                                viewModel.state.value.viewer.let { v ->
-                                    when (v) {
-                                        is PagerViewer -> v.moveToNext()
-                                        is WebtoonViewer -> {
-                                            if (readerPreferences.smoothAutoScroll().get()) {
-                                                v.linearScroll(interval)
-                                            } else {
-                                                v.scrollDown()
-                                            }
-                                        }
-                                    }
-                                }
-                                delay(interval)
-                            } else {
-                                delay(100)
-                            }
-                        }
-                    }
-                }
-            }
-            .launchIn(lifecycleScope)
-    }
 
     private fun exhRetryAll() {
         var retried = 0
@@ -1082,7 +1008,7 @@ class ReaderActivity : BaseActivity() {
         try {
             readingModeToast?.cancel()
             readingModeToast = toast(ReadingMode.fromPreference(mode).stringRes)
-        } catch (_: ArrayIndexOutOfBoundsException) {
+        } catch (e: ArrayIndexOutOfBoundsException) {
             logcat(LogPriority.ERROR) { "Unknown reading mode: $mode" }
         }
     }

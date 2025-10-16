@@ -14,16 +14,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <TextView
+        <androidx.compose.ui.platform.ComposeView
             android:id="@+id/title"
-            style="@style/TextAppearance.Tachiyomi.SectionHeader"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
             android:layout_weight="1"
             android:layout_gravity="center_vertical"
-            tools:text="Title" />
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="8dp" />
 
         <ImageView
             android:id="@+id/reorder"

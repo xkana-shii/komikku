@@ -40,6 +40,8 @@
     <string name="show_japanese_titles">Show Japanese titles in search results</string>
     <string name="show_japanese_titles_option_1">Currently showing Japanese titles in search results. Clear the chapter cache after changing this (in the Advanced section)</string>
     <string name="show_japanese_titles_option_2">Currently showing English/Romanized titles in search results. Clear the chapter cache after changing this (in the Advanced section)</string>
+    <string name="clean_title">Remove special characters from titles</string>
+    <string name="clean_title_summary">Remove special characters from titles</string>
     <string name="use_original_images">Use original images</string>
     <string name="use_original_images_on">Currently using original images</string>
     <string name="use_original_images_off">Currently using resampled images</string>
@@ -325,12 +327,12 @@
 
     <!-- Reader -->
     <!-- Reader Actions -->
-    <string name="eh_autoscroll">Autoscroll</string>
     <string name="eh_retry_all">Retry all</string>
     <string name="eh_boost_page">Boost page</string>
+<!--<string name="eh_autoscroll">Autoscroll</string>
     <string name="eh_autoscroll_help">Autoscroll help</string>
     <string name="eh_autoscroll_help_message">Automatically scroll to the next page in the specified interval. Interval is specified in seconds.</string>
-    <string name="eh_autoscroll_freq_invalid">Invalid frequency</string>
+    <string name="eh_autoscroll_freq_invalid">Invalid frequency</string>-->
     <string name="eh_retry_all_help">Retry all help</string>
     <string name="eh_retry_all_help_message">Re-add all failed pages to the download queue.</string>
     <string name="eh_boost_page_help">Boost page help</string>
