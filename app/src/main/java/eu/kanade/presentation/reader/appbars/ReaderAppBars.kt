@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -39,10 +36,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentListOf
-import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
-import tachiyomi.presentation.core.i18n.stringResource
 
 private val animationSpec = tween<IntOffset>(200)
 
@@ -79,8 +73,8 @@ fun ReaderAppBars(
     chapterTitle: String?,
     navigateUp: () -> Unit,
     onClickTopAppBar: () -> Unit,
-    bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
+    // bookmarked: Boolean,
+    // onToggleBookmarked: () -> Unit,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -104,6 +98,8 @@ fun ReaderAppBars(
     // SY -->
     onClickRetryAll: () -> Unit,
     onClickBoostPage: () -> Unit,
+    bookmarked: Boolean,
+    onToggleBookmarked: () -> Unit,
     navBarType: NavBarType,
     currentPageText: String,
     enabledButtons: ImmutableSet<String>,
@@ -212,6 +208,7 @@ fun ReaderAppBars(
                         title = mangaTitle,
                         subtitle = chapterTitle,
                         navigateUp = navigateUp,
+                        /* SY -->
                         actions = {
                             AppBarActions(
                                 actions = persistentListOf<AppBar.AppBarAction>().builder()
@@ -233,7 +230,6 @@ fun ReaderAppBars(
                                                 onClick = onToggleBookmarked,
                                             ),
                                         )
-                                        /* SY -->
                                         onOpenInWebView?.let {
                                             add(
                                                 AppBar.OverflowAction(
@@ -258,11 +254,11 @@ fun ReaderAppBars(
                                                 ),
                                             )
                                         }
-                                        SY <-- */
                                     }
                                     .build(),
                             )
                         },
+                        SY <-- */
                     )
                     // SY -->
                     ExhUtils(
