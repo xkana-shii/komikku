@@ -13,7 +13,9 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.PATCH
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -31,22 +33,32 @@ class MangaBakaApi(
             .build()
     }
 
-    private fun trackerUrlToQuery(query: String): String? {
+    private data class TrackerUrlInfo(val service: String, val id: String)
+
+    // Extracts tracker URLs and returns a service + id, or null for normal queries
+    private fun extractTrackerUrlInfo(query: String): TrackerUrlInfo? {
         val trimmed = query.trim()
-        val urlPrefixes = mapOf(
-            "anilist.co/manga/" to "al:",
-            "www.mangaupdates.com/series/" to "mu:",
-            "myanimelist.net/manga/" to "mal:",
-        )
-        for ((prefix, qPrefix) in urlPrefixes) {
-            val idx = trimmed.indexOf(prefix)
-            if (idx != -1) {
-                val rest = trimmed.substring(idx + prefix.length)
-                val id = rest.split('/')[0]
-                return qPrefix + id
+        return when {
+            // AniList
+            trimmed.contains("anilist.co/manga/") -> {
+                val rest = trimmed.substringAfter("anilist.co/manga/")
+                val id = rest.takeWhile { it.isDigit() }
+                if (id.isNotEmpty()) TrackerUrlInfo("anilist", id) else null
             }
+            // MangaUpdates
+            trimmed.contains("www.mangaupdates.com/series/") -> {
+                val rest = trimmed.substringAfter("www.mangaupdates.com/series/")
+                val id = rest.takeWhile { it.isLetterOrDigit() }
+                if (id.isNotEmpty()) TrackerUrlInfo("manga-updates", id) else null
+            }
+            // MyAnimeList
+            trimmed.contains("myanimelist.net/manga/") -> {
+                val rest = trimmed.substringAfter("myanimelist.net/manga/")
+                val id = rest.takeWhile { it.isDigit() }
+                if (id.isNotEmpty()) TrackerUrlInfo("my-anime-list", id) else null
+            }
+            else -> null
         }
-        return null
     }
 
     suspend fun testLibraryAuth() {
@@ -153,15 +165,30 @@ class MangaBakaApi(
     }
 
     suspend fun search(query: String): List<MBRecord> {
-        val url = when (val trackerQuery = trackerUrlToQuery(query)) {
-            null -> "$API_BASE_URL/v1/series/search?q=$query&content_rating=safe%2Csuggestive%2Cerotica%2Cpornographic"
-            else -> "$API_BASE_URL/v1/series/search?q=$trackerQuery"
+        val trackerInfo = extractTrackerUrlInfo(query)
+        val response = if (trackerInfo != null) {
+            // Use the special source endpoint for tracker URLs
+            val url = "$API_BASE_URL/v1/source/${trackerInfo.service}/${trackerInfo.id}?with_series=true"
+            client.newCall(GET(url)).awaitSuccess()
+        } else {
+            // Use regular search for normal queries
+            val url = "$API_BASE_URL/v1/series/search?q=$query&content_rating=safe%2Csuggestive%2Cerotica%2Cpornographic"
+            client.newCall(GET(url)).awaitSuccess()
         }
-        val response = client.newCall(GET(url)).awaitSuccess()
         val bodyString = response.body.string()
         try {
-            val searchResponse = json.decodeFromString(MBSearchResponse.serializer(), bodyString)
-            return searchResponse.data
+            return if (trackerInfo != null) {
+                // Parse direct source response and extract "series"
+                val root = json.parseToJsonElement(bodyString)
+                val seriesArr = root.jsonObject["data"]
+                    ?.jsonObject?.get("series")
+                    ?: throw Exception("No series data found for tracker id")
+                json.decodeFromJsonElement(ListSerializer(MBRecord.serializer()), seriesArr)
+            } else {
+                // Parse normal search response
+                val searchResponse = json.decodeFromString(MBSearchResponse.serializer(), bodyString)
+                searchResponse.data
+            }
         } catch (e: Exception) {
             throw e
         }
