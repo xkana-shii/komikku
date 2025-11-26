@@ -351,7 +351,6 @@ class ReaderViewModel @JvmOverloads constructor(
                 val alTrack = tracks.firstOrNull { it.trackerId == alService.id }
                 val mbTrack = tracks.firstOrNull { it.trackerId == mbService.id }
 
-
                 val malCompleted = malTrack != null && malService.isLoggedIn && (malTrack.status == MyAnimeList.COMPLETED)
                 val alCompleted = alTrack != null && alService.isLoggedIn && (alTrack.status == Anilist.COMPLETED)
                 val mbCompleted = mbTrack != null && mbService.isLoggedIn && (mbTrack.status == MangaBaka.COMPLETED)
