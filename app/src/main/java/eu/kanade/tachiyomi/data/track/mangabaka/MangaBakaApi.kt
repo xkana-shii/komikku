@@ -13,17 +13,16 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.PATCH
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import uy.kohesive.injekt.injectLazy
 import timber.log.Timber
+import uy.kohesive.injekt.injectLazy
 
 class MangaBakaApi(
     interceptor: MangaBakaInterceptor,
