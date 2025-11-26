@@ -471,7 +471,7 @@ class ReaderViewModel @JvmOverloads constructor(
                             chapterProgress = openedChapterProgress,
                         )
                     }
-                    
+
                     // Update MangaBaka tracker
                     val mbTrack = tracks.firstOrNull { it.trackerId == trackerManager.mangaBaka.id }
                     if (mbTrack != null && trackerManager.mangaBaka.isLoggedIn) {
