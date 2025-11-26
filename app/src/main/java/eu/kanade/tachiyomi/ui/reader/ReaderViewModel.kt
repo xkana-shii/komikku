@@ -33,6 +33,7 @@ import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
+import eu.kanade.tachiyomi.data.track.mangabaka.MangaBaka
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -345,13 +346,17 @@ class ReaderViewModel @JvmOverloads constructor(
                 val tracks = withContext(Dispatchers.IO) { getTracks.await(manga.id) }
                 val malService = trackerManager.myAnimeList
                 val alService = trackerManager.aniList
+                val mbService = trackerManager.mangaBaka
                 val malTrack = tracks.firstOrNull { it.trackerId == malService.id }
                 val alTrack = tracks.firstOrNull { it.trackerId == alService.id }
+                val mbTrack = tracks.firstOrNull { it.trackerId == mbService.id }
+
 
                 val malCompleted = malTrack != null && malService.isLoggedIn && (malTrack.status == MyAnimeList.COMPLETED)
                 val alCompleted = alTrack != null && alService.isLoggedIn && (alTrack.status == Anilist.COMPLETED)
+                val mbCompleted = mbTrack != null && mbService.isLoggedIn && (mbTrack.status == MangaBaka.COMPLETED)
 
-                val shouldAct = malCompleted || alCompleted
+                val shouldAct = malCompleted || alCompleted || mbCompleted
                 if (shouldAct) {
                     when (trackPreferences.autoRereadBehavior().get()) {
                         AutoTrackState.ALWAYS -> {
@@ -463,6 +468,17 @@ class ReaderViewModel @JvmOverloads constructor(
                             track = alTrack,
                             service = trackerManager.aniList,
                             rereadStatus = Anilist.REREADING,
+                            chapterProgress = openedChapterProgress,
+                        )
+                    }
+                    
+                    // Update MangaBaka tracker
+                    val mbTrack = tracks.firstOrNull { it.trackerId == trackerManager.mangaBaka.id }
+                    if (mbTrack != null && trackerManager.mangaBaka.isLoggedIn) {
+                        updateTrackerForReread(
+                            track = mbTrack,
+                            service = trackerManager.mangaBaka,
+                            rereadStatus = MangaBaka.REREADING,
                             chapterProgress = openedChapterProgress,
                         )
                     }
