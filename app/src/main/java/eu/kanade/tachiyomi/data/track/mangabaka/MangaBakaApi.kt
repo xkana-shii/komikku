@@ -36,7 +36,7 @@ class MangaBakaApi(
         val urlPrefixes = mapOf(
             "anilist.co/manga/" to "al:",
             "www.mangaupdates.com/series/" to "mu:",
-            "myanimelist.net/manga/" to "mal:"
+            "myanimelist.net/manga/" to "mal:",
         )
         for ((prefix, qPrefix) in urlPrefixes) {
             val idx = trimmed.indexOf(prefix)
