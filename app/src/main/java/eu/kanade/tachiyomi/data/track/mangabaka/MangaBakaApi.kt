@@ -31,6 +31,24 @@ class MangaBakaApi(
             .build()
     }
 
+    private fun trackerUrlToQuery(query: String): String {
+        val trimmed = query.trim()
+        val urlPrefixes = mapOf(
+            "anilist.co/manga/" to "al:",
+            "www.mangaupdates.com/series/" to "mu:",
+            "myanimelist.net/manga/" to "mal:"
+        )
+        for ((prefix, qPrefix) in urlPrefixes) {
+            val idx = trimmed.indexOf(prefix)
+            if (idx != -1) {
+                val rest = trimmed.substring(idx + prefix.length)
+                val id = rest.split('/')[0]
+                return qPrefix + id
+            }
+        }
+        return query
+    }
+
     suspend fun testLibraryAuth() {
         try {
             authClient.newCall(
@@ -135,7 +153,9 @@ class MangaBakaApi(
     }
 
     suspend fun search(query: String): List<MBRecord> {
-        val response = client.newCall(GET("$API_BASE_URL/v1/series/search?q=$query")).awaitSuccess()
+        val actualQuery = trackerUrlToQuery(query)
+        val url = "$API_BASE_URL/v1/series/search?q=$actualQuery&content_rating=safe%2Csuggestive%2Cerotica%2Cpornographic"
+        val response = client.newCall(GET(url)).awaitSuccess()
         val bodyString = response.body.string()
         try {
             val searchResponse = json.decodeFromString(MBSearchResponse.serializer(), bodyString)
