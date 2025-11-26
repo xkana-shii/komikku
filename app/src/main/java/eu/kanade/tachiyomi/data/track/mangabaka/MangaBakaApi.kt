@@ -31,7 +31,7 @@ class MangaBakaApi(
             .build()
     }
 
-    private fun trackerUrlToQuery(query: String): String {
+    private fun trackerUrlToQuery(query: String): String? {
         val trimmed = query.trim()
         val urlPrefixes = mapOf(
             "anilist.co/manga/" to "al:",
@@ -46,7 +46,7 @@ class MangaBakaApi(
                 return qPrefix + id
             }
         }
-        return query
+        return null
     }
 
     suspend fun testLibraryAuth() {
@@ -153,8 +153,10 @@ class MangaBakaApi(
     }
 
     suspend fun search(query: String): List<MBRecord> {
-        val actualQuery = trackerUrlToQuery(query)
-        val url = "$API_BASE_URL/v1/series/search?q=$actualQuery&content_rating=safe%2Csuggestive%2Cerotica%2Cpornographic"
+        val url = when (val trackerQuery = trackerUrlToQuery(query)) {
+            null -> "$API_BASE_URL/v1/series/search?q=$query&content_rating=safe%2Csuggestive%2Cerotica%2Cpornographic"
+            else -> "$API_BASE_URL/v1/series/search?q=$trackerQuery"
+        }
         val response = client.newCall(GET(url)).awaitSuccess()
         val bodyString = response.body.string()
         try {
