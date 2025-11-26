@@ -68,13 +68,13 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         val previousStatus = previousListItem.state?.let {
             when (it) {
-                "reading"      -> READING
-                "completed"    -> COMPLETED
-                "paused"       -> PAUSED
-                "dropped"      -> DROPPED
+                "reading" -> READING
+                "completed" -> COMPLETED
+                "paused" -> PAUSED
+                "dropped" -> DROPPED
                 "plan_to_read" -> PLAN_TO_READ
-                "rereading"    -> REREADING
-                else           -> PLAN_TO_READ
+                "rereading" -> REREADING
+                else -> PLAN_TO_READ
             }
         } ?: PLAN_TO_READ
 
@@ -130,9 +130,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             val item: MBListItem = api.getSeriesListItem(track.remote_id)
             item.copyTo(track)
             autoCompleteIfFinished(track, item.Series)
-            if (track.status == 0L
-                || item.state.isNullOrBlank()
-                || !STATUS_SET.contains(track.status)
+            if (track.status == 0L ||
+                item.state.isNullOrBlank() ||
+                !STATUS_SET.contains(track.status)
             ) {
                 track.status = PLAN_TO_READ
             }
@@ -208,8 +208,10 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     }
 
     override val isLoggedIn: Boolean
-        get() = !(trackPreferences.trackUsername(this).get().isNullOrEmpty() ||
-            trackPreferences.trackPassword(this).get().isNullOrEmpty())
+        get() = !(
+            trackPreferences.trackUsername(this).get().isNullOrEmpty() ||
+                trackPreferences.trackPassword(this).get().isNullOrEmpty()
+            )
 
     override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         try {
@@ -220,7 +222,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 record.cover?.raw?.url ?: "",
                 record.description ?: "",
                 record.authors?.joinToString(", ") ?: "",
-                record.artists?.joinToString(", ") ?: ""
+                record.artists?.joinToString(", ") ?: "",
             )
         } catch (e: Exception) {
             throw e

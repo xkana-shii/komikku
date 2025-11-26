@@ -2,9 +2,9 @@ package eu.kanade.tachiyomi.data.track.mangabaka.dto
 
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -71,19 +71,19 @@ data class MBRecord(
     val popularity: Int? = null,
     @SerialName("user_rating") val user_rating: Double? = null,
     val created_at: String? = null,
-    val updated_at: String? = null
+    val updated_at: String? = null,
 )
 
 @Serializable
 data class MBSecondaryTitles(
     val en: List<MBSecondaryTitleItem>? = null,
-    val ja: List<MBSecondaryTitleItem>? = null
+    val ja: List<MBSecondaryTitleItem>? = null,
 )
 
 @Serializable
 data class MBSecondaryTitleItem(
     val type: String? = null,
-    val title: String? = null
+    val title: String? = null,
 )
 
 @Serializable
@@ -91,7 +91,7 @@ data class MBCover(
     val raw: MBImage? = null,
     val x150: MBCoverSizes? = null,
     val x250: MBCoverSizes? = null,
-    val x350: MBCoverSizes? = null
+    val x350: MBCoverSizes? = null,
 )
 
 @Serializable
@@ -102,14 +102,14 @@ data class MBImage(
     val width: Int? = null,
     val blurhash: String? = null,
     val thumbhash: String? = null,
-    val format: String? = null
+    val format: String? = null,
 )
 
 @Serializable
 data class MBCoverSizes(
     val x1: String? = null,
     val x2: String? = null,
-    val x3: String? = null
+    val x3: String? = null,
 )
 
 @Serializable
@@ -119,7 +119,7 @@ data class MBAnimeInfo(
     val episodes: Int? = null,
     val type: String? = null,
     val status: String? = null,
-    val url: String? = null
+    val url: String? = null,
 )
 
 @Serializable
@@ -127,7 +127,7 @@ data class MBPublisher(
     val name: String? = null,
     val type: String? = null,
     val note: String? = null,
-    val region: String? = null
+    val region: String? = null,
 )
 
 @Serializable
@@ -140,7 +140,7 @@ data class MBGenreV2(
     val is_spoiler: Boolean? = null,
     val content_rating: String? = null,
     val series_count: Int? = null,
-    val level: Int? = null
+    val level: Int? = null,
 )
 
 @Serializable
@@ -153,7 +153,7 @@ data class MBTagV2(
     val is_spoiler: Boolean? = null,
     val content_rating: String? = null,
     val series_count: Int? = null,
-    val level: Int? = null
+    val level: Int? = null,
 )
 
 @Serializable
@@ -165,7 +165,7 @@ data class MBRelationships(
     val main_story: List<Long>? = null,
     val alternative: List<Long>? = null,
     val other: List<Long>? = null,
-    val related: List<Long>? = null
+    val related: List<Long>? = null,
 )
 
 @Serializable
@@ -178,14 +178,14 @@ data class MBSource(
     val mangadex: MBSourceItem? = null,
     val my_anime_list: MBSourceItem? = null,
     val shikimori: MBSourceItem? = null,
-    val official_site: MBSourceItem? = null
+    val official_site: MBSourceItem? = null,
 )
 
 @Serializable
 data class MBSourceItem(
     val id: FlexibleId? = null,
     val rating: Double? = null,
-    val url: String? = null
+    val url: String? = null,
 )
 
 fun MBRecord.toTrackSearch(trackerId: Long): TrackSearch {

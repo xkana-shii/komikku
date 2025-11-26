@@ -8,12 +8,12 @@ import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBRecord
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBSearchResponse
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBSeriesResponse
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.formatDate
-import kotlinx.serialization.json.Json
-import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.POST
-import eu.kanade.tachiyomi.network.PATCH
 import eu.kanade.tachiyomi.network.DELETE
+import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.PATCH
+import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
+import kotlinx.serialization.json.Json
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -43,7 +43,7 @@ class MangaBakaApi(
 
     suspend fun getLibraryEntryWithSeries(remoteId: Long): MBListItem {
         val response = authClient.newCall(
-            GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId")
+            GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId"),
         ).awaitSuccess()
         val bodyString = response.body.string()
         try {
@@ -77,7 +77,7 @@ class MangaBakaApi(
             rating = normalizedScore,
             is_private = track.private,
             start_date = if (hasReadChapters) formatDate(System.currentTimeMillis()) else null,
-            finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null
+            finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null,
         )
         val body = json.encodeToString(MBListItemRequest.serializer(), entry)
         try {
