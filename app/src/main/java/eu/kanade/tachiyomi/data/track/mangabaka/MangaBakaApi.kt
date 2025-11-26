@@ -15,13 +15,11 @@ import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import timber.log.Timber
 import uy.kohesive.injekt.injectLazy
 
 class MangaBakaApi(
@@ -171,7 +169,6 @@ class MangaBakaApi(
             val ratings = listOf("safe", "suggestive", "erotica", "pornographic")
             val ratingsParams = ratings.joinToString("&") { "content_rating=$it" }
             val url = "$API_BASE_URL/v1/series/search?q=$query&$ratingsParams"
-            Timber.d("MangaBaka search: $url")
             client.newCall(GET(url)).awaitSuccess()
         }
         val bodyString = response.body.string()
