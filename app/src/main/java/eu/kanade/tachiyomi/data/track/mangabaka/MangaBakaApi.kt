@@ -34,7 +34,6 @@ class MangaBakaApi(
     }
 
     private data class TrackerUrlInfo(val service: String, val id: String)
-
     private fun extractTrackerUrlInfo(query: String): TrackerUrlInfo? {
         val trimmed = query.trim()
         return when {
@@ -57,56 +56,53 @@ class MangaBakaApi(
         }
     }
 
-    suspend fun testLibraryAuth() {
-        try {
+    suspend fun testLibraryAuth(): Boolean {
+        return try {
             authClient.newCall(
                 GET("$API_BASE_URL/v1/my/library?limit=1&page=1"),
             ).awaitSuccess()
-        } catch (e: Exception) {
-            throw e
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
-    suspend fun getLibraryEntryWithSeries(remoteId: Long): MBListItem {
-        val response = authClient.newCall(
-            GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId"),
-        ).awaitSuccess()
-        val bodyString = response.body.string()
-        try {
+    suspend fun getLibraryEntryWithSeries(remoteId: Long): MBListItem? {
+        return try {
+            val response = authClient.newCall(
+                GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId"),
+            ).awaitSuccess()
+            val bodyString = response.body.string()
             val libraryResponse = json.decodeFromString(MBLibrarySearchResponse.serializer(), bodyString)
-            val item = libraryResponse.data.firstOrNull()
-
-            return item ?: throw Exception("No library entry for series_id $remoteId")
-        } catch (e: Exception) {
-            throw e
+            libraryResponse.data.firstOrNull()
+        } catch (_: Exception) {
+            null
         }
     }
 
-    suspend fun getSeriesListItem(remoteId: Long): MBListItem {
-        val response = authClient.newCall(GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId")).awaitSuccess()
-        val bodyString = response.body.string()
-        try {
+    suspend fun getSeriesListItem(remoteId: Long): MBListItem? {
+        return try {
+            val response = authClient.newCall(GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId")).awaitSuccess()
+            val bodyString = response.body.string()
             val wrapper = json.decodeFromString(MBLibrarySearchResponse.serializer(), bodyString)
-            val item = wrapper.data.firstOrNull()
-
-            return item ?: throw Exception("No item found in library for remoteId $remoteId")
-        } catch (e: Exception) {
-            throw e
+            wrapper.data.firstOrNull()
+        } catch (_: Exception) {
+            null
         }
     }
 
-    suspend fun addSeriesEntry(track: Track, hasReadChapters: Boolean) {
-        val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
-        val entry = MBListItemRequest(
-            state = if (hasReadChapters) "reading" else "plan_to_read",
-            progress_chapter = if (hasReadChapters) track.last_chapter_read.toInt() else 0,
-            rating = normalizedScore,
-            is_private = track.private,
-            start_date = if (hasReadChapters) formatDate(System.currentTimeMillis()) else null,
-            finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null,
-        )
-        val body = json.encodeToString(MBListItemRequest.serializer(), entry)
-        try {
+    suspend fun addSeriesEntry(track: Track, hasReadChapters: Boolean): Boolean {
+        return try {
+            val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
+            val entry = MBListItemRequest(
+                state = if (hasReadChapters) "reading" else "plan_to_read",
+                progress_chapter = if (hasReadChapters) track.last_chapter_read.toInt() else 0,
+                rating = normalizedScore,
+                is_private = track.private,
+                start_date = if (hasReadChapters) formatDate(System.currentTimeMillis()) else null,
+                finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null,
+            )
+            val body = json.encodeToString(MBListItemRequest.serializer(), entry)
             authClient.newCall(
                 POST(
                     url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
@@ -114,32 +110,33 @@ class MangaBakaApi(
                     body = body.toRequestBody(CONTENT_TYPE),
                 ),
             ).awaitSuccess()
-        } catch (e: Exception) {
-            throw e
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
-    suspend fun updateSeriesEntryPatch(track: Track, numberOfRereads: Int?) {
-        val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
-        val entry = MBListItemRequest(
-            state = when (track.status) {
-                MangaBaka.READING -> "reading"
-                MangaBaka.COMPLETED -> "completed"
-                MangaBaka.PAUSED -> "paused"
-                MangaBaka.DROPPED -> "dropped"
-                MangaBaka.PLAN_TO_READ -> "plan_to_read"
-                MangaBaka.REREADING -> "rereading"
-                else -> "plan_to_read"
-            },
-            progress_chapter = track.last_chapter_read.toInt(),
-            rating = normalizedScore,
-            is_private = track.private,
-            number_of_rereads = numberOfRereads,
-            start_date = if (track.started_reading_date > 0) formatDate(track.started_reading_date) else null,
-            finish_date = if (track.status == MangaBaka.COMPLETED && track.finished_reading_date > 0) formatDate(track.finished_reading_date) else null,
-        )
-        val body = json.encodeToString(MBListItemRequest.serializer(), entry)
-        try {
+    suspend fun updateSeriesEntryPatch(track: Track, numberOfRereads: Int?): Boolean {
+        return try {
+            val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
+            val entry = MBListItemRequest(
+                state = when (track.status) {
+                    MangaBaka.READING -> "reading"
+                    MangaBaka.COMPLETED -> "completed"
+                    MangaBaka.PAUSED -> "paused"
+                    MangaBaka.DROPPED -> "dropped"
+                    MangaBaka.PLAN_TO_READ -> "plan_to_read"
+                    MangaBaka.REREADING -> "rereading"
+                    else -> "plan_to_read"
+                },
+                progress_chapter = track.last_chapter_read.toInt(),
+                rating = normalizedScore,
+                is_private = track.private,
+                number_of_rereads = numberOfRereads,
+                start_date = if (track.started_reading_date > 0) formatDate(track.started_reading_date) else null,
+                finish_date = if (track.status == MangaBaka.COMPLETED && track.finished_reading_date > 0) formatDate(track.finished_reading_date) else null,
+            )
+            val body = json.encodeToString(MBListItemRequest.serializer(), entry)
             authClient.newCall(
                 PATCH(
                     url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
@@ -147,55 +144,57 @@ class MangaBakaApi(
                     body = body.toRequestBody(CONTENT_TYPE),
                 ),
             ).awaitSuccess()
-        } catch (e: Exception) {
-            throw e
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
-    suspend fun deleteSeriesEntry(remoteId: Long) {
-        try {
+    suspend fun deleteSeriesEntry(remoteId: Long): Boolean {
+        return try {
             authClient.newCall(DELETE("$API_BASE_URL/v1/my/library/$remoteId")).awaitSuccess()
-        } catch (e: Exception) {
-            throw e
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
     suspend fun search(query: String): List<MBRecord> {
-        val trackerInfo = extractTrackerUrlInfo(query)
-        val response = if (trackerInfo != null) {
-            val url = "$API_BASE_URL/v1/source/${trackerInfo.service}/${trackerInfo.id}?with_series=true"
-            client.newCall(GET(url)).awaitSuccess()
-        } else {
-            val ratings = listOf("safe", "suggestive", "erotica", "pornographic")
-            val ratingsParams = ratings.joinToString("&") { "content_rating=$it" }
-            val url = "$API_BASE_URL/v1/series/search?q=$query&$ratingsParams"
-            client.newCall(GET(url)).awaitSuccess()
-        }
-        val bodyString = response.body.string()
-        try {
-            return if (trackerInfo != null) {
+        return try {
+            val trackerInfo = extractTrackerUrlInfo(query)
+            val response = if (trackerInfo != null) {
+                val url = "$API_BASE_URL/v1/source/${trackerInfo.service}/${trackerInfo.id}?with_series=true"
+                client.newCall(GET(url)).awaitSuccess()
+            } else {
+                val ratings = listOf("safe", "suggestive", "erotica", "pornographic")
+                val ratingsParams = ratings.joinToString("&") { "content_rating=$it" }
+                val url = "$API_BASE_URL/v1/series/search?q=$query&$ratingsParams"
+                client.newCall(GET(url)).awaitSuccess()
+            }
+            val bodyString = response.body.string()
+            if (extractTrackerUrlInfo(query) != null) {
                 val root = json.parseToJsonElement(bodyString)
                 val seriesArr = root.jsonObject["data"]
                     ?.jsonObject?.get("series")
-                    ?: throw Exception("No series data found for tracker id")
+                    ?: return emptyList()
                 json.decodeFromJsonElement(ListSerializer(MBRecord.serializer()), seriesArr)
             } else {
                 val searchResponse = json.decodeFromString(MBSearchResponse.serializer(), bodyString)
                 searchResponse.data
             }
-        } catch (e: Exception) {
-            throw e
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 
-    suspend fun getSeries(remoteId: Long): MBRecord {
-        val response = client.newCall(GET("$API_BASE_URL/v1/series/$remoteId")).awaitSuccess()
-        val bodyString = response.body.string()
-        try {
+    suspend fun getSeries(remoteId: Long): MBRecord? {
+        return try {
+            val response = client.newCall(GET("$API_BASE_URL/v1/series/$remoteId")).awaitSuccess()
+            val bodyString = response.body.string()
             val recordResponse = json.decodeFromString(MBSeriesResponse.serializer(), bodyString)
-            return recordResponse.data
-        } catch (e: Exception) {
-            throw e
+            recordResponse.data
+        } catch (_: Exception) {
+            null
         }
     }
 
