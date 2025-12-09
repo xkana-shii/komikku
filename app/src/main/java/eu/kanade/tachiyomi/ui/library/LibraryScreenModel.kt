@@ -525,7 +525,7 @@ class LibraryScreenModel(
             // KMK <--
 
             val isExcluded = excludedTracks.isNotEmpty() && mangaTracks.fastAny { it in excludedTracks }
-            val isIncluded = includedTracks.isEmpty() || mangaTracks.fastAny { it in includedTracks }
+            val isIncluded = includedTracks.isEmpty() || includedTracks.all { it in mangaTracks }
 
             !isExcluded && isIncluded
         }
