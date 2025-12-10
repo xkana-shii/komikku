@@ -58,6 +58,7 @@ import exh.source.nHentaiSourceIds
 import exh.util.cancellable
 import exh.util.isLewd
 import exh.util.nullIfBlank
+import eu.kanade.domain.ui.UiPreferences
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.PersistentList
@@ -140,6 +141,7 @@ class LibraryScreenModel(
     private val updateManga: UpdateManga = Injekt.get(),
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
+    private val uiPreferences: UiPreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
@@ -293,11 +295,12 @@ class LibraryScreenModel(
                         it.ifEmpty {
                             mapOf(
                                 Category(
-                                    0,
-                                    preferences.context.stringResource(MR.strings.default_category),
-                                    0,
-                                    0,
-                                    false,
+                                    id = 0,
+                                    name = preferences.context.stringResource(MR.strings.default_category),
+                                    order = 0,
+                                    flags = 0,
+                                    parentId = null,
+                                    hidden = false,
                                 ) to emptyList(),
                             )
                         }
@@ -318,13 +321,15 @@ class LibraryScreenModel(
             libraryPreferences.categoryTabs().changes(),
             libraryPreferences.categoryNumberOfItems().changes(),
             libraryPreferences.showContinueReadingButton().changes(),
-        ) { a, b, c -> arrayOf(a, b, c) }
-            .onEach { (showCategoryTabs, showMangaCount, showMangaContinueButton) ->
+            uiPreferences.libraryParentChildLayout().changes(),
+        ) { a, b, c, d -> arrayOf(a, b, c, d) }
+            .onEach { (showCategoryTabs, showMangaCount, showMangaContinueButton, showParentFilters) ->
                 mutableState.update { state ->
                     state.copy(
                         showCategoryTabs = showCategoryTabs,
                         showMangaCount = showMangaCount,
                         showMangaContinueButton = showMangaContinueButton,
+                        showParentFilters = showParentFilters,
                     )
                 }
             }
@@ -606,13 +611,12 @@ class LibraryScreenModel(
             LibraryGroup.UNGROUPED -> {
                 return mapOf(
                     Category(
-                        0,
-                        preferences.context.stringResource(SYMR.strings.ungrouped),
-                        0,
-                        0,
-                        // KMK -->
-                        false,
-                        // KMK <--
+                        id = 0,
+                        name = preferences.context.stringResource(SYMR.strings.ungrouped),
+                        order = 0,
+                        flags = 0,
+                        parentId = null,
+                        hidden = false,
                     ) to
                         map { it.id },
                 )
@@ -1412,12 +1416,9 @@ class LibraryScreenModel(
         val newIndex = mutableState.updateAndGet { state ->
             state.copy(
                 activeCategoryIndex = index,
-                // KMK -->
-                activeCategoryId = state.displayedCategories.getOrNull(index)?.id,
-                // KMK <--
             )
         }
-            .coercedActiveCategoryIndex
+            .activeCategoryIndex
 
         libraryPreferences.lastUsedCategory().set(newIndex)
     }
@@ -1505,6 +1506,7 @@ class LibraryScreenModel(
                         order = trackStatus.ordinal.toLong(),
                         // KMK <--
                         flags = 0,
+                        parentId = null,
                         // KMK -->
                         hidden = false,
                         // KMK <--
@@ -1546,6 +1548,7 @@ class LibraryScreenModel(
 //                        },
                         order = sourceOrderMap[it.id] ?: Long.MAX_VALUE,
                         flags = 0,
+                        parentId = null,
                         // KMK -->
                         hidden = false,
                         // KMK <--
@@ -1566,6 +1569,7 @@ class LibraryScreenModel(
                         name = context.stringResource(nameRes),
                         order = order,
                         flags = 0,
+                        parentId = null,
                         // KMK -->
                         hidden = false,
                         // KMK <--
@@ -1690,12 +1694,10 @@ class LibraryScreenModel(
         val showCategoryTabs: Boolean = false,
         val showMangaCount: Boolean = false,
         val showMangaContinueButton: Boolean = false,
+        val showParentFilters: Boolean = false,
         val dialog: Dialog? = null,
         val libraryData: LibraryData = LibraryData(),
-        private val activeCategoryIndex: Int = 0,
-        // KMK -->
-        private val activeCategoryId: Long? = null,
-        // KMK <--
+        val activeCategoryIndex: Int = 0,
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
         // SY -->
         val showSyncExh: Boolean = false,
@@ -1708,21 +1710,9 @@ class LibraryScreenModel(
         val excludedCategories: ImmutableSet<Long> = persistentSetOf(),
         // KMK <--
     ) {
-        /**
-         * The grouped tabs which is displayed above the library screen.
-         * They can be actual [Category] or [Source], [Track]...
-         */
-        val displayedCategories: List<Category> = groupedFavorites.keys.toList()
+        val categories = groupedFavorites.keys.toList()
 
-        val coercedActiveCategoryIndex = /* KMK --> */ displayedCategories.indexOfFirst { it.id == activeCategoryId }
-            .takeIf { it != -1 } ?: activeCategoryIndex
-            // KMK <--
-            .coerceIn(
-                minimumValue = 0,
-                maximumValue = displayedCategories.lastIndex.coerceAtLeast(0),
-            )
-
-        val activeCategory: Category? = displayedCategories.getOrNull(coercedActiveCategoryIndex)
+        val activeCategory: Category? = categories.getOrNull(activeCategoryIndex)
 
         val isLibraryEmpty = libraryData.favorites.isEmpty()
 
@@ -1757,7 +1747,7 @@ class LibraryScreenModel(
 
         fun getItemsForCategoryId(categoryId: Long?): List<LibraryItem> {
             if (categoryId == null) return emptyList()
-            val category = displayedCategories.find { it.id == categoryId } ?: return emptyList()
+            val category = categories.find { it.id == categoryId } ?: return emptyList()
             return getItemsForCategory(category)
         }
 
@@ -1774,7 +1764,7 @@ class LibraryScreenModel(
             defaultCategoryTitle: String,
             page: Int,
         ): LibraryToolbarTitle {
-            val category = displayedCategories.getOrNull(page) ?: return LibraryToolbarTitle(defaultTitle)
+            val category = categories.getOrNull(page) ?: return LibraryToolbarTitle(defaultTitle)
             val categoryName = category.let {
                 if (it.isSystemCategory) defaultCategoryTitle else it.name
             }
