@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.track.mangabaka.dto.copyTo
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.toTrackSearch
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
+import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.i18n.MR
@@ -192,7 +193,8 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         val item: MBListItem? = api.getSeriesListItem(track.remote_id)
         if (item != null) {
             try {
-                item.copyTo(track)
+                val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
+                item.copyTo(track, seriesRecord?.title ?: item.Series?.title)
             } catch (_: Exception) {
             }
 
@@ -214,6 +216,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         val seriesOnly: MBRecord? = api.getSeries(track.remote_id)
         if (seriesOnly != null) {
+            seriesOnly.title?.takeIf { it.isNotBlank() }?.let { title ->
+                track.title = title.htmlDecode()
+            }
             val totalFromSeries = seriesOnly.total_chapters?.toLongOrNull() ?: 0L
             if (totalFromSeries > 0L) {
                 track.total_chapters = totalFromSeries

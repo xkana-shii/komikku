@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.data.track.mangabaka.dto
 
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.mangabaka.MangaBaka
+import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -47,7 +48,7 @@ data class MBListItemRequest(
     val finish_date: String? = null,
 )
 
-fun MBListItem.copyTo(track: Track): Track {
+fun MBListItem.copyTo(track: Track, remoteTitle: String? = null): Track {
     val entry = Entries?.firstOrNull()
     return track.apply {
         this.status = when (state) {
@@ -69,6 +70,9 @@ fun MBListItem.copyTo(track: Track): Track {
         this.private = is_private ?: false
         this.started_reading_date = start_date?.let { parseDate(it) } ?: 0L
         this.finished_reading_date = finish_date?.let { parseDate(it) } ?: 0L
+        remoteTitle?.takeIf { it.isNotBlank() }?.let {
+            title = it.htmlDecode()
+        }
     }
 }
 
