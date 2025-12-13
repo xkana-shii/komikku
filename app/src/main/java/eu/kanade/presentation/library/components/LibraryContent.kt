@@ -3,8 +3,6 @@ package eu.kanade.presentation.library.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
@@ -36,7 +33,6 @@ import kotlinx.coroutines.launch
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryManga
-import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.components.material.padding
 import kotlin.time.Duration.Companion.seconds
@@ -63,7 +59,6 @@ fun LibraryContent(
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
     getItemsForCategory: (Category) -> List<LibraryItem>,
-
 ) {
     // Derive parent categories and child mapping
     val parentCategories = remember(categories) {
@@ -248,19 +243,10 @@ fun LibraryContent(
                         onClickManga(manga.manga.id)
                     }
                 },
-            ) {
-                val wrappedGetItemsForCategory: (Category) -> List<LibraryItem> = { pageCategory ->
-                    if (showParentFilters) {
-                        // Existing behavior when parent filters are enabled:
-                        // If a specific subcategory is selected and it belongs to this parent, show that subcategory's items
-                        val selectedSub = activeSubcategoryId?.let { id -> categories.firstOrNull { it.id == id } }
-                        if (selectedSub != null && selectedSub.parentId == pageCategory.id) {
-                            getItemsForCategory(selectedSub)
-                        } else if (activeSubcategoryId == null) {
-                            // "All" selected: return parent items PLUS all items from its subcategories, deduped by manga id.
-                            val parentItems = getItemsForCategory(pageCategory)
-                            val children = childrenByParent[pageCategory.id].orEmpty()
-                            val childItems = children.flatMap { child -> getItemsForCategory(child) }
+                onLongClickManga = onToggleRangeSelection,
+                onClickContinueReading = onContinueReadingClicked,
+            )
+        }
 
         LaunchedEffect(pagerState.currentPage) {
             // Reset subcategory selection when parent page changes
