@@ -1,63 +1,246 @@
 package eu.kanade.tachiyomi.data.track.mangabaka
 
 import eu.kanade.tachiyomi.data.database.models.Track
-import eu.kanade.tachiyomi.data.track.model.TrackSearch
-import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBLibrarySearchResponse
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBListItem
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBListItemRequest
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBRecord
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBSearchResponse
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBSeriesResponse
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.formatDate
+import eu.kanade.tachiyomi.network.DELETE
+import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.PATCH
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
-import eu.kanade.tachiyomi.network.jsonMime
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import tachiyomi.core.common.util.lang.withIOContext
-import okhttp3.OkHttpClient
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonObject
-import tachiyomi.domain.track.model.Track as DomainTrack
+import okhttp3.Headers
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
+import uy.kohesive.injekt.injectLazy
 
-class MangaBakaApi(private val client: OkHttpClient) {
+class MangaBakaApi(
+    interceptor: MangaBakaInterceptor,
+    private val client: OkHttpClient,
+) {
+    private val json: Json by injectLazy()
+    private val authClient: OkHttpClient by lazy {
+        client.newBuilder()
+            .addInterceptor(interceptor)
+            .build()
+    }
 
-    suspend fun addLibManga(track: Track): Track {
-        return withIOContext {
-            // Construct request to add manga to library
-            track
+    private data class TrackerUrlInfo(val service: String, val id: String)
+    private fun extractTrackerUrlInfo(query: String): TrackerUrlInfo? {
+        val trimmed = query.trim()
+        return when {
+            trimmed.contains("anilist.co/manga/") -> {
+                val rest = trimmed.substringAfter("anilist.co/manga/")
+                val id = rest.takeWhile { it.isDigit() }
+                if (id.isNotEmpty()) TrackerUrlInfo("anilist", id) else null
+            }
+            trimmed.contains("www.mangaupdates.com/series/") -> {
+                val rest = trimmed.substringAfter("www.mangaupdates.com/series/")
+                val id = rest.takeWhile { it.isLetterOrDigit() }
+                if (id.isNotEmpty()) TrackerUrlInfo("manga-updates", id) else null
+            }
+            trimmed.contains("myanimelist.net/manga/") -> {
+                val rest = trimmed.substringAfter("myanimelist.net/manga/")
+                val id = rest.takeWhile { it.isDigit() }
+                if (id.isNotEmpty()) TrackerUrlInfo("my-anime-list", id) else null
+            }
+            else -> null
         }
     }
 
-    suspend fun updateLibManga(track: Track): Track {
-        return withIOContext {
-            // Construct request to update manga in library
-            track
+    suspend fun resolveLatestId(remoteId: Long): Long {
+        var currentId = remoteId
+        try {
+            while (true) {
+                val series = getSeries(currentId)
+                if (series?.state == "merged" && series.merged_with != null) {
+                    currentId = series.merged_with
+                } else {
+                    return currentId
+                }
+            }
+        } catch (_: Exception) {
+            return currentId
         }
     }
 
-    suspend fun deleteLibManga(track: DomainTrack) {
-        withIOContext {
-            // Construct request to delete manga from library
+    suspend fun testLibraryAuth(): Boolean {
+        return try {
+            authClient.newCall(
+                GET("$API_BASE_URL/v1/my/library?limit=1&page=1"),
+            ).awaitSuccess()
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
-    suspend fun search(query: String): List<TrackSearch> {
-        return withIOContext {
-            // Construct search request
+    suspend fun getLibraryEntryWithSeries(remoteId: Long): MBListItem? {
+        var currentRemoteId = remoteId
+        try {
+            while (true) {
+                val response = authClient.newCall(
+                    GET("$API_BASE_URL/v1/my/library?q=mb:$currentRemoteId"),
+                ).awaitSuccess()
+                val bodyString = response.body.string()
+                val libraryResponse = json.decodeFromString(MBLibrarySearchResponse.serializer(), bodyString)
+                val item = libraryResponse.data.firstOrNull()
+
+                if (item != null && item.state == "merged" && item.merged_with != null) {
+                    currentRemoteId = item.merged_with
+                } else {
+                    return item
+                }
+            }
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    suspend fun getSeriesListItem(remoteId: Long): MBListItem? {
+        var currentRemoteId = remoteId
+        try {
+            while (true) {
+                val response = authClient.newCall(GET("$API_BASE_URL/v1/my/library?q=mb:$currentRemoteId")).awaitSuccess()
+                val bodyString = response.body.string()
+                val wrapper = json.decodeFromString(MBLibrarySearchResponse.serializer(), bodyString)
+                val item = wrapper.data.firstOrNull()
+
+                if (item != null && item.state == "merged" && item.merged_with != null) {
+                    currentRemoteId = item.merged_with
+                } else {
+                    return item
+                }
+            }
+        } catch (_: Exception) {
+            return null
+        }
+    }
+
+    suspend fun getSeries(remoteId: Long): MBRecord? {
+        var currentRemoteId = remoteId
+        try {
+            while (true) {
+                val response = client.newCall(GET("$API_BASE_URL/v1/series/$currentRemoteId")).awaitSuccess()
+                val bodyString = response.body.string()
+                val recordResponse = json.decodeFromString(MBSeriesResponse.serializer(), bodyString)
+                val record = recordResponse.data
+
+                if (record.state == "merged" && record.merged_with != null) {
+                    currentRemoteId = record.merged_with
+                } else {
+                    return record
+                }
+            }
+        } catch (_: Exception) {
+            return null
+        }
+    }
+
+    suspend fun addSeriesEntry(track: Track, hasReadChapters: Boolean): Boolean {
+        return try {
+            val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
+            val entry = MBListItemRequest(
+                state = if (hasReadChapters) "reading" else "plan_to_read",
+                progress_chapter = if (hasReadChapters) track.last_chapter_read.toInt() else 0,
+                rating = normalizedScore,
+                is_private = track.private,
+                start_date = if (hasReadChapters) formatDate(System.currentTimeMillis()) else null,
+                finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null,
+            )
+            val body = json.encodeToString(MBListItemRequest.serializer(), entry)
+            authClient.newCall(
+                POST(
+                    url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
+                    headers = Headers.headersOf(),
+                    body = body.toRequestBody(CONTENT_TYPE),
+                ),
+            ).awaitSuccess()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun updateSeriesEntryPatch(track: Track, numberOfRereads: Int?): Boolean {
+        return try {
+            val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
+            val entry = MBListItemRequest(
+                state = when (track.status) {
+                    MangaBaka.READING -> "reading"
+                    MangaBaka.COMPLETED -> "completed"
+                    MangaBaka.PAUSED -> "paused"
+                    MangaBaka.DROPPED -> "dropped"
+                    MangaBaka.PLAN_TO_READ -> "plan_to_read"
+                    MangaBaka.REREADING -> "rereading"
+                    else -> "plan_to_read"
+                },
+                progress_chapter = track.last_chapter_read.toInt(),
+                rating = normalizedScore,
+                is_private = track.private,
+                number_of_rereads = numberOfRereads,
+                start_date = if (track.started_reading_date > 0) formatDate(track.started_reading_date) else null,
+                finish_date = if (track.status == MangaBaka.COMPLETED && track.finished_reading_date > 0) formatDate(track.finished_reading_date) else null,
+            )
+            val body = json.encodeToString(MBListItemRequest.serializer(), entry)
+            authClient.newCall(
+                PATCH(
+                    url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
+                    headers = Headers.headersOf(),
+                    body = body.toRequestBody(CONTENT_TYPE),
+                ),
+            ).awaitSuccess()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun deleteSeriesEntry(remoteId: Long): Boolean {
+        return try {
+            authClient.newCall(DELETE("$API_BASE_URL/v1/my/library/$remoteId")).awaitSuccess()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun search(query: String): List<MBRecord> {
+        return try {
+            val trackerInfo = extractTrackerUrlInfo(query)
+            val response = if (trackerInfo != null) {
+                val url = "$API_BASE_URL/v1/source/${trackerInfo.service}/${trackerInfo.id}?with_series=true"
+                client.newCall(GET(url)).awaitSuccess()
+            } else {
+                val url = "$API_BASE_URL/v1/series/search?q=$query"
+                client.newCall(GET(url)).awaitSuccess()
+            }
+            val bodyString = response.body.string()
+            if (extractTrackerUrlInfo(query) != null) {
+                val root = json.parseToJsonElement(bodyString)
+                val seriesArr = root.jsonObject["data"]
+                    ?.jsonObject?.get("series")
+                    ?: return emptyList()
+                json.decodeFromJsonElement(ListSerializer(MBRecord.serializer()), seriesArr)
+            } else {
+                val searchResponse = json.decodeFromString(MBSearchResponse.serializer(), bodyString)
+                searchResponse.data
+            }
+        } catch (_: Exception) {
             emptyList()
         }
     }
 
-    suspend fun findLibManga(track: Track): Track? {
-        return withIOContext {
-            // Construct request to find library entry
-            null
-        }
-    }
-
-    suspend fun getLibManga(track: Track): Track {
-        return findLibManga(track) ?: throw Exception("Could not find manga")
-    }
-
-    suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
-        return withIOContext {
-            // Construct request to fetch manga metadata
-            TrackMangaMetadata()
-        }
+    companion object {
+        private const val API_BASE_URL = "https://api.mangabaka.dev"
+        private val CONTENT_TYPE = "application/json".toMediaType()
     }
 }
