@@ -28,6 +28,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         const val REREADING = 6L
         private val STATUS_SET = setOf(READING, COMPLETED, PAUSED, DROPPED, PLAN_TO_READ, REREADING)
         private val SCORE_LIST = (0..100).map { i -> "%.1f".format(i / 10.0) }.toImmutableList()
+        private const val URL_BASE = "https://mangabaka.org"
     }
 
     private val interceptor by lazy { MangaBakaInterceptor(this) }
@@ -110,7 +111,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         api.updateSeriesEntryPatch(track, rereadsToSend)
 
-        track.tracking_url = "https://mangabaka.dev/${track.remote_id}"
+        track.tracking_url = "$URL_BASE/${track.remote_id}"
         return track
     }
 
@@ -147,7 +148,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             ) {
                 track.status = PLAN_TO_READ
             }
-            track.tracking_url = "https://mangabaka.dev/${track.remote_id}"
+            track.tracking_url = "$URL_BASE/${track.remote_id}"
             return track
         }
 
@@ -167,7 +168,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         } catch (_: Exception) {
         }
         track.status = PLAN_TO_READ
-        track.tracking_url = "https://mangabaka.dev/${track.remote_id}"
+        track.tracking_url = "$URL_BASE/${track.remote_id}"
         return track
     }
 
@@ -210,7 +211,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 autoCompleteIfFinished(track, seriesRecord ?: item.Series)
             } catch (_: Exception) {
             }
-            track.tracking_url = "https://mangabaka.dev/${track.remote_id}"
+            track.tracking_url = "$URL_BASE/${track.remote_id}"
             return track
         }
 
