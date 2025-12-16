@@ -107,15 +107,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
         }
 
-        val progress = track.last_chapter_read.toInt()
-        val statusEligible = track.status == READING || track.status == PLAN_TO_READ
-        if (progress == total && total > 0 && releaseIsCompleted && statusEligible) {
-            track.status = COMPLETED
-            if (track.finished_reading_date == 0L) {
-                track.finished_reading_date = System.currentTimeMillis()
-            }
-        }
-
         if (track.status != COMPLETED && didReadChapter) {
             if (track.started_reading_date == 0L) {
                 track.started_reading_date = System.currentTimeMillis()
@@ -164,12 +155,8 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 }
             }
 
-            try {
-                autoCompleteIfFinished(track, seriesRecord ?: item.Series)
-            } catch (_: Exception) {
-            }
-
-            if (track.status == 0L ||
+            if (
+                track.status == 0L ||
                 item.state.isNullOrBlank() ||
                 !STATUS_SET.contains(track.status)
             ) {
@@ -190,27 +177,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 track.last_chapter_read = totalFromSeries.toDouble()
             }
         }
-        try {
-            autoCompleteIfFinished(track, seriesRecord)
-        } catch (_: Exception) {
-        }
         track.status = PLAN_TO_READ
         track.tracking_url = "$URL_BASE/${track.remote_id}"
         return track
-    }
-
-    private fun autoCompleteIfFinished(track: Track, series: MBRecord?) {
-        if (series?.status == "completed") {
-            val progress = track.last_chapter_read.toInt()
-            val total = series.total_chapters?.toIntOrNull() ?: 0
-            val statusEligible = track.status == READING || track.status == PLAN_TO_READ
-            if (progress == total && total > 0 && statusEligible) {
-                track.status = COMPLETED
-                if (track.finished_reading_date == 0L) {
-                    track.finished_reading_date = System.currentTimeMillis()
-                }
-            }
-        }
     }
 
     override suspend fun refresh(track: Track): Track {
@@ -244,10 +213,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                     track.last_chapter_read = totalFromSeries.toDouble()
                 }
             }
-            try {
-                autoCompleteIfFinished(track, seriesRecord ?: item.Series)
-            } catch (_: Exception) {
-            }
             track.tracking_url = "$URL_BASE/${track.remote_id}"
             return track
         }
@@ -263,10 +228,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 if (seriesOnly.status == "completed" && track.last_chapter_read > totalFromSeries) {
                     track.last_chapter_read = totalFromSeries.toDouble()
                 }
-            }
-            try {
-                autoCompleteIfFinished(track, seriesOnly)
-            } catch (_: Exception) {
             }
         }
         return track
