@@ -150,10 +150,15 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
     override suspend fun refresh(track: Track): Track {
         val item: MBListItem? = api.getSeriesListItem(track.remote_id)
+        val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
         if (item != null) {
             try {
                 val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
                 item.copyTo(track, seriesRecord?.title ?: item.Series?.title)
+            } catch (_: Exception) {
+            }
+            try {
+                autoCompleteIfFinished(track, seriesRecord ?: item.Series)
             } catch (_: Exception) {
             }
             track.tracking_url = "$URL_BASE/${track.remote_id}"
