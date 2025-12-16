@@ -185,17 +185,20 @@ data class MBSource(
 data class MBSourceItem(
     val id: FlexibleId? = null,
     val rating: Double? = null,
+    @SerialName("rating_normalized") val ratingNormalized: Double? = null,
     val url: String? = null,
 )
 
 fun MBRecord.toTrackSearch(trackerId: Long): TrackSearch {
+    val URL_BASE = "https://mangabaka.org"
+
     return TrackSearch.create(trackerId).apply {
         remote_id = this@toTrackSearch.id
         title = this@toTrackSearch.title?.htmlDecode() ?: ""
         total_chapters = 0
         cover_url = this@toTrackSearch.cover?.raw?.url ?: ""
         summary = this@toTrackSearch.description?.htmlDecode() ?: ""
-        tracking_url = "https://mangabaka.dev/${this@toTrackSearch.id}"
+        tracking_url = "$URL_BASE/${this@toTrackSearch.id}"
         publishing_status = this@toTrackSearch.status ?: ""
         publishing_type = this@toTrackSearch.type?.toString() ?: ""
         start_date = this@toTrackSearch.year?.toString() ?: ""
