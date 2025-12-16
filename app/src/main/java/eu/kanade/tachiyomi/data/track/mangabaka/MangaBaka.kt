@@ -102,6 +102,12 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 item.copyTo(track)
             } catch (_: Exception) {
             }
+            val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
+
+            try {
+                autoCompleteIfFinished(track, seriesRecord ?: item.Series)
+            } catch (_: Exception) {
+            }
 
             if (track.status == 0L ||
                 item.state.isNullOrBlank() ||
@@ -114,9 +120,27 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         }
 
         track.score = 0.0
+        val seriesRecord: MBRecord? = api.getSeries(track.remote_id)
+        try {
+            autoCompleteIfFinished(track, seriesRecord)
+        } catch (_: Exception) {
+        }
         track.status = PLAN_TO_READ
         track.tracking_url = "$URL_BASE/${track.remote_id}"
         return track
+    }
+
+    private fun autoCompleteIfFinished(track: Track, series: MBRecord?) {
+        val releaseIsCompleted = series?.status == "completed"
+        val progress = track.last_chapter_read.toInt()
+        val total = series?.total_chapters?.toIntOrNull() ?: 0
+        val statusEligible = track.status == READING || track.status == PLAN_TO_READ
+        if (progress == total && total > 0 && releaseIsCompleted && statusEligible) {
+            track.status = COMPLETED
+            if (track.finished_reading_date == 0L) {
+                track.finished_reading_date = System.currentTimeMillis()
+            }
+        }
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
@@ -140,6 +164,10 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         if (seriesOnly != null) {
             seriesOnly.title?.takeIf { it.isNotBlank() }?.let { title ->
                 track.title = title.htmlDecode()
+            }
+            try {
+                autoCompleteIfFinished(track, seriesOnly)
+            } catch (_: Exception) {
             }
         }
         return track
