@@ -23,7 +23,6 @@ data class MBListItem(
     val id: Int? = null,
     val series_id: Long? = null,
     val user_id: String? = null,
-    val merged_with: Long? = null,
     val Entries: List<MBEntry>? = null,
     val Series: MBRecord? = null,
 )
