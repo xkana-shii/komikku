@@ -63,11 +63,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     override suspend fun update(track: Track, didReadChapter: Boolean): Track {
         val previousListItem: MBListItem = api.getLibraryEntryWithSeries(track.remote_id) ?: return track
 
-        val releaseIsCompleted = previousListItem.Series?.status == "completed"
         val total = previousListItem.Series?.total_chapters?.toIntOrNull() ?: 0
-        if (releaseIsCompleted && track.last_chapter_read > total && total > 0) {
-            track.last_chapter_read = total.toDouble()
-        }
 
         val previousStatus = previousListItem.state?.let {
             when (it) {
@@ -80,28 +76,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 else -> PLAN_TO_READ
             }
         } ?: PLAN_TO_READ
-
-        if (previousStatus == COMPLETED && track.status != COMPLETED) {
-            when (track.status) {
-                READING -> if (total > 0) track.last_chapter_read = (total - 1).toDouble()
-                PLAN_TO_READ -> track.last_chapter_read = 0.0
-            }
-        }
-
-        val progress = track.last_chapter_read.toInt()
-        val statusEligible = track.status == READING || track.status == PLAN_TO_READ
-        if (progress == total && total > 0 && releaseIsCompleted && statusEligible) {
-            track.status = COMPLETED
-            if (track.finished_reading_date == 0L) {
-                track.finished_reading_date = System.currentTimeMillis()
-            }
-        }
-
-        if (track.status != COMPLETED && didReadChapter) {
-            if (track.started_reading_date == 0L) {
-                track.started_reading_date = System.currentTimeMillis()
-            }
-        }
 
         val previousRereads = previousListItem.number_of_rereads ?: 0
         val wasRereading = previousListItem.state == "rereading"
@@ -129,20 +103,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             } catch (_: Exception) {
             }
 
-            val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
-            val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
-            if (totalFromSeries > 0L) {
-                track.total_chapters = totalFromSeries
-                if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
-                    track.last_chapter_read = totalFromSeries.toDouble()
-                }
-            }
-
-            try {
-                autoCompleteIfFinished(track, seriesRecord ?: item.Series)
-            } catch (_: Exception) {
-            }
-
             if (track.status == 0L ||
                 item.state.isNullOrBlank() ||
                 !STATUS_SET.contains(track.status)
@@ -154,35 +114,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         }
 
         track.score = 0.0
-        val seriesRecord: MBRecord? = api.getSeries(track.remote_id)
-
-        val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
-        if (totalFromSeries > 0L) {
-            track.total_chapters = totalFromSeries
-            if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
-                track.last_chapter_read = totalFromSeries.toDouble()
-            }
-        }
-        try {
-            autoCompleteIfFinished(track, seriesRecord)
-        } catch (_: Exception) {
-        }
         track.status = PLAN_TO_READ
         track.tracking_url = "$URL_BASE/${track.remote_id}"
         return track
-    }
-
-    private fun autoCompleteIfFinished(track: Track, series: MBRecord?) {
-        val releaseIsCompleted = series?.status == "completed"
-        val progress = track.last_chapter_read.toInt()
-        val total = series?.total_chapters?.toIntOrNull() ?: 0
-        val statusEligible = track.status == READING || track.status == PLAN_TO_READ
-        if (progress == total && total > 0 && releaseIsCompleted && statusEligible) {
-            track.status = COMPLETED
-            if (track.finished_reading_date == 0L) {
-                track.finished_reading_date = System.currentTimeMillis()
-            }
-        }
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
@@ -198,19 +132,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 item.copyTo(track, seriesRecord?.title ?: item.Series?.title)
             } catch (_: Exception) {
             }
-
-            val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
-            val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
-            if (totalFromSeries > 0L) {
-                track.total_chapters = totalFromSeries
-                if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
-                    track.last_chapter_read = totalFromSeries.toDouble()
-                }
-            }
-            try {
-                autoCompleteIfFinished(track, seriesRecord ?: item.Series)
-            } catch (_: Exception) {
-            }
             track.tracking_url = "$URL_BASE/${track.remote_id}"
             return track
         }
@@ -219,17 +140,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         if (seriesOnly != null) {
             seriesOnly.title?.takeIf { it.isNotBlank() }?.let { title ->
                 track.title = title.htmlDecode()
-            }
-            val totalFromSeries = seriesOnly.total_chapters?.toLongOrNull() ?: 0L
-            if (totalFromSeries > 0L) {
-                track.total_chapters = totalFromSeries
-                if (seriesOnly.status == "completed" && track.last_chapter_read > totalFromSeries) {
-                    track.last_chapter_read = totalFromSeries.toDouble()
-                }
-            }
-            try {
-                autoCompleteIfFinished(track, seriesOnly)
-            } catch (_: Exception) {
             }
         }
         return track
