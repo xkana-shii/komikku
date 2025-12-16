@@ -140,9 +140,7 @@ class MangaBakaApi(
                 val url = "$API_BASE_URL/v1/source/${trackerInfo.service}/${trackerInfo.id}?with_series=true"
                 client.newCall(GET(url)).awaitSuccess()
             } else {
-                val ratings = listOf("safe", "suggestive", "erotica", "pornographic")
-                val ratingsParams = ratings.joinToString("&") { "content_rating=$it" }
-                val url = "$API_BASE_URL/v1/series/search?q=$query&$ratingsParams"
+                val url = "$API_BASE_URL/v1/series/search?q=$query"
                 client.newCall(GET(url)).awaitSuccess()
             }
             val bodyString = response.body.string()

@@ -77,6 +77,17 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
         } ?: PLAN_TO_READ
 
+        if (previousStatus == COMPLETED && track.status != COMPLETED) {
+            when (track.status) {
+                READING -> if (total > 0) track.last_chapter_read = (total - 1).toDouble()
+                PLAN_TO_READ -> track.last_chapter_read = 0.0
+            }
+        }
+
+        if (track.status == COMPLETED && track.last_chapter_read > total && total > 0) {
+            track.last_chapter_read = total.toDouble()
+        }
+
         val previousRereads = previousListItem.number_of_rereads ?: 0
         val wasRereading = previousListItem.state == "rereading"
         var rereadsToSend: Int? = null
