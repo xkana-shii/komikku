@@ -185,6 +185,7 @@ data class MBSource(
 data class MBSourceItem(
     val id: FlexibleId? = null,
     val rating: Double? = null,
+    @SerialName("rating_normalized") val ratingNormalized: Double? = null,
     val url: String? = null,
 )
 
