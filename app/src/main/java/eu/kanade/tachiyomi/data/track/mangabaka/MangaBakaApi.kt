@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.data.track.mangabaka.dto.formatDate
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.PATCH
+import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -87,6 +88,31 @@ class MangaBakaApi(
             wrapper.data.firstOrNull()
         } catch (_: Exception) {
             null
+        }
+    }
+
+    suspend fun addSeriesEntry(track: Track, hasReadChapters: Boolean): Boolean {
+        return try {
+            val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
+            val entry = MBListItemRequest(
+                state = if (hasReadChapters) "reading" else "plan_to_read",
+                progress_chapter = if (hasReadChapters) track.last_chapter_read.toInt() else 0,
+                rating = normalizedScore,
+                is_private = track.private,
+                start_date = if (hasReadChapters) formatDate(System.currentTimeMillis()) else null,
+                finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null,
+            )
+            val body = json.encodeToString(MBListItemRequest.serializer(), entry)
+            authClient.newCall(
+                POST(
+                    url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
+                    headers = Headers.headersOf(),
+                    body = body.toRequestBody(CONTENT_TYPE),
+                ),
+            ).awaitSuccess()
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
