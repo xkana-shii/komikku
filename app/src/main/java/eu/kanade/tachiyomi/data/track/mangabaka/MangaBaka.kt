@@ -88,6 +88,12 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
         }
 
+        val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: previousListItem.Series
+        try {
+            autoCompleteIfFinished(track, seriesRecord)
+        } catch (_: Exception) {
+        }
+
         val previousRereads = previousListItem.number_of_rereads ?: 0
         val wasRereading = previousListItem.state == "rereading"
         var rereadsToSend: Int? = null
@@ -115,14 +121,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
 
             val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
-            val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
-            if (totalFromSeries > 0L) {
-                track.total_chapters = totalFromSeries
-                if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
-                    track.last_chapter_read = totalFromSeries.toDouble()
-                }
-            }
-
             try {
                 autoCompleteIfFinished(track, seriesRecord ?: item.Series)
             } catch (_: Exception) {
