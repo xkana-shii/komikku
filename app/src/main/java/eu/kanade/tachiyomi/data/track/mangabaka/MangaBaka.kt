@@ -89,6 +89,14 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         }
 
         val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: previousListItem.Series
+        val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
+        if (totalFromSeries > 0L) {
+            track.total_chapters = totalFromSeries
+            if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
+                track.last_chapter_read = totalFromSeries.toDouble()
+            }
+        }
+
         try {
             autoCompleteIfFinished(track, seriesRecord)
         } catch (_: Exception) {
@@ -180,6 +188,13 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             try {
                 val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
                 item.copyTo(track, seriesRecord?.title ?: item.Series?.title)
+                val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
+                if (totalFromSeries > 0L) {
+                    track.total_chapters = totalFromSeries
+                    if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
+                        track.last_chapter_read = totalFromSeries.toDouble()
+                    }
+                }
             } catch (_: Exception) {
             }
             val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
@@ -195,6 +210,13 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         if (seriesOnly != null) {
             seriesOnly.title?.takeIf { it.isNotBlank() }?.let { title ->
                 track.title = title.htmlDecode()
+            }
+            val totalFromSeries = seriesOnly.total_chapters?.toLongOrNull() ?: 0L
+            if (totalFromSeries > 0L) {
+                track.total_chapters = totalFromSeries
+                if (seriesOnly.status == "completed" && track.last_chapter_read > totalFromSeries) {
+                    track.last_chapter_read = totalFromSeries.toDouble()
+                }
             }
             try {
                 autoCompleteIfFinished(track, seriesOnly)

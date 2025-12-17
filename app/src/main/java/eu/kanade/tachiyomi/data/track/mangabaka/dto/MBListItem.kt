@@ -62,11 +62,11 @@ fun MBListItem.copyTo(track: Track, remoteTitle: String? = null): Track {
         }
         this.last_chapter_read = entry?.progress_chapter?.toDouble()
             ?: progress_chapter?.toDouble()
-                ?: 0.0
+            ?: 0.0
         this.total_chapters = Series?.total_chapters?.toLongOrNull() ?: 0L
         this.score = entry?.rating?.let { it / 10.0 }
             ?: rating?.let { it / 10.0 }
-                ?: 0.0
+            ?: 0.0
         this.private = is_private ?: false
         this.started_reading_date = start_date?.let { parseDate(it) } ?: 0L
         this.finished_reading_date = finish_date?.let { parseDate(it) } ?: 0L
