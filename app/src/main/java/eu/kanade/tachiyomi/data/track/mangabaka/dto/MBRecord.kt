@@ -189,7 +189,7 @@ data class MBSourceItem(
 )
 
 fun MBRecord.toTrackSearch(trackerId: Long): TrackSearch {
-    val URL_BASE = "https://mangabaka.org"
+    val urlBase = "https://mangabaka.org"
 
     return TrackSearch.create(trackerId).apply {
         remote_id = this@toTrackSearch.id
@@ -197,7 +197,7 @@ fun MBRecord.toTrackSearch(trackerId: Long): TrackSearch {
         total_chapters = 0
         cover_url = this@toTrackSearch.cover?.raw?.url ?: ""
         summary = this@toTrackSearch.description?.htmlDecode() ?: ""
-        tracking_url = "$URL_BASE/${this@toTrackSearch.id}"
+        tracking_url = "$urlBase/${this@toTrackSearch.id}"
         publishing_status = this@toTrackSearch.status ?: ""
         publishing_type = this@toTrackSearch.type?.toString() ?: ""
         start_date = this@toTrackSearch.year?.toString() ?: ""
