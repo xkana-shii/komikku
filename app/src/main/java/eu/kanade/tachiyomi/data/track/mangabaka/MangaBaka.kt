@@ -121,6 +121,14 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
 
             val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
+            val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
+            if (totalFromSeries > 0L) {
+                track.total_chapters = totalFromSeries
+                if (seriesRecord?.status == "completed" && track.last_chapter_read > totalFromSeries) {
+                    track.last_chapter_read = totalFromSeries.toDouble()
+                }
+            }
+
             try {
                 autoCompleteIfFinished(track, seriesRecord ?: item.Series)
             } catch (_: Exception) {
