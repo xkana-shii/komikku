@@ -29,7 +29,7 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.komikku.kns"
+        applicationId = "app.komikku"
 
         versionCode = 86
         versionName = "1.18.2"
