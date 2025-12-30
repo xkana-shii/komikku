@@ -1094,7 +1094,9 @@ class MangaScreenModel(
                     chapter.name,
                     chapter.scanlator,
                     chapter.url,
+                    // SY -->
                     manga.ogTitle,
+                    // SY <--
                     manga.source,
                 )
             }

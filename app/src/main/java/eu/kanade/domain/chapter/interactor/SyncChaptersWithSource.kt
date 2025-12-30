@@ -119,7 +119,6 @@ class SyncChaptersWithSource(
                 newChapters.add(toAddChapter)
             } else {
                 if (triggerChapterRename) {
-                    // Always check and rename old-format downloads regardless of metadata changes
                     val shouldRenameLegacy = downloadManager.isChapterDownloaded(
                         dbChapter.name,
                         dbChapter.scanlator,
@@ -128,7 +127,7 @@ class SyncChaptersWithSource(
                         manga.source,
                     ) &&
                         downloadProvider.isChapterDirNameChanged(
-                            dbChapter.copy(url = ""), // simulate legacy download (no URL hash)
+                            dbChapter.copy(url = ""),
                             chapter,
                         )
 

@@ -168,6 +168,7 @@ class DownloadManager(
         val chapterDir = provider.findChapterDir(
             chapter.name,
             chapter.scanlator,
+            chapter.url,
             // SY -->
             manga.ogTitle,
             // SY <--
