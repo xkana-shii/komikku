@@ -119,7 +119,6 @@ class SyncChaptersWithSource(
                 newChapters.add(toAddChapter)
             } else {
                 if (triggerChapterRename) {
-                    // Always check and rename old-format downloads regardless of metadata changes
                     val shouldRenameLegacy = downloadManager.isChapterDownloaded(
                         dbChapter.name,
                         dbChapter.scanlator,

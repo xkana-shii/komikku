@@ -250,7 +250,15 @@ class ReaderViewModel @JvmOverloads constructor(
 
     private val unfilteredChapterList by lazy {
         val manga = manga!!
-        runBlocking { getChaptersByMangaId.await(manga.id, applyFilter = false) }
+        runBlocking {
+            // KMK -->
+            if (manga.source == MERGED_SOURCE_ID) {
+                getMergedChaptersByMangaId.await(manga.id, dedupe = false, applyFilter = false)
+            } else {
+                getChaptersByMangaId.await(manga.id, applyFilter = false)
+            }
+            // KMK <--
+        }
     }
 
     /**
@@ -1094,7 +1102,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val filenameSuffix = " - ${page.number}"
         return DiskUtil.buildValidFilename(
             "${manga.title} - ${chapter.name}",
-            DiskUtil.MAX_FILE_NAME_BYTES - filenameSuffix.byteSize(),
+            MAX_FILE_NAME_BYTES - filenameSuffix.byteSize(),
         ) + filenameSuffix
     }
 
@@ -1279,7 +1287,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val filenameSuffix = " - ${page1.number}-${page2.number}.jpg"
         val filename = DiskUtil.buildValidFilename(
             "${manga.title} - ${chapter.name}",
-            DiskUtil.MAX_FILE_NAME_BYTES - filenameSuffix.byteSize(),
+            MAX_FILE_NAME_BYTES - filenameSuffix.byteSize(),
         ) + filenameSuffix
 
         return imageSaver.save(
@@ -1472,7 +1480,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val viewer: Viewer? = null,
         val dialog: Dialog? = null,
         val menuVisible: Boolean = false,
-        @IntRange(from = -100, to = 100) val brightnessOverlayValue: Int = 0,
+        @field:IntRange(from = -100, to = 100) val brightnessOverlayValue: Int = 0,
 
         // SY -->
         /** for display page number in double-page mode */

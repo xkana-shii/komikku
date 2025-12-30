@@ -273,18 +273,12 @@ class DownloadProvider(
         }
     }
 
-    /**
-     * Checks if the chapter directory name should be changed.
-     * Returns true if the expected directory name for the new chapter is different
-     * from any of the possible old formats (with or without URL).
-     */
     fun isChapterDirNameChanged(oldChapter: Chapter, newChapter: Chapter): Boolean {
         val oldNames = listOf(
             getChapterDirName(oldChapter.name, oldChapter.scanlator, oldChapter.url),
             getChapterDirName(oldChapter.name, oldChapter.scanlator, ""),
         ).distinct()
         val newName = getChapterDirName(newChapter.name, newChapter.scanlator, newChapter.url)
-        // If the new name is not found among the old names, trigger rename
         return newName !in oldNames
     }
 

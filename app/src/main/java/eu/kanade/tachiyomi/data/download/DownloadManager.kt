@@ -165,6 +165,7 @@ class DownloadManager(
         val chapterDir = provider.findChapterDir(
             chapter.name,
             chapter.scanlator,
+            chapter.url,
             // SY -->
             manga.ogTitle,
             // SY <--
@@ -462,10 +463,8 @@ class DownloadManager(
      * @param newChapter the target chapter with the new name.
      */
     suspend fun renameChapter(source: Source, manga: Manga, oldChapter: Chapter, newChapter: Chapter) {
-        // Get all possible old folder names, with and without URL (for migration)
         val oldNames = buildList {
             addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, oldChapter.url))
-            // For migration: also try without URL if not already included
             if (oldChapter.url.isNullOrEmpty()) {
                 addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, ""))
             }
