@@ -753,7 +753,7 @@ object SettingsAdvancedScreen : SearchableSettings {
         val devOptionsPassword by devOptionsPasswordPref.collectAsState()
 
         val conditionalPreferenceItems = if (devOptionsAreEnabled) {
-            listOf<Preference.PreferenceItem<out Any>>(
+            listOf<Preference.PreferenceItem<out Any, out Any>>(
                 Preference.PreferenceItem.SwitchPreference(
                     preference = unsortedPreferences.fastDownloadEnabled(),
                     title = stringResource(KMR.strings.dev_fast_download),
