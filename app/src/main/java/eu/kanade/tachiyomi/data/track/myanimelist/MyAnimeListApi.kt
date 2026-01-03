@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALListItem
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALListItemStatus
+import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALListItemStatusWrapper
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALManga
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALMangaMetadata
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALOAuth
@@ -31,6 +32,7 @@ import tachiyomi.core.common.util.lang.withIOContext
 import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.text.ifEmpty
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 class MyAnimeListApi(
@@ -99,7 +101,7 @@ class MyAnimeListApi(
                 .appendPath(id.toString())
                 .appendQueryParameter(
                     "fields",
-                    "id,title,synopsis,num_chapters,mean,main_picture,status,media_type,start_date",
+                    "id,title,synopsis,num_chapters,mean,main_picture,status,media_type,start_date,authors{first_name,last_name,role}",
                 )
                 .build()
             with(json) {
@@ -118,6 +120,12 @@ class MyAnimeListApi(
                             publishing_status = it.status.replace("_", " ")
                             publishing_type = it.mediaType.replace("_", " ")
                             start_date = it.startDate ?: ""
+                            authors = it.authors
+                                .filter { "Story" in it.role }
+                                .map { "${it.node.firstName} ${it.node.lastName}".trim() }
+                            artists = it.authors
+                                .filter { "Art" in it.role }
+                                .map { "${it.node.firstName} ${it.node.lastName}".trim() }
                         }
                     }
             }
@@ -126,17 +134,34 @@ class MyAnimeListApi(
 
     suspend fun updateItem(track: Track): Track {
         return withIOContext {
+            // Fetch current list status to determine if reread count should be incremented
+            val previousStatus = getCurrentListStatus(track.remote_id)
+
+            val targetStatus = track.toMyAnimeListStatus() ?: "reading"
+            val isTargetCompleted = targetStatus == "completed"
+            val wasRereading = previousStatus?.isRereading == true
+
             val formBodyBuilder = FormBody.Builder()
-                .add("status", track.toMyAnimeListStatus() ?: "reading")
-                .add("is_rereading", (track.status == MyAnimeList.REREADING).toString())
+                .add("status", targetStatus)
                 .add("score", track.score.toString())
                 .add("num_chapters_read", track.last_chapter_read.toInt().toString())
+            // If changing status from rereading -> completed, increment MAL's num_times_reread
+            val initialIsRereading = (track.status == MyAnimeList.REREADING)
+            var finalIsRereading = initialIsRereading
+            if (isTargetCompleted && wasRereading) {
+                val nextRereadCount = (previousStatus?.numTimesReread ?: 0) + 1
+                formBodyBuilder.add("num_times_reread", nextRereadCount.toString())
+                // Ensure rereading flag is false when completed
+                finalIsRereading = false
+            }
             convertToIsoDate(track.started_reading_date)?.let {
                 formBodyBuilder.add("start_date", it)
             }
             convertToIsoDate(track.finished_reading_date)?.let {
                 formBodyBuilder.add("finish_date", it)
             }
+            // Add is_rereading only once after finalizing its value
+            formBodyBuilder.add("is_rereading", finalIsRereading.toString())
 
             val request = Request.Builder()
                 .url(mangaUrl(track.remote_id).toString())
@@ -163,7 +188,10 @@ class MyAnimeListApi(
         return withIOContext {
             val uri = "$BASE_API_URL/manga".toUri().buildUpon()
                 .appendPath(track.remote_id.toString())
-                .appendQueryParameter("fields", "num_chapters,my_list_status{start_date,finish_date}")
+                .appendQueryParameter(
+                    "fields",
+                    "num_volumes,num_chapters,my_list_status{start_date,finish_date,is_rereading,num_times_reread}",
+                )
                 .build()
             with(json) {
                 authClient.newCall(GET(uri.toString()))
@@ -257,6 +285,21 @@ class MyAnimeListApi(
             score = listStatus.score.toDouble()
             listStatus.startDate?.let { started_reading_date = parseDate(it) }
             listStatus.finishDate?.let { finished_reading_date = parseDate(it) }
+        }
+    }
+
+    private suspend fun getCurrentListStatus(remoteId: Long): MALListItemStatus? {
+        return withIOContext {
+            val uri = "$BASE_API_URL/manga".toUri().buildUpon()
+                .appendPath(remoteId.toString())
+                .appendQueryParameter("fields", "my_list_status{is_rereading,num_times_reread}")
+                .build()
+            with(json) {
+                val wrapper = authClient.newCall(GET(uri.toString()))
+                    .awaitSuccess()
+                    .parseAs<MALListItemStatusWrapper>()
+                wrapper.myListStatus
+            }
         }
     }
 

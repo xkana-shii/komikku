@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -31,17 +28,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
-import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.reader.components.Automation
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentListOf
-import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
-import tachiyomi.presentation.core.i18n.stringResource
 
 private val animationSpec = tween<IntOffset>(200)
 
@@ -78,8 +73,8 @@ fun ReaderAppBars(
     chapterTitle: String?,
     navigateUp: () -> Unit,
     onClickTopAppBar: () -> Unit,
-    bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
+    // bookmarked: Boolean,
+    // onToggleBookmarked: () -> Unit,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -101,18 +96,10 @@ fun ReaderAppBars(
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
     // SY -->
-    isExhToolsVisible: Boolean,
-    onSetExhUtilsVisibility: (Boolean) -> Unit,
-    isAutoScroll: Boolean,
-    isAutoScrollEnabled: Boolean,
-    onToggleAutoscroll: (Boolean) -> Unit,
-    autoScrollFrequency: String,
-    onSetAutoScrollFrequency: (String) -> Unit,
-    onClickAutoScrollHelp: () -> Unit,
     onClickRetryAll: () -> Unit,
-    onClickRetryAllHelp: () -> Unit,
     onClickBoostPage: () -> Unit,
-    onClickBoostPageHelp: () -> Unit,
+    bookmarked: Boolean,
+    onToggleBookmarked: () -> Unit,
     navBarType: NavBarType,
     currentPageText: String,
     enabledButtons: ImmutableSet<String>,
@@ -123,6 +110,7 @@ fun ReaderAppBars(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
+    readerPreferences: ReaderPreferences,
 ) {
     val isRtl = viewer is R2LPagerViewer
     val backgroundColor = MaterialTheme.colorScheme
@@ -220,6 +208,7 @@ fun ReaderAppBars(
                         title = mangaTitle,
                         subtitle = chapterTitle,
                         navigateUp = navigateUp,
+                        /* SY -->
                         actions = {
                             AppBarActions(
                                 actions = persistentListOf<AppBar.AppBarAction>().builder()
@@ -241,7 +230,6 @@ fun ReaderAppBars(
                                                 onClick = onToggleBookmarked,
                                             ),
                                         )
-                                        /* SY -->
                                         onOpenInWebView?.let {
                                             add(
                                                 AppBar.OverflowAction(
@@ -266,27 +254,19 @@ fun ReaderAppBars(
                                                 ),
                                             )
                                         }
-                                        SY <-- */
                                     }
                                     .build(),
                             )
                         },
+                        SY <-- */
                     )
                     // SY -->
                     ExhUtils(
-                        isVisible = isExhToolsVisible,
-                        onSetExhUtilsVisibility = onSetExhUtilsVisibility,
                         backgroundColor = backgroundColor,
-                        isAutoScroll = isAutoScroll,
-                        isAutoScrollEnabled = isAutoScrollEnabled,
-                        onToggleAutoscroll = onToggleAutoscroll,
-                        autoScrollFrequency = autoScrollFrequency,
-                        onSetAutoScrollFrequency = onSetAutoScrollFrequency,
-                        onClickAutoScrollHelp = onClickAutoScrollHelp,
                         onClickRetryAll = onClickRetryAll,
-                        onClickRetryAllHelp = onClickRetryAllHelp,
                         onClickBoostPage = onClickBoostPage,
-                        onClickBoostPageHelp = onClickBoostPageHelp,
+                        bookmarked = bookmarked,
+                        onToggleBookmarked = onToggleBookmarked,
                     )
                     // SY <--
                 }
@@ -309,6 +289,10 @@ fun ReaderAppBars(
                     modifier = modifierWithInsetsPadding,
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                 ) {
+                    Automation(
+                        readerPreferences = readerPreferences,
+                        viewer = viewer,
+                    )
                     if (navBarType == NavBarType.Bottom) {
                         ChapterNavigator(
                             isRtl = isRtl,

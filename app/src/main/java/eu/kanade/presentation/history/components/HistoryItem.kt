@@ -168,7 +168,7 @@ fun HistoryItem(
                     Text(
                         text = readProgress,
                         maxLines = 1,
-                        color = LocalContentColor.current.copy(alpha = textAlpha),
+                        color = LocalContentColor.current.copy(alpha = DISABLED_ALPHA),
                         style = MaterialTheme.typography.bodySmall,
                         overflow = TextOverflow.Ellipsis,
                     )

@@ -105,12 +105,13 @@ class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker
     }
 
     override suspend fun refresh(track: Track): Track {
-        val (series, rating) = api.getSeriesListItem(track)
-        return track.copyFrom(series, rating)
+        val (item, rating) = api.getSeriesListItem(track)
+        val remoteTitle = item.series?.title?.takeIf { it.isNotBlank() }?.htmlDecode()
+        return track.copyFrom(item, rating, remoteTitle)
     }
 
-    private fun Track.copyFrom(item: MUListItem, rating: MURating?): Track = apply {
-        item.copyTo(this)
+    private fun Track.copyFrom(item: MUListItem, rating: MURating?, remoteTitle: String? = null): Track = apply {
+        item.copyTo(this, remoteTitle)
         score = rating?.rating ?: 0.0
     }
 

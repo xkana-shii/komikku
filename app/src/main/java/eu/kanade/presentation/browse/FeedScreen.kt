@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.components.GlobalSearchCardRow
 import eu.kanade.presentation.browse.components.GlobalSearchErrorResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchLoadingResultItem
@@ -57,6 +58,8 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.util.plus
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import kotlin.time.Duration.Companion.seconds
 
 data class FeedItemUI(
@@ -191,6 +194,7 @@ fun FeedAddDialog(
 ) {
     // KMK -->
     var query by remember { mutableStateOf("") }
+    val uiPreferences = Injekt.get<UiPreferences>()
     val sourceList = sources
         .filter { source ->
             if (query.isBlank()) return@filter true
@@ -213,7 +217,7 @@ fun FeedAddDialog(
                 )
                 SourceIcon(source = source)
                 Spacer(modifier = Modifier.width(MaterialTheme.padding.extraSmall))
-                Text(text = it.getNameForMangaInfo())
+                Text(text = it.getNameForMangaInfo(uiPreferences = uiPreferences))
             }
         }
     // KMK <--

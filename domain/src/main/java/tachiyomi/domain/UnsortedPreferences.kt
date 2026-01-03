@@ -18,6 +18,12 @@ class UnsortedPreferences(
 
     // SY -->
 
+    fun devOptionsPassword() = preferenceStore.getString("dev_options_password", "")
+
+    fun devOptionsEnabled() = preferenceStore.getBoolean("dev_options_enabled", false)
+
+    fun fastDownloadEnabled() = preferenceStore.getBoolean("fast_download_enabled", false)
+
     fun migrateFlags() = preferenceStore.getInt("migrate_flags", Int.MAX_VALUE)
 
     fun defaultMangaOrder() = preferenceStore.getString("default_manga_order", "")
@@ -49,6 +55,8 @@ class UnsortedPreferences(
     fun useHentaiAtHome() = preferenceStore.getInt("eh_enable_hah", 0)
 
     fun useJapaneseTitle() = preferenceStore.getBoolean("use_jp_title", false)
+
+    fun useCleanTitle() = preferenceStore.getBoolean("use_clean_title", true)
 
     fun exhUseOriginalImages() = preferenceStore.getBoolean("eh_useOrigImages", false)
 

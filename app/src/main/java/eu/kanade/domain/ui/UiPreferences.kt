@@ -50,6 +50,8 @@ class UiPreferences(
 
     fun imagesInDescription() = preferenceStore.getBoolean("pref_render_images_description", true)
 
+    fun showFlags() = preferenceStore.getBoolean("show_flags", true)
+
     // SY -->
 
     fun expandFilters() = preferenceStore.getBoolean("eh_expand_filters", false)
@@ -74,6 +76,8 @@ class UiPreferences(
     fun usePanoramaCoverMangaInfo() = preferenceStore.getBoolean("use_panorama_cover_manga_info", false)
 
     fun topAlignCover() = preferenceStore.getBoolean("top_align_cover", false)
+
+    fun libraryParentChildLayout() = preferenceStore.getBoolean("pref_library_parent_child_layout", false)
     // KMK <--
 
     fun recommendsInOverflow() = preferenceStore.getBoolean("recommends_in_overflow", false)

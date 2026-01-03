@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.browse.migration.advanced.design
 import android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
 import android.view.View
 import eu.davidea.viewholders.FlexibleViewHolder
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.databinding.MigrationSourceItemBinding
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
@@ -13,6 +14,7 @@ import uy.kohesive.injekt.api.get
 class MigrationSourceHolder(view: View, val adapter: MigrationSourceAdapter) :
     FlexibleViewHolder(view, adapter) {
     val binding = MigrationSourceItemBinding.bind(view)
+    val uiPreferences = Injekt.get<UiPreferences>()
     init {
         setDragHandleView(binding.reorder)
     }
@@ -21,7 +23,7 @@ class MigrationSourceHolder(view: View, val adapter: MigrationSourceAdapter) :
         // Set capitalized title.
         val sourceName =
             // KMK -->
-            source.getNameForMangaInfo()
+            source.getNameForMangaInfo(uiPreferences = uiPreferences)
         // KMK <--
         binding.title.text = sourceName
         // Update circle letter image.

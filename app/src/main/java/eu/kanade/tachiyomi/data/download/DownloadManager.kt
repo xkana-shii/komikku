@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.Page
 import exh.log.xLogE
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.drop
@@ -36,6 +37,7 @@ import uy.kohesive.injekt.api.get
  * and retrieved through dependency injection. You can use this class to queue new chapters or query
  * downloaded chapters.
  */
+@OptIn(DelicateCoroutinesApi::class)
 class DownloadManager(
     private val context: Context,
     private val provider: DownloadProvider = Injekt.get(),
@@ -136,7 +138,8 @@ class DownloadManager(
      * @param autoStart whether to start the downloader after enqueing the chapters.
      */
     fun downloadChapters(manga: Manga, chapters: List<Chapter>, autoStart: Boolean = true) {
-        downloader.queueChapters(manga, chapters, autoStart)
+        val filteredChapters = getChaptersToDownload(chapters)
+        downloader.queueChapters(manga, filteredChapters, autoStart)
     }
 
     /**
@@ -168,6 +171,7 @@ class DownloadManager(
             // SY -->
             manga.ogTitle,
             // SY <--
+            chapter.url,
             source,
         )
         val files = chapterDir?.listFiles().orEmpty()
@@ -195,11 +199,12 @@ class DownloadManager(
     fun isChapterDownloaded(
         chapterName: String,
         chapterScanlator: String?,
+        chapterUrl: String,
         mangaTitle: String,
         sourceId: Long,
         skipCache: Boolean = false,
     ): Boolean {
-        return cache.isChapterDownloaded(chapterName, chapterScanlator, mangaTitle, sourceId, skipCache)
+        return cache.isChapterDownloaded(chapterName, chapterScanlator, chapterUrl, mangaTitle, sourceId, skipCache)
     }
 
     /**
@@ -218,8 +223,42 @@ class DownloadManager(
         return cache.getDownloadCount(manga)
     }
 
+    /**
+     * Returns the size of downloaded chapters for a manga.
+     *
+     * @param manga the manga to check.
+     */
+    fun getDownloadSize(manga: Manga): Long {
+        return cache.getDownloadSize(manga)
+    }
+
     fun cancelQueuedDownloads(downloads: List<Download>) {
         removeFromDownloadQueue(downloads.map { it.chapter })
+
+        // clean up temp artifacts for the canceled downloads
+        downloads.forEach { download ->
+            val source = download.source
+            val manga = download.manga
+            val chapter = download.chapter
+            val mangaDir = provider.findMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source) ?: return@forEach
+            val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url)
+            // Temp in-progress folder
+            mangaDir.findFile(baseName + Downloader.TMP_DIR_SUFFIX)?.delete()
+            // Temp CBZ file during archiving
+            mangaDir.findFile("$baseName.cbz" + Downloader.TMP_DIR_SUFFIX)?.delete()
+
+            // If manga directory is empty, delete it and clean cache/source
+            if (mangaDir.listFiles()?.isEmpty() == true) {
+                mangaDir.delete()
+                launchIO { cache.removeManga(manga) }
+
+                val sourceDir = provider.findSourceDir(source)
+                if (sourceDir?.listFiles()?.isEmpty() == true) {
+                    sourceDir.delete()
+                    launchIO { cache.removeSource(source) }
+                }
+            }
+        }
     }
 
     /**
@@ -253,7 +292,20 @@ class DownloadManager(
             removeFromDownloadQueue(filteredChapters)
 
             val (mangaDir, chapterDirs) = provider.findChapterDirs(filteredChapters, manga, source)
+            // Delete finalized chapter directories/files
             chapterDirs.forEach { it.delete() }
+
+            // Also proactively delete any temporary artifacts for these chapters
+            // e.g., "<chapter>_tmp" directory or "<chapter>.cbz_tmp" temp zip
+            mangaDir?.let { dir ->
+                filteredChapters.forEach { chapter ->
+                    val baseName = provider.getChapterDirName(chapter.name, chapter.scanlator, chapter.url)
+                    // Temp chapter folder during download
+                    dir.findFile(baseName + Downloader.TMP_DIR_SUFFIX)?.delete()
+                    // Temp CBZ file during archiving
+                    dir.findFile("$baseName.cbz" + Downloader.TMP_DIR_SUFFIX)?.delete()
+                }
+            }
             cache.removeChapters(filteredChapters, manga)
 
             // Delete manga directory if empty
@@ -460,7 +512,15 @@ class DownloadManager(
      * @param newChapter the target chapter with the new name.
      */
     suspend fun renameChapter(source: Source, manga: Manga, oldChapter: Chapter, newChapter: Chapter) {
-        val oldNames = provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator)
+        // Get all possible old folder names, with and without URL (for migration)
+        val oldNames = buildList {
+            addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, oldChapter.url))
+            // For migration: also try without URL if not already included
+            if (oldChapter.url.isNullOrEmpty()) {
+                addAll(provider.getValidChapterDirNames(oldChapter.name, oldChapter.scanlator, ""))
+            }
+        }
+
         val mangaDir = provider.getMangaDir(/* SY --> */ manga.ogTitle /* SY <-- */, source).getOrElse { e ->
             logcat(LogPriority.ERROR, e) { "Manga download folder doesn't exist. Skipping renaming after source sync" }
             return
@@ -471,7 +531,7 @@ class DownloadManager(
             .mapNotNull { mangaDir.findFile(it) }
             .firstOrNull() ?: return
 
-        var newName = provider.getChapterDirName(newChapter.name, newChapter.scanlator)
+        var newName = provider.getChapterDirName(newChapter.name, newChapter.scanlator, newChapter.url)
         if (oldDownload.isFile && oldDownload.extension == "cbz") {
             newName += ".cbz"
         }
@@ -521,6 +581,14 @@ class DownloadManager(
             filteredCategoryManga.filterNot { it.bookmark }
         } else {
             filteredCategoryManga
+        }
+    }
+
+    private fun getChaptersToDownload(chapters: List<Chapter>): List<Chapter> {
+        return if (!downloadPreferences.notDownloadFillermarkedItems().get()) {
+            chapters.filterNot { it.fillermark }
+        } else {
+            chapters
         }
     }
 

@@ -17,6 +17,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
+import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -114,6 +115,7 @@ object SettingsReaderScreen : SearchableSettings {
             getPageDownloadingGroup(readerPreferences = readerPref),
             getForkSettingsGroup(readerPreferences = readerPref),
             // SY <--
+            getAutomationGroup(readerPreferences = readerPref),
         )
     }
 
@@ -557,21 +559,32 @@ object SettingsReaderScreen : SearchableSettings {
     // SY -->
     @Composable
     private fun getPageDownloadingGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
+        // Get dev options state
+        val unsortedPreferences = remember { Injekt.get<UnsortedPreferences>() }
+        val devOptionsEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
+
+        // Build entries for preload size, adding 100 if dev options enabled
+        val preloadEntries = persistentMapOf(
+            4 to stringResource(SYMR.strings.reader_preload_amount_4_pages),
+            6 to stringResource(SYMR.strings.reader_preload_amount_6_pages),
+            8 to stringResource(SYMR.strings.reader_preload_amount_8_pages),
+            10 to stringResource(SYMR.strings.reader_preload_amount_10_pages),
+            12 to stringResource(SYMR.strings.reader_preload_amount_12_pages),
+            14 to stringResource(SYMR.strings.reader_preload_amount_14_pages),
+            16 to stringResource(SYMR.strings.reader_preload_amount_16_pages),
+            20 to stringResource(SYMR.strings.reader_preload_amount_20_pages),
+        ).toMutableMap()
+
+        if (devOptionsEnabled) {
+            preloadEntries[100] = "100 pages" // You may want to localize this string
+        }
+
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.page_downloading),
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.preloadSize(),
-                    entries = persistentMapOf(
-                        4 to stringResource(SYMR.strings.reader_preload_amount_4_pages),
-                        6 to stringResource(SYMR.strings.reader_preload_amount_6_pages),
-                        8 to stringResource(SYMR.strings.reader_preload_amount_8_pages),
-                        10 to stringResource(SYMR.strings.reader_preload_amount_10_pages),
-                        12 to stringResource(SYMR.strings.reader_preload_amount_12_pages),
-                        14 to stringResource(SYMR.strings.reader_preload_amount_14_pages),
-                        16 to stringResource(SYMR.strings.reader_preload_amount_16_pages),
-                        20 to stringResource(SYMR.strings.reader_preload_amount_20_pages),
-                    ),
+                    entries = preloadEntries.toImmutableMap(),
                     title = stringResource(SYMR.strings.reader_preload_amount),
                     subtitle = stringResource(SYMR.strings.reader_preload_amount_summary),
                 ),
@@ -677,4 +690,100 @@ object SettingsReaderScreen : SearchableSettings {
         )
     }
     // SY <--
+
+    @Composable
+    private fun getAutomationGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
+        val autoScrollState by readerPreferences.autoScroll().collectAsState()
+        val autoFlipState by readerPreferences.autoFlip().collectAsState()
+
+        val autoScrollSpeedPref = readerPreferences.autoScrollSpeed()
+        val autoScrollSpeed by autoScrollSpeedPref.collectAsState()
+        val autoFlipIntervalPref = readerPreferences.autoFlipInterval()
+        val autoFlipInterval by autoFlipIntervalPref.collectAsState()
+        val automationMaxMinutesPref = readerPreferences.automationMaxMinutes()
+        val automationMaxMinutes by automationMaxMinutesPref.collectAsState()
+        val automationMaxChaptersPref = readerPreferences.automationMaxChapters()
+        val automationMaxChapters by automationMaxChaptersPref.collectAsState()
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.pref_reader_automation),
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.autoScroll(),
+                    title = stringResource(MR.strings.pref_auto_scroll),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = 11 - autoScrollSpeed,
+                    valueRange = 1..10,
+                    title = stringResource(MR.strings.pref_auto_scroll_speed),
+                    subtitle = pluralStringResource(
+                        MR.plurals.pref_auto_scroll_speed_summary,
+                        autoScrollSpeed,
+                        autoScrollSpeed,
+                    ),
+                    enabled = autoScrollState,
+                    onValueChanged = {
+                        autoScrollSpeedPref.set(11 - it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.autoFlip(),
+                    title = stringResource(MR.strings.pref_auto_flip),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = autoFlipInterval,
+                    valueRange = 1..30,
+                    title = stringResource(MR.strings.pref_auto_flip_interval),
+                    subtitle = pluralStringResource(
+                        MR.plurals.pref_auto_flip_interval_summary,
+                        autoFlipInterval,
+                        autoFlipInterval,
+                    ),
+                    enabled = autoFlipState,
+                    onValueChanged = {
+                        autoFlipIntervalPref.set(it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = readerPreferences.automationMaxMinutes().get(),
+                    valueRange = 0..60,
+                    title = stringResource(MR.strings.pref_reader_automation_max_minutes),
+                    subtitle = if (automationMaxMinutes == 0) {
+                        stringResource(MR.strings.disabled)
+                    } else {
+                        pluralStringResource(
+                            MR.plurals.pref_reader_automation_max_minutes_summary,
+                            automationMaxMinutes,
+                            automationMaxMinutes,
+                        )
+                    },
+                    enabled = autoScrollState || autoFlipState,
+                    onValueChanged = {
+                        automationMaxMinutesPref.set(it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = readerPreferences.automationMaxChapters().get(),
+                    valueRange = 0..10,
+                    title = stringResource(MR.strings.pref_reader_automation_max_chapters),
+                    subtitle = if (automationMaxChapters == 0) {
+                        stringResource(MR.strings.disabled)
+                    } else {
+                        pluralStringResource(
+                            MR.plurals.pref_reader_automation_max_chapters_summary,
+                            automationMaxChapters,
+                            automationMaxChapters,
+                        )
+                    },
+                    enabled = autoScrollState || autoFlipState,
+                    onValueChanged = {
+                        automationMaxChaptersPref.set(it)
+                        true
+                    },
+                ),
+            ),
+        )
+    }
 }

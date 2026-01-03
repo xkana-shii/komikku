@@ -257,6 +257,8 @@ object SettingsLibraryScreen : SearchableSettings {
                             stringResource(MR.strings.disabled),
                         LibraryPreferences.ChapterSwipeAction.ToggleBookmark to
                             stringResource(MR.strings.action_bookmark),
+                        LibraryPreferences.ChapterSwipeAction.ToggleFillermark to
+                            stringResource(KMR.strings.action_fillermark_chapter),
                         LibraryPreferences.ChapterSwipeAction.ToggleRead to
                             stringResource(MR.strings.action_mark_as_read),
                         LibraryPreferences.ChapterSwipeAction.Download to
@@ -271,6 +273,8 @@ object SettingsLibraryScreen : SearchableSettings {
                             stringResource(MR.strings.disabled),
                         LibraryPreferences.ChapterSwipeAction.ToggleBookmark to
                             stringResource(MR.strings.action_bookmark),
+                        LibraryPreferences.ChapterSwipeAction.ToggleFillermark to
+                            stringResource(KMR.strings.action_fillermark_chapter),
                         LibraryPreferences.ChapterSwipeAction.ToggleRead to
                             stringResource(MR.strings.action_mark_as_read),
                         LibraryPreferences.ChapterSwipeAction.Download to
@@ -298,6 +302,11 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_show_empty_categories_search),
                 ),
                 // KMK <--
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.syncOnAdd(),
+                    title = stringResource(KMR.strings.pref_sync_manga_on_add),
+                    subtitle = stringResource(KMR.strings.pref_sync_manga_on_add_description),
+                ),
             ),
         )
     }
