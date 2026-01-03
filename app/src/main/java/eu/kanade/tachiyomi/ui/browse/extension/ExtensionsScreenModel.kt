@@ -201,10 +201,6 @@ class ExtensionsScreenModel(
         removeDownloadState(extension)
     }
 
-    fun updateSearchQuery(query: String?) {
-        mutableState.update { it.copy(searchQuery = query) }
-    }
-
     private fun addDownloadState(extension: Extension, installStep: InstallStep) {
         currentDownloads.update {
             it + Pair(
