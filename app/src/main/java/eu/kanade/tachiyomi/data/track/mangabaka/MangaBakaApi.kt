@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.track.mangabaka
 
+import android.util.Log
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBLibrarySearchResponse
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MBListItem
@@ -58,9 +59,11 @@ class MangaBakaApi(
 
     suspend fun testLibraryAuth(): Boolean {
         return try {
-            authClient.newCall(
+            val response = authClient.newCall(
                 GET("$API_BASE_URL/v1/my/library?limit=1&page=1"),
             ).awaitSuccess()
+            val bodyString = response.body.string()
+            Log.d(TAG, "testLibraryAuth response: $bodyString")
             true
         } catch (_: Exception) {
             false
@@ -73,6 +76,7 @@ class MangaBakaApi(
                 GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId"),
             ).awaitSuccess()
             val bodyString = response.body.string()
+            Log.d(TAG, "getLibraryEntryWithSeries response for id=$remoteId: $bodyString")
             val libraryResponse = json.decodeFromString(MBLibrarySearchResponse.serializer(), bodyString)
             libraryResponse.data.firstOrNull()
         } catch (_: Exception) {
@@ -84,6 +88,7 @@ class MangaBakaApi(
         return try {
             val response = authClient.newCall(GET("$API_BASE_URL/v1/my/library?q=mb:$remoteId")).awaitSuccess()
             val bodyString = response.body.string()
+            Log.d(TAG, "getSeriesListItem response for id=$remoteId: $bodyString")
             val wrapper = json.decodeFromString(MBLibrarySearchResponse.serializer(), bodyString)
             wrapper.data.firstOrNull()
         } catch (_: Exception) {
@@ -93,6 +98,7 @@ class MangaBakaApi(
 
     suspend fun addSeriesEntry(track: Track, hasReadChapters: Boolean): Boolean {
         return try {
+            val finalId = fetchFinalSeriesId(track.remote_id)
             val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
             val entry = MBListItemRequest(
                 state = if (hasReadChapters) "reading" else "plan_to_read",
@@ -103,13 +109,16 @@ class MangaBakaApi(
                 finish_date = if (track.status == MangaBaka.COMPLETED) formatDate(System.currentTimeMillis()) else null,
             )
             val body = json.encodeToString(MBListItemRequest.serializer(), entry)
-            authClient.newCall(
+            Log.d(TAG, "addSeriesEntry request (finalId=$finalId): $body")
+            val response = authClient.newCall(
                 POST(
-                    url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
+                    url = "$API_BASE_URL/v1/my/library/$finalId",
                     headers = Headers.headersOf(),
                     body = body.toRequestBody(CONTENT_TYPE),
                 ),
             ).awaitSuccess()
+            val bodyString = response.body.string()
+            Log.d(TAG, "addSeriesEntry response (finalId=$finalId): $bodyString")
             true
         } catch (_: Exception) {
             false
@@ -118,6 +127,7 @@ class MangaBakaApi(
 
     suspend fun updateSeriesEntryPatch(track: Track, numberOfRereads: Int?): Boolean {
         return try {
+            val finalId = fetchFinalSeriesId(track.remote_id)
             val normalizedScore = (track.score * 10).coerceIn(0.0, 100.0)
             val entry = MBListItemRequest(
                 state = when (track.status) {
@@ -137,13 +147,16 @@ class MangaBakaApi(
                 finish_date = if (track.status == MangaBaka.COMPLETED && track.finished_reading_date > 0) formatDate(track.finished_reading_date) else null,
             )
             val body = json.encodeToString(MBListItemRequest.serializer(), entry)
-            authClient.newCall(
+            Log.d(TAG, "updateSeriesEntryPatch request (finalId=$finalId): $body")
+            val response = authClient.newCall(
                 PATCH(
-                    url = "$API_BASE_URL/v1/my/library/${track.remote_id}",
+                    url = "$API_BASE_URL/v1/my/library/$finalId",
                     headers = Headers.headersOf(),
                     body = body.toRequestBody(CONTENT_TYPE),
                 ),
             ).awaitSuccess()
+            val bodyString = response.body.string()
+            Log.d(TAG, "updateSeriesEntryPatch response (finalId=$finalId): $bodyString")
             true
         } catch (_: Exception) {
             false
@@ -152,7 +165,11 @@ class MangaBakaApi(
 
     suspend fun deleteSeriesEntry(remoteId: Long): Boolean {
         return try {
-            authClient.newCall(DELETE("$API_BASE_URL/v1/my/library/$remoteId")).awaitSuccess()
+            val finalId = fetchFinalSeriesId(remoteId)
+            Log.d(TAG, "deleteSeriesEntry for finalId=$finalId")
+            val response = authClient.newCall(DELETE("$API_BASE_URL/v1/my/library/$finalId")).awaitSuccess()
+            val bodyString = response.body.string()
+            Log.d(TAG, "deleteSeriesEntry response (finalId=$finalId): $bodyString")
             true
         } catch (_: Exception) {
             false
@@ -170,6 +187,7 @@ class MangaBakaApi(
                 client.newCall(GET(url)).awaitSuccess()
             }
             val bodyString = response.body.string()
+            Log.d(TAG, "search response for query='$query': $bodyString")
             if (extractTrackerUrlInfo(query) != null) {
                 val root = json.parseToJsonElement(bodyString)
                 val seriesArr = root.jsonObject["data"]
@@ -185,19 +203,59 @@ class MangaBakaApi(
         }
     }
 
+    /**
+     * Fetch a series and follow merges (merged_with) until the active/final series is found.
+     * Returns the final MBRecord or null on failure.
+     */
     suspend fun getSeries(remoteId: Long): MBRecord? {
         return try {
-            val response = client.newCall(GET("$API_BASE_URL/v1/series/$remoteId")).awaitSuccess()
-            val bodyString = response.body.string()
-            val recordResponse = json.decodeFromString(MBSeriesResponse.serializer(), bodyString)
-            recordResponse.data
-        } catch (_: Exception) {
+            var currentId = remoteId
+            repeat(5) { attempt ->
+                val response = client.newCall(GET("$API_BASE_URL/v1/series/$currentId")).awaitSuccess()
+                val bodyString = response.body.string()
+                Log.d(TAG, "getSeries response (attempt=${attempt + 1}, id=$currentId): $bodyString")
+                val recordResponse = json.decodeFromString(MBSeriesResponse.serializer(), bodyString)
+                val record = recordResponse.data
+                // If the record indicates it was merged to another id, follow that id.
+                if (record.merged_with != null && record.merged_with != currentId) {
+                    Log.d(TAG, "Series id $currentId merged_with ${record.merged_with}, following")
+                    // move to merged id and try again to get the final record
+                    currentId = record.merged_with
+                } else {
+                    return record
+                }
+            }
+            // If we've retried several times and still have a merged pointer, try fetching the last known id once more.
+            val finalResponse = client.newCall(GET("$API_BASE_URL/v1/series/$currentId")).awaitSuccess()
+            val finalBody = finalResponse.body.string()
+            Log.d(TAG, "getSeries final attempt response (id=$currentId): $finalBody")
+            val finalRecordResponse = json.decodeFromString(MBSeriesResponse.serializer(), finalBody)
+            finalRecordResponse.data
+        } catch (e: Exception) {
+            Log.d(TAG, "getSeries failed for id=$remoteId: ${e.message}")
             null
+        }
+    }
+
+    /**
+     * Helper to resolve the final series id to use for requests.
+     * If the series has been merged, returns the new id. If resolution fails, returns the original id.
+     */
+    private suspend fun fetchFinalSeriesId(originalId: Long): Long {
+        return try {
+            val record = getSeries(originalId)
+            val final = record?.id ?: originalId
+            Log.d(TAG, "fetchFinalSeriesId resolved $originalId -> $final")
+            final
+        } catch (e: Exception) {
+            Log.d(TAG, "fetchFinalSeriesId failed for $originalId: ${e.message}")
+            originalId
         }
     }
 
     companion object {
         private const val API_BASE_URL = "https://api.mangabaka.dev"
         private val CONTENT_TYPE = "application/json".toMediaType()
+        private const val TAG = "MangaBakaApi"
     }
 }
