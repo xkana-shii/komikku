@@ -87,12 +87,6 @@ class SourcePreferences(
 
     fun dataSaver() = preferenceStore.getEnum("data_saver", DataSaver.NONE)
 
-    fun devOptionsPassword() = preferenceStore.getString("dev_options_password", "")
-
-    fun devOptionsEnabled() = preferenceStore.getBoolean("dev_options_enabled", false)
-
-    fun fastDownloadEnabled() = preferenceStore.getBoolean("fast_download_enabled", false)
-
     fun dataSaverIgnoreJpeg() = preferenceStore.getBoolean("ignore_jpeg", false)
 
     fun dataSaverIgnoreGif() = preferenceStore.getBoolean("ignore_gif", true)

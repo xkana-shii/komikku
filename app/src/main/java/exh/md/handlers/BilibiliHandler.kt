@@ -2,7 +2,7 @@ package exh.md.handlers
 
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
-import eu.kanade.tachiyomi.network.interceptor.reallyApplyRateLimit
+import eu.kanade.tachiyomi.network.interceptor.rateLimit
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
@@ -34,7 +34,7 @@ class BilibiliHandler(currentClient: OkHttpClient) {
         .build()
 
     val client: OkHttpClient = currentClient.newBuilder()
-        .reallyApplyRateLimit(1, 1.seconds)
+        .rateLimit(1, 1.seconds)
         .build()
 
     val json by injectLazy<Json>()

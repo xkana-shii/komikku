@@ -10,11 +10,22 @@ import kotlin.time.toDuration
 import kotlin.time.toDurationUnit
 
 /**
- * TimeUnit-based overload kept for compatibility.
+ * An OkHttp interceptor that handles given url host's rate limiting.
  *
- * Example:
- * httpUrl = "https://api.manga.com".toHttpUrlOrNull(), permits = 5, period = 1, unit = seconds
- * => 5 requests per second to the api.manga.com host.
+ * This uses Java Time APIs and is the legacy method, kept
+ * for compatibility reasons with existing extensions.
+ *
+ * Examples:
+ *
+ * httpUrl = "api.manga.com".toHttpUrlOrNull(), permits = 5, period = 1, unit = seconds  =>  5 requests per second to api.manga.com
+ * httpUrl = "imagecdn.manga.com".toHttpUrlOrNull(), permits = 10, period = 2, unit = minutes  =>  10 requests per 2 minutes to imagecdn.manga.com
+ *
+ * @since extension-lib 1.3
+ *
+ * @param httpUrl [HttpUrl] The url host that this interceptor should handle. Will get url's host by using HttpUrl.host()
+ * @param permits [Int]     Number of requests allowed within a period of units.
+ * @param period [Long]     The limiting duration. Defaults to 1.
+ * @param unit [TimeUnit]   The unit of time for the period. Defaults to seconds.
  */
 @Deprecated("Use the version with kotlin.time APIs instead.")
 fun OkHttpClient.Builder.rateLimitHost(
@@ -27,28 +38,39 @@ fun OkHttpClient.Builder.rateLimitHost(
 )
 
 /**
- * Preferred kotlin.time overload that respects the global ignore preference.
+ * An OkHttp interceptor that handles given url host's rate limiting.
  *
- * Example:
- * httpUrl = "https://api.manga.com".toHttpUrlOrNull(), permits = 5, period = 1.seconds
- * => 5 requests per second to the api.manga.com host.
+ * Examples:
+ *
+ * httpUrl = "https://api.manga.com".toHttpUrlOrNull(), permits = 5, period = 1.seconds =>  5 requests per second to api.manga.com
+ * httpUrl = "https://imagecdn.manga.com".toHttpUrlOrNull(), permits = 10, period = 2.minutes  =>  10 requests per 2 minutes to imagecdn.manga.com
+ *
+ * @since extension-lib 1.5
+ *
+ * @param httpUrl [HttpUrl] The url host that this interceptor should handle. Will get url's host by using HttpUrl.host()
+ * @param permits [Int]     Number of requests allowed within a period of units.
+ * @param period [Duration] The limiting duration. Defaults to 1.seconds.
  */
 fun OkHttpClient.Builder.rateLimitHost(
     httpUrl: HttpUrl,
     permits: Int,
     period: Duration = 1.seconds,
-) = addInterceptor(RateLimitInterceptor(httpUrl.host, permits, period, true))
+) = addInterceptor(RateLimitInterceptor(httpUrl.host, permits, period))
 
 /**
- * Convenience overload accepting a raw URL string.
+ * An OkHttp interceptor that handles given url host's rate limiting.
  *
- * Example:
- * url = "https://imagecdn.manga.com", permits = 10, period = 2.minutes
- * => 10 requests per 2 minutes to imagecdn.manga.com
+ * Examples:
+ *
+ * url = "https://api.manga.com", permits = 5, period = 1.seconds =>  5 requests per second to api.manga.com
+ * url = "https://imagecdn.manga.com", permits = 10, period = 2.minutes  =>  10 requests per 2 minutes to imagecdn.manga.com
+ *
+ * @since extension-lib 1.5
+ *
+ * @param url [String]      The url host that this interceptor should handle. Will get url's host by using HttpUrl.host()
+ * @param permits [Int]     Number of requests allowed within a period of units.
+ * @param period [Duration] The limiting duration. Defaults to 1.seconds.
  */
 @Suppress("UNUSED")
-fun OkHttpClient.Builder.rateLimitHost(
-    url: String,
-    permits: Int,
-    period: Duration = 1.seconds,
-) = addInterceptor(RateLimitInterceptor(url.toHttpUrlOrNull()?.host, permits, period, true))
+fun OkHttpClient.Builder.rateLimitHost(url: String, permits: Int, period: Duration = 1.seconds) =
+    addInterceptor(RateLimitInterceptor(url.toHttpUrlOrNull()?.host, permits, period))
