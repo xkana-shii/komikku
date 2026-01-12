@@ -62,5 +62,4 @@ dependencies {
     // SY <--
 
     implementation(libs.injekt)
-
 }

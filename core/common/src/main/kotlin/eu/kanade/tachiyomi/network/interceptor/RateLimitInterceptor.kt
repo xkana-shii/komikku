@@ -56,12 +56,25 @@ fun OkHttpClient.Builder.rateLimit(
 fun OkHttpClient.Builder.rateLimit(permits: Int, period: Duration = 1.seconds) =
     addInterceptor(RateLimitInterceptor(null, permits, period))
 
+/**
+ * Explicit helper that allows callers to decide whether this interceptor should respect
+ * the global ignore-rate-limits preference or always enforce limits.
+ *
+ * Use this on clients that must always be rate-limited (e.g. to avoid server bans),
+ * by passing respectIgnorePreference = false.
+ */
+fun OkHttpClient.Builder.reallyApplyRateLimit(
+    permits: Int,
+    period: Duration = 1.seconds,
+) = addInterceptor(RateLimitInterceptor(null, permits, period, false))
+
 /** We can probably accept domains or wildcards by comparing with [endsWith], etc. */
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 internal class RateLimitInterceptor(
     private val host: String?,
     private val permits: Int,
     period: Duration,
+    private val respectIgnorePreference: Boolean = true,
 ) : Interceptor {
 
     private val requestQueue = ArrayDeque<Long>(permits)
@@ -81,8 +94,9 @@ internal class RateLimitInterceptor(
             else -> return chain.proceed(request)
         }
 
-        // If the user has chosen to ignore rate limits, bypass limiter entirely.
-        if (preferences.ignoreRateLimits().get()) {
+        // If the user has chosen to ignore rate limits, bypass limiter entirely
+        // unless this interceptor was created with respectIgnorePreference == false.
+        if (respectIgnorePreference && preferences.ignoreRateLimits().get()) {
             return chain.proceed(request)
         }
 
