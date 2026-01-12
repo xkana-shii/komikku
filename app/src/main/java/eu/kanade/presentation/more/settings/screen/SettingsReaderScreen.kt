@@ -6,6 +6,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
+import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderBottomButton
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
@@ -17,7 +18,6 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
-import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -560,8 +560,8 @@ object SettingsReaderScreen : SearchableSettings {
     @Composable
     private fun getPageDownloadingGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
         // Get dev options state
-        val unsortedPreferences = remember { Injekt.get<UnsortedPreferences>() }
-        val devOptionsEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
+        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
+        val devOptionsEnabled by sourcePreferences.devOptionsEnabled().collectAsState()
 
         // Build entries for preload size, adding 100 if dev options enabled
         val preloadEntries = persistentMapOf(
@@ -576,7 +576,8 @@ object SettingsReaderScreen : SearchableSettings {
         ).toMutableMap()
 
         if (devOptionsEnabled) {
-            preloadEntries[100] = "100 pages" // You may want to localize this string
+            preloadEntries[100] = stringResource(SYMR.strings.reader_preload_amount_100_pages)
+            preloadEntries[-1] = stringResource(SYMR.strings.reader_preload_entire_chapter)
         }
 
         return Preference.PreferenceGroup(

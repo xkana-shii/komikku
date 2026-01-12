@@ -768,6 +768,19 @@ class ReaderViewModel @JvmOverloads constructor(
             }
             return
         }
+
+        // If preloadSize is the sentinel (-1) meaning "entire chapter", enqueue all pages immediately.
+        val preloadSizeValue = readerPreferences.preloadSize().get()
+        if (preloadSizeValue < 0) {
+            chapter.pageLoader?.let { pl ->
+                try {
+                    (pl as? eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader)?.preloadAllPages()
+                } catch (_: Throwable) {
+                    // swallow errors so preload doesn't crash
+                }
+            }
+        }
+
         eventChannel.trySend(Event.ReloadViewerChapters)
     }
 
