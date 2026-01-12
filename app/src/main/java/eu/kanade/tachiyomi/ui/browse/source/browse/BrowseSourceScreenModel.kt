@@ -36,6 +36,7 @@ import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.util.removeCovers
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.source.EH_PACKAGE
+import exh.source.ExhPreferences
 import exh.source.LOCAL_SOURCE_PACKAGE
 import exh.source.getMainSource
 import exh.source.isEhBasedSource
@@ -67,7 +68,6 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
@@ -124,7 +124,7 @@ open class BrowseSourceScreenModel(
     // KMK <--
 
     // SY -->
-    unsortedPreferences: UnsortedPreferences = Injekt.get(),
+    exhPreferences: ExhPreferences = Injekt.get(),
     uiPreferences: UiPreferences = Injekt.get(),
     private val getFlatMetadataById: GetFlatMetadataById = Injekt.get(),
     private val deleteSavedSearchById: DeleteSavedSearchById = Injekt.get(),
@@ -138,7 +138,7 @@ open class BrowseSourceScreenModel(
     var source = sourceManager.getOrStub(sourceId)
 
     // SY -->
-    val ehentaiBrowseDisplayMode by unsortedPreferences.enhancedEHentaiView().asState(screenModelScope)
+    val ehentaiBrowseDisplayMode by exhPreferences.enhancedEHentaiView().asState(screenModelScope)
 
     val startExpanded by uiPreferences.expandFilters().asState(screenModelScope)
 

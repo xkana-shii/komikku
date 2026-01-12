@@ -44,7 +44,6 @@ import eu.kanade.tachiyomi.ui.category.genre.SortTagScreen
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
-import tachiyomi.domain.UnsortedPreferences
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.ResetCategoryFlags
 import tachiyomi.domain.category.model.Category
@@ -82,16 +81,15 @@ object SettingsLibraryScreen : SearchableSettings {
         val navigator = LocalNavigator.currentOrThrow
         val getCategories = remember { Injekt.get<GetCategories>() }
         val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
-        val unsortedPreferences = remember { Injekt.get<UnsortedPreferences>() }
-
-        val allCategories by getCategories.subscribe().collectAsState(emptyList())
+        val allCategories by getCategories.subscribe().collectAsState(initial = emptyList())
 
         return listOf(
             getCategoriesGroup(navigator, allCategories, libraryPreferences),
             getGlobalUpdateGroup(allCategories, libraryPreferences),
             getBehaviorGroup(libraryPreferences),
-            getSortingCategory(navigator, libraryPreferences),
-            getMigrationCategory(unsortedPreferences),
+            // SY -->
+            getSortingCategory(LocalNavigator.currentOrThrow, libraryPreferences),
+            // SY <--
         )
     }
 
@@ -564,25 +562,6 @@ object SettingsLibraryScreen : SearchableSettings {
                         tagCount.size,
                     ),
                     onClick = { navigator.push(SortTagScreen()) },
-                ),
-            ),
-        )
-    }
-
-    @Composable
-    fun getMigrationCategory(
-        unsortedPreferences: UnsortedPreferences,
-    ): Preference.PreferenceGroup {
-        val skipPreMigration by unsortedPreferences.skipPreMigration().collectAsState()
-        val migrationSources by unsortedPreferences.migrationSources().collectAsState()
-        return Preference.PreferenceGroup(
-            stringResource(SYMR.strings.migration),
-            enabled = skipPreMigration || migrationSources.isNotEmpty(),
-            preferenceItems = persistentListOf(
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = unsortedPreferences.skipPreMigration(),
-                    title = stringResource(SYMR.strings.skip_pre_migration),
-                    subtitle = stringResource(SYMR.strings.pref_skip_pre_migration_summary),
                 ),
             ),
         )
