@@ -39,6 +39,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.advanced.ClearDatabaseScreen
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.download.DownloadCache
@@ -739,9 +740,110 @@ object SettingsAdvancedScreen : SearchableSettings {
         val exhPreferences = remember { Injekt.get<ExhPreferences>() }
         val delegateSourcePreferences = remember { Injekt.get<DelegateSourcePreferences>() }
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
+
+        // Preferences we want to expose in dev tools
+        val networkPreferences = remember { Injekt.get<NetworkPreferences>() }
+        val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
+
+        val devOptionsAreEnabled by sourcePreferences.devOptionsEnabled().collectAsState()
+        val devOptionsPasswordPref = sourcePreferences.devOptionsPassword()
+        val devOptionsPassword by devOptionsPasswordPref.collectAsState()
+
+        // Collect values needed for slider preferences
+        val maxConcurrentRequestsPref = networkPreferences.maxConcurrentRequests()
+        val maxConcurrentRequests by maxConcurrentRequestsPref.collectAsState()
+
+        val libraryParallelSlotsPref = libraryPreferences.libraryUpdateParallelSlots()
+        val libraryParallelSlots by libraryParallelSlotsPref.collectAsState()
+
+        val conditionalPreferenceItems = if (devOptionsAreEnabled) {
+            listOf<Preference.PreferenceItem<out Any, out Any>>(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = sourcePreferences.fastDownloadEnabled(),
+                    title = stringResource(KMR.strings.dev_fast_download),
+                    subtitle = stringResource(KMR.strings.dev_concurrent_pages),
+                ),
+                // Network dev options (appear only when dev options enabled)
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = networkPreferences.ignoreRateLimits(),
+                    title = stringResource(KMR.strings.pref_ignore_rate_limits),
+                    subtitle = stringResource(KMR.strings.pref_ignore_rate_limits_summary),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = maxConcurrentRequests,
+                    title = stringResource(KMR.strings.pref_max_concurrent_requests),
+                    subtitle = stringResource(KMR.strings.pref_max_concurrent_requests_summary),
+                    valueRange = 1..256,
+                    valueString = maxConcurrentRequests.toString(),
+                    onValueChanged = {
+                        maxConcurrentRequestsPref.set(it)
+                        context.toast(MR.strings.requires_app_restart)
+                    },
+                ),
+                // Library dev options
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.libraryUpdateCacheSkip(),
+                    title = stringResource(KMR.strings.pref_library_update_cache_skip),
+                    subtitle = stringResource(KMR.strings.pref_library_update_cache_skip_summary),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    value = libraryParallelSlots,
+                    title = stringResource(KMR.strings.pref_library_update_parallel_slots),
+                    subtitle = stringResource(KMR.strings.pref_library_update_parallel_slots_summary),
+                    valueRange = 1..10,
+                    valueString = libraryParallelSlots.toString(),
+                    onValueChanged = {
+                        libraryParallelSlotsPref.set(it)
+                    },
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.developer_tools),
             preferenceItems = persistentListOf(
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = devOptionsPasswordPref,
+                    title = stringResource(KMR.strings.dev_options_password),
+                    subtitle = if (devOptionsAreEnabled) {
+                        stringResource(KMR.strings.dev_options_password_subtitle_enabled)
+                    } else {
+                        stringResource(KMR.strings.dev_options_password_subtitle_disabled)
+                    },
+                    onValueChanged = { password ->
+                        if (password.isBlank()) {
+                            if (devOptionsAreEnabled) {
+                                sourcePreferences.devOptionsEnabled().set(false)
+                                sourcePreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_disabled_by_clear)
+                            }
+                            true
+                        } else {
+                            val valid = password == BuildConfig.DEV_OPTIONS
+                            sourcePreferences.devOptionsEnabled().set(valid)
+                            if (valid) {
+                                context.toast(KMR.strings.dev_options_enabled)
+                            } else {
+                                sourcePreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_incorrect_password)
+                            }
+                            valid
+                        }
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(KMR.strings.dev_options_password_reset),
+                    enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
+                    onClick = {
+                        devOptionsPasswordPref.delete()
+                        sourcePreferences.devOptionsEnabled().set(false)
+                        sourcePreferences.fastDownloadEnabled().set(false)
+                        context.toast(MR.strings.requires_app_restart)
+                    },
+                ),
+                *conditionalPreferenceItems.toTypedArray(),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = exhPreferences.isHentaiEnabled(),
                     title = stringResource(SYMR.strings.toggle_hentai_features),
