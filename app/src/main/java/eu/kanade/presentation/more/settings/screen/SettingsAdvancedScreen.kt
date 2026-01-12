@@ -752,8 +752,8 @@ object SettingsAdvancedScreen : SearchableSettings {
         val networkPreferences = remember { Injekt.get<NetworkPreferences>() }
         val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
 
-        val devOptionsAreEnabled by unsortedPreferences.devOptionsEnabled().collectAsState()
-        val devOptionsPasswordPref = unsortedPreferences.devOptionsPassword()
+        val devOptionsAreEnabled by sourcePreferences.devOptionsEnabled().collectAsState()
+        val devOptionsPasswordPref = sourcePreferences.devOptionsPassword()
         val devOptionsPassword by devOptionsPasswordPref.collectAsState()
 
         // Collect values needed for slider preferences
@@ -766,7 +766,7 @@ object SettingsAdvancedScreen : SearchableSettings {
         val conditionalPreferenceItems = if (devOptionsAreEnabled) {
             listOf<Preference.PreferenceItem<out Any, out Any>>(
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = unsortedPreferences.fastDownloadEnabled(),
+                    preference = sourcePreferences.fastDownloadEnabled(),
                     title = stringResource(KMR.strings.dev_fast_download),
                     subtitle = stringResource(KMR.strings.dev_concurrent_pages),
                 ),
@@ -822,18 +822,18 @@ object SettingsAdvancedScreen : SearchableSettings {
                     onValueChanged = { password ->
                         if (password.isBlank()) {
                             if (devOptionsAreEnabled) {
-                                unsortedPreferences.devOptionsEnabled().set(false)
-                                unsortedPreferences.fastDownloadEnabled().set(false)
+                                sourcePreferences.devOptionsEnabled().set(false)
+                                sourcePreferences.fastDownloadEnabled().set(false)
                                 context.toast(KMR.strings.dev_options_disabled_by_clear)
                             }
                             true
                         } else {
                             val valid = password == BuildConfig.DEV_OPTIONS
-                            unsortedPreferences.devOptionsEnabled().set(valid)
+                            sourcePreferences.devOptionsEnabled().set(valid)
                             if (valid) {
                                 context.toast(KMR.strings.dev_options_enabled)
                             } else {
-                                unsortedPreferences.fastDownloadEnabled().set(false)
+                                sourcePreferences.fastDownloadEnabled().set(false)
                                 context.toast(KMR.strings.dev_options_incorrect_password)
                             }
                             valid
@@ -845,8 +845,8 @@ object SettingsAdvancedScreen : SearchableSettings {
                     enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
                     onClick = {
                         devOptionsPasswordPref.delete()
-                        unsortedPreferences.devOptionsEnabled().set(false)
-                        unsortedPreferences.fastDownloadEnabled().set(false)
+                        sourcePreferences.devOptionsEnabled().set(false)
+                        sourcePreferences.fastDownloadEnabled().set(false)
                         context.toast(MR.strings.requires_app_restart)
                     },
                 ),
