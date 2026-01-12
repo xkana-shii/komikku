@@ -99,7 +99,18 @@ class MetadataUpdateJob(private val context: Context, workerParams: WorkerParame
     }
 
     private suspend fun updateMetadata() {
-        val semaphore = Semaphore(5)
+        // Use configured parallel slots from preferences (fallback to 1 minimum)
+        val parallelSlots = try {
+            Injekt.get<tachiyomi.domain.library.service.LibraryPreferences>()
+                .libraryUpdateParallelSlots()
+                .get()
+                .coerceAtLeast(1)
+        } catch (e: Throwable) {
+            logcat(LogPriority.WARN, e) { "Failed to read libraryUpdateParallelSlots preference, using default 5" }
+            5
+        }
+
+        val semaphore = Semaphore(parallelSlots)
         val progressCount = AtomicInt(0)
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
 
