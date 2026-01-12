@@ -577,7 +577,7 @@ object SettingsReaderScreen : SearchableSettings {
 
         if (devOptionsEnabled) {
             preloadEntries[100] = stringResource(SYMR.strings.reader_preload_amount_100_pages)
-            preloadEntries[-1] = stringResource(SYMR.strings.reader_preload_entire_chapter)
+            preloadEntries[-1] = stringResource(SYMR.strings.reader_preload_amount_all_pages)
         }
 
         return Preference.PreferenceGroup(

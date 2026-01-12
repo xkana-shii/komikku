@@ -163,7 +163,7 @@ class EHentai(
                 ),
                 manga = SManga.create().apply {
                     // Get title
-                    title = if (preferences.useCleanTitle().get()) {
+                    title = if (exhPreferences.useCleanTitle().get()) {
                         thumbnailElement.attr("title").replace(cleanTitleRegex, "").trim()
                     } else {
                         thumbnailElement.attr("title")
@@ -730,13 +730,13 @@ class EHentai(
                 gToken = EHentaiSearchMetadata.galleryToken(url)
 
                 exh = this@EHentai.exh
-                title = if (preferences.useCleanTitle().get()) {
+                title = if (exhPreferences.useCleanTitle().get()) {
                     select("#gn").text().trimOrNull()?.replace(cleanTitleRegex, "")?.trim()
                 } else {
                     select("#gn").text().trimOrNull()
                 }
 
-                altTitle = if (preferences.useCleanTitle().get()) {
+                altTitle = if (exhPreferences.useCleanTitle().get()) {
                     select("#gj").text().trimOrNull()?.replace(cleanTitleRegex, "")?.trim()
                 } else {
                     select("#gj").text().trimOrNull()

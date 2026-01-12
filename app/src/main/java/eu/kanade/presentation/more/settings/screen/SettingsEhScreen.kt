@@ -99,15 +99,15 @@ object SettingsEhScreen : SearchableSettings {
         openWarnConfigureDialogController: () -> Unit,
     ) {
         var initialLoadGuard by remember { mutableStateOf(false) }
-        val useHentaiAtHome by unsortedPreferences.useHentaiAtHome().collectAsState()
-        val useJapaneseTitle by unsortedPreferences.useJapaneseTitle().collectAsState()
-        val useCleanTitle by unsortedPreferences.useCleanTitle().collectAsState()
-        val useOriginalImages by unsortedPreferences.exhUseOriginalImages().collectAsState()
-        val ehTagFilterValue by unsortedPreferences.ehTagFilterValue().collectAsState()
-        val ehTagWatchingValue by unsortedPreferences.ehTagWatchingValue().collectAsState()
-        val settingsLanguages by unsortedPreferences.exhSettingsLanguages().collectAsState()
-        val enabledCategories by unsortedPreferences.exhEnabledCategories().collectAsState()
-        val imageQuality by unsortedPreferences.imageQuality().collectAsState()
+        val useCleanTitle by exhPreferences.useCleanTitle().collectAsState()
+        val useHentaiAtHome by exhPreferences.useHentaiAtHome().collectAsState()
+        val useJapaneseTitle by exhPreferences.useJapaneseTitle().collectAsState()
+        val useOriginalImages by exhPreferences.exhUseOriginalImages().collectAsState()
+        val ehTagFilterValue by exhPreferences.ehTagFilterValue().collectAsState()
+        val ehTagWatchingValue by exhPreferences.ehTagWatchingValue().collectAsState()
+        val settingsLanguages by exhPreferences.exhSettingsLanguages().collectAsState()
+        val enabledCategories by exhPreferences.exhEnabledCategories().collectAsState()
+        val imageQuality by exhPreferences.imageQuality().collectAsState()
         DisposableEffect(
             useHentaiAtHome,
             useJapaneseTitle,
@@ -153,11 +153,11 @@ object SettingsEhScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 stringResource(SYMR.strings.ehentai_prefs_account_settings),
                 preferenceItems = persistentListOf(
-                    getLoginPreference(unsortedPreferences, openWarnConfigureDialogController),
-                    useHentaiAtHome(exhentaiEnabled, unsortedPreferences),
-                    useJapaneseTitle(exhentaiEnabled, unsortedPreferences),
-                    useCleanTitle(exhentaiEnabled, unsortedPreferences),
-                    useOriginalImages(exhentaiEnabled, unsortedPreferences),
+                    useCleanTitle(exhentaiEnabled, exhPreferences),
+                    getLoginPreference(exhPreferences, openWarnConfigureDialogController),
+                    useHentaiAtHome(exhentaiEnabled, exhPreferences),
+                    useJapaneseTitle(exhentaiEnabled, exhPreferences),
+                    useOriginalImages(exhentaiEnabled, exhPreferences),
                     watchedTags(exhentaiEnabled),
                     tagFilterThreshold(exhentaiEnabled, exhPreferences),
                     tagWatchingThreshold(exhentaiEnabled, exhPreferences),
@@ -282,7 +282,7 @@ object SettingsEhScreen : SearchableSettings {
     @Composable
     fun useCleanTitle(
         exhentaiEnabled: Boolean,
-        unsortedPreferences: UnsortedPreferences,
+        unsortedPreferences: ExhPreferences,
     ): Preference.PreferenceItem.SwitchPreference {
         return Preference.PreferenceItem.SwitchPreference(
             preference = unsortedPreferences.useCleanTitle(),
