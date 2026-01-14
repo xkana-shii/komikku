@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.ui.reader
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.assist.AssistContent
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -56,7 +55,9 @@ import androidx.core.transition.doOnEnd
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.hippo.unifile.UniFile
@@ -117,12 +118,14 @@ import exh.util.mangaType
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
@@ -145,6 +148,7 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.ByteArrayOutputStream
+import kotlin.time.Duration.Companion.seconds
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 class ReaderActivity : BaseActivity() {
@@ -206,7 +210,7 @@ class ReaderActivity : BaseActivity() {
         registerSecureActivity(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
-                Activity.OVERRIDE_TRANSITION_OPEN,
+                OVERRIDE_TRANSITION_OPEN,
                 R.anim.shared_axis_x_push_enter,
                 R.anim.shared_axis_x_push_exit,
             )
@@ -576,7 +580,7 @@ class ReaderActivity : BaseActivity() {
         super.finish()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
-                Activity.OVERRIDE_TRANSITION_CLOSE,
+                OVERRIDE_TRANSITION_CLOSE,
                 R.anim.shared_axis_x_pop_enter,
                 R.anim.shared_axis_x_pop_exit,
             )
@@ -743,8 +747,7 @@ class ReaderActivity : BaseActivity() {
             },
             onClickShiftPage = ::shiftDoublePages,
             // SY <--
-            readerPreferences = readerPreferences,
-            )
+        )
     }
 
     // KMK -->
@@ -993,7 +996,7 @@ class ReaderActivity : BaseActivity() {
         try {
             readingModeToast?.cancel()
             readingModeToast = toast(ReadingMode.fromPreference(mode).stringRes)
-        } catch (e: ArrayIndexOutOfBoundsException) {
+        } catch (_: ArrayIndexOutOfBoundsException) {
             logcat(LogPriority.ERROR) { "Unknown reading mode: $mode" }
         }
     }

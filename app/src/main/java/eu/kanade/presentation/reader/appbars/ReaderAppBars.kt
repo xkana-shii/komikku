@@ -58,8 +58,8 @@ fun ReaderAppBars(
     chapterTitle: String?,
     navigateUp: () -> Unit,
     onClickTopAppBar: () -> Unit,
-    // bookmarked: Boolean,
-    // onToggleBookmarked: () -> Unit,
+    bookmarked: Boolean,
+    onToggleBookmarked: () -> Unit,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -83,8 +83,6 @@ fun ReaderAppBars(
     // SY -->
     onClickRetryAll: () -> Unit,
     onClickBoostPage: () -> Unit,
-    bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
     navBarType: NavBarType,
     currentPageText: String,
     enabledButtons: ImmutableSet<String>,
@@ -95,7 +93,6 @@ fun ReaderAppBars(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
-    readerPreferences: ReaderPreferences,
 ) {
     val isRtl = viewer is R2LPagerViewer
     val backgroundColor = MaterialTheme.colorScheme
