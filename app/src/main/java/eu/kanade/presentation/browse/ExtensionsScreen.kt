@@ -372,7 +372,7 @@ private fun ExtensionItemContent(
     installStep: InstallStep,
     modifier: Modifier = Modifier,
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
+    val uiPreferences = Injekt.get<UiPreferences>()
     Column(
         modifier = modifier.padding(start = MaterialTheme.padding.medium),
     ) {

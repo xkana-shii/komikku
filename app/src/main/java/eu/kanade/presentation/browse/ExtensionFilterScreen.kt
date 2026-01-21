@@ -71,7 +71,7 @@ private fun ExtensionFilterContent(
     onClickLang: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
+    val uiPreferences = Injekt.get<UiPreferences>()
     LazyColumn(
         contentPadding = contentPadding,
         // KMK -->

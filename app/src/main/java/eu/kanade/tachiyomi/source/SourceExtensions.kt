@@ -16,7 +16,7 @@ fun Source.getNameForMangaInfo(
     // SY -->
     mergeSources: List<Source>? = null,
     // SY <--
-    uiPreferences: UiPreferences, // Optional UiPreferences for flag setting
+    uiPreferences: UiPreferences,
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
     val enabledLanguages = preferences.enabledLanguages().get()

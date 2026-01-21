@@ -245,7 +245,7 @@ private fun MigrateSourceItem(
     onLongClickItem: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
+    val uiPreferences = Injekt.get<UiPreferences>()
     BaseSourceItem(
         modifier = modifier,
         source = source,

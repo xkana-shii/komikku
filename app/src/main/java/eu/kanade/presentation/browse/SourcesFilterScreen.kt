@@ -78,7 +78,7 @@ private fun SourcesFilterContent(
     onClickSources: (Boolean, List<Source>) -> Unit,
     // SY <--
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>() // <-- Added for flag settings
+    val uiPreferences = Injekt.get<UiPreferences>()
     FastScrollLazyColumn(
         // KMK -->
         // Using modifier instead of contentPadding so we can use stickyHeader
@@ -102,7 +102,7 @@ private fun SourcesFilterContent(
                     language = language,
                     enabled = enabled,
                     onClickItem = onClickLanguage,
-                    uiPreferences = uiPreferences, // <-- pass preferences
+                    uiPreferences = uiPreferences,
                 )
             }
             if (enabled) {
@@ -130,7 +130,7 @@ private fun SourcesFilterContent(
                         onClickItem = {
                             onClickSources(!toggleEnabled, sources)
                         },
-                        uiPreferences = uiPreferences, // <-- pass preferences
+                        uiPreferences = uiPreferences,
                     )
                 }
                 // SY <--
@@ -160,7 +160,7 @@ private fun SourcesFilterHeader(
     language: String,
     enabled: Boolean,
     onClickItem: (String) -> Unit,
-    uiPreferences: UiPreferences, // <-- added
+    uiPreferences: UiPreferences,
     modifier: Modifier = Modifier,
 ) {
     val showFlags = uiPreferences.showFlags().get()
@@ -193,7 +193,7 @@ fun SourcesFilterToggle(
     language: String,
     // KMK <--
     onClickItem: () -> Unit,
-    uiPreferences: UiPreferences, // <-- added
+    uiPreferences: UiPreferences,
 ) {
     val showFlags = uiPreferences.showFlags().get()
     val title = if (showFlags) {
