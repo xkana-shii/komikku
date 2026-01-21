@@ -1,4 +1,4 @@
-package eu.kanade.presentation.browse.components
+package mihon.feature.migration.list.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.AlertDialog
@@ -21,7 +21,7 @@ fun MigrationProgressDialog(
         onDismissRequest = {},
         confirmButton = {
             TextButton(onClick = exitMigration) {
-                Text(text = stringResource(MR.strings.action_cancel))
+                Text(text = stringResource(MR.strings.migrationListScreen_progressDialog_cancelLabel))
             }
         },
         text = {

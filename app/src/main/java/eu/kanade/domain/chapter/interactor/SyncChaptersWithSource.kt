@@ -118,18 +118,17 @@ class SyncChaptersWithSource(
                 }
                 newChapters.add(toAddChapter)
             } else {
-                if (triggerChapterRename) {
-                    // Always check and rename old-format downloads regardless of metadata changes
-                    val shouldRenameLegacy = downloadManager.isChapterDownloaded(
-                        dbChapter.name,
-                        dbChapter.scanlator,
-                        dbChapter.url,
-                        manga.ogTitle,
-                        manga.source,
-                    ) &&
-                        downloadProvider.isChapterDirNameChanged(
-                            dbChapter.copy(url = ""), // simulate legacy download (no URL hash)
-                            chapter,
+                if (shouldUpdateDbChapter.await(dbChapter, chapter)) {
+                    val shouldRenameChapter = downloadProvider.isChapterDirNameChanged(dbChapter, chapter) &&
+                        downloadManager.isChapterDownloaded(
+                            dbChapter.name,
+                            dbChapter.scanlator,
+                            dbChapter.url,
+                            // SY -->
+                            // manga.title,
+                            manga.ogTitle,
+                            // SY <--
+                            manga.source,
                         )
 
                     val shouldRenameUrlChange = (
@@ -153,28 +152,6 @@ class SyncChaptersWithSource(
                         val oldChapterForRename = if (shouldRenameLegacy) dbChapter.copy(url = "") else dbChapter
                         downloadManager.renameChapter(source, manga, oldChapterForRename, chapter)
                     }
-                } else {
-                    // If the option is disabled, only rename if metadata changed and chapter is downloaded
-                    if (shouldUpdateDbChapter.await(dbChapter, chapter)) {
-                        val shouldRenameChapter = downloadProvider.isChapterDirNameChanged(dbChapter, chapter) &&
-                            downloadManager.isChapterDownloaded(
-                                dbChapter.name,
-                                dbChapter.scanlator,
-                                dbChapter.url,
-                                // SY -->
-                                // manga.title,
-                                manga.ogTitle,
-                                // SY <--
-                                manga.source,
-                            )
-
-                        if (shouldRenameChapter) {
-                            downloadManager.renameChapter(source, manga, dbChapter, chapter)
-                        }
-                    }
-                }
-
-                if (shouldUpdateDbChapter.await(dbChapter, chapter)) {
                     var toChangeChapter = dbChapter.copy(
                         name = chapter.name,
                         chapterNumber = chapter.chapterNumber,

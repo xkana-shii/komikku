@@ -279,19 +279,16 @@ class DownloadProvider(
      * from any of the possible old formats (with or without URL).
      */
     fun isChapterDirNameChanged(oldChapter: Chapter, newChapter: Chapter): Boolean {
-        val oldNames = listOf(
-            getChapterDirName(oldChapter.name, oldChapter.scanlator, oldChapter.url),
-            getChapterDirName(oldChapter.name, oldChapter.scanlator, ""),
-        ).distinct()
-        val newName = getChapterDirName(newChapter.name, newChapter.scanlator, newChapter.url)
-        // If the new name is not found among the old names, trigger rename
-        return newName !in oldNames
+        return getChapterDirName(oldChapter.name, oldChapter.scanlator, oldChapter.url) !=
+            getChapterDirName(newChapter.name, newChapter.scanlator, newChapter.url)
     }
 
     /**
      * Returns valid downloaded chapter directory names.
      *
-     * @param chapter the domain chapter object.
+     * @param chapterName the name of the chapter.
+     * @param chapterScanlator the scanlator group for the chapter, if any.
+     * @param chapterUrl the unique URL of the chapter.
      */
     fun getValidChapterDirNames(chapterName: String, chapterScanlator: String?, chapterUrl: String): List<String> {
         val chapterDirName = getChapterDirName(chapterName, chapterScanlator, chapterUrl)
