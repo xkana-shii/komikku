@@ -20,6 +20,7 @@ import eu.kanade.domain.manga.interactor.SmartSearchMerge
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
 import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.DownloadAction
@@ -30,6 +31,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -138,6 +140,7 @@ class LibraryScreenModel(
     private val updateManga: UpdateManga = Injekt.get(),
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
+    private val uiPreferences: UiPreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
@@ -291,11 +294,12 @@ class LibraryScreenModel(
                         it.ifEmpty {
                             mapOf(
                                 Category(
-                                    0,
-                                    preferences.context.stringResource(MR.strings.default_category),
-                                    0,
-                                    0,
-                                    false,
+                                    id = 0,
+                                    name = preferences.context.stringResource(MR.strings.default_category),
+                                    order = 0,
+                                    flags = 0,
+                                    parentId = null,
+                                    hidden = false,
                                 ) to emptyList(),
                             )
                         }
@@ -316,13 +320,15 @@ class LibraryScreenModel(
             libraryPreferences.categoryTabs().changes(),
             libraryPreferences.categoryNumberOfItems().changes(),
             libraryPreferences.showContinueReadingButton().changes(),
-        ) { a, b, c -> arrayOf(a, b, c) }
-            .onEach { (showCategoryTabs, showMangaCount, showMangaContinueButton) ->
+            uiPreferences.libraryParentChildLayout().changes(),
+        ) { a, b, c, d -> arrayOf(a, b, c, d) }
+            .onEach { (showCategoryTabs, showMangaCount, showMangaContinueButton, showParentFilters) ->
                 mutableState.update { state ->
                     state.copy(
                         showCategoryTabs = showCategoryTabs,
                         showMangaCount = showMangaCount,
                         showMangaContinueButton = showMangaContinueButton,
+                        showParentFilters = showParentFilters,
                     )
                 }
             }
@@ -337,6 +343,7 @@ class LibraryScreenModel(
                 prefs.filterUnread,
                 prefs.filterStarted,
                 prefs.filterBookmarked,
+                prefs.filterFillermarked,
                 prefs.filterCompleted,
                 prefs.filterIntervalCustom,
                 // SY -->
@@ -436,6 +443,7 @@ class LibraryScreenModel(
         val filterUnread = preferences.filterUnread
         val filterStarted = preferences.filterStarted
         val filterBookmarked = preferences.filterBookmarked
+        val filterFillermarked = preferences.filterFillermarked
         val filterCompleted = preferences.filterCompleted
         val filterIntervalCustom = preferences.filterIntervalCustom
         val filterCategories = preferences.filterCategories
@@ -488,6 +496,10 @@ class LibraryScreenModel(
             applyFilter(filterBookmarked) { it.libraryManga.hasBookmarks }
         }
 
+        val filterFnFillermarked: (LibraryItem) -> Boolean = {
+            applyFilter(filterFillermarked) { it.libraryManga.hasFillermarks }
+        }
+
         val filterFnCompleted: (LibraryItem) -> Boolean = {
             applyFilter(filterCompleted) { it.libraryManga.manga.status.toInt() == SManga.COMPLETED }
         }
@@ -517,7 +529,7 @@ class LibraryScreenModel(
             // KMK <--
 
             val isExcluded = excludedTracks.isNotEmpty() && mangaTracks.fastAny { it in excludedTracks }
-            val isIncluded = includedTracks.isEmpty() || mangaTracks.fastAny { it in includedTracks }
+            val isIncluded = includedTracks.isEmpty() || includedTracks.all { it in mangaTracks }
 
             !isExcluded && isIncluded
         }
@@ -545,6 +557,7 @@ class LibraryScreenModel(
                 filterFnUnread(it) &&
                 filterFnStarted(it) &&
                 filterFnBookmarked(it) &&
+                filterFnFillermarked(it) &&
                 filterFnCompleted(it) &&
                 filterFnIntervalCustom(it) &&
                 filterFnTracking(it) &&
@@ -567,8 +580,8 @@ class LibraryScreenModel(
         // KMK -->
         when (groupType) {
             LibraryGroup.BY_DEFAULT -> {
-                var showSystemCategory = false
                 // KMK <--
+                var showSystemCategory = false
                 val groupCache = mutableMapOf</* Category.id */ Long, MutableList</* LibraryItem */ Long>>()
                 forEach { item ->
                     item.libraryManga.categories.forEach { categoryId ->
@@ -587,24 +600,22 @@ class LibraryScreenModel(
                     // KMK <--
                 }
                     .associateWith {
-                        groupCache[it.id]?.toList()
+                        groupCache[it.id]?.toList().orEmpty()
                             // KMK -->
-                            ?.distinct()
-                            // KMK <--
-                            .orEmpty()
+                            .distinct()
+                        // KMK <--
                     }
             }
             // KMK -->
             LibraryGroup.UNGROUPED -> {
                 return mapOf(
                     Category(
-                        0,
-                        preferences.context.stringResource(SYMR.strings.ungrouped),
-                        0,
-                        0,
-                        // KMK -->
-                        false,
-                        // KMK <--
+                        id = 0,
+                        name = preferences.context.stringResource(SYMR.strings.ungrouped),
+                        order = 0,
+                        flags = 0,
+                        parentId = null,
+                        hidden = false,
                     ) to
                         map { it.id },
                 )
@@ -725,7 +736,9 @@ class LibraryScreenModel(
                 return@mapValues value.shuffled(Random(libraryPreferences.randomSortSeed().get()))
             }
 
-            val manga = value.mapNotNull { favoritesById[it] }
+            // KMK -->
+            val manga = value.fastFilter { favoritesById.containsKey(it) }.map { favoritesById[it]!! }
+            // KMK <--
 
             // SY -->
             val comparator = sort.comparator()
@@ -750,6 +763,7 @@ class LibraryScreenModel(
             libraryPreferences.filterUnread().changes(),
             libraryPreferences.filterStarted().changes(),
             libraryPreferences.filterBookmarked().changes(),
+            libraryPreferences.filterFillermarked().changes(),
             libraryPreferences.filterCompleted().changes(),
             libraryPreferences.filterIntervalCustom().changes(),
             // SY -->
@@ -772,15 +786,16 @@ class LibraryScreenModel(
                 filterUnread = it[7] as TriState,
                 filterStarted = it[8] as TriState,
                 filterBookmarked = it[9] as TriState,
-                filterCompleted = it[10] as TriState,
-                filterIntervalCustom = it[11] as TriState,
+                filterFillermarked = it[10] as TriState,
+                filterCompleted = it[11] as TriState,
+                filterIntervalCustom = it[12] as TriState,
                 // SY -->
-                filterLewd = it[12] as TriState,
+                filterLewd = it[13] as TriState,
                 // SY <--
                 // KMK -->
-                sourceBadge = it[13] as Boolean,
-                useLangIcon = it[14] as Boolean,
-                filterCategories = it[15] as Boolean,
+                sourceBadge = it[14] as Boolean,
+                useLangIcon = it[15] as Boolean,
+                filterCategories = it[16] as Boolean,
             )
         }
     }
@@ -1223,6 +1238,7 @@ class LibraryScreenModel(
         val sourceIdString = manga.source.takeUnless { it == LocalSource.ID }?.toString()
         val genre = if (checkGenre) manga.genre.orEmpty() else emptyList()
         val context = Injekt.get<Application>()
+        val uiPreferences = Injekt.get<UiPreferences>()
         return queries.all { queryComponent ->
             when (queryComponent.excluded) {
                 false -> when (queryComponent) {
@@ -1232,7 +1248,9 @@ class LibraryScreenModel(
                             (manga.author?.contains(query, true) == true) ||
                             (manga.artist?.contains(query, true) == true) ||
                             (manga.description?.contains(query, true) == true) ||
-                            (source?.name?.contains(query, true) == true) ||
+                            // KMK -->
+                            (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) == true) ||
+                            // KMK <--
                             (sourceIdString != null && sourceIdString == query) ||
                             (
                                 loggedInTrackServices.isNotEmpty() &&
@@ -1265,7 +1283,9 @@ class LibraryScreenModel(
                                     (manga.author?.contains(query, true) != true) &&
                                     (manga.artist?.contains(query, true) != true) &&
                                     (manga.description?.contains(query, true) != true) &&
-                                    (source?.name?.contains(query, true) != true) &&
+                                    // KMK -->
+                                    (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) != true) &&
+                                    // KMK <--
                                     (sourceIdString != null && sourceIdString != query) &&
                                     (
                                         loggedInTrackServices.isEmpty() ||
@@ -1395,12 +1415,9 @@ class LibraryScreenModel(
         val newIndex = mutableState.updateAndGet { state ->
             state.copy(
                 activeCategoryIndex = index,
-                // KMK -->
-                activeCategoryId = state.displayedCategories.getOrNull(index)?.id,
-                // KMK <--
             )
         }
-            .coercedActiveCategoryIndex
+            .activeCategoryIndex
 
         libraryPreferences.lastUsedCategory().set(newIndex)
     }
@@ -1460,6 +1477,7 @@ class LibraryScreenModel(
         groupType: Int,
     ): Map<Category, List</* LibraryItem */ Long>> {
         val context = preferences.context
+        val uiPreferences = Injekt.get<UiPreferences>()
         return when (groupType) {
             LibraryGroup.BY_TRACK_STATUS -> {
                 val tracks = runBlocking { getTracks.await() }.groupBy { it.mangaId }
@@ -1487,6 +1505,7 @@ class LibraryScreenModel(
                         order = trackStatus.ordinal.toLong(),
                         // KMK <--
                         flags = 0,
+                        parentId = null,
                         // KMK -->
                         hidden = false,
                         // KMK <--
@@ -1510,13 +1529,25 @@ class LibraryScreenModel(
                 sources.associate {
                     val category = Category(
                         id = it.id,
-                        name = if (it.id == LocalSource.ID) {
-                            context.stringResource(MR.strings.local_source)
-                        } else {
-                            it.name.ifBlank { it.id.toString() }
-                        },
+                        // TODO: Probably add condition for useLangIcon to `getNameForMangaInfo` too
+                        name = it.getNameForMangaInfo(uiPreferences = uiPreferences),
+//                        if (it.id == LocalSource.ID) {
+//                            context.stringResource(MR.strings.local_source)
+//                        } else {
+//                            // KMK -->
+//                            // FIXME: This useLangIcon should be moved out ouf LibraryItem & subscribe to changes() directly from preferences
+//                            val useLangIcon = groupCache[it.id]?.let { it.firstOrNull()?.let { itemId -> this.firstOrNull { it.id == itemId } } }?.useLangIcon == true
+//                            val langText = if (useLangIcon) FlagEmoji.getEmojiLangFlag(it.lang) else it.lang.uppercase()
+//                            // KMK <--
+//                            it.name.ifBlank { it.id.toString() }.let { sourceName ->
+//                                // KMK -->
+//                                "$sourceName ($langText)"
+//                                // KMK <--
+//                            }
+//                        },
                         order = sourceOrderMap[it.id] ?: Long.MAX_VALUE,
                         flags = 0,
+                        parentId = null,
                         // KMK -->
                         hidden = false,
                         // KMK <--
@@ -1537,6 +1568,7 @@ class LibraryScreenModel(
                         name = context.stringResource(nameRes),
                         order = order,
                         flags = 0,
+                        parentId = null,
                         // KMK -->
                         hidden = false,
                         // KMK <--
@@ -1629,6 +1661,7 @@ class LibraryScreenModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
+        val filterFillermarked: TriState,
         val filterCompleted: TriState,
         val filterIntervalCustom: TriState,
         // SY -->
@@ -1660,12 +1693,10 @@ class LibraryScreenModel(
         val showCategoryTabs: Boolean = false,
         val showMangaCount: Boolean = false,
         val showMangaContinueButton: Boolean = false,
+        val showParentFilters: Boolean = false,
         val dialog: Dialog? = null,
         val libraryData: LibraryData = LibraryData(),
-        private val activeCategoryIndex: Int = 0,
-        // KMK -->
-        private val activeCategoryId: Long? = null,
-        // KMK <--
+        val activeCategoryIndex: Int = 0,
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
         // SY -->
         val showSyncExh: Boolean = false,
@@ -1678,21 +1709,9 @@ class LibraryScreenModel(
         val excludedCategories: ImmutableSet<Long> = persistentSetOf(),
         // KMK <--
     ) {
-        /**
-         * The grouped tabs which is displayed above the library screen.
-         * They can be actual [Category] or [Source], [Track]...
-         */
-        val displayedCategories: List<Category> = groupedFavorites.keys.toList()
+        val categories = groupedFavorites.keys.toList()
 
-        val coercedActiveCategoryIndex = /* KMK --> */ displayedCategories.indexOfFirst { it.id == activeCategoryId }
-            .takeIf { it != -1 } ?: activeCategoryIndex
-            // KMK <--
-            .coerceIn(
-                minimumValue = 0,
-                maximumValue = displayedCategories.lastIndex.coerceAtLeast(0),
-            )
-
-        val activeCategory: Category? = displayedCategories.getOrNull(coercedActiveCategoryIndex)
+        val activeCategory: Category? = categories.getOrNull(activeCategoryIndex)
 
         val isLibraryEmpty = libraryData.favorites.isEmpty()
 
@@ -1727,7 +1746,7 @@ class LibraryScreenModel(
 
         fun getItemsForCategoryId(categoryId: Long?): List<LibraryItem> {
             if (categoryId == null) return emptyList()
-            val category = displayedCategories.find { it.id == categoryId } ?: return emptyList()
+            val category = categories.find { it.id == categoryId } ?: return emptyList()
             return getItemsForCategory(category)
         }
 
@@ -1735,8 +1754,26 @@ class LibraryScreenModel(
             return groupedFavorites[category].orEmpty().fastMapNotNull { libraryData.favoritesById[it] }
         }
 
+        // KMK -->
+        val displayedCategories: List<Category> = groupedFavorites.keys.toList()
+
+        // Recursively get all subcategories for a given parent category
+        private fun getAllSubcategories(parentId: Long, allCategories: List<Category>): List<Category> {
+            val directChildren = allCategories.filter { it.parentId == parentId }
+            return directChildren + directChildren.flatMap { getAllSubcategories(it.id, allCategories) }
+        }
+        // KMK <--
+
         fun getItemCountForCategory(category: Category): Int? {
-            return if (showMangaCount || !searchQuery.isNullOrEmpty()) groupedFavorites[category]?.size else null
+            if (!showMangaCount && searchQuery.isNullOrEmpty()) return null
+
+            // Get this category + all its subcategories
+            val categoriesToCount = listOf(category) + getAllSubcategories(category.id, displayedCategories)
+
+            // Sum up manga counts from all these categories
+            return categoriesToCount.sumOf { cat ->
+                groupedFavorites[cat]?.size ?: 0
+            }
         }
 
         fun getToolbarTitle(
@@ -1744,7 +1781,7 @@ class LibraryScreenModel(
             defaultCategoryTitle: String,
             page: Int,
         ): LibraryToolbarTitle {
-            val category = displayedCategories.getOrNull(page) ?: return LibraryToolbarTitle(defaultTitle)
+            val category = categories.getOrNull(page) ?: return LibraryToolbarTitle(defaultTitle)
             val categoryName = category.let {
                 if (it.isSystemCategory) defaultCategoryTitle else it.name
             }

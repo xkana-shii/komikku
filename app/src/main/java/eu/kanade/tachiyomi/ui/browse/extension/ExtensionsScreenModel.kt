@@ -248,6 +248,10 @@ class ExtensionsScreenModel(
         }
     }
 
+    fun updateSearchQuery(query: String?) {
+        mutableState.update { it.copy(searchQuery = query) }
+    }
+
     fun trustExtension(extension: Extension.Untrusted) {
         screenModelScope.launch {
             extensionManager.trust(extension)

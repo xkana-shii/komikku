@@ -65,6 +65,8 @@ import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.manga.model.readingMode
+import eu.kanade.domain.track.model.AutoRereadResetMode
+import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
@@ -254,10 +256,6 @@ class ReaderActivity : BaseActivity() {
 
         config = ReaderConfig()
         setMenuVisibility(viewModel.state.value.menuVisible)
-
-        // EXH -->
-        enableExhAutoScroll()
-        // EXH <--
 
         // Finish when incognito mode is disabled
         preferences.incognitoMode().changes()
@@ -470,46 +468,48 @@ class ReaderActivity : BaseActivity() {
                                 }
                             }.toImmutableList()
                         },
-                        state.dateRelativeTime,
-                        // KMK -->
-                        onDownloadAction = { chapter, action ->
-                            viewModel.handleDownloadAction(chapter, action)
+                        onFillermark = { chapter ->
+                            viewModel.toggleFillermark(chapter.id, !chapter.fillermark)
+                            chapters = chapters.map {
+                                if (it.chapter.id == chapter.id) {
+                                    it.copy(chapter = chapter.copy(fillermark = !chapter.fillermark))
+                                } else {
+                                    it
+                                }
+                            }.toImmutableList()
                         },
-                        // KMK <--
+                        state.dateRelativeTime,
                     )
                 }
-
-                ReaderViewModel.Dialog.AutoScrollHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
+                // SY -->
+                ReaderViewModel.Dialog.RereadPrompt -> AlertDialog(
+                    onDismissRequest = viewModel::cancelRereadPrompt,
                     confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
+                        TextButton(onClick = { viewModel.confirmStartReread() }) {
                             Text(text = stringResource(MR.strings.action_ok))
                         }
                     },
-                    title = { Text(text = stringResource(SYMR.strings.eh_autoscroll_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_autoscroll_help_message)) },
-                )
-
-                ReaderViewModel.Dialog.BoostPageHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
+                    dismissButton = {
+                        TextButton(onClick = viewModel::cancelRereadPrompt) {
+                            Text(text = stringResource(MR.strings.action_cancel))
                         }
                     },
-                    title = { Text(text = stringResource(SYMR.strings.eh_boost_page_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_boost_page_help_message)) },
-                )
-
-                ReaderViewModel.Dialog.RetryAllHelp -> AlertDialog(
-                    onDismissRequest = onDismissRequest,
-                    confirmButton = {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(text = stringResource(MR.strings.action_ok))
+                    title = { Text(text = stringResource(KMR.strings.reread_prompt_title)) },
+                    text = {
+                        val trackPreferences = remember { Injekt.get<TrackPreferences>() }
+                        val resetMode = trackPreferences.autoRereadResetMode().get()
+                        val chapterLabel = if (resetMode == AutoRereadResetMode.RESET_TO_ZERO) {
+                            stringResource(KMR.strings.chapter_label, "0")
+                        } else {
+                            val chapterNum = state.currentChapter?.chapter?.chapter_number
+                            chapterNum?.let {
+                                val intPart = it.toInt()
+                                val display = if (it == intPart.toFloat()) intPart.toString() else it.toString()
+                                stringResource(KMR.strings.chapter_label, display)
+                            } ?: stringResource(KMR.strings.this_chapter_label)
                         }
+                        Text(text = stringResource(KMR.strings.reread_prompt_body, chapterLabel))
                     },
-                    title = { Text(text = stringResource(SYMR.strings.eh_retry_all_help)) },
-                    text = { Text(text = stringResource(SYMR.strings.eh_retry_all_help_message)) },
                 )
                 // SY <--
                 null -> {}
@@ -724,18 +724,8 @@ class ReaderActivity : BaseActivity() {
             },
             onClickSettings = viewModel::openSettingsDialog,
             // SY -->
-            isExhToolsVisible = state.ehUtilsVisible,
-            onSetExhUtilsVisibility = viewModel::showEhUtils,
-            isAutoScroll = state.autoScroll,
-            isAutoScrollEnabled = state.isAutoScrollEnabled,
-            onToggleAutoscroll = viewModel::toggleAutoScroll,
-            autoScrollFrequency = state.ehAutoscrollFreq,
-            onSetAutoScrollFrequency = viewModel::setAutoScrollFrequency,
-            onClickAutoScrollHelp = viewModel::openAutoScrollHelpDialog,
             onClickRetryAll = ::exhRetryAll,
-            onClickRetryAllHelp = viewModel::openRetryAllHelp,
             onClickBoostPage = ::exhBoostPage,
-            onClickBoostPageHelp = viewModel::openBoostPageHelp,
             currentPageText = state.currentPageText,
             navBarType = navBarType,
             enabledButtons = readerBottomButtons,
@@ -775,40 +765,6 @@ class ReaderActivity : BaseActivity() {
                 ?.let { ComposeColor(it) }
     }
     // KMK <--
-
-    // EXH -->
-    private fun enableExhAutoScroll() {
-        readerPreferences.autoscrollInterval().changes()
-            .combine(viewModel.state.map { it.autoScroll }.distinctUntilChanged()) { interval, enabled ->
-                interval.toDouble() to enabled
-            }.mapLatest { (intervalFloat, enabled) ->
-                if (enabled) {
-                    repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        val interval = intervalFloat.seconds
-                        while (true) {
-                            if (!viewModel.state.value.menuVisible) {
-                                viewModel.state.value.viewer.let { v ->
-                                    when (v) {
-                                        is PagerViewer -> v.moveToNext()
-                                        is WebtoonViewer -> {
-                                            if (readerPreferences.smoothAutoScroll().get()) {
-                                                v.linearScroll(interval)
-                                            } else {
-                                                v.scrollDown()
-                                            }
-                                        }
-                                    }
-                                }
-                                delay(interval)
-                            } else {
-                                delay(100)
-                            }
-                        }
-                    }
-                }
-            }
-            .launchIn(lifecycleScope)
-    }
 
     private fun exhRetryAll() {
         var retried = 0

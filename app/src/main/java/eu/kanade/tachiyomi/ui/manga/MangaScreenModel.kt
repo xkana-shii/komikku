@@ -452,12 +452,12 @@ class MangaScreenModel(
             val meta = getFlatMetadata.await(mangaId)
             // SY <--
 
-            if (!manga.favorite) {
+            if (!manga.favorite || manga.initialized) {
                 setMangaDefaultChapterFlags.await(manga)
             }
 
             val needRefreshInfo = !manga.initialized
-            val needRefreshChapter = chapters.isEmpty()
+            val needRefreshChapter = chapters.isEmpty() || manga.initialized
 
             // Show what we have earlier
             mutableState.update {
@@ -1112,7 +1112,7 @@ class MangaScreenModel(
                 downloadProgress = activeDownload?.progress ?: 0,
                 selected = chapter.id in selectedChapterIds,
                 // SY -->
-                sourceName = source?.getNameForMangaInfo(),
+                sourceName = source?.getNameForMangaInfo(uiPreferences = uiPreferences),
                 showScanlator = !isExhManga,
                 // SY <--
             )
@@ -1275,6 +1275,9 @@ class MangaScreenModel(
             }
             LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> {
                 bookmarkChapters(listOf(chapter), !chapter.bookmark)
+            }
+            LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
+                fillermarkChapters(listOf(chapter), !chapter.fillermark)
             }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction: ChapterDownloadAction = when (chapterItem.downloadState) {
@@ -1504,6 +1507,16 @@ class MangaScreenModel(
         toggleAllSelection(false)
     }
 
+    fun fillermarkChapters(chapters: List<Chapter>, fillermarked: Boolean) {
+        screenModelScope.launchIO {
+            chapters
+                .filterNot { it.fillermark == fillermarked }
+                .map { ChapterUpdate(id = it.id, fillermark = fillermarked) }
+                .let { updateChapter.awaitAll(it) }
+        }
+        toggleAllSelection(false)
+    }
+
     /**
      * Deletes the given list of chapter.
      *
@@ -1676,6 +1689,20 @@ class MangaScreenModel(
 
         screenModelScope.launchNonCancellable {
             setMangaChapterFlags.awaitSetBookmarkFilter(manga, flag)
+        }
+    }
+
+    fun setFillermarkedFilter(state: TriState) {
+        val manga = successState?.manga ?: return
+
+        val flag = when (state) {
+            TriState.DISABLED -> Manga.SHOW_ALL
+            TriState.ENABLED_IS -> Manga.CHAPTER_SHOW_FILLERMARKED
+            TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_NOT_FILLERMARKED
+        }
+
+        screenModelScope.launchNonCancellable {
+            setMangaChapterFlags.awaitSetFillermarkFilter(manga, flag)
         }
     }
 
@@ -2092,9 +2119,11 @@ class MangaScreenModel(
                 val unreadFilter = manga.unreadFilter
                 val downloadedFilter = manga.downloadedFilter
                 val bookmarkedFilter = manga.bookmarkedFilter
+                val fillermarkedFilter = manga.fillermarkedFilter
                 return asSequence()
                     .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
+                    .filter { (chapter) -> applyFilter(fillermarkedFilter) { chapter.fillermark } }
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
                     .sortedWith { (chapter1), (chapter2) -> getChapterSort(manga).invoke(chapter1, chapter2) }
             }

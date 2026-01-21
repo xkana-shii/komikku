@@ -99,6 +99,7 @@ object SettingsEhScreen : SearchableSettings {
         openWarnConfigureDialogController: () -> Unit,
     ) {
         var initialLoadGuard by remember { mutableStateOf(false) }
+        val useCleanTitle by exhPreferences.useCleanTitle().collectAsState()
         val useHentaiAtHome by exhPreferences.useHentaiAtHome().collectAsState()
         val useJapaneseTitle by exhPreferences.useJapaneseTitle().collectAsState()
         val useOriginalImages by exhPreferences.exhUseOriginalImages().collectAsState()
@@ -110,6 +111,7 @@ object SettingsEhScreen : SearchableSettings {
         DisposableEffect(
             useHentaiAtHome,
             useJapaneseTitle,
+            useCleanTitle,
             useOriginalImages,
             ehTagFilterValue,
             ehTagWatchingValue,
@@ -151,6 +153,7 @@ object SettingsEhScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 stringResource(SYMR.strings.ehentai_prefs_account_settings),
                 preferenceItems = persistentListOf(
+                    useCleanTitle(exhentaiEnabled, exhPreferences),
                     getLoginPreference(exhPreferences, openWarnConfigureDialogController),
                     useHentaiAtHome(exhentaiEnabled, exhPreferences),
                     useJapaneseTitle(exhentaiEnabled, exhPreferences),
@@ -272,6 +275,19 @@ object SettingsEhScreen : SearchableSettings {
             } else {
                 stringResource(SYMR.strings.show_japanese_titles_option_2)
             },
+            enabled = exhentaiEnabled,
+        )
+    }
+
+    @Composable
+    fun useCleanTitle(
+        exhentaiEnabled: Boolean,
+        unsortedPreferences: ExhPreferences,
+    ): Preference.PreferenceItem.SwitchPreference {
+        return Preference.PreferenceItem.SwitchPreference(
+            preference = unsortedPreferences.useCleanTitle(),
+            title = stringResource(SYMR.strings.clean_title),
+            subtitle = stringResource(SYMR.strings.clean_title_summary),
             enabled = exhentaiEnabled,
         )
     }

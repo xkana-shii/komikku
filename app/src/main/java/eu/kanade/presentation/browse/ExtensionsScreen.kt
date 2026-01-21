@@ -1,5 +1,6 @@
 package eu.kanade.presentation.browse
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.components.BaseBrowseItem
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.components.WarningBanner
@@ -73,6 +75,8 @@ import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
 import tachiyomi.presentation.core.util.secondaryItemAlpha
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 @Composable
 fun ExtensionScreen(
@@ -89,7 +93,12 @@ fun ExtensionScreen(
     onOpenExtension: (Extension.Installed) -> Unit,
     onClickUpdateAll: () -> Unit,
     onRefresh: () -> Unit,
+    onSearchQueryChange: (String?) -> Unit,
 ) {
+    BackHandler(!state.searchQuery.isNullOrEmpty()) {
+        onSearchQueryChange(null)
+    }
+
     val navigator = LocalNavigator.currentOrThrow
 
     PullRefresh(
@@ -363,6 +372,7 @@ private fun ExtensionItemContent(
     installStep: InstallStep,
     modifier: Modifier = Modifier,
 ) {
+    val uiPreferences = Injekt.get<UiPreferences>()
     Column(
         modifier = modifier.padding(start = MaterialTheme.padding.medium),
     ) {
@@ -383,11 +393,14 @@ private fun ExtensionItemContent(
                 // KMK -->
                 extension.lang?.let {
                     if (it.isNotEmpty()) {
-                        // KMK <--
                         hasAlreadyShownAnElement = true
+                        val showFlags = uiPreferences.showFlags().get()
                         Text(
-                            text = /* KMK --> */FlagEmoji.getEmojiLangFlag(it) + " " + /* KMK <-- */
-                                LocaleHelper.getSourceDisplayName(it, LocalContext.current),
+                            text = if (showFlags) {
+                                FlagEmoji.getEmojiLangFlag(it) + " " + LocaleHelper.getSourceDisplayName(it, LocalContext.current)
+                            } else {
+                                LocaleHelper.getSourceDisplayName(extension.lang, LocalContext.current)
+                            },
                         )
                     }
                 }

@@ -263,9 +263,9 @@ class MdUtil {
             return if (altTitles.isNullOrEmpty()) {
                 description
             } else {
-                val altTitlesDesc = altTitles
-                    .joinToString("\n", "${Injekt.get<Application>().getString(R.string.alt_titles)}:\n") { "• $it" }
-                description + (if (description.isBlank()) "" else "\n\n") + Parser.unescapeEntities(altTitlesDesc, false)
+                val altTitlesDesc = "----\n#### " + Injekt.get<Application>().getString(R.string.alt_titles) + "\n" +
+                    altTitles.joinToString("\n- ", prefix = "- ") { Parser.unescapeEntities(it, false) }
+                description + (if (description.isBlank()) "" else "\n\n") + altTitlesDesc
             }
         }
     }

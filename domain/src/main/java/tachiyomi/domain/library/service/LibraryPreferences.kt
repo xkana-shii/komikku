@@ -73,6 +73,10 @@ class LibraryPreferences(
 
     fun autoUpdateMetadata() = preferenceStore.getBoolean("auto_update_metadata", false)
 
+    // KMK -->
+    fun syncOnAdd() = preferenceStore.getBoolean("sync_on_add", false)
+    // KMK <--
+
     fun showContinueReadingButton() = preferenceStore.getBoolean(
         "display_continue_reading_button",
         false,
@@ -96,6 +100,11 @@ class LibraryPreferences(
 
     fun filterBookmarked() = preferenceStore.getEnum(
         "pref_filter_library_bookmarked_v2",
+        TriState.DISABLED,
+    )
+
+    fun filterFillermarked() = preferenceStore.getEnum(
+        "pref_filter_library_fillermarked_v2",
         TriState.DISABLED,
     )
 
@@ -163,6 +172,8 @@ class LibraryPreferences(
 
     fun categoryTabs() = preferenceStore.getBoolean("display_category_tabs", true)
 
+    fun subcategoryTabs() = preferenceStore.getBoolean("display_subcategory_tabs", false)
+
     fun categoryNumberOfItems() = preferenceStore.getBoolean("display_number_of_items", false)
 
     fun categorizedDisplaySettings() = preferenceStore.getBoolean("categorized_display", false)
@@ -194,6 +205,11 @@ class LibraryPreferences(
         Manga.SHOW_ALL,
     )
 
+    fun filterChapterByFillermarked() = preferenceStore.getLong(
+        "default_chapter_filter_by_fillermarked",
+        Manga.SHOW_ALL,
+    )
+
     // and upload date
     fun sortChapterBySourceOrNumber() = preferenceStore.getLong(
         "default_chapter_sort_by_source_or_number",
@@ -214,6 +230,7 @@ class LibraryPreferences(
         filterChapterByRead().set(manga.unreadFilterRaw)
         filterChapterByDownloaded().set(manga.downloadedFilterRaw)
         filterChapterByBookmarked().set(manga.bookmarkedFilterRaw)
+        filterChapterByFillermarked().set(manga.fillermarkedFilterRaw)
         sortChapterBySourceOrNumber().set(manga.sorting)
         displayChapterByNameOrNumber().set(manga.displayMode)
         sortChapterByAscendingOrDescending().set(
@@ -251,6 +268,7 @@ class LibraryPreferences(
     enum class ChapterSwipeAction {
         ToggleRead,
         ToggleBookmark,
+        ToggleFillermark,
         Download,
         Disabled,
     }
@@ -264,6 +282,13 @@ class LibraryPreferences(
     fun groupLibraryBy() = preferenceStore.getInt("group_library_by", LibraryGroup.BY_DEFAULT)
 
     // SY <--
+
+    // KMK -->
+    // New preferences added for developer options UI in Settings:
+    fun libraryUpdateCacheSkip() = preferenceStore.getBoolean("library_update_cache_skip", false)
+
+    fun libraryUpdateParallelSlots() = preferenceStore.getInt("library_update_parallel_slots", 1)
+    // KMK <--
 
     companion object {
         const val DEVICE_ONLY_ON_WIFI = "wifi"

@@ -121,7 +121,7 @@ class FetchInterval(
     }
 
     companion object {
-        const val MAX_INTERVAL = 28
+        const val MAX_INTERVAL = 14
 
         private const val GRACE_PERIOD = 1L
 
