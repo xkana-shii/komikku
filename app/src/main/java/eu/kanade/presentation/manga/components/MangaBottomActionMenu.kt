@@ -276,7 +276,7 @@ internal fun RowScope.Button(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                imageVector = icon,
+                painter = painter,
                 contentDescription = title,
                 // KMK -->
                 tint = animatedColor,
