@@ -172,7 +172,6 @@ class DownloadManager(
             // SY -->
             manga.ogTitle,
             // SY <--
-            chapter.url,
             source,
         )
         val files = chapterDir?.listFiles().orEmpty()

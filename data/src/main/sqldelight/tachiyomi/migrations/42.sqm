@@ -1,60 +1,7 @@
--- Add chapter urls to updates view
-DROP VIEW IF EXISTS updatesView;
-CREATE VIEW updatesView AS
-SELECT
-    mangas._id AS mangaId,
-    mangas.title AS mangaTitle,
-    chapters._id AS chapterId,
-    chapters.name AS chapterName,
-    chapters.scanlator,
-    chapters.url AS chapterUrl,
-    chapters.read,
-    chapters.bookmark,
-    chapters.last_page_read,
-    mangas.source,
-    mangas.favorite,
-    mangas.thumbnail_url AS thumbnailUrl,
-    mangas.cover_last_modified AS coverLastModified,
-    chapters.date_upload AS dateUpload,
-    chapters.date_fetch AS datefetch
-FROM mangas JOIN chapters
-ON mangas._id = chapters.manga_id
-LEFT JOIN excluded_scanlators
-ON mangas._id = excluded_scanlators.manga_id
-AND chapters.scanlator = excluded_scanlators.scanlator
-WHERE favorite = 1 AND source <> 6969
-AND excluded_scanlators.scanlator IS NULL
-AND date_fetch > date_added
-UNION
-SELECT
-    mangas._id AS mangaId,
-    mangas.title AS mangaTitle,
-    chapters._id AS chapterId,
-    chapters.name AS chapterName,
-    chapters.scanlator,
-    chapters.url AS chapterUrl,
-    chapters.read,
-    chapters.bookmark,
-    chapters.last_page_read,
-    mangas.source,
-    mangas.favorite,
-    mangas.thumbnail_url AS thumbnailUrl,
-    mangas.cover_last_modified AS coverLastModified,
-    chapters.date_upload AS dateUpload,
-    chapters.date_fetch AS datefetch
-FROM mangas
-LEFT JOIN (
-    SELECT merged.manga_id,merged.merge_id
-    FROM merged
-    GROUP BY merged.merge_id
-) AS ME
-ON ME.merge_id = mangas._id
-JOIN chapters
-ON ME.manga_id = chapters.manga_id
-LEFT JOIN excluded_scanlators
-ON mangas._id = excluded_scanlators.manga_id
-AND chapters.scanlator = excluded_scanlators.scanlator
-WHERE favorite = 1 AND source = 6969
-AND excluded_scanlators.scanlator IS NULL
-AND date_fetch > date_added
-ORDER BY datefetch DESC;
+-- Save the current remote_id as library_id, since old Kitsu tracker did not use this correctly
+UPDATE manga_sync SET library_id = remote_id WHERE sync_id = 3;
+
+-- Kitsu and Suwayomi aren't using the remote_id field properly, but for both the ID is present in the URL
+-- This parses a url and gets the ID from the trailing path part, e.g. https://kitsu.app/manga/<id>
+-- Based on https://stackoverflow.com/a/38330814
+UPDATE manga_sync SET remote_id = replace(remote_url, rtrim(remote_url, replace(remote_url, '/', '')), '') WHERE sync_id IN (3, 9);

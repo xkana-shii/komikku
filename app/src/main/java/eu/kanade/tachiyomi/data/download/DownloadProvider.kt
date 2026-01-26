@@ -273,11 +273,6 @@ class DownloadProvider(
         }
     }
 
-    /**
-     * Checks if the chapter directory name should be changed.
-     * Returns true if the expected directory name for the new chapter is different
-     * from any of the possible old formats (with or without URL).
-     */
     fun isChapterDirNameChanged(oldChapter: Chapter, newChapter: Chapter): Boolean {
         return getChapterDirName(oldChapter.name, oldChapter.scanlator, oldChapter.url) !=
             getChapterDirName(newChapter.name, newChapter.scanlator, newChapter.url)
