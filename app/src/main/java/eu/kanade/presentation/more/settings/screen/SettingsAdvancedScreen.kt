@@ -89,6 +89,7 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetAllManga
 import tachiyomi.domain.manga.interactor.ResetViewerFlags
@@ -121,7 +122,10 @@ object SettingsAdvancedScreen : SearchableSettings {
         val basePreferences = remember { Injekt.get<BasePreferences>() }
         val networkPreferences = remember { Injekt.get<NetworkPreferences>() }
         val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
+        // SY -->
+        val downloadPreferences = remember { Injekt.get<DownloadPreferences>() }
         val exhPreferences = remember { Injekt.get<ExhPreferences>() }
+        // SY <--
 
         return listOf(
             Preference.PreferenceItem.TextPreference(
@@ -181,6 +185,9 @@ object SettingsAdvancedScreen : SearchableSettings {
             getDataGroup(),
             getNetworkGroup(networkPreferences = networkPreferences),
             getLibraryGroup(libraryPreferences = libraryPreferences),
+            // SY -->
+            getDownloadsGroup(downloadPreferences = downloadPreferences),
+            // SY <--
             getReaderGroup(basePreferences = basePreferences),
             getExtensionsGroup(basePreferences = basePreferences),
             // SY -->
@@ -400,6 +407,24 @@ object SettingsAdvancedScreen : SearchableSettings {
             ),
         )
     }
+
+    // SY ->
+    @Composable
+    private fun getDownloadsGroup(
+        downloadPreferences: DownloadPreferences,
+    ): Preference.PreferenceGroup {
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.pref_category_downloads),
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = downloadPreferences.includeChapterUrlHash(),
+                    title = stringResource(SYMR.strings.pref_include_chapter_url_hash),
+                    subtitle = stringResource(SYMR.strings.pref_include_chapter_url_hash_desc),
+                ),
+            ),
+        )
+    }
+    // <- SY
 
     @Composable
     private fun getReaderGroup(

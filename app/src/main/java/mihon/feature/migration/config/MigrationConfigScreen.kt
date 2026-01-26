@@ -91,7 +91,7 @@ import uy.kohesive.injekt.api.get
  *
  * @param mangaIds IDs of the manga that will be migrated using the sources configured on this screen.
  */
-class MigrationConfigScreen(private val mangaIds: List<Long>) : Screen() {
+class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
 
     constructor(mangaId: Long) : this(listOf(mangaId))
 
@@ -406,13 +406,6 @@ class MigrationConfigScreen(private val mangaIds: List<Long>) : Screen() {
         private val disabledSources by lazy { sourcePreferences.disabledSources().get().mapNotNull { it.toLongOrNull() } }
         // KMK <--
 
-        init {
-            screenModelScope.launchIO {
-                initSources()
-                mutableState.update { it.copy(isLoading = false) }
-            }
-        }
-
         private val sourcesComparator = { includedSources: /* KMK --> */ Map<Long, Int> /* KMK <-- */ ->
             compareBy<MigrationSource>(
                 // KMK -->
@@ -421,6 +414,13 @@ class MigrationConfigScreen(private val mangaIds: List<Long>) : Screen() {
                 // KMK <--
                 { with(it) { "$name ($shortLanguage)" } },
             )
+        }
+
+        init {
+            screenModelScope.launchIO {
+                initSources()
+                mutableState.update { it.copy(isLoading = false) }
+            }
         }
 
         private fun updateSources(save: Boolean = true, action: (List<MigrationSource>) -> List<MigrationSource>) {

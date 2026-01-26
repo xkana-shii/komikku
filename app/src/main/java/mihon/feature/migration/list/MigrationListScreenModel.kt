@@ -48,7 +48,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class MigrationListScreenModel(
-    mangaIds: List<Long>,
+    mangaIds: Collection<Long>,
     extraSearchQuery: String?,
     val preferences: SourcePreferences = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
@@ -64,6 +64,7 @@ class MigrationListScreenModel(
 ) : StateScreenModel<MigrationListScreenModel.State>(State()) {
 
     private val smartSearchEngine = SmartSourceSearchEngine(extraSearchQuery)
+
     // SY -->
     private val throttleManager = ThrottleManager()
     // SY <--
@@ -139,8 +140,10 @@ class MigrationListScreenModel(
     }
 
     private suspend fun runMigrations(mangas: List<MigratingManga>) {
-        // KMK -->
+        // SY -->
         throttleManager.resetThrottle()
+        // SY <--
+        // KMK -->
         // val prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
         // val deepSearchMode = preferences.migrationDeepSearchMode().get()
         // KMK <--
@@ -228,14 +231,13 @@ class MigrationListScreenModel(
 
             val localManga = networkToLocalManga(searchResult)
             try {
-                val chapters =
-                    // KMK -->
-                    if (source is EHentai) {
-                        source.getChapterList(localManga.toSManga(), throttleManager::throttle)
-                    } else {
-                        // KMK <--
-                        source.getChapterList(localManga.toSManga())
-                    }
+                // SY -->
+                val chapters = if (source is EHentai) {
+                    source.getChapterList(localManga.toSManga(), throttleManager::throttle)
+                } else {
+                    // SY <--
+                    source.getChapterList(localManga.toSManga())
+                }
                 syncChaptersWithSource.await(chapters, localManga, source)
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
@@ -277,7 +279,13 @@ class MigrationListScreenModel(
                 val manga = getManga.await(target) ?: return@async null
                 try {
                     val source = sourceManager.get(manga.source)!!
-                    val chapters = source.getChapterList(manga.toSManga())
+                    // SY -->
+                    val chapters = if (source is EHentai) {
+                        source.getChapterList(manga.toSManga(), throttleManager::throttle)
+                    } else {
+                        // SY <--
+                        source.getChapterList(manga.toSManga())
+                    }
                     syncChaptersWithSource.await(chapters, manga, source)
                 } catch (_: Exception) {
                     return@async null

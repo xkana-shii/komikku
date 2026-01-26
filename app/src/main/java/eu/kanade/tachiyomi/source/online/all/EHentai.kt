@@ -67,7 +67,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.CacheControl
-import okhttp3.CookieJar
 import okhttp3.Headers
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -918,7 +917,7 @@ class EHentai(
             page = parsed.first.lastOrNull()?.manga?.url?.let { EHentaiSearchMetadata.galleryId(it) }?.toInt() ?: 0
         } while (parsed.second != null)
 
-        return Pair(result.toList(), favNames.orEmpty())
+        return Pair(result.toList(), favNames)
     }
 
     fun spPref() = if (exh) {
@@ -960,7 +959,7 @@ class EHentai(
         return cookies
     }
 
-    fun cookiesHeader(sp: Int = spPref().get()) = buildCookies(rawCookies(sp))
+    fun cookiesHeader(cfCookies: Map<String, String> = emptyMap(), sp: Int = spPref().get()) = buildCookies(rawCookies(sp) + cfCookies)
 
     // Headers
     override fun headersBuilder() = super.headersBuilder().add("Cookie", cookiesHeader())
@@ -970,20 +969,35 @@ class EHentai(
         .appendQueryParameter(param, value)
         .toString()
 
-    override val client = network.client.newBuilder()
-        .cookieJar(CookieJar.NO_COOKIES)
-        .addInterceptor { chain ->
-            val newReq = chain
-                .request()
-                .newBuilder()
-                .removeHeader("Cookie")
-                .addHeader("Cookie", cookiesHeader())
-                .build()
+    override val client =
+        network.client.newBuilder()
+            // .cookieJar(CookieJar.NO_COOKIES)
+            .addInterceptor { chain ->
+                val cfCookies = chain.request().header("Cookie")?.split("; ")
+                    ?.filter {
+                        // KMK -->
+                        // Only accept cookie in form of name=value
+                        if (!it.contains("=")) return@filter false
+                        val name = it.substringBefore("=").trim().lowercase()
+                        // KMK <--
+                        name.startsWith("cf") || name.startsWith("_cf") || name.startsWith("__cf")
+                    }
+                    // KMK -->
+                    ?.associate { it.substringBefore("=").trim() to it.substringAfter("=").trim() }
+                // KMK <--
 
-            chain.proceed(newReq)
-        }
-        .addInterceptor(ThumbnailPreviewInterceptor())
-        .build()
+                val newReq =
+                    chain
+                        .request()
+                        .newBuilder()
+                        .removeHeader("Cookie")
+                        .addHeader("Cookie", cookiesHeader(cfCookies ?: emptyMap()))
+                        .build()
+
+                chain.proceed(newReq)
+            }
+            .addInterceptor(ThumbnailPreviewInterceptor())
+            .build()
 
     // Filters
     override fun getFilterList(): FilterList {
@@ -1405,9 +1419,9 @@ class EHentai(
         private const val BLANK_PREVIEW_THUMB = "https://$THUMB_DOMAIN/g/$BLANK_THUMB"
         private val cleanTitleRegex = Regex("""(\[[^]]*]|[({][^)}]*[)}])""")
 
-        private val MATCH_YEAR_REGEX = "^\\d{4}\$".toRegex()
-        private val MATCH_SEEK_REGEX = "^\\d{2,4}-\\d{1,2}(-\\d{1,2})?\$".toRegex()
-        private val MATCH_JUMP_REGEX = "^\\d+(\$|d\$|w\$|m\$|y\$|-\$)".toRegex()
+        private val MATCH_YEAR_REGEX = "^\\d{4}$".toRegex()
+        private val MATCH_SEEK_REGEX = "^\\d{2,4}-\\d{1,2}(-\\d{1,2})?$".toRegex()
+        private val MATCH_JUMP_REGEX = "^\\d+($|d$|w$|m$|y$|-$)".toRegex()
 
         private const val EH_API_BASE = "https://api.e-hentai.org/api.php"
         private val JSON = "application/json; charset=utf-8".toMediaTypeOrNull()!!
