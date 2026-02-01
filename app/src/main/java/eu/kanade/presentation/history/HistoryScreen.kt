@@ -6,13 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.Panorama
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -28,12 +27,12 @@ import kotlinx.collections.immutable.persistentListOf
 import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
+import tachiyomi.presentation.core.theme.active
 import java.time.LocalDate
 
 @Composable
@@ -51,8 +50,11 @@ fun HistoryScreen(
     }
 
     // KMK -->
-    val usePanoramaCover = remember { mutableStateOf(false) }
+    onFilterClicked: () -> Unit,
+    hasActiveFilters: Boolean,
+    usePanoramaCover: Boolean,
     // KMK <--
+) {
     Scaffold(
         topBar = { scrollBehavior ->
             SearchToolbar(
@@ -61,35 +63,23 @@ fun HistoryScreen(
                 onChangeSearchQuery = onSearchQueryChange,
                 actions = {
                     AppBarActions(
-                        // KMK -->
-                        persistentListOf<AppBar.AppBarAction>().builder()
-                            .apply {
-                                if (!state.list.isNullOrEmpty()) {
-                                    add(
-                                        AppBar.Action(
-                                            title = stringResource(KMR.strings.action_panorama_cover),
-                                            icon = Icons.Outlined.Panorama,
-                                            iconTint = MaterialTheme.colorScheme.primary.takeIf { usePanoramaCover.value },
-                                            onClick = {
-                                                usePanoramaCover.value = !usePanoramaCover.value
-                                            },
-                                        ),
-                                    )
-                                }
-                                add(
-                                    // KMK <--
-                                    AppBar.Action(
-                                        title = stringResource(MR.strings.pref_clear_history),
-                                        icon = Icons.Outlined.DeleteSweep,
-                                        onClick = {
-                                            onDialogChange(HistoryScreenModel.Dialog.DeleteAll)
-                                        },
-                                    ),
-                                    // KMK -->
-                                )
-                            }
-                            .build(),
-                        // KMK <--
+                        persistentListOf(
+                            // KMK -->
+                            AppBar.Action(
+                                title = stringResource(MR.strings.action_filter),
+                                icon = Icons.Outlined.FilterList,
+                                iconTint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                                onClick = onFilterClicked,
+                            ),
+                            // KMK <--
+                            AppBar.Action(
+                                title = stringResource(MR.strings.pref_clear_history),
+                                icon = Icons.Outlined.DeleteSweep,
+                                onClick = {
+                                    onDialogChange(HistoryScreenModel.Dialog.DeleteAll)
+                                },
+                            ),
+                        ),
                     )
                 },
                 scrollBehavior = scrollBehavior,
@@ -119,7 +109,7 @@ fun HistoryScreen(
                     onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
                     onClickFavorite = { history -> onClickFavorite(history.mangaId) },
                     // KMK -->
-                    usePanoramaCover = usePanoramaCover.value,
+                    usePanoramaCover = usePanoramaCover,
                     // KMK <--
                 )
             }
@@ -208,6 +198,11 @@ internal fun HistoryScreenPreviews(
             onClickResume = { _, _ -> run {} },
             onDialogChange = {},
             onClickFavorite = {},
+            // KMK -->
+            onFilterClicked = {},
+            hasActiveFilters = true,
+            usePanoramaCover = true,
+            // KMK <--
         )
     }
 }

@@ -21,6 +21,7 @@ import eu.kanade.core.preference.asState
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.updates.UpdateScreen
 import eu.kanade.presentation.updates.UpdatesDeleteConfirmationDialog
+import eu.kanade.presentation.updates.UpdatesFilterDialog
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.LibraryUpdateStatus
@@ -38,10 +39,12 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 data object UpdatesTab : Tab {
+    @Suppress("unused")
     private fun readResolve(): Any = UpdatesTab
 
     override val options: TabOptions
@@ -75,9 +78,14 @@ data object UpdatesTab : Tab {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel { UpdatesScreenModel() }
+        val settingsScreenModel = rememberScreenModel { UpdatesSettingsScreenModel() }
         val state by screenModel.state.collectAsState()
         val libraryUpdateStatus = Injekt.get<LibraryUpdateStatus>()
         val libraryUpdateInProgress by libraryUpdateStatus.isRunning.collectAsState(initial = false)
+
+        // KMK -->
+        val usePanoramaCover by settingsScreenModel.updatesPreferences.usePanoramaCover().collectAsState()
+        // KMK <--
 
         UpdateScreen(
             state = state,
@@ -108,7 +116,10 @@ data object UpdatesTab : Tab {
                 context.startActivity(intent)
             },
             onCalendarClicked = { navigator.push(UpcomingScreen()) },
+            onFilterClicked = screenModel::showFilterDialog,
+            hasActiveFilters = state.hasActiveFilters,
             // KMK -->
+            usePanoramaCover = usePanoramaCover,
             collapseToggle = screenModel::toggleExpandedState,
             // KMK <--
         )
@@ -119,6 +130,12 @@ data object UpdatesTab : Tab {
                 UpdatesDeleteConfirmationDialog(
                     onDismissRequest = onDismissDialog,
                     onConfirm = { screenModel.deleteChapters(dialog.toDelete) },
+                )
+            }
+            is UpdatesScreenModel.Dialog.FilterSheet -> {
+                UpdatesFilterDialog(
+                    onDismissRequest = onDismissDialog,
+                    screenModel = settingsScreenModel,
                 )
             }
             null -> {}
