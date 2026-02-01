@@ -44,17 +44,15 @@ fun HistoryScreen(
     onClickResume: (mangaId: Long, chapterId: Long) -> Unit,
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
-) {
-    BackHandler(!state.searchQuery.isNullOrEmpty()) {
-        onSearchQueryChange(null)
-    }
-
     // KMK -->
     onFilterClicked: () -> Unit,
     hasActiveFilters: Boolean,
     usePanoramaCover: Boolean,
     // KMK <--
 ) {
+    BackHandler(!state.searchQuery.isNullOrEmpty()) {
+        onSearchQueryChange(null)
+    }
     Scaffold(
         topBar = { scrollBehavior ->
             SearchToolbar(
