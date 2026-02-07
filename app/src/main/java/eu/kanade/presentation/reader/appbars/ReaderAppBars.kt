@@ -93,6 +93,7 @@ fun ReaderAppBars(
     onClickPageLayout: () -> Unit,
     onClickShiftPage: () -> Unit,
     // SY <--
+    readerPreferences: ReaderPreferences,
 ) {
     val isRtl = viewer is R2LPagerViewer
     val backgroundColor = MaterialTheme.colorScheme
@@ -117,8 +118,6 @@ fun ReaderAppBars(
                     mangaTitle = mangaTitle,
                     chapterTitle = chapterTitle,
                     navigateUp = navigateUp,
-                    bookmarked = bookmarked,
-                    onToggleBookmarked = onToggleBookmarked,
                     // SY -->
                     onOpenInWebView = null, // onOpenInWebView,
                     onOpenInBrowser = null, // onOpenInBrowser,
@@ -190,6 +189,10 @@ fun ReaderAppBars(
                         .weight(1f)
                         .align(Alignment.End),
                 ) {
+                    Automation(
+                        readerPreferences = readerPreferences,
+                        viewer = viewer,
+                    )
                     ChapterNavigator(
                         isRtl = isRtl,
                         onNextChapter = onNextChapter,

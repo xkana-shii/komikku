@@ -747,6 +747,7 @@ class ReaderActivity : BaseActivity() {
             },
             onClickShiftPage = ::shiftDoublePages,
             // SY <--
+            readerPreferences = readerPreferences,
         )
     }
 
