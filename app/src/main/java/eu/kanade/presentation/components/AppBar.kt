@@ -409,7 +409,7 @@ fun SearchToolbar(
                         )
                     }
                     it()
-                            },
+                },
             )
         },
         navigateUp = if (searchQuery == null) navigateUp else internalOnClickCloseSearch,
