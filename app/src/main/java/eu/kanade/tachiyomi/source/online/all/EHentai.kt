@@ -1167,7 +1167,7 @@ class EHentai(
     class AdvancedGroup : UriGroup<Filter<*>>(
         "Advanced Options",
         listOf(
-            AdvancedOption("Browse Expunged Galleries", "f_sh"),
+            AdvancedOption("Browse Expunged Galleries", "f_sh").apply { state = true },
             AdvancedOption("Require Gallery Torrent", "f_sto"),
             RatingOption(),
             MinPagesOption(),

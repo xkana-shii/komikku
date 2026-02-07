@@ -83,10 +83,10 @@ class HistoryScreenModelStateProvider : PreviewParameterProvider<HistoryScreenMo
     // KMK -->
     private object HistoryWithRelationExamples {
         val headerToday = randItem()
-        val headerTomorrow = randItem(LocalDate.now().plusDays(1).toDate(), mangaCount = 0)
+        val headerTomorrow = randItem(LocalDate.now().plusDays(1).toDate())
 
         fun header(instantBuilder: (Instant) -> Instant = { it }) =
-            randItem(LocalDate.from(instantBuilder(Instant.now())).toDate(), mangaCount = 0)
+            randItem(LocalDate.from(instantBuilder(Instant.now())).toDate())
 
         fun LocalDate.toDate(zone: ZoneId = ZoneId.systemDefault()): Date =
             Date.from(atStartOfDay(zone).toInstant())
