@@ -24,17 +24,16 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
-import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel.HistorySelectionOptions
 import kotlinx.collections.immutable.persistentListOf
+import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
-import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -180,9 +179,10 @@ private fun HistoryScreenContent(
         ) { item ->
             when (item) {
                 is HistoryUiModel.Header -> {
-                    ListGroupHeader(
+                    DateHeading(
                         modifier = Modifier.animateItemFastScroll(),
-                        text = relativeDateText(item.date),
+                        date = item.date,
+                        mangaCount = item.mangaCount,
                     )
                 }
                 is HistoryUiModel.Item -> {
@@ -240,8 +240,7 @@ private fun HistoryScreenContent(
 }
 
 sealed interface HistoryUiModel {
-    data class Header(val date: LocalDate) : HistoryUiModel
-    // KMK -->
+    data class Header(val date: LocalDate, val mangaCount: Int) : HistoryUiModel
     data class Item(val item: HistoryWithRelations) : HistoryUiModel
     // KMK <--
 }
