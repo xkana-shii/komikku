@@ -422,20 +422,21 @@ open class BrowseSourceScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
+            updateManga.await(new.toMangaUpdate())
             // KMK -->
             if (new.favorite && libraryPreferences.syncOnAdd().get()) {
                 withIOContext {
                     try {
-                        val sManga = new.toSManga()
+                        val sManga = manga.toSManga()
                         val remoteManga = source.getMangaDetails(sManga)
                         val chapters = source.getChapterList(sManga)
+                        // Use `manga` instead of `new` so its title got updated with source's `getMangaDetails`
                         updateManga.awaitUpdateFromSource(manga, remoteManga, false, coverCache)
-                        syncChaptersWithSource.await(chapters, new, source, false)
+                        syncChaptersWithSource.await(chapters, manga, source, false)
                     } catch (e: Exception) {
                         logcat(LogPriority.ERROR, e)
                         screenModelScope.launch {
-                            snackbarHostState.showSnackbar(message = "Failed to sync manga: $e")
+                            snackbarHostState.showSnackbar(message = "Failed to sync manga: ${e.message}")
                         }
                     }
                 }

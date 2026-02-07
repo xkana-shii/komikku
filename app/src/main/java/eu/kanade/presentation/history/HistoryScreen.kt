@@ -5,13 +5,18 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.FlipToBack
+import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -19,15 +24,17 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
+import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
+import eu.kanade.tachiyomi.ui.history.HistoryScreenModel.HistorySelectionOptions
 import kotlinx.collections.immutable.persistentListOf
-import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
+import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -45,48 +52,66 @@ fun HistoryScreen(
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
     // KMK -->
+    toggleSelectionMode: () -> Unit,
+    onSelectAll: (Boolean) -> Unit,
+    onInvertSelection: () -> Unit,
+    onHistorySelected: (HistoryWithRelations, HistorySelectionOptions) -> Unit,
     onFilterClicked: () -> Unit,
     hasActiveFilters: Boolean,
     usePanoramaCover: Boolean,
     // KMK <--
 ) {
-    BackHandler(!state.searchQuery.isNullOrEmpty()) {
-        onSearchQueryChange(null)
-    }
+    // KMK -->
+    BackHandler(enabled = state.selectionMode, onBack = toggleSelectionMode)
+    // KMK <--
+
     Scaffold(
         topBar = { scrollBehavior ->
-            SearchToolbar(
-                titleContent = { AppBarTitle(stringResource(MR.strings.history)) },
-                searchQuery = state.searchQuery,
-                onChangeSearchQuery = onSearchQueryChange,
-                actions = {
-                    AppBarActions(
-                        persistentListOf(
-                            // KMK -->
-                            AppBar.Action(
-                                title = stringResource(MR.strings.action_filter),
-                                icon = Icons.Outlined.FilterList,
-                                iconTint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
-                                onClick = onFilterClicked,
+            // KMK -->
+            when {
+                state.selectionMode -> HistorySelectionToolbar(
+                    selectedCount = state.selection.size,
+                    onCancelActionMode = toggleSelectionMode,
+                    onClickSelectAll = { onSelectAll(true) },
+                    onClickInvertSelection = onInvertSelection,
+                    onClickClearHistory = { onDialogChange(HistoryScreenModel.Dialog.Delete(state.selected)) },
+                )
+                // KMK <--
+                else -> SearchToolbar(
+                    titleContent = { AppBarTitle(stringResource(MR.strings.history)) },
+                    searchQuery = state.searchQuery,
+                    onChangeSearchQuery = onSearchQueryChange,
+                    actions = {
+                        AppBarActions(
+                            persistentListOf(
+                                // KMK -->
+                                AppBar.Action(
+                                    title = stringResource(MR.strings.action_filter),
+                                    icon = Icons.Outlined.FilterList,
+                                    iconTint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                                    onClick = onFilterClicked,
+                                ),
+                                // KMK <--
+                                AppBar.Action(
+                                    title = stringResource(MR.strings.pref_clear_history),
+                                    // KMK -->
+                                    icon = Icons.Outlined.Checklist,
+                                    onClick = toggleSelectionMode,
+                                    // KMK <--
+                                ),
                             ),
-                            // KMK <--
-                            AppBar.Action(
-                                title = stringResource(MR.strings.pref_clear_history),
-                                icon = Icons.Outlined.DeleteSweep,
-                                onClick = {
-                                    onDialogChange(HistoryScreenModel.Dialog.DeleteAll)
-                                },
-                            ),
-                        ),
-                    )
-                },
-                scrollBehavior = scrollBehavior,
-            )
+                        )
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
         state.list.let {
-            if (it == null) {
+            // KMK -->
+            if (state.isLoading) {
+                // KMK <--
                 LoadingScreen(Modifier.padding(contentPadding))
             } else if (it.isEmpty()) {
                 val msg = if (!state.searchQuery.isNullOrEmpty()) {
@@ -99,14 +124,22 @@ fun HistoryScreen(
                     modifier = Modifier.padding(contentPadding),
                 )
             } else {
+                // KMK -->
+                val uiModels = remember(state.list) { state.getUiModel() }
+                // KMK <--
                 HistoryScreenContent(
-                    history = it,
+                    // KMK -->
+                    state = state,
+                    history = uiModels,
+                    // KMK <--
                     contentPadding = contentPadding,
                     onClickCover = { history -> onClickCover(history.mangaId) },
                     onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
                     onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
                     onClickFavorite = { history -> onClickFavorite(history.mangaId) },
                     // KMK -->
+                    selectionMode = state.selectionMode,
+                    onHistorySelected = onHistorySelected,
                     usePanoramaCover = usePanoramaCover,
                     // KMK <--
                 )
@@ -117,6 +150,9 @@ fun HistoryScreen(
 
 @Composable
 private fun HistoryScreenContent(
+    // KMK -->
+    state: HistoryScreenModel.State,
+
     history: List<HistoryUiModel>,
     contentPadding: PaddingValues,
     onClickCover: (HistoryWithRelations) -> Unit,
@@ -124,6 +160,8 @@ private fun HistoryScreenContent(
     onClickDelete: (HistoryWithRelations) -> Unit,
     onClickFavorite: (HistoryWithRelations) -> Unit,
     // KMK -->
+    selectionMode: Boolean,
+    onHistorySelected: (HistoryWithRelations, HistorySelectionOptions) -> Unit,
     usePanoramaCover: Boolean,
     // KMK <--
 ) {
@@ -142,22 +180,47 @@ private fun HistoryScreenContent(
         ) { item ->
             when (item) {
                 is HistoryUiModel.Header -> {
-                    DateHeading(
+                    ListGroupHeader(
                         modifier = Modifier.animateItemFastScroll(),
-                        date = item.date,
-                        mangaCount = item.mangaCount,
+                        text = relativeDateText(item.date),
                     )
                 }
                 is HistoryUiModel.Item -> {
                     val value = item.item
+                    // KMK -->
+                    val isSelected = remember(state.selection) { value.chapterId in state.selection }
+                    // KMK <--
                     HistoryItem(
                         modifier = Modifier.animateItemFastScroll(),
                         history = value,
                         onClickCover = { onClickCover(value) },
-                        onClickResume = { onClickResume(value) },
+                        // KMK -->
+                        onClick = {
+                            when {
+                                selectionMode -> onHistorySelected(
+                                    item.item,
+                                    HistorySelectionOptions(
+                                        selected = !isSelected,
+                                        fromLongPress = false,
+                                    ),
+                                )
+                                else -> onClickResume(value)
+                            }
+                        },
+                        onLongClick = {
+                            onHistorySelected(
+                                item.item,
+                                HistorySelectionOptions(
+                                    selected = !isSelected,
+                                    fromLongPress = true,
+                                ),
+                            )
+                        },
+                        // KMK <--
                         onClickDelete = { onClickDelete(value) },
                         onClickFavorite = { onClickFavorite(value) },
                         // KMK -->
+                        selected = isSelected,
                         readProgress = value.lastPageRead
                             .takeIf { !value.read && it > 0L }
                             ?.let {
@@ -177,9 +240,50 @@ private fun HistoryScreenContent(
 }
 
 sealed interface HistoryUiModel {
-    data class Header(val date: LocalDate, val mangaCount: Int) : HistoryUiModel
+    data class Header(val date: LocalDate) : HistoryUiModel
+    // KMK -->
     data class Item(val item: HistoryWithRelations) : HistoryUiModel
+    // KMK <--
 }
+
+// KMK -->
+@Composable
+private fun HistorySelectionToolbar(
+    selectedCount: Int,
+    onCancelActionMode: () -> Unit,
+    onClickSelectAll: () -> Unit,
+    onClickInvertSelection: () -> Unit,
+    onClickClearHistory: () -> Unit,
+) {
+    AppBar(
+        titleContent = { Text(text = "$selectedCount") },
+        actions = {
+            AppBarActions(
+                persistentListOf(
+                    AppBar.Action(
+                        title = stringResource(MR.strings.action_select_all),
+                        icon = Icons.Outlined.SelectAll,
+                        onClick = onClickSelectAll,
+                    ),
+                    AppBar.Action(
+                        title = stringResource(MR.strings.action_select_inverse),
+                        icon = Icons.Outlined.FlipToBack,
+                        onClick = onClickInvertSelection,
+                    ),
+                    AppBar.Action(
+                        title = stringResource(MR.strings.pref_clear_history),
+                        icon = Icons.Outlined.DeleteSweep,
+                        onClick = onClickClearHistory,
+                        enabled = selectedCount > 0,
+                    ),
+                ),
+            )
+        },
+        isActionMode = true,
+        onCancelActionMode = onCancelActionMode,
+    )
+}
+// KMK <--
 
 @PreviewLightDark
 @Composable
@@ -197,6 +301,10 @@ internal fun HistoryScreenPreviews(
             onDialogChange = {},
             onClickFavorite = {},
             // KMK -->
+            toggleSelectionMode = {},
+            onSelectAll = {},
+            onInvertSelection = {},
+            onHistorySelected = { _, _ -> },
             onFilterClicked = {},
             hasActiveFilters = true,
             usePanoramaCover = true,

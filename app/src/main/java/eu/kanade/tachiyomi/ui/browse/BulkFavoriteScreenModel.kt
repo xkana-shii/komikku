@@ -59,10 +59,8 @@ class BulkFavoriteScreenModel(
     private val coverCache: CoverCache = Injekt.get(),
     private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags = Injekt.get(),
     private val addTracks: AddTracks = Injekt.get(),
-    // KMK -->
     private val syncChaptersWithSource: SyncChaptersWithSource = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
-    // KMK <--
 ) : StateScreenModel<BulkFavoriteScreenModel.State>(initialState) {
 
     fun backHandler() {
@@ -253,31 +251,23 @@ class BulkFavoriteScreenModel(
         if (manga.favorite) return
 
         screenModelScope.launchIO {
-            updateManga.awaitUpdateFavorite(manga.id, true)
-            setMangaDefaultChapterFlags.await(manga)
-            val new = manga.copy(
-                favorite = !manga.favorite,
-                dateAdded = when (manga.favorite) {
-                    true -> 0
-                    false -> Instant.now().toEpochMilli()
-                },
-            )
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
-            // KMK -->
-            if (libraryPreferences.syncOnAdd().get()) {
-                try {
-                    val source = sourceManager.getOrStub(manga.source)
+            try {
+                val source = sourceManager.getOrStub(manga.source)
+                setMangaDefaultChapterFlags.await(manga)
+                addTracks.bindEnhancedTrackers(manga, source)
+                updateManga.awaitUpdateFavorite(manga.id, true)
+                if (libraryPreferences.syncOnAdd().get()) {
                     val sManga = manga.toSManga()
                     val remoteManga = source.getMangaDetails(sManga)
                     val chapters = source.getChapterList(sManga)
+                    // Use `manga` instead of `new` so its title got updated with source's `getMangaDetails`
                     updateManga.awaitUpdateFromSource(manga, remoteManga, false, coverCache)
                     syncChaptersWithSource.await(chapters, manga, source, false)
-                } catch (e: Exception) {
-                    logcat(LogPriority.ERROR, e)
-                    snackbarHostState.showSnackbar(message = "Failed to sync manga: $e")
                 }
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e)
+                snackbarHostState.showSnackbar(message = "Failed to sync manga: ${e.message}")
             }
-            // KMK <--
         }
     }
 
@@ -360,23 +350,22 @@ class BulkFavoriteScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
-            // KMK -->
+            updateManga.await(new.toMangaUpdate())
             if (new.favorite && libraryPreferences.syncOnAdd().get()) {
                 withIOContext {
                     try {
                         val sManga = manga.toSManga()
                         val remoteManga = source.getMangaDetails(sManga)
                         val chapters = source.getChapterList(sManga)
-                        updateManga.awaitUpdateFromSource(new, remoteManga, false, coverCache)
-                        syncChaptersWithSource.await(chapters, new, source, false)
+                        // Use `manga` instead of `new` so its title got updated with source's `getMangaDetails`
+                        updateManga.awaitUpdateFromSource(manga, remoteManga, false, coverCache)
+                        syncChaptersWithSource.await(chapters, manga, source, false)
                     } catch (e: Exception) {
                         logcat(LogPriority.ERROR, e)
-                        snackbarHostState.showSnackbar(message = "Failed to sync manga: $e")
+                        snackbarHostState.showSnackbar(message = "Failed to sync manga: ${e.message}")
                     }
                 }
             }
-            // KMK <--
         }
     }
 
