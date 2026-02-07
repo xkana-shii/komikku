@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import logcat.LogPriority
 import okhttp3.Cache
+import okhttp3.Dispatcher
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -57,6 +58,19 @@ import kotlin.random.Random
             .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
             .addNetworkInterceptor(IgnoreGzipInterceptor())
             .addNetworkInterceptor(BrotliInterceptor)
+
+        // Apply dispatcher limits from preferences so max concurrent requests slider takes effect.
+        try {
+            val dispatcher = Dispatcher().apply {
+                val max = preferences.maxConcurrentRequests().get().coerceAtLeast(1)
+                maxRequests = max
+                maxRequestsPerHost = max
+            }
+            builder.dispatcher(dispatcher)
+        } catch (e: Throwable) {
+            // Fallback: if something goes wrong reading preferences, keep default dispatcher and log.
+            logcat(LogPriority.WARN, e) { "Failed to apply dispatcher limits from preferences" }
+        }
 
         if (isDebugBuild) {
             val httpLoggingInterceptor = HttpLoggingInterceptor().apply {

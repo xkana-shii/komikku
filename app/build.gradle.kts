@@ -19,20 +19,27 @@ if (Config.includeTelemetry) {
     }
 }
 
+val devSecret: String = if (project.hasProperty("devSecret")) {
+    project.property("devSecret") as String
+} else {
+    "default-secret"
+}
+
 android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.komikku"
+        applicationId = "app.komikku.kns"
 
-        versionCode = 78
-        versionName = "1.13.6"
+        versionCode = 93
+        versionName = "1.18.9"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
         buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = false)}\"")
         buildConfigField("boolean", "TELEMETRY_INCLUDED", "${Config.includeTelemetry}")
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
+        buildConfigField("String", "DEV_OPTIONS", "\"${devSecret}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

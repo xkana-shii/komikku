@@ -25,6 +25,7 @@ class ChapterRepositoryImpl(
                         chapter.scanlator,
                         chapter.read,
                         chapter.bookmark,
+                        chapter.fillermark,
                         chapter.lastPageRead,
                         chapter.chapterNumber,
                         chapter.sourceOrder,
@@ -60,6 +61,7 @@ class ChapterRepositoryImpl(
                     scanlator = chapterUpdate.scanlator,
                     read = chapterUpdate.read,
                     bookmark = chapterUpdate.bookmark,
+                    fillermark = chapterUpdate.fillermark,
                     lastPageRead = chapterUpdate.lastPageRead,
                     chapterNumber = chapterUpdate.chapterNumber,
                     sourceOrder = chapterUpdate.sourceOrder,
@@ -89,6 +91,8 @@ class ChapterRepositoryImpl(
                 // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
                 // KMK <--
                 ChapterMapper::mapChapter,
             )
@@ -116,6 +120,15 @@ class ChapterRepositoryImpl(
         }
     }
 
+    override suspend fun getFillermarkedChaptersByMangaId(mangaId: Long): List<Chapter> {
+        return handler.awaitList {
+            chaptersQueries.getFillermarkedChaptersByMangaId(
+                mangaId,
+                ChapterMapper::mapChapter,
+            )
+        }
+    }
+
     override suspend fun getChapterById(id: Long): Chapter? {
         return handler.awaitOneOrNull { chaptersQueries.getChapterById(id, ChapterMapper::mapChapter) }
     }
@@ -128,6 +141,8 @@ class ChapterRepositoryImpl(
                 // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
                 // KMK <--
                 ChapterMapper::mapChapter,
             )
@@ -157,6 +172,8 @@ class ChapterRepositoryImpl(
                 // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
                 // KMK <--
                 ChapterMapper::mapChapter,
             )
@@ -174,6 +191,8 @@ class ChapterRepositoryImpl(
                 // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
                 // KMK <--
                 ChapterMapper::mapChapter,
             )

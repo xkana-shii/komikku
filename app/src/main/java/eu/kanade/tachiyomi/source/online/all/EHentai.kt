@@ -162,7 +162,11 @@ class EHentai(
                 ),
                 manga = SManga.create().apply {
                     // Get title
-                    title = thumbnailElement.attr("title")
+                    title = if (exhPreferences.useCleanTitle().get()) {
+                        thumbnailElement.attr("title").replace(cleanTitleRegex, "").trim()
+                    } else {
+                        thumbnailElement.attr("title")
+                    }
                     url = EHentaiSearchMetadata.normalizeUrl(linkElement.attr("href"))
                     // Get image
                     thumbnail_url = thumbnailElement.attr("src")
@@ -725,9 +729,17 @@ class EHentai(
                 gToken = EHentaiSearchMetadata.galleryToken(url)
 
                 exh = this@EHentai.exh
-                title = select("#gn").text().trimOrNull()
+                title = if (exhPreferences.useCleanTitle().get()) {
+                    select("#gn").text().trimOrNull()?.replace(cleanTitleRegex, "")?.trim()
+                } else {
+                    select("#gn").text().trimOrNull()
+                }
 
-                altTitle = select("#gj").text().trimOrNull()
+                altTitle = if (exhPreferences.useCleanTitle().get()) {
+                    select("#gj").text().trimOrNull()?.replace(cleanTitleRegex, "")?.trim()
+                } else {
+                    select("#gj").text().trimOrNull()
+                }
 
                 thumbnailUrl = select("#gd1 div").attr("style").nullIfBlank()?.let {
                     it.substring(it.indexOf('(') + 1 until it.lastIndexOf(')'))
@@ -1405,6 +1417,7 @@ class EHentai(
         private const val THUMB_DOMAIN = "ehgt.org"
         private const val BLANK_THUMB = "blank.gif"
         private const val BLANK_PREVIEW_THUMB = "https://$THUMB_DOMAIN/g/$BLANK_THUMB"
+        private val cleanTitleRegex = Regex("""(\[[^]]*]|[({][^)}]*[)}])""")
 
         private val MATCH_YEAR_REGEX = "^\\d{4}$".toRegex()
         private val MATCH_SEEK_REGEX = "^\\d{2,4}-\\d{1,2}(-\\d{1,2})?$".toRegex()

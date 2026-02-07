@@ -7,15 +7,11 @@ import eu.kanade.domain.manga.model.getComicInfo
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
-import eu.kanade.tachiyomi.data.notification.NotificationHandler
-import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.DiskUtil.NOMEDIA_FILE
 import eu.kanade.tachiyomi.util.storage.saveTo
-import exh.source.MERGED_SOURCE_ID
 import exh.source.isEhBasedSource
 import exh.util.DataSaver
 import exh.util.DataSaver.Companion.getImage
@@ -158,6 +154,14 @@ class Downloader(
             .filter { it.status == Download.State.DOWNLOADING }
             .forEach { it.status = Download.State.ERROR }
 
+        // If stopping with a reason (e.g., no network / only Wi‑Fi), or if any item is already in ERROR,
+        // propagate ERROR to remaining queued items so the UI reflects the global failure.
+        if (reason != null || queueState.value.any { it.status == Download.State.ERROR }) {
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
+        }
+
         if (reason != null) {
             notifier.onWarning(reason)
             return
@@ -262,6 +266,10 @@ class Downloader(
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e)
             notifier.onError(e.message)
+            // Also mark queued items as ERROR so UI reflects global failure (e.g., no internet)
+            queueState.value
+                .filter { it.status == Download.State.QUEUE }
+                .forEach { it.status = Download.State.ERROR }
             stop()
         }
     }
@@ -285,11 +293,6 @@ class Downloader(
         if (chapters.isEmpty()) return
 
         val source = sourceManager.get(manga.source) as? HttpSource ?: return
-
-        // KMK -->
-        if (source.id == MERGED_SOURCE_ID) return
-        // KMK <--
-
         val wasEmpty = queueState.value.isEmpty()
         val chaptersToQueue = chapters.asSequence()
             // Filter out those already downloaded.
@@ -309,25 +312,6 @@ class Downloader(
 
             // Start downloader if needed
             if (autoStart && wasEmpty) {
-                val queuedDownloads = queueState.value.count { it.source !is UnmeteredSource }
-                val maxDownloadsFromSource = queueState.value
-                    .groupBy { it.source }
-                    .filterKeys { it !is UnmeteredSource }
-                    .maxOfOrNull { it.value.size }
-                    ?: 0
-                if (
-                    queuedDownloads > DOWNLOADS_QUEUED_WARNING_THRESHOLD ||
-                    maxDownloadsFromSource > CHAPTERS_PER_SOURCE_QUEUE_WARNING_THRESHOLD
-                ) {
-                    notifier.onWarning(
-                        context.stringResource(
-                            MR.strings.download_queue_size_warning,
-                            context.stringResource(MR.strings.app_name),
-                        ),
-                        WARNING_NOTIF_TIMEOUT_MS,
-                        NotificationHandler.openUrl(context, LibraryUpdateNotifier.HELP_WARNING_URL),
-                    )
-                }
                 DownloadJob.start(context)
             }
         }
@@ -339,10 +323,6 @@ class Downloader(
      * @param download the chapter to be downloaded.
      */
     private suspend fun downloadChapter(download: Download) {
-        // KMK -->
-        if (download.source.id == MERGED_SOURCE_ID) return
-        // KMK <--
-
         val mangaDir = provider.getMangaDir(/* SY --> */ download.manga.ogTitle /* SY <-- */, download.source).getOrElse { e ->
             download.status = Download.State.ERROR
             notifier.onError(e.message, download.chapter.name, download.manga.title, download.manga.id)
@@ -770,9 +750,6 @@ class Downloader(
 
     companion object {
         const val TMP_DIR_SUFFIX = "_tmp"
-        const val WARNING_NOTIF_TIMEOUT_MS = 30_000L
-        const val CHAPTERS_PER_SOURCE_QUEUE_WARNING_THRESHOLD = 15
-        private const val DOWNLOADS_QUEUED_WARNING_THRESHOLD = 30
     }
 }
 

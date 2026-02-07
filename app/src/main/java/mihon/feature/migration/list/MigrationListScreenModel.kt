@@ -7,6 +7,7 @@ import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.online.all.EHentai
@@ -79,6 +80,8 @@ class MigrationListScreenModel(
 
     private var migrateJob: Job? = null
 
+    val uiPreferences = Injekt.get<UiPreferences>()
+
     init {
         screenModelScope.launchIO {
             val manga = mangaIds
@@ -97,6 +100,7 @@ class MigrationListScreenModel(
                                 } else {
                                     null
                                 },
+                                uiPreferences = uiPreferences,
                                 // KMK <--
                             ),
                             parentContext = screenModelScope.coroutineContext,
@@ -119,7 +123,9 @@ class MigrationListScreenModel(
 
     private suspend fun Manga.toSuccessSearchResult(): SearchResult.Success {
         val chapterInfo = getChapterInfo(id)
-        val source = sourceManager.getOrStub(source).getNameForMangaInfo()
+        val source = sourceManager.getOrStub(source).getNameForMangaInfo(
+            uiPreferences = uiPreferences,
+        )
         return SearchResult.Success(
             manga = this,
             chapterCount = chapterInfo.chapterCount,

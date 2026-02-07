@@ -39,9 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,6 +69,7 @@ import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -252,24 +256,33 @@ private fun UpdatesUiItem(
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
 
     // KMK -->
+    val fillermarkPainter = rememberVectorPainter(
+        if (!update.fillermark) {
+            ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)
+        } else {
+            ImageVector.vectorResource(id = R.drawable.ic_fillermark_border_24dp)
+        },
+    )
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
-    val swipeStart = remember(updateSwipeStartAction, update.read, update.bookmark, downloadStateProvider()) {
+    val swipeStart = remember(updateSwipeStartAction, update.read, update.bookmark, update.fillermark, downloadStateProvider()) {
         getSwipeAction(
             action = updateSwipeStartAction,
             read = update.read,
             bookmark = update.bookmark,
             downloadState = downloadStateProvider(),
             background = swipeBackground,
+            fillermarkPainter = fillermarkPainter,
             onSwipe = { onUpdateSwipe(updateSwipeStartAction) },
         )
     }
-    val swipeEnd = remember(updateSwipeEndAction, update.read, update.bookmark, downloadStateProvider()) {
+    val swipeEnd = remember(updateSwipeEndAction, update.read, update.bookmark, update.fillermark, downloadStateProvider()) {
         getSwipeAction(
             action = updateSwipeEndAction,
             read = update.read,
             bookmark = update.bookmark,
             downloadState = downloadStateProvider(),
             background = swipeBackground,
+            fillermarkPainter = fillermarkPainter,
             onSwipe = { onUpdateSwipe(updateSwipeEndAction) },
         )
     }
@@ -393,6 +406,16 @@ private fun UpdatesUiItem(
                         Icon(
                             imageVector = Icons.Filled.Bookmark,
                             contentDescription = stringResource(MR.strings.action_filter_bookmarked),
+                            modifier = Modifier
+                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                    }
+                    if (update.fillermark) {
+                        Icon(
+                            painter = rememberVectorPainter(ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)),
+                            contentDescription = stringResource(KMR.strings.action_fillermark_chapter),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
                             tint = MaterialTheme.colorScheme.primary,

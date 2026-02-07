@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
@@ -27,8 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.reader.components.Automation
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
@@ -77,18 +81,8 @@ fun ReaderAppBars(
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
     // SY -->
-    isExhToolsVisible: Boolean,
-    onSetExhUtilsVisibility: (Boolean) -> Unit,
-    isAutoScroll: Boolean,
-    isAutoScrollEnabled: Boolean,
-    onToggleAutoscroll: (Boolean) -> Unit,
-    autoScrollFrequency: String,
-    onSetAutoScrollFrequency: (String) -> Unit,
-    onClickAutoScrollHelp: () -> Unit,
     onClickRetryAll: () -> Unit,
-    onClickRetryAllHelp: () -> Unit,
     onClickBoostPage: () -> Unit,
-    onClickBoostPageHelp: () -> Unit,
     navBarType: NavBarType,
     currentPageText: String,
     enabledButtons: ImmutableSet<String>,
@@ -133,19 +127,11 @@ fun ReaderAppBars(
                 )
                 // SY -->
                 ExhUtils(
-                    isVisible = isExhToolsVisible,
-                    onSetExhUtilsVisibility = onSetExhUtilsVisibility,
                     backgroundColor = backgroundColor,
-                    isAutoScroll = isAutoScroll,
-                    isAutoScrollEnabled = isAutoScrollEnabled,
-                    onToggleAutoscroll = onToggleAutoscroll,
-                    autoScrollFrequency = autoScrollFrequency,
-                    onSetAutoScrollFrequency = onSetAutoScrollFrequency,
-                    onClickAutoScrollHelp = onClickAutoScrollHelp,
                     onClickRetryAll = onClickRetryAll,
-                    onClickRetryAllHelp = onClickRetryAllHelp,
                     onClickBoostPage = onClickBoostPage,
-                    onClickBoostPageHelp = onClickBoostPageHelp,
+                    bookmarked = bookmarked,
+                    onToggleBookmarked = onToggleBookmarked,
                 )
             }
             // SY <--

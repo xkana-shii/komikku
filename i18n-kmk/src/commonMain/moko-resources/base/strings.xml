@@ -5,6 +5,7 @@
     <string name="action_source_search">Search in source</string>
     <string name="action_library_search">Library search</string>
     <string name="action_toggle_nsfw_only">Toggle NSFW only</string>
+    <string name="action_cancel_update">Cancel update</string>
     <string name="action_bulk_select">Bulk selection mode</string>
     <string name="action_faq_and_guides">FAQ and Guides</string>
     <string name="action_move_up">Move up</string>
@@ -14,6 +15,9 @@
     <string name="action_hide">Hide</string>
     <string name="action_show_hidden_categories">Show hidden categories</string>
     <string name="action_panorama_cover">Panorama cover</string>
+    <string name="action_filter_fillermarked">Fillermarked</string>
+    <string name="action_fillermark_chapter">Fillermark chapter</string>
+    <string name="action_remove_fillermark_chapter">Unfillermark chapter</string>
     <string name="action_open_folder">Open folder</string>
     <string name="action_clear_manga">Clear manga</string>
     <string name="action_update">Update</string>
@@ -72,6 +76,9 @@
     <string name="theme_matrix">Matrix</string>
     <string name="theme_mocha">Mocha</string>
     <string name="theme_sapphire">Sapphire</string>
+    <string name="pref_language_flags">Show language flags</string>
+    <string name="pref_language_flags_summary">Display flags instead of language names</string>
+
     <!-- Custom Color Picker -->
     <string name="pref_custom_color">Palette Personalizer</string>
     <string name="custom_color_description">Pick a seed color for the custom Theme</string>
@@ -111,10 +118,22 @@
     <string name="download_cache_renew_interval_12hour">12 hours</string>
     <string name="download_cache_renew_interval_24hour">1 day</string>
     <string name="download_cache_renew_interval_info">If set to "manual", either refresh each manga or using the "Reindex downloads" action in "Advanced"</string>
+    <string name="trigger_chapter_rename">Trigger chapter rename</string>
     <!-- Tracking section -->
     <string name="pref_auto_sync_progress_from_trackers">Auto sync progress from Trackers</string>
     <string name="sync_progress_from_trackers_up_to_chapter">Sync progress from Trackers up to chapter %d</string>
     <string name="pref_track_on_add_library">Open track menu on adding to library</string>
+    <string name="pref_auto_reread_behavior">Auto reread</string>
+    <!-- Reread prompt -->
+    <string name="reread_prompt_title">Start rereading?</string>
+    <string name="reread_prompt_body">Reset progress to %1$s and set status to Rereading?\n(You can always change this in Settings &gt; Tracking &gt; Auto reread)</string>
+    <string name="chapter_label">Chapter %s</string>
+    <string name="this_chapter_label">this chapter</string>
+    <!-- Auto Reread settings -->
+    <string name="pref_auto_reread_behaviour_title">Auto reread behaviour</string>
+    <string name="pref_auto_reread_reset_to">Reset to</string>
+    <string name="pref_auto_reread_reset_to_zero">Reset to 0</string>
+    <string name="pref_auto_reread_reset_to_current_chapter">Reset to current chapter</string>
     <!-- Sync section -->
     <string name="pref_show_restoring_progress_banner">Show restoring progress banner</string>
     <string name="pref_show_syncing_progress_banner">Show syncing progress banner</string>
@@ -136,6 +155,15 @@
     <string name="preload_library_cover_color">Preload library's cover color</string>
     <string name="auto_update_app">Auto-update app</string>
     <string name="auto_update_app_disable_auto_download">Don't auto download update</string>
+
+    <string name="pref_ignore_rate_limits">Ignore extension rate limits</string>
+    <string name="pref_ignore_rate_limits_summary">Makes page loading, downloading, and browsing faster</string>
+    <string name="pref_max_concurrent_requests">Maximum concurrent requests</string>
+    <string name="pref_max_concurrent_requests_summary">Significantly faster updates and downloads (may cause rate-limiting)</string>
+    <string name="pref_library_update_cache_skip">Disable caching for library updates</string>
+    <string name="pref_library_update_cache_skip_summary">Force network requests during global updates</string>
+    <string name="pref_library_update_parallel_slots">Parallel update slots</string>
+    <string name="pref_library_update_parallel_slots_summary">Number of updates to perform at the same time</string>
     <!-- Onboarding section -->
     <string name="onboarding_permission_external_storage">Access media files permission</string>
     <string name="onboarding_permission_external_storage_description">Allow using custom covers in entry's Edit Info</string>
@@ -195,6 +223,7 @@
     <string name="pref_connections_summary">Discord, more to come..</string>
     <string name="pref_discord_configuration">Open to configure Discord RPC</string>
     <string name="connections_discord">Discord</string>
+    <string name="pref_discord_configuration">Configure Discord RPC</string>
     <string name="connections_discord_info">This Discord Service works through token logging. Use at your own risk. Your token is stored locally and %s does not share it anywhere else</string>
     <string name="pref_discord_rpc">Discord Rich Presence</string>
     <string name="show_chapters_titles_title">Show Chapter Titles</string>
@@ -234,4 +263,14 @@
     <string name="pref_discord_show_download_button_summary">Displays a button to download the app</string>
     <string name="pref_discord_show_discord_button">Show Discord Button</string>
     <string name="pref_discord_show_discord_button_summary">Displays a button to join the Discord server</string>
+
+    <string name="dev_fast_download">Fast Downloads</string>
+    <string name="dev_concurrent_pages">Increases concurrent page downloads</string>
+    <string name="dev_options_password">Unlock Developer Features</string>
+    <string name="dev_options_password_subtitle_enabled">Options enabled. Leave blank and confirm to disable</string>
+    <string name="dev_options_password_subtitle_disabled">Enter password to unlock developer features</string>
+    <string name="dev_options_disabled_by_clear">Developer options disabled</string>
+    <string name="dev_options_enabled">Developer options enabled</string>
+    <string name="dev_options_incorrect_password">Incorrect password</string>
+    <string name="dev_options_password_reset">Reset default password string</string>
 </resources>
