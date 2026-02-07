@@ -155,6 +155,10 @@ fun ReaderAppBars(
                         .weight(1f)
                         .align(Alignment.Start),
                 ) {
+                    Automation(
+                        readerPreferences = readerPreferences,
+                        viewer = viewer,
+                    )
                     ChapterNavigator(
                         isRtl = isRtl,
                         onNextChapter = onNextChapter,
@@ -223,6 +227,10 @@ fun ReaderAppBars(
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small)) {
                 // SY -->
                 if (navBarType == NavBarType.Bottom) {
+                    Automation(
+                        readerPreferences = readerPreferences,
+                        viewer = viewer,
+                    )
                     // SY <--
                     ChapterNavigator(
                         isRtl = isRtl,
