@@ -541,11 +541,6 @@ object SettingsLibraryScreen : SearchableSettings {
                     subtitle = stringResource(KMR.strings.pref_sync_manga_on_add_description),
                 ),
                 // KMK <--
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = libraryPreferences.syncOnAdd(),
-                    title = stringResource(KMR.strings.pref_sync_manga_on_add),
-                    subtitle = stringResource(KMR.strings.pref_sync_manga_on_add_description),
-                ),
             ),
         )
 
