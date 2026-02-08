@@ -62,6 +62,10 @@ fun HistoryScreen(
 ) {
     // KMK -->
     BackHandler(enabled = state.selectionMode, onBack = toggleSelectionMode)
+    BackHandler(!state.searchQuery.isNullOrEmpty()) {
+        onSearchQueryChange(null)
+    }
+
     // KMK <--
 
     Scaffold(
