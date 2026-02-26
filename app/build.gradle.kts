@@ -20,13 +20,13 @@ if (Config.includeTelemetry) {
     }
 }
 
-shortcutHelper.setFilePath("./shortcuts.xml")
-
 val devSecret: String = if (project.hasProperty("devSecret")) {
     project.property("devSecret") as String
 } else {
     "default-secret"
 }
+
+shortcutHelper.setFilePath("./shortcuts.xml")
 
 android {
     namespace = "eu.kanade.tachiyomi"
