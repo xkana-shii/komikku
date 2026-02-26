@@ -31,6 +31,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import eu.kanade.core.util.combine
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -106,6 +107,7 @@ class UpdatesScreenModel(
                             unread = it.filterUnread.toBooleanOrNull(),
                             started = it.filterStarted.toBooleanOrNull(),
                             bookmarked = it.filterBookmarked.toBooleanOrNull(),
+                            fillermarked = it.filterFillermarked.toBooleanOrNull(),
                             hideExcludedScanlators = it.filterExcludedScanlators,
                         ).distinctUntilChanged()
                     },
@@ -161,6 +163,7 @@ class UpdatesScreenModel(
                     prefs.filterDownloaded,
                     prefs.filterStarted,
                     prefs.filterBookmarked,
+                    prefs.filterFillermarked,
                 )
                     .any { it != TriState.DISABLED }
             }
@@ -551,7 +554,7 @@ class UpdatesScreenModel(
                 bookmarkUpdates(listOf(updateItem), !update.bookmark)
             }
             LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
-                bookmarkUpdates(listOf(updateItem), !update.fillermark)
+                fillermarkUpdates(listOf(updateItem), !update.fillermark)
             }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction = when (updateItem.downloadStateProvider()) {
@@ -579,13 +582,15 @@ class UpdatesScreenModel(
             updatesPreferences.filterUnread().changes(),
             updatesPreferences.filterStarted().changes(),
             updatesPreferences.filterBookmarked().changes(),
+            updatesPreferences.filterFillermarked().changes(),
             updatesPreferences.filterExcludedScanlators().changes(),
-        ) { downloaded, unread, started, bookmarked, excludedScanlators ->
+        ) { downloaded, unread, started, bookmarked, fillermarked, excludedScanlators ->
             ItemPreferences(
                 filterDownloaded = downloaded,
                 filterUnread = unread,
                 filterStarted = started,
                 filterBookmarked = bookmarked,
+                filterFillermarked = fillermarked,
                 filterExcludedScanlators = excludedScanlators,
             )
         }
@@ -601,6 +606,7 @@ class UpdatesScreenModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
+        val filterFillermarked: TriState,
         val filterExcludedScanlators: Boolean,
     )
 
