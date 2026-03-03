@@ -19,6 +19,7 @@ class TrackerManager {
         const val ANILIST = 2L
         const val KITSU = 3L
         const val KAVITA = 8L
+        const val MANGABAKA = 10L
 
         // SY --> Mangadex from Neko
         const val MDLIST = 60L
@@ -37,10 +38,21 @@ class TrackerManager {
     val kavita = Kavita(KAVITA)
     val suwayomi = Suwayomi(9L)
 
-    val mangaBaka = MangaBaka(10L)
+    val mangaBaka = MangaBaka(MANGABAKA)
 
-    val trackers =
-        listOf(mdList, myAnimeList, aniList, kitsu, shikimori, bangumi, komga, mangaUpdates, kavita, suwayomi, mangaBaka)
+    val trackers = listOf(
+        mdList,
+        myAnimeList,
+        aniList,
+        kitsu,
+        shikimori,
+        bangumi,
+        komga,
+        mangaUpdates,
+        kavita,
+        suwayomi,
+        mangaBaka,
+    )
 
     fun loggedInTrackers() = trackers.filter { it.isLoggedIn }
 

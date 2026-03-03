@@ -1,28 +1,43 @@
 package eu.kanade.tachiyomi.data.track.mangabaka
 
+import eu.kanade.tachiyomi.BuildConfig
+import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
+import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import okhttp3.Response
-import java.io.IOException
+import uy.kohesive.injekt.injectLazy
 
-class MangaBakaInterceptor(
-    private val tracker: MangaBaka,
-) : Interceptor {
+class MangaBakaInterceptor(private val mangaBaka: MangaBaka) : Interceptor {
 
-    private var pat: String? = tracker.restoreSession()
+    private val json: Json by injectLazy()
+
+    private var oauth: MangaBakaOAuth? = mangaBaka.restoreToken()
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        val token = pat ?: throw IOException("Not authenticated with MangaBaka")
 
-        val authRequest = originalRequest.newBuilder()
-            .addHeader("x-api-key", token)
-            .header("User-Agent", "Komikku")
+        var currentAuth = oauth ?: throw Exception("Not authenticated with MangaBaka")
+
+        if (currentAuth.isExpired()) {
+            val response = chain.proceed(MangaBakaApi.refreshTokenRequest(currentAuth.refreshToken))
+            if (response.isSuccessful) {
+                currentAuth = json.decodeFromString(response.body.string())
+                setAuth(currentAuth)
+            } else {
+                response.close()
+            }
+        }
+
+        return originalRequest.newBuilder()
+            .header("User-Agent", "Mihon/v${BuildConfig.VERSION_NAME} (Android) (https://github.com/mihonapp/mihon)")
+            .addHeader("Authorization", "Bearer ${currentAuth.accessToken}")
             .build()
-
-        return chain.proceed(authRequest)
+            .let(chain::proceed)
     }
 
-    fun newAuth(pat: String?) {
-        this.pat = pat
+    fun setAuth(oauth: MangaBakaOAuth?) {
+        this.oauth = oauth
+
+        mangaBaka.saveToken(oauth)
     }
 }
