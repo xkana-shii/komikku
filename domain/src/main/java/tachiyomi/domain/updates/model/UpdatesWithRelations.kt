@@ -15,6 +15,7 @@ data class UpdatesWithRelations(
     val chapterUrl: String,
     val read: Boolean,
     val bookmark: Boolean,
+    val fillermark: Boolean,
     val lastPageRead: Long,
     val sourceId: Long,
     val dateFetch: Long,

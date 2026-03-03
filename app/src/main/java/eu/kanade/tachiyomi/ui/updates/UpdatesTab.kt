@@ -24,6 +24,7 @@ import eu.kanade.presentation.updates.UpdatesDeleteConfirmationDialog
 import eu.kanade.presentation.updates.UpdatesFilterDialog
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.DiscordScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
@@ -79,6 +80,8 @@ data object UpdatesTab : Tab {
         val screenModel = rememberScreenModel { UpdatesScreenModel() }
         val settingsScreenModel = rememberScreenModel { UpdatesSettingsScreenModel() }
         val state by screenModel.state.collectAsState()
+        val libraryUpdateStatus = Injekt.get<LibraryUpdateStatus>()
+        val libraryUpdateInProgress by libraryUpdateStatus.isRunning.collectAsState(initial = false)
 
         // KMK -->
         val usePanoramaCover by settingsScreenModel.updatesPreferences.usePanoramaCover().collectAsState()
@@ -91,12 +94,15 @@ data object UpdatesTab : Tab {
             // SY -->
             preserveReadingPosition = screenModel.preserveReadingPosition,
             // SY <--
+            libraryUpdateInProgress = libraryUpdateInProgress,
             onClickCover = { item -> navigator.push(MangaScreen(item.update.mangaId)) },
             onSelectAll = screenModel::toggleAllSelection,
             onInvertSelection = screenModel::invertSelection,
             onUpdateLibrary = screenModel::updateLibrary,
+            onCancelUpdateLibrary = { screenModel.cancelLibraryUpdate(context) },
             onDownloadChapter = screenModel::downloadChapters,
             onMultiBookmarkClicked = screenModel::bookmarkUpdates,
+            onMultiFillermarkClicked = screenModel::fillermarkUpdates,
             onMultiMarkAsReadClicked = screenModel::markUpdatesRead,
             onMultiDeleteClicked = screenModel::showConfirmDeleteChapters,
             // KMK -->

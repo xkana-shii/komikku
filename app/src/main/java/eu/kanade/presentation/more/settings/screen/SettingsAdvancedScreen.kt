@@ -3,6 +3,7 @@ package eu.kanade.presentation.more.settings.screen
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import android.webkit.WebStorage
 import android.webkit.WebView
@@ -39,6 +40,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.advanced.ClearDatabaseScreen
 import eu.kanade.presentation.more.settings.screen.debug.DebugInfoScreen
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.download.DownloadCache
@@ -47,6 +49,7 @@ import eu.kanade.tachiyomi.data.library.MetadataUpdateJob
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.NetworkPreferences
+import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.PREF_DOH_360
 import eu.kanade.tachiyomi.network.PREF_DOH_ADGUARD
 import eu.kanade.tachiyomi.network.PREF_DOH_ALIDNS
@@ -59,6 +62,9 @@ import eu.kanade.tachiyomi.network.PREF_DOH_NJALLA
 import eu.kanade.tachiyomi.network.PREF_DOH_QUAD101
 import eu.kanade.tachiyomi.network.PREF_DOH_QUAD9
 import eu.kanade.tachiyomi.network.PREF_DOH_SHECAN
+import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.network.interceptor.FlareSolverrInterceptor
+import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.source.AndroidSourceManager
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.util.CrashLogUtil
@@ -77,10 +83,16 @@ import exh.util.toAnnotatedString
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.json.Json
 import logcat.LogPriority
 import okhttp3.Headers
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchNonCancellable
@@ -102,7 +114,9 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import uy.kohesive.injekt.injectLazy
 import java.io.File
+import tachiyomi.core.common.preference.Preference as BasePreference
 
 object SettingsAdvancedScreen : SearchableSettings {
     @Suppress("unused")
@@ -267,9 +281,13 @@ object SettingsAdvancedScreen : SearchableSettings {
     ): Preference.PreferenceGroup {
         val context = LocalContext.current
         val networkHelper = remember { Injekt.get<NetworkHelper>() }
+        val scope = rememberCoroutineScope()
 
         val userAgentPref = networkPreferences.defaultUserAgent()
         val userAgent by userAgentPref.collectAsState()
+        val flareSolverrUrlPref = networkPreferences.flareSolverrUrl()
+        val enableFlareSolverrPref = networkPreferences.enableFlareSolverr()
+        val enableFlareSolverr by enableFlareSolverrPref.collectAsState()
 
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.label_network),
@@ -349,6 +367,28 @@ object SettingsAdvancedScreen : SearchableSettings {
                         context.toast(MR.strings.requires_app_restart)
                     },
                 ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = enableFlareSolverrPref,
+                    title = stringResource(SYMR.strings.pref_enable_flare_solverr),
+                    subtitle = stringResource(SYMR.strings.pref_enable_flare_solverr_summary),
+                ),
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = flareSolverrUrlPref,
+                    title = stringResource(SYMR.strings.pref_flare_solverr_url),
+                    enabled = enableFlareSolverr,
+                    subtitle = stringResource(SYMR.strings.pref_flare_solverr_url_summary),
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(SYMR.strings.pref_test_flare_solverr_and_update_user_agent),
+                    enabled = enableFlareSolverr,
+                    subtitle = stringResource(SYMR.strings.pref_test_flare_solverr_and_update_user_agent_summary),
+                    onClick = {
+                        scope.launch {
+                            testFlareSolverrAndUpdateUserAgent(flareSolverrUrlPref, userAgentPref, context)
+                        }
+                    },
+                ),
+
             ),
         )
     }
@@ -542,6 +582,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                 // KMK -->
                 Preference.PreferenceItem.InfoPreference(stringResource(KMR.strings.pref_private_installer_warning)),
                 // KMK <--
+                /*
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.ext_revoke_trust),
                     onClick = {
@@ -549,6 +590,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                         context.toast(MR.strings.requires_app_restart)
                     },
                 ),
+                 */
             ),
         )
     }
@@ -769,9 +811,66 @@ object SettingsAdvancedScreen : SearchableSettings {
         val exhPreferences = remember { Injekt.get<ExhPreferences>() }
         val delegateSourcePreferences = remember { Injekt.get<DelegateSourcePreferences>() }
         val securityPreferences = remember { Injekt.get<SecurityPreferences>() }
+
+        val devOptionsAreEnabled by sourcePreferences.devOptionsEnabled().collectAsState()
+        val devOptionsPasswordPref = sourcePreferences.devOptionsPassword()
+        val devOptionsPassword by devOptionsPasswordPref.collectAsState()
+
+        val conditionalPreferenceItems = if (devOptionsAreEnabled) {
+            listOf<Preference.PreferenceItem<out Any, out Any>>(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = sourcePreferences.fastDownloadEnabled(),
+                    title = stringResource(KMR.strings.dev_fast_download),
+                    subtitle = stringResource(KMR.strings.dev_concurrent_pages),
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
         return Preference.PreferenceGroup(
             title = stringResource(SYMR.strings.developer_tools),
             preferenceItems = persistentListOf(
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = devOptionsPasswordPref,
+                    title = stringResource(KMR.strings.dev_options_password),
+                    subtitle = if (devOptionsAreEnabled) {
+                        stringResource(KMR.strings.dev_options_password_subtitle_enabled)
+                    } else {
+                        stringResource(KMR.strings.dev_options_password_subtitle_disabled)
+                    },
+                    onValueChanged = { password ->
+                        if (password.isBlank()) {
+                            if (devOptionsAreEnabled) {
+                                sourcePreferences.devOptionsEnabled().set(false)
+                                sourcePreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_disabled_by_clear)
+                            }
+                            true
+                        } else {
+                            val valid = password == BuildConfig.DEV_OPTIONS
+                            sourcePreferences.devOptionsEnabled().set(valid)
+                            if (valid) {
+                                context.toast(KMR.strings.dev_options_enabled)
+                            } else {
+                                sourcePreferences.fastDownloadEnabled().set(false)
+                                context.toast(KMR.strings.dev_options_incorrect_password)
+                            }
+                            valid
+                        }
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(KMR.strings.dev_options_password_reset),
+                    enabled = remember(devOptionsPassword) { devOptionsPassword != devOptionsPasswordPref.defaultValue() },
+                    onClick = {
+                        devOptionsPasswordPref.delete()
+                        sourcePreferences.devOptionsEnabled().set(false)
+                        sourcePreferences.fastDownloadEnabled().set(false)
+                        context.toast(MR.strings.requires_app_restart)
+                    },
+                ),
+                *conditionalPreferenceItems.toTypedArray(),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = exhPreferences.isHentaiEnabled(),
                     title = stringResource(SYMR.strings.toggle_hentai_features),
@@ -869,6 +968,59 @@ object SettingsAdvancedScreen : SearchableSettings {
                 ),
             ),
         )
+    }
+
+    @OptIn(InternalSerializationApi::class)
+    private suspend fun testFlareSolverrAndUpdateUserAgent(
+        flareSolverrUrlPref: BasePreference<String>,
+        userAgentPref: BasePreference<String>,
+        context: android.content.Context,
+    ) {
+        val networkHelper: NetworkHelper by injectLazy()
+        val json: Json by injectLazy()
+        val jsonMediaType = "application/json".toMediaType()
+
+        try {
+            withContext(Dispatchers.IO) {
+                val flareSolverUrl = flareSolverrUrlPref.get().trim()
+                val flareSolverResponse = with(json) {
+                    networkHelper.client.newCall(
+                        POST(
+                            url = flareSolverUrl,
+                            body =
+                            Json.encodeToString(
+                                FlareSolverrInterceptor.CFClearance.FlareSolverRequest(
+                                    "request.get",
+                                    "https://www.google.com/",
+                                    returnOnlyCookies = true,
+                                    maxTimeout = 60000,
+                                ),
+                            ).toRequestBody(jsonMediaType),
+                        ),
+                    ).awaitSuccess().parseAs<FlareSolverrInterceptor.CFClearance.FlareSolverResponse>()
+                }
+
+                if (flareSolverResponse.solution.status in 200..299) {
+                    // Set the user agent to the one provided by FlareSolverr
+                    userAgentPref.set(flareSolverResponse.solution.userAgent)
+
+                    val message = SYMR.strings.flare_solver_user_agent_update_success
+                    withContext(Dispatchers.Main) {
+                        context.toast(message)
+                    }
+                } else {
+                    val message = SYMR.strings.flare_solver_update_user_agent_failed
+                    withContext(Dispatchers.Main) {
+                        context.toast(message)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, tag = "FlareSolverr") { "Failed to resolve with FlareSolverr: ${e.message}" }
+            withContext(Dispatchers.Main) {
+                context.toast(SYMR.strings.flare_solver_error)
+            }
+        }
     }
 
     private var job: Job? = null

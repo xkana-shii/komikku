@@ -55,6 +55,10 @@ object SettingsDownloadScreen : SearchableSettings {
                 title = stringResource(MR.strings.split_tall_images),
                 subtitle = stringResource(MR.strings.split_tall_images_summary),
             ),
+            Preference.PreferenceItem.SwitchPreference(
+                preference = downloadPreferences.triggerChapterRename(),
+                title = stringResource(KMR.strings.trigger_chapter_rename),
+            ),
             Preference.PreferenceItem.SliderPreference(
                 value = parallelSourceLimit,
                 valueRange = 1..10,

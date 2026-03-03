@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.source
 
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import exh.source.EH_PACKAGE
 import exh.source.LOCAL_SOURCE_PACKAGE
@@ -15,18 +16,21 @@ fun Source.getNameForMangaInfo(
     // SY -->
     mergeSources: List<Source>? = null,
     // SY <--
+    uiPreferences: UiPreferences,
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
     val enabledLanguages = preferences.enabledLanguages().get()
-        .filterNot { it in listOf("all", "other") }
+        .filterNot { it in listOf("none") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
+    val showFlags = uiPreferences.showFlags().get()
     return when {
         // SY -->
         !mergeSources.isNullOrEmpty() -> getMergedSourcesString(
             mergeSources,
             enabledLanguages,
             hasOneActiveLanguages,
+            showFlags,
         )
         // SY <--
         // KMK -->
@@ -35,13 +39,21 @@ fun Source.getNameForMangaInfo(
         // For edge cases where user disables a source they got manga of in their library.
         hasOneActiveLanguages && !isInEnabledLanguages ->
             // KMK -->
-            "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
+            if (showFlags) {
+                "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
+            } else {
+                "$name (${lang.uppercase()})"
+            }
         // KMK <--
         // Hide the language tag when only one language is used.
-        hasOneActiveLanguages && isInEnabledLanguages -> name
+        hasOneActiveLanguages && isInEnabledLanguages -> "$name (${lang.uppercase()})"
         else ->
             // KMK -->
-            "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
+            if (showFlags) {
+                "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
+            } else {
+                "$name (${lang.uppercase()})"
+            }
         // KMK <--
     }
 }
@@ -51,6 +63,7 @@ private fun getMergedSourcesString(
     mergeSources: List<Source>,
     enabledLangs: List<String>,
     onlyName: Boolean,
+    showFlags: Boolean = true,
 ): String {
     return if (onlyName) {
         mergeSources.joinToString { source ->
@@ -60,10 +73,14 @@ private fun getMergedSourcesString(
                 // KMK <--
                 source.lang !in enabledLangs ->
                     // KMK -->
-                    "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
+                    if (showFlags) {
+                        "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
+                    } else {
+                        "${source.name} (${source.lang.uppercase()})"
+                    }
                 // KMK <--
                 else ->
-                    source.name
+                    "${source.name} (${source.lang.uppercase()})"
             }
         }
     } else {
@@ -72,7 +89,11 @@ private fun getMergedSourcesString(
             if (source.isLocalOrStub()) {
                 source.toString()
             } else {
-                "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
+                if (showFlags) {
+                    "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
+                } else {
+                    "${source.name} (${source.lang.uppercase()})"
+                }
             }
             // KMK <--
         }

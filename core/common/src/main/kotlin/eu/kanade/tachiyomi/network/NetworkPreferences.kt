@@ -12,6 +12,14 @@ class NetworkPreferences(
         return preferenceStore.getBoolean("verbose_logging", verboseLogging)
     }
 
+    fun enableFlareSolverr(): Preference<Boolean> {
+        return preferenceStore.getBoolean("enable_flare_solverr", false)
+    }
+
+    fun flareSolverrUrl(): Preference<String> {
+        return preferenceStore.getString("flare_solverr_url", "http://localhost:8191/v1")
+    }
+
     fun dohProvider(): Preference<Int> {
         return preferenceStore.getInt("doh_provider", -1)
     }
@@ -22,4 +30,14 @@ class NetworkPreferences(
             "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
         )
     }
+
+    // KMK -->
+    fun ignoreRateLimits(): Preference<Boolean> {
+        return preferenceStore.getBoolean("ignore_rate_limits", false)
+    }
+
+    fun maxConcurrentRequests(): Preference<Int> {
+        return preferenceStore.getInt("max_concurrent_requests", 64)
+    }
+    // KMK <--
 }

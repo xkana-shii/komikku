@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.FlipToBack
 import androidx.compose.material.icons.outlined.Refresh
@@ -35,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -53,13 +55,16 @@ fun UpdateScreen(
     // SY -->
     preserveReadingPosition: Boolean,
     // SY <--
+    libraryUpdateInProgress: Boolean,
     onClickCover: (UpdatesItem) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Boolean,
+    onCancelUpdateLibrary: () -> Boolean,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
+    onMultiFillermarkClicked: (List<UpdatesItem>, fillermark: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<UpdatesItem>, read: Boolean) -> Unit,
     onMultiDeleteClicked: (List<UpdatesItem>) -> Unit,
     // KMK -->
@@ -83,6 +88,8 @@ fun UpdateScreen(
             UpdatesAppBar(
                 onCalendarClicked = { onCalendarClicked() },
                 onUpdateLibrary = { onUpdateLibrary() },
+                onCancelUpdateLibrary = { onCancelUpdateLibrary() },
+                isUpdatingLibrary = libraryUpdateInProgress,
                 onFilterClicked = { onFilterClicked() },
                 hasFilters = hasActiveFilters,
                 actionModeCounter = state.selected.size,
@@ -97,6 +104,7 @@ fun UpdateScreen(
                 selected = state.selected,
                 onDownloadChapter = onDownloadChapter,
                 onMultiBookmarkClicked = onMultiBookmarkClicked,
+                onMultiFillermarkClicked = onMultiFillermarkClicked,
                 onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
                 onMultiDeleteClicked = onMultiDeleteClicked,
             )
@@ -165,6 +173,8 @@ fun UpdateScreen(
 private fun UpdatesAppBar(
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
+    onCancelUpdateLibrary: () -> Unit,
+    isUpdatingLibrary: Boolean,
     onFilterClicked: () -> Unit,
     hasFilters: Boolean,
     // For action mode
@@ -193,9 +203,15 @@ private fun UpdatesAppBar(
                         onClick = onCalendarClicked,
                     ),
                     AppBar.Action(
-                        title = stringResource(MR.strings.action_update_library),
-                        icon = Icons.Outlined.Refresh,
-                        onClick = onUpdateLibrary,
+                        title = if (isUpdatingLibrary) stringResource(KMR.strings.action_cancel_update) else stringResource(MR.strings.action_update_library),
+                        icon = if (isUpdatingLibrary) Icons.Outlined.Close else Icons.Outlined.Refresh,
+                        onClick = {
+                            if (isUpdatingLibrary) {
+                                onCancelUpdateLibrary()
+                            } else {
+                                onUpdateLibrary()
+                            }
+                        },
                     ),
                 ),
             )
@@ -227,6 +243,7 @@ private fun UpdatesBottomBar(
     selected: List<UpdatesItem>,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
+    onMultiFillermarkClicked: (List<UpdatesItem>, fillermark: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<UpdatesItem>, read: Boolean) -> Unit,
     onMultiDeleteClicked: (List<UpdatesItem>) -> Unit,
 ) {
@@ -239,6 +256,12 @@ private fun UpdatesBottomBar(
         onRemoveBookmarkClicked = {
             onMultiBookmarkClicked.invoke(selected, false)
         }.takeIf { selected.fastAll { it.update.bookmark } },
+        onFillermarkClicked = {
+            onMultiFillermarkClicked.invoke(selected, true)
+        }.takeIf { selected.fastAny { !it.update.fillermark } },
+        onRemoveFillermarkClicked = {
+            onMultiFillermarkClicked.invoke(selected, false)
+        }.takeIf { selected.fastAll { it.update.fillermark } },
         onMarkAsReadClicked = {
             onMultiMarkAsReadClicked(selected, true)
         }.takeIf { selected.fastAny { !it.update.read } },

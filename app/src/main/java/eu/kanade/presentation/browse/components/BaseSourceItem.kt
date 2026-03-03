@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import eu.kanade.domain.source.model.installedExtension
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
@@ -19,6 +20,8 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.icons.FlagEmoji
 import tachiyomi.presentation.core.util.secondaryItemAlpha
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 @Composable
 fun BaseSourceItem(
@@ -55,6 +58,7 @@ private val defaultContent: @Composable RowScope.(
     String,
     // KMK <--
 ) -> Unit = { source, sourceLangString, /* KMK --> */ lang /* KMK <-- */ ->
+    val uiPreferences = Injekt.get<UiPreferences>()
     Column(
         modifier = Modifier
             .padding(horizontal = MaterialTheme.padding.medium)
@@ -79,10 +83,15 @@ private val defaultContent: @Composable RowScope.(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
         ) {
             // KMK <--
+            val showFlags = uiPreferences.showFlags().get()
             if (sourceLangString != null) {
                 Text(
-                    text = /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
-                        sourceLangString,
+                    text = if (showFlags) {
+                        /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
+                            sourceLangString
+                    } else {
+                        sourceLangString
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,

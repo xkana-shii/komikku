@@ -187,13 +187,22 @@ internal class HttpPageLoader(
      *
      * @return a list of [PriorityPage] that were added to the [queue]
      */
+    // Update preloadNextPages to handle negative `amount` as "all remaining pages".
+
     private fun preloadNextPages(currentPage: ReaderPage, amount: Int): List<PriorityPage> {
         val pageIndex = currentPage.index
         val pages = currentPage.chapter.pages ?: return emptyList()
         if (pageIndex == pages.lastIndex) return emptyList()
 
+        // If amount is negative (e.g. -1), interpret as "all remaining pages"
+        val endIndexExclusive = if (amount < 0) {
+            pages.size
+        } else {
+            min(pageIndex + 1 + amount, pages.size)
+        }
+
         return pages
-            .subList(pageIndex + 1, min(pageIndex + 1 + amount, pages.size))
+            .subList(pageIndex + 1, endIndexExclusive)
             .mapNotNull {
                 if (it.status == Page.State.Queue) {
                     PriorityPage(it, 0).apply { queue.offer(this) }
@@ -201,6 +210,19 @@ internal class HttpPageLoader(
                     null
                 }
             }
+    }
+
+    /**
+     * Enqueue all pages of the chapter with low priority so downloads start immediately.
+     * Intended to be called when preloading an adjacent chapter was requested.
+     */
+    fun preloadAllPages() {
+        val pages = chapter.pages ?: return
+        pages.forEach {
+            if (it.status == Page.State.Queue) {
+                queue.offer(PriorityPage(it, 0))
+            }
+        }
     }
 
     /**

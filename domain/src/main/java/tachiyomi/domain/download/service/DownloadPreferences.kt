@@ -15,6 +15,8 @@ class DownloadPreferences(
 
     fun splitTallImages() = preferenceStore.getBoolean("split_tall_images", true)
 
+    fun triggerChapterRename() = preferenceStore.getBoolean("trigger_chapter_rename", true)
+
     fun autoDownloadWhileReading() = preferenceStore.getInt("auto_download_while_reading", 0)
 
     fun removeAfterReadSlots() = preferenceStore.getInt("remove_after_read_slots", -1)
@@ -25,6 +27,8 @@ class DownloadPreferences(
     )
 
     fun removeBookmarkedChapters() = preferenceStore.getBoolean("pref_remove_bookmarked", false)
+
+    fun notDownloadFillermarkedItems() = preferenceStore.getBoolean("pref_no_download_fillermarked", false)
 
     fun removeExcludeCategories() = preferenceStore.getStringSet(REMOVE_EXCLUDE_CATEGORIES_PREF_KEY, emptySet())
 

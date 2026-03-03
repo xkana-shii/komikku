@@ -422,7 +422,7 @@ open class BrowseSourceScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate())
+            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             // KMK -->
             if (new.favorite && libraryPreferences.syncOnAdd().get()) {
                 withIOContext {

@@ -17,8 +17,6 @@ fun ReaderTopBar(
     mangaTitle: String?,
     chapterTitle: String?,
     navigateUp: () -> Unit,
-    bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -34,23 +32,6 @@ fun ReaderTopBar(
             AppBarActions(
                 actions = persistentListOf<AppBar.AppBarAction>().builder()
                     .apply {
-                        add(
-                            AppBar.Action(
-                                title = stringResource(
-                                    if (bookmarked) {
-                                        MR.strings.action_remove_bookmark
-                                    } else {
-                                        MR.strings.action_bookmark
-                                    },
-                                ),
-                                icon = if (bookmarked) {
-                                    Icons.Outlined.Bookmark
-                                } else {
-                                    Icons.Outlined.BookmarkBorder
-                                },
-                                onClick = onToggleBookmarked,
-                            ),
-                        )
                         onOpenInWebView?.let {
                             add(
                                 AppBar.OverflowAction(

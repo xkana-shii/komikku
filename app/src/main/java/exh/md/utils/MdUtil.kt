@@ -233,8 +233,8 @@ class MdUtil {
                 val altTitlesDesc = altTitles
                     .joinToString(
                         "\n",
-                        "${Injekt.get<Application>().stringResource(SYMR.strings.alt_titles)}:\n",
-                    ) { "• $it" }
+                        "----\n#### ${Injekt.get<Application>().stringResource(SYMR.strings.alt_titles)}\n",
+                    ) { "- $it" }
                 description + (if (description.isBlank()) "" else "\n\n") + Parser.unescapeEntities(
                     altTitlesDesc,
                     false,
