@@ -399,8 +399,8 @@ class ReaderViewModel @JvmOverloads constructor(
             val updated = refreshed.copy(
                 status = rereadStatus,
                 lastChapterRead = chapterProgress,
-                startDate = System.currentTimeMillis(),
-                finishDate = 0L,
+                startDate = if (refreshed.startDate == 0L) System.currentTimeMillis() else refreshed.startDate,
+                finishDate = if (refreshed.finishDate == 0L) 0L else refreshed.finishDate,
             )
             service.update(updated.toDbTrack(), didReadChapter = false)
             insertTrack.await(updated)
