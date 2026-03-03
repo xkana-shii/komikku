@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.track.mangabaka
 
 import android.net.Uri
-import android.text.Html
 import androidx.core.net.toUri
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.TrackerManager
@@ -9,7 +8,6 @@ import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaItemResult
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaListResult
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaSearchResult
-import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
@@ -43,26 +41,8 @@ class MangaBakaApi(
 
     private val authClient = client.newBuilder().addInterceptor(interceptor).build()
 
-    suspend fun resolveId(seriesId: Long): Long {
-        return withIOContext {
-            with(json) {
-                val item = authClient.newCall(GET("$API_BASE_URL/v1/series/$seriesId"))
-                    .awaitSuccess()
-                    .parseAs<MangaBakaItemResult>()
-                    .data
-
-                item.mergedWith ?: item.id
-            }
-        }
-    }
-
     suspend fun addLibManga(track: Track): Track {
         return withIOContext {
-            val resolvedId = resolveId(track.remote_id)
-            if (resolvedId != track.remote_id) {
-                track.remote_id = resolvedId
-            }
-
             val url = "$LIBRARY_API_URL/${track.remote_id}"
             val body = buildJsonObject {
                 put("is_private", track.private)
@@ -101,8 +81,7 @@ class MangaBakaApi(
 
     suspend fun deleteLibManga(track: DomainTrack) {
         withIOContext {
-            val resolvedId = resolveId(track.remoteId)
-            val url = "$LIBRARY_API_URL/$resolvedId"
+            val url = "$LIBRARY_API_URL/${track.remoteId}"
 
             authClient
                 .newCall(DELETE(url))
@@ -114,42 +93,19 @@ class MangaBakaApi(
         return withIOContext {
             with(json) {
                 try {
-                    val originalId = track.remote_id
-
-                    val userData = authClient.newCall(GET("$LIBRARY_API_URL/$originalId"))
+                    val url = "$LIBRARY_API_URL/${track.remote_id}"
+                    val userData = authClient.newCall(GET(url))
                         .awaitSuccess()
                         .parseAs<MangaBakaListResult>()
                         .data
 
-                    val additionalData = runCatching {
-                        authClient.newCall(GET("$API_BASE_URL/v1/series/$originalId"))
-                            .awaitSuccess()
-                            .parseAs<MangaBakaItemResult>()
-                            .data
-                    }.getOrElse { e ->
-                        if (e is HttpException && e.code == 404) {
-                            val resolvedId = resolveId(originalId)
-                            authClient.newCall(GET("$API_BASE_URL/v1/series/$resolvedId"))
-                                .awaitSuccess()
-                                .parseAs<MangaBakaItemResult>()
-                                .data
-                        } else {
-                            throw e
-                        }
-                    }
-
-                    val resolvedId = additionalData.mergedWith ?: additionalData.id
-
-                    // If merged, migrate: delete old entry and re-add under the new ID
-                    if (resolvedId != originalId) {
-                        runCatching {
-                            authClient.newCall(DELETE("$LIBRARY_API_URL/$originalId")).awaitSuccess()
-                        }
-                        track.remote_id = resolvedId
-                    }
+                    val additionalData = authClient.newCall(GET("$API_BASE_URL/v1/series/${track.remote_id}"))
+                        .awaitSuccess()
+                        .parseAs<MangaBakaItemResult>()
+                        .data
 
                     Track.create(TrackerManager.MANGABAKA).apply {
-                        remote_id = resolvedId
+                        remote_id = track.remote_id
                         title = additionalData.title
                         status = userData.getStatus()
                         score = userData.rating?.toDouble() ?: 0.0
@@ -159,7 +115,7 @@ class MangaBakaApi(
                         last_chapter_read = userData.progressChapter ?: 0.0
                         total_chapters = additionalData.totalChapters?.toLong() ?: 0
                         private = userData.isPrivate
-                    }.also { if (resolvedId != originalId) updateLibManga(it) }
+                    }
                 } catch (e: HttpException) {
                     if (e.code == 404) {
                         null
@@ -173,28 +129,7 @@ class MangaBakaApi(
 
     suspend fun updateLibManga(track: Track): Track {
         return withIOContext {
-            val originalId = track.remote_id
-            val resolvedId = resolveId(originalId)
-
-            if (resolvedId != originalId) {
-                runCatching {
-                    authClient.newCall(DELETE("$LIBRARY_API_URL/$originalId")).awaitSuccess()
-                }
-                track.remote_id = resolvedId
-            }
-
             val url = "$LIBRARY_API_URL/${track.remote_id}"
-
-            val entry = runCatching {
-                with(json) { authClient.newCall(GET(url)).awaitSuccess().parseAs<MangaBakaListResult>().data }
-            }.getOrNull()
-
-            val nextRereads = if (track.toApiStatus() == "completed" && entry?.state == "rereading") {
-                (entry.numberOfRereads ?: 0) + 1
-            } else {
-                entry?.numberOfRereads
-            }
-
             val body = buildJsonObject {
                 put("state", track.toApiStatus())
                 put("is_private", track.private)
@@ -218,9 +153,6 @@ class MangaBakaApi(
                 } else {
                     put("finish_date", null)
                 }
-                if (nextRereads != null) {
-                    put("number_of_rereads", nextRereads)
-                }
             }
                 .toString()
                 .toRequestBody()
@@ -233,46 +165,10 @@ class MangaBakaApi(
         }
     }
 
-    suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
-        return withIOContext {
-            with(json) {
-                val resolvedId = resolveId(track.remoteId)
-
-                authClient.newCall(GET("$API_BASE_URL/v1/series/$resolvedId"))
-                    .awaitSuccess()
-                    .parseAs<MangaBakaItemResult>()
-                    .data
-                    .let {
-                        TrackMangaMetadata(
-                            remoteId = it.id,
-                            title = it.title,
-                            thumbnailUrl = it.cover.raw.url,
-                            description = android.text.Html.fromHtml(it.description.orEmpty(), android.text.Html.FROM_HTML_MODE_LEGACY)
-                                .toString()
-                                .trim()
-                                .ifEmpty { null },
-                            authors = it.authors?.joinToString(", ")?.ifEmpty { null },
-                            artists = it.artists?.joinToString(", ")?.ifEmpty { null },
-                        )
-                    }
-            }
-        }
-    }
-
     suspend fun search(search: String): List<TrackSearch> {
         return withIOContext {
-            val searchId = when {
-                "mangaupdates" in search -> "mu:" + search.substringAfter("series/").substringBefore('/')
-                "anilist" in search -> "al:" + search.substringAfter("manga/").substringBefore('/')
-                "myanimelist" in search -> "mal:" + search.substringAfter("manga/").substringBefore('/')
-                else -> Regex(
-                    "^(?:anilist|al|kitsu|kt|mangaupdates|mu|myanimelist|mal|bangumi|mangabaka|shikimori):",
-                    RegexOption.IGNORE_CASE,
-                ).replace(search) { it.value.lowercase() }
-            }
-
             val url = "$API_BASE_URL/v1/series/search".toUri().buildUpon()
-                .appendQueryParameter("q", searchId)
+                .appendQueryParameter("q", search)
                 .appendQueryParameter("type_not", "novel")
                 .build()
             with(json) {
@@ -280,16 +176,15 @@ class MangaBakaApi(
                     .awaitSuccess()
                     .parseAs<MangaBakaSearchResult>()
                     .data
-                    .filter { it.state != "merged" }
                     .map {
                         TrackSearch.create(trackId).apply {
-                            remote_id = it.mergedWith ?: it.id
+                            remote_id = it.id
                             title = it.title
-                            summary = Html.fromHtml(it.description.orEmpty(), Html.FROM_HTML_MODE_LEGACY).toString().trim()
+                            summary = it.description?.trim().orEmpty()
                             total_chapters = it.totalChapters?.toLongOrNull() ?: 0
                             score = it.rating?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)?.toDouble() ?: -1.0
-                            cover_url = it.cover.x350.x3.orEmpty()
-                            tracking_url = "$BASE_URL/${it.mergedWith ?: it.id}"
+                            cover_url = it.cover.x250.x1.orEmpty()
+                            tracking_url = "$BASE_URL/${it.id}"
                             start_date = it.year?.toString().orEmpty()
                             publishing_status = it.status
                             publishing_type = it.type.replaceFirstChar { c ->
@@ -325,7 +220,7 @@ class MangaBakaApi(
     companion object {
         private const val CLIENT_ID = "wOWYtfnAMjnornECeqIclcxOdUayYGqA"
 
-        const val BASE_URL = "https://mangabaka.org"
+        private const val BASE_URL = "https://mangabaka.org"
         private const val API_BASE_URL = "https://api.mangabaka.dev"
         private const val LIBRARY_API_URL = "$API_BASE_URL/v1/my/library"
         private const val OAUTH_URL = "$BASE_URL/auth/oauth2"
@@ -337,7 +232,7 @@ class MangaBakaApi(
 
         private var codeVerifier: String = ""
 
-        fun authUrl(): Uri = "$OAUTH_URL/authorize".toUri().buildUpon()
+        fun authUrl(): Uri = "$OAUTH_URL/authorize".toUri().buildUpon() //
             .appendQueryParameter("client_id", CLIENT_ID)
             .appendQueryParameter("code_challenge", getPkceS256ChallengeCode())
             .appendQueryParameter("code_challenge_method", "S256")
