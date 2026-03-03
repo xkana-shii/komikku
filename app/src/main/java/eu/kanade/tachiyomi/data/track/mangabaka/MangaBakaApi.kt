@@ -204,15 +204,12 @@ class MangaBakaApi(
                 val bodyString = response.body.string()
                 val recordResponse = json.decodeFromString(MBSeriesResponse.serializer(), bodyString)
                 val record = recordResponse.data
-                // If the record indicates it was merged to another id, follow that id.
                 if (record.merged_with != null && record.merged_with != currentId) {
-                    // move to merged id and try again to get the final record
                     currentId = record.merged_with
                 } else {
                     return record
                 }
             }
-            // If we've retried several times and still have a merged pointer, try fetching the last known id once more.
             val finalResponse = client.newCall(GET("$API_BASE_URL/v1/series/$currentId")).awaitSuccess()
             val finalBody = finalResponse.body.string()
             val finalRecordResponse = json.decodeFromString(MBSeriesResponse.serializer(), finalBody)

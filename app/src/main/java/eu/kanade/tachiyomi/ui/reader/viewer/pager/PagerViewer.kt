@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.injectLazy
 import kotlin.math.min
+import eu.kanade.domain.source.service.SourcePreferences
+import uy.kohesive.injekt.api.get
 
 /**
  * Implementation of a [Viewer] to display pages with a [ViewPager].
@@ -111,6 +113,8 @@ abstract class PagerViewer(
     }
 
     override val automationInProgress = MutableStateFlow(false)
+
+    private val sourcePreferences: SourcePreferences = uy.kohesive.injekt.Injekt.get()
 
     init {
         pager.isVisible = false // Don't layout the pager yet
@@ -266,7 +270,8 @@ abstract class PagerViewer(
         }
 
         // Preload next chapter once we're within the last 20 pages of the current chapter
-        val inPreloadRange = pages.size - page.number < 20
+        val preloadThreshold = if (sourcePreferences.devOptionsEnabled().get()) 20 else 5
+        val inPreloadRange = pages.size - page.number < preloadThreshold
         if (inPreloadRange && allowPreload && page.chapter == adapter.currentChapter) {
             logcat { "Request preload next chapter because we're at page ${page.number} of ${pages.size}" }
             adapter.nextTransition?.to?.let(activity::requestPreloadChapter)

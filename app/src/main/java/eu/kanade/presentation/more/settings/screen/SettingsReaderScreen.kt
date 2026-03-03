@@ -557,11 +557,9 @@ object SettingsReaderScreen : SearchableSettings {
     // SY -->
     @Composable
     private fun getPageDownloadingGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
-        // Get dev options state
         val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
         val devOptionsEnabled by sourcePreferences.devOptionsEnabled().collectAsState()
 
-        // Build entries for preload size, adding 100 if dev options enabled
         val preloadEntries = persistentMapOf(
             4 to stringResource(SYMR.strings.reader_preload_amount_4_pages),
             6 to stringResource(SYMR.strings.reader_preload_amount_6_pages),

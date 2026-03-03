@@ -32,6 +32,7 @@ import uy.kohesive.injekt.injectLazy
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.Duration
+import eu.kanade.domain.source.service.SourcePreferences
 
 /**
  * Implementation of a [Viewer] to display pages with a [RecyclerView].
@@ -49,6 +50,8 @@ class WebtoonViewer(
     val downloadManager: DownloadManager by injectLazy()
 
     private val scope = MainScope()
+
+    private val sourcePreferences: SourcePreferences = Injekt.get()
 
     /**
      * Recycler view used by this viewer.
@@ -274,7 +277,8 @@ class WebtoonViewer(
         activity.onPageSelected(page)
 
         // Preload next chapter once we're within the last 20 pages of the current chapter
-        val inPreloadRange = pages.size - page.number < 20
+        val preloadThreshold = if (sourcePreferences.devOptionsEnabled().get()) 20 else 5
+        val inPreloadRange = pages.size - page.number < preloadThreshold
         if (inPreloadRange && allowPreload && page.chapter == adapter.currentChapter) {
             logcat { "Request preload next chapter because we're at page ${page.number} of ${pages.size}" }
             val nextItem = adapter.items.getOrNull(adapter.items.size - 1)

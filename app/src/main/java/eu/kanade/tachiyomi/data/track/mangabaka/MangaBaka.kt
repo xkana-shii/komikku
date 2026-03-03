@@ -36,7 +36,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     private val interceptor by lazy { MangaBakaInterceptor(this) }
     private val api by lazy { MangaBakaApi(interceptor, client) }
 
-    // Persist updated tracks so status/remote_id changes are saved locally.
     private val trackRepository: TrackRepository by injectLazy()
 
     override val supportsReadingDates: Boolean = true
@@ -64,19 +63,14 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     override fun displayScore(track: DomainTrack): String = "%.1f".format(track.score)
 
     override suspend fun update(track: Track, didReadChapter: Boolean): Track {
-        // Try to get the library entry for the current remote_id.
         var previousListItem: MBListItem? = api.getLibraryEntryWithSeries(track.remote_id)
 
-        // If we didn't find an entry, check if the series was merged and resolve to final id.
         if (previousListItem == null) {
             val resolvedSeries = api.getSeries(track.remote_id)
             if (resolvedSeries != null && resolvedSeries.id != track.remote_id) {
-                // Use the final id from the resolved series.
                 val oldId = track.remote_id
                 track.remote_id = resolvedSeries.id
-                // Try to get the library entry for the final id.
                 previousListItem = api.getLibraryEntryWithSeries(track.remote_id)
-                // If still not present in library, add it so updates will work.
                 if (previousListItem == null) {
                     val added = api.addSeriesEntry(track, track.last_chapter_read > 0)
                     if (added) {
@@ -86,7 +80,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
         }
 
-        // If still no library entry, bail out (previous behavior).
         val previousList = previousListItem ?: return track
 
         val total = previousList.Series?.total_chapters?.toIntOrNull() ?: 0
@@ -110,7 +103,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             }
         }
 
-        // Prefer Series from the library entry if it's not merged; otherwise fetch the (resolved) series.
         val seriesRecord: MBRecord? = previousList.Series
             ?.takeIf { it.merged_with == null }
             ?: api.getSeries(track.remote_id)
@@ -118,15 +110,12 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         val totalFromSeries = seriesRecord?.total_chapters?.toLongOrNull() ?: 0L
 
-        // Determine server-side previous progress so we can detect a local increase even if caller didn't set didReadChapter.
         val serverProgress = previousList.Entries?.firstOrNull()?.progress_chapter
             ?: previousList.progress_chapter
             ?: 0
 
-        // If caller indicated a chapter read OR local progress increased vs server, treat as read event.
         val effectiveDidRead = didReadChapter || (track.last_chapter_read.toInt() > serverProgress)
 
-        // Handle read transitions AFTER we know series totals/status.
         if (track.status != COMPLETED && effectiveDidRead) {
             if (track.started_reading_date == 0L) {
                 track.started_reading_date = System.currentTimeMillis()
@@ -134,27 +123,22 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
             val progress = track.last_chapter_read.toInt()
 
-            // If progress equals total and release is completed, set COMPLETED.
             if (totalFromSeries > 0L && progress == totalFromSeries.toInt() && seriesRecord?.status == "completed") {
                 track.status = COMPLETED
                 if (track.finished_reading_date == 0L) {
                     track.finished_reading_date = System.currentTimeMillis()
                 }
             } else {
-                // Only set READING when more than 1 chapter has been read.
                 if (progress > 1) {
                     track.status = READING
                 }
-                // If progress is 1 or 0, preserve existing status (likely PLAN_TO_READ).
             }
         }
 
-        // Also ensure if progress indicates they've started reading (>1) and not completed, set READING.
         if (track.status != COMPLETED && track.last_chapter_read.toInt() > 1) {
             track.status = READING
         }
 
-        // If the series was merged, update the tracked id so subsequent reads/writes use the final id.
         seriesRecord?.id?.let { newId ->
             if (newId != track.remote_id) {
                 track.remote_id = newId
@@ -184,7 +168,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         track.tracking_url = "$URL_BASE/${track.remote_id}"
 
-        // Persist the updated track (status/remote_id/chapters) so UI/DB reflects changes.
         try {
             track.toDomainTrack()?.let { domainTrack ->
                 trackRepository.insert(domainTrack)
@@ -200,10 +183,8 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     }
 
     override suspend fun bind(track: Track, hasReadChapters: Boolean): Track {
-        // Try to get the library item for the current tracked id.
         var item: MBListItem? = api.getSeriesListItem(track.remote_id)
 
-        // If not found, resolve merges and ensure library entry exists for final id.
         if (item == null) {
             val resolvedSeries = api.getSeries(track.remote_id)
             if (resolvedSeries != null && resolvedSeries.id != track.remote_id) {
@@ -225,13 +206,11 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             } catch (_: Exception) {
             }
 
-            // Prefer Series from the library entry if it's not merged; otherwise fetch the (resolved) series.
             val seriesRecord: MBRecord? = item.Series
                 ?.takeIf { it.merged_with == null }
                 ?: api.getSeries(track.remote_id)
                 ?: item.Series
 
-            // Update tracked id if the series has been merged.
             seriesRecord?.id?.let { newId ->
                 if (newId != track.remote_id) {
                     track.remote_id = newId
@@ -250,7 +229,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             } catch (_: Exception) {
             }
 
-            // If status wasn't set by copyTo, infer from the library item or progress.
             if (track.status == 0L || item.state.isNullOrBlank() || !STATUS_SET.contains(track.status)) {
                 val inferred = when (item.state) {
                     "reading" -> READING
@@ -265,7 +243,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
             track.tracking_url = "$URL_BASE/${track.remote_id}"
 
-            // Persist after bind so status changes are saved
             try {
                 track.toDomainTrack()?.let { domainTrack ->
                     trackRepository.insert(domainTrack)
@@ -276,11 +253,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             return track
         }
 
-        // If still no item found after attempting to resolve/add, create an entry for the current id (fallback).
         track.score = 0.0
         val created = api.addSeriesEntry(track, hasReadChapters)
         val seriesRecord: MBRecord? = api.getSeries(track.remote_id)
-        // After creating/updating the entry, if the API reports a final id, update it locally.
         seriesRecord?.id?.let { newId ->
             if (newId != track.remote_id) {
                 track.remote_id = newId
@@ -290,7 +265,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             autoCompleteIfFinished(track, seriesRecord)
         } catch (_: Exception) {
         }
-        // Set status based on whether the user has read more than one chapter; otherwise keep plan to read.
         track.status = if (track.last_chapter_read.toInt() > 1) READING else PLAN_TO_READ
         track.tracking_url = "$URL_BASE/${track.remote_id}"
 
@@ -331,7 +305,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
                 track.remote_id = resolvedSeries.id
             }
 
-            // Try to get library entry for (possibly) updated id and add if missing.
             item = api.getSeriesListItem(track.remote_id)
             if (item == null) {
                 val added = api.addSeriesEntry(track, track.last_chapter_read > 0)
@@ -344,7 +317,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         if (item != null) {
             try {
                 val seriesRecord: MBRecord? = api.getSeries(track.remote_id) ?: item.Series
-                // Update tracked id if merged
                 seriesRecord?.id?.let { newId ->
                     if (newId != track.remote_id) {
                         track.remote_id = newId
@@ -379,7 +351,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         val seriesOnly: MBRecord? = api.getSeries(track.remote_id)
         if (seriesOnly != null) {
-            // If the API says the series was merged, update the track id to the final one.
             seriesOnly.id.let { newId ->
                 if (newId != track.remote_id) {
                     track.remote_id = newId
