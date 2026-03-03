@@ -14,6 +14,7 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.WebtoonLayoutManager
+import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
@@ -32,7 +33,6 @@ import uy.kohesive.injekt.injectLazy
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.Duration
-import eu.kanade.domain.source.service.SourcePreferences
 
 /**
  * Implementation of a [Viewer] to display pages with a [RecyclerView].
