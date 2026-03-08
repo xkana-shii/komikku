@@ -211,7 +211,7 @@ class MangaBakaApi(
     }
 
     companion object {
-        private const val CLIENT_ID = ""
+        private const val CLIENT_ID = "wOWYtfnAMjnornECeqIclcxOdUayYGqA"
 
         private const val BASE_URL = "https://mangabaka.org"
         private const val API_BASE_URL = "https://api.mangabaka.dev"
@@ -219,7 +219,7 @@ class MangaBakaApi(
         private const val OAUTH_URL = "$BASE_URL/auth/oauth2"
         private const val SCOPES = "library.read library.write offline_access openid"
 
-        private const val REDIRECT_URI = "mihon://mangabaka-auth"
+        private const val REDIRECT_URI = "komikku://mangabaka-auth"
 
         private const val APP_JSON = "application/json"
 
