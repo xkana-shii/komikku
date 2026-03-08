@@ -29,7 +29,7 @@ class MangaBakaInterceptor(private val mangaBaka: MangaBaka) : Interceptor {
         }
 
         return originalRequest.newBuilder()
-            .header("User-Agent", "Mihon/v${BuildConfig.VERSION_NAME} (Android) (https://github.com/mihonapp/mihon)")
+            .header("User-Agent", "Komikku/v${BuildConfig.VERSION_NAME} (Android) (https://github.com/xkana-shii/komikku)")
             .addHeader("Authorization", "Bearer ${currentAuth.accessToken}")
             .build()
             .let(chain::proceed)
