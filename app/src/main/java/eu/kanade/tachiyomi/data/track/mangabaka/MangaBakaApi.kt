@@ -107,24 +107,61 @@ class MangaBakaApi(
         return withIOContext {
             with(json) {
                 try {
-                    val resolvedId = resolveMergedSeriesId(track.remote_id)
-                    if (resolvedId != track.remote_id) {
-                        track.remote_id = resolvedId
-                    }
+                    val originalId = track.remote_id
 
-                    val url = "$LIBRARY_API_URL/${track.remote_id}"
-                    val userData = authClient.newCall(GET(url))
+                    val userData = authClient.newCall(GET("$LIBRARY_API_URL/$originalId"))
                         .awaitSuccess()
                         .parseAs<MangaBakaListResult>()
                         .data
 
-                    val additionalData = authClient.newCall(GET("$API_BASE_URL/v1/series/${track.remote_id}"))
-                        .awaitSuccess()
-                        .parseAs<MangaBakaItemResult>()
-                        .data
+                    val additionalData = runCatching {
+                        authClient.newCall(GET("$API_BASE_URL/v1/series/$originalId"))
+                            .awaitSuccess()
+                            .parseAs<MangaBakaItemResult>()
+                            .data
+                    }.getOrElse { e ->
+                        if (e is HttpException && e.code == 404) {
+                            val resolvedId = resolveMergedSeriesId(originalId)
+                            authClient.newCall(GET("$API_BASE_URL/v1/series/$resolvedId"))
+                                .awaitSuccess()
+                                .parseAs<MangaBakaItemResult>()
+                                .data
+                        } else {
+                            throw e
+                        }
+                    }
+
+                    val resolvedId = additionalData.mergedWith ?: additionalData.id
+
+                    // 3) If merged, migrate: delete old library entry, then create/update new one with same userData.
+                    if (resolvedId != originalId) {
+                        // Delete old entry (ignore failures; if it doesn't exist anymore, migration isn't needed)
+                        runCatching {
+                            authClient.newCall(DELETE("$LIBRARY_API_URL/$originalId")).awaitSuccess()
+                        }
+
+                        // Ensure local is now bound to the resolved ID
+                        track.remote_id = resolvedId
+
+                        // Create/update new entry with carried-over fields
+                        val migrated = Track.create(TrackerManager.MANGABAKA).apply {
+                            remote_id = resolvedId
+                            title = additionalData.title
+                            status = userData.getStatus()
+                            score = userData.rating?.toDouble() ?: 0.0
+                            started_reading_date = userData.startDate?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0
+                            finished_reading_date = userData.finishDate?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0
+                            last_chapter_read = userData.progressChapter ?: 0.0
+                            total_chapters = additionalData.totalChapters?.toLong() ?: 0
+                            private = userData.isPrivate
+                        }
+                        updateLibManga(migrated)
+
+                        return@withIOContext migrated
+                    }
 
                     Track.create(TrackerManager.MANGABAKA).apply {
-                        remote_id = track.remote_id
+                        remote_id = originalId
                         title = additionalData.title
                         status = userData.getStatus()
                         score = userData.rating?.toDouble() ?: 0.0
@@ -148,8 +185,13 @@ class MangaBakaApi(
 
     suspend fun updateLibManga(track: Track): Track {
         return withIOContext {
-            val resolvedId = resolveMergedSeriesId(track.remote_id)
-            if (resolvedId != track.remote_id) {
+            val originalId = track.remote_id
+            val resolvedId = resolveMergedSeriesId(originalId)
+
+            if (resolvedId != originalId) {
+                runCatching {
+                    authClient.newCall(DELETE("$LIBRARY_API_URL/$originalId")).awaitSuccess()
+                }
                 track.remote_id = resolvedId
             }
 
