@@ -125,6 +125,17 @@ class MangaBakaApi(
     suspend fun updateLibManga(track: Track): Track {
         return withIOContext {
             val url = "$LIBRARY_API_URL/${track.remote_id}"
+
+            val entry = runCatching {
+                with(json) { authClient.newCall(GET(url)).awaitSuccess().parseAs<MangaBakaListResult>().data }
+            }.getOrNull()
+
+            val nextRereads = if (track.toApiStatus() == "completed" && entry?.state == "rereading") {
+                (entry.numberOfRereads ?: 0) + 1
+            } else {
+                entry?.numberOfRereads
+            }
+            
             val body = buildJsonObject {
                 put("state", track.toApiStatus())
                 put("is_private", track.private)
@@ -147,6 +158,9 @@ class MangaBakaApi(
                     put("finish_date", Instant.fromEpochMilliseconds(track.finished_reading_date).toString())
                 } else {
                     put("finish_date", null)
+                }
+                if (nextRereads != null) {
+                    put("number_of_rereads", nextRereads)
                 }
             }
                 .toString()
