@@ -14,13 +14,15 @@ data class MangaBakaListEntry(
     val state: String,
     @SerialName("start_date")
     val startDate: String?,
-    @SerialName("finish_name")
+    @SerialName("finish_date")
     val finishDate: String?,
     @SerialName("is_private")
     val isPrivate: Boolean,
     @SerialName("progress_chapter")
     val progressChapter: Double?,
     val rating: Long?,
+    @SerialName("number_of_rereads")
+    val numberOfRereads: Int? = null,
 ) {
     fun getStatus(): Long = when (state) {
         "considering" -> MangaBaka.CONSIDERING
