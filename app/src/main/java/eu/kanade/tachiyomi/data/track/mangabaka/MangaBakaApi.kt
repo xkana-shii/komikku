@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.data.track.mangabaka
 
 import android.net.Uri
+import android.text.Html
 import androidx.core.net.toUri
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.TrackerManager
@@ -160,8 +161,18 @@ class MangaBakaApi(
 
     suspend fun search(search: String): List<TrackSearch> {
         return withIOContext {
+            val searchId = when {
+                "mangaupdates" in search -> "mu:" + search.substringAfter("series/").substringBefore('/')
+                "anilist" in search -> "al:" + search.substringAfter("manga/").substringBefore('/')
+                "myanimelist" in search -> "mal:" + search.substringAfter("manga/").substringBefore('/')
+                else -> Regex(
+                    "^(?:anilist|al|kitsu|kt|mangaupdates|mu|myanimelist|mal|bangumi|mangabaka|shikimori):",
+                    RegexOption.IGNORE_CASE
+                ).replace(search) { it.value.lowercase() }
+            }
+
             val url = "$API_BASE_URL/v1/series/search".toUri().buildUpon()
-                .appendQueryParameter("q", search)
+                .appendQueryParameter("q", searchId)
                 .appendQueryParameter("type_not", "novel")
                 .build()
             with(json) {
@@ -169,14 +180,15 @@ class MangaBakaApi(
                     .awaitSuccess()
                     .parseAs<MangaBakaSearchResult>()
                     .data
+                    .filter { it.state != "merged" }
                     .map {
                         TrackSearch.create(trackId).apply {
                             remote_id = it.id
                             title = it.title
-                            summary = it.description?.trim().orEmpty()
+                            summary = Html.fromHtml(it.description.orEmpty(), Html.FROM_HTML_MODE_LEGACY).toString().trim()
                             total_chapters = it.totalChapters?.toLongOrNull() ?: 0
                             score = it.rating?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)?.toDouble() ?: -1.0
-                            cover_url = it.cover.x250.x1.orEmpty()
+                            cover_url = it.cover.x350.x3.orEmpty()
                             tracking_url = "$BASE_URL/${it.id}"
                             start_date = it.year?.toString().orEmpty()
                             publishing_status = it.status
