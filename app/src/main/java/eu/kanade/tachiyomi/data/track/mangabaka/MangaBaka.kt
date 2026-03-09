@@ -56,15 +56,14 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         track: Track,
         didReadChapter: Boolean,
     ): Track {
+        if (track.status == PLAN_TO_READ || track.status == CONSIDERING) {
+            track.started_reading_date = 0
+        }
         if (track.status != COMPLETED && didReadChapter) {
             if (track.total_chapters > 0 && track.last_chapter_read.toLong() == track.total_chapters) {
                 track.status = COMPLETED
-                track.finished_reading_date = System.currentTimeMillis()
             } else if (track.status != REREADING) {
                 track.status = READING
-                if (track.last_chapter_read > 0.0) {
-                    track.started_reading_date = System.currentTimeMillis()
-                }
             }
         }
 
@@ -80,6 +79,7 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             track.copyPersonalFrom(remoteTrack, copyRemotePrivate = false)
             track.title = remoteTrack.title
             track.remote_id = remoteTrack.remote_id
+            track.tracking_url = "${MangaBakaApi.BASE_URL}/${track.remote_id}"
             track.total_chapters = remoteTrack.total_chapters
 
             if (track.status != COMPLETED) {
@@ -90,10 +90,11 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             update(track)
         } else {
             // Set default fields if it's not found in the list
+            track.tracking_url = "${MangaBakaApi.BASE_URL}/${track.remote_id}"
             track.status = if (hasReadChapters) READING else PLAN_TO_READ
             track.score = 0.0
 
-            api.addLibManga(track)
+            api.addLibManga(track).also { track.title = it.title }
         }
     }
 
@@ -102,11 +103,14 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     }
 
     override suspend fun refresh(track: Track): Track {
-        val remoteTrack = api.findLibManga(track) ?: throw Exception("Could not find manga")
-        track.copyPersonalFrom(remoteTrack)
-        track.remote_id = remoteTrack.remote_id
-        track.title = remoteTrack.title
-        track.total_chapters = remoteTrack.total_chapters
+        val remoteTrack = api.findLibManga(track)
+        track.remote_id = remoteTrack?.remote_id ?: track.remote_id
+        track.tracking_url = "${MangaBakaApi.BASE_URL}/${track.remote_id}"
+        if (remoteTrack != null) {
+            track.copyPersonalFrom(remoteTrack)
+            track.title = remoteTrack.title
+            track.total_chapters = remoteTrack.total_chapters
+        }
         return track
     }
 
@@ -159,6 +163,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         private val SCORE_LIST = IntRange(0, 100).map(Int::toString).toImmutableList()
     }
-    
-    override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ
+
+    override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ || status == CONSIDERING
 }
