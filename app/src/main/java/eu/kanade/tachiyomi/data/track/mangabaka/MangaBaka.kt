@@ -159,6 +159,6 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
         private val SCORE_LIST = IntRange(0, 100).map(Int::toString).toImmutableList()
     }
-    
+
     override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ
 }

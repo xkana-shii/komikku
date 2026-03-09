@@ -206,7 +206,7 @@ class MangaBakaApi(
             } else {
                 entry?.numberOfRereads
             }
-            
+
             val body = buildJsonObject {
                 put("state", track.toApiStatus())
                 put("is_private", track.private)
@@ -279,7 +279,7 @@ class MangaBakaApi(
                 "myanimelist" in search -> "mal:" + search.substringAfter("manga/").substringBefore('/')
                 else -> Regex(
                     "^(?:anilist|al|kitsu|kt|mangaupdates|mu|myanimelist|mal|bangumi|mangabaka|shikimori):",
-                    RegexOption.IGNORE_CASE
+                    RegexOption.IGNORE_CASE,
                 ).replace(search) { it.value.lowercase() }
             }
 
