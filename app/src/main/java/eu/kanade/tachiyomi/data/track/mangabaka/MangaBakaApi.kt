@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaItemResult
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaListResult
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaSearchResult
+import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
@@ -156,6 +157,30 @@ class MangaBakaApi(
                 .awaitSuccess()
 
             track
+        }
+    }
+
+    suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
+        return withIOContext {
+            with(json) {
+                authClient.newCall(GET("$API_BASE_URL/v1/series/${track.remoteId}"))
+                    .awaitSuccess()
+                    .parseAs<MangaBakaItemResult>()
+                    .data
+                    .let {
+                        TrackMangaMetadata(
+                            remoteId = it.id,
+                            title = it.title,
+                            thumbnailUrl = it.cover.raw.url,
+                            description = android.text.Html.fromHtml(it.description.orEmpty(), android.text.Html.FROM_HTML_MODE_LEGACY)
+                                .toString()
+                                .trim()
+                                .ifEmpty { null },
+                            authors = it.authors?.joinToString(", ")?.ifEmpty { null },
+                            artists = it.artists?.joinToString(", ")?.ifEmpty { null },
+                        )
+                    }
+            }
         }
     }
 
