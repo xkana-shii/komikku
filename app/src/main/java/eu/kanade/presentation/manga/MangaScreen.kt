@@ -70,6 +70,7 @@ import eu.kanade.presentation.browse.RelatedMangaTitle
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterHeader
+import eu.kanade.presentation.manga.components.CollectionBadges
 import eu.kanade.presentation.manga.components.ExpandableMangaDescription
 import eu.kanade.presentation.manga.components.MangaActionRow
 import eu.kanade.presentation.manga.components.MangaBottomActionMenu
@@ -184,6 +185,8 @@ fun MangaScreen(
     onMorePreviewsClicked: () -> Unit,
     previewsRowCount: Int,
     // SY <--
+    onAddToCollectionClicked: (() -> Unit)?,
+    onClickCollection: (Long) -> Unit,
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -262,6 +265,8 @@ fun MangaScreen(
             onMorePreviewsClicked = onMorePreviewsClicked,
             previewsRowCount = previewsRowCount,
             // SY <--
+            onAddToCollectionClicked = onAddToCollectionClicked,
+            onClickCollection = onClickCollection,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiFillermarkClicked = onMultiFillermarkClicked,
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
@@ -326,6 +331,8 @@ fun MangaScreen(
             onMorePreviewsClicked = onMorePreviewsClicked,
             previewsRowCount = previewsRowCount,
             // SY <--
+            onAddToCollectionClicked = onAddToCollectionClicked,
+            onClickCollection = onClickCollection,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiFillermarkClicked = onMultiFillermarkClicked,
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
@@ -400,6 +407,8 @@ private fun MangaScreenSmallImpl(
     onMorePreviewsClicked: () -> Unit,
     previewsRowCount: Int,
     // SY <--
+    onAddToCollectionClicked: (() -> Unit)? = null,
+    onClickCollection: (Long) -> Unit = {},
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -515,6 +524,7 @@ private fun MangaScreenSmallImpl(
                 onClickMergedSettings = onMergedSettingsClicked.takeIf { state.manga.source == MERGED_SOURCE_ID },
                 onClickMerge = onMergeClicked.takeIf { state.showMergeInOverflow },
                 // SY <--
+                onClickAddToCollection = onAddToCollectionClicked,
                 actionModeCounter = selectedChapterCount,
                 onCancelActionMode = { onAllChapterSelected(false) },
                 onSelectAll = { onAllChapterSelected(true) },
@@ -784,6 +794,17 @@ private fun MangaScreenSmallImpl(
                         )
                     }
                     // SY <--
+                    if (state.collections.isNotEmpty()) {
+                        item(
+                            key = MangaScreenItem.COLLECTION_BADGES,
+                            contentType = MangaScreenItem.COLLECTION_BADGES,
+                        ) {
+                            CollectionBadges(
+                                collections = state.collections,
+                                onClickCollection = onClickCollection,
+                            )
+                        }
+                    }
 
                     item(
                         key = MangaScreenItem.CHAPTER_HEADER,
@@ -868,6 +889,8 @@ private fun MangaScreenLargeImpl(
     onMorePreviewsClicked: () -> Unit,
     previewsRowCount: Int,
     // SY <--
+    onAddToCollectionClicked: (() -> Unit)? = null,
+    onClickCollection: (Long) -> Unit = {},
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
@@ -958,6 +981,7 @@ private fun MangaScreenLargeImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
+                onClickAddToCollection = onAddToCollectionClicked,
                 onCancelActionMode = { onAllChapterSelected(false) },
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
@@ -1168,6 +1192,12 @@ private fun MangaScreenLargeImpl(
                             )
                         }
                         // SY <--
+                        if (state.collections.isNotEmpty()) {
+                            CollectionBadges(
+                                collections = state.collections,
+                                onClickCollection = onClickCollection,
+                            )
+                        }
                     }
                 },
                 endContent = {

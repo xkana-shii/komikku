@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.ui.library
 
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
+import tachiyomi.domain.collection.model.Collection
+import tachiyomi.domain.collection.model.CollectionCoverData
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.source.model.Source
 import tachiyomi.domain.source.service.SourceManager
@@ -7,6 +10,23 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 internal const val LOCAL_SOURCE_ID_ALIAS = "local"
+
+sealed interface LibraryGridItem {
+    val id: Long
+    fun matches(constraint: String): Boolean
+}
+
+data class LibraryCollectionItem(
+    val collection: Collection,
+    val coverData: List<CollectionCoverData>,
+    val entryCount: Long,
+) : LibraryGridItem {
+    override val id: Long = -collection.id
+    override fun matches(constraint: String): Boolean {
+        return collection.name.contains(constraint, true) ||
+            collection.description.contains(constraint, true)
+    }
+}
 
 data class LibraryItem(
     val libraryManga: LibraryManga,
@@ -19,8 +39,8 @@ data class LibraryItem(
     val source: Source? = null,
     // KMK <--
     private val sourceManager: SourceManager = Injekt.get(),
-) {
-    val id: Long = libraryManga.id
+) : LibraryGridItem {
+    override val id: Long = libraryManga.id
 
 //    /**
 //     * Checks if a query matches the manga
@@ -28,7 +48,7 @@ data class LibraryItem(
 //     * @param constraint the query to check.
 //     * @return true if the manga matches the query, false otherwise.
 //     */
-//    fun matches(constraint: String): Boolean {
+//    override fun matches(constraint: String): Boolean {
 //        val source = sourceManager.getOrStub(libraryManga.manga.source)
 //        val sourceName by lazy { source.getNameForMangaInfo() }
 //        if (constraint.startsWith("id:", true)) {

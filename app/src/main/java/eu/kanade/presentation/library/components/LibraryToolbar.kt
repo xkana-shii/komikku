@@ -45,6 +45,7 @@ fun LibraryToolbar(
     onClickSyncExh: (() -> Unit)?,
     isSyncEnabled: Boolean,
     // SY <--
+    onClickCollections: () -> Unit,
     searchQuery: String?,
     onSearchQueryChange: (String?) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior?,
@@ -70,6 +71,7 @@ fun LibraryToolbar(
         onClickSyncExh = onClickSyncExh,
         isSyncEnabled = isSyncEnabled,
         // SY <--
+        onClickCollections = onClickCollections,
         scrollBehavior = scrollBehavior,
         onInvalidateDownloadCache = onInvalidateDownloadCache,
     )
@@ -90,6 +92,7 @@ private fun LibraryRegularToolbar(
     onClickSyncExh: (() -> Unit)?,
     isSyncEnabled: Boolean,
     // SY <--
+    onClickCollections: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior?,
     onInvalidateDownloadCache: (Context) -> Unit,
 ) {
@@ -142,6 +145,10 @@ private fun LibraryRegularToolbar(
                         onClick = {
                             onInvalidateDownloadCache(context)
                         },
+                    ),
+                    AppBar.OverflowAction(
+                        title = stringResource(MR.strings.action_manage_collections),
+                        onClick = onClickCollections,
                     ),
                 ).builder().apply {
                     // SY -->

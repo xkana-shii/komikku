@@ -60,6 +60,7 @@ fun MangaToolbar(
     onClickMerge: (() -> Unit)?,
     onClickMergedSettings: (() -> Unit)?,
     // SY <--
+    onClickAddToCollection: (() -> Unit)? = null,
 
     // For action mode
     actionModeCounter: Int,
@@ -266,6 +267,14 @@ fun MangaToolbar(
                         )
                     }
                     // KMK <--
+                    if (onClickAddToCollection != null) {
+                        add(
+                            AppBar.OverflowAction(
+                                title = stringResource(MR.strings.action_add_to_collection),
+                                onClick = onClickAddToCollection,
+                            ),
+                        )
+                    }
                 }
                     .build(),
             )

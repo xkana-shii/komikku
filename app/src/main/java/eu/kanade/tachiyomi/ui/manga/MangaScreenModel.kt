@@ -119,6 +119,7 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.collection.model.CollectionWithLabel
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.DeleteChapters
@@ -228,6 +229,7 @@ class MangaScreenModel(
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val mangaRepository: MangaRepository = Injekt.get(),
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get(),
+    private val getCollectionsWithLabelByMangaId: tachiyomi.domain.collection.interactor.GetCollectionsWithLabelByMangaId = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     // KMK -->
     private val deleteLibraryUpdateErrors: DeleteLibraryUpdateErrors = Injekt.get(),
@@ -508,6 +510,7 @@ class MangaScreenModel(
 
             // Start observe tracking since it only needs mangaId
             observeTrackers()
+            observeCollections()
 
             // Fetch info-chapters when needed
             if (screenModelScope.isActive) {
@@ -1945,6 +1948,18 @@ class MangaScreenModel(
         }
     }
     // SY <--
+    private fun observeCollections() {
+        screenModelScope.launchIO {
+            getCollectionsWithLabelByMangaId.subscribe(mangaId)
+                .flowWithLifecycle(lifecycle)
+                .distinctUntilChanged()
+                .collectLatest { collections ->
+                    updateSuccessState {
+                        it.copy(collections = collections.toImmutableList())
+                    }
+                }
+        }
+    }
 
     // Track sheet - end
 
@@ -2077,6 +2092,7 @@ class MangaScreenModel(
             val relatedMangaCollection: List<RelatedManga>? = null,
             val seedColor: Color? = manga.asMangaCover().vibrantCoverColor?.let { Color(it) },
             // KMK <--
+            val collections: ImmutableList<CollectionWithLabel> = kotlinx.collections.immutable.persistentListOf(),
         ) : State {
             // KMK -->
             /**

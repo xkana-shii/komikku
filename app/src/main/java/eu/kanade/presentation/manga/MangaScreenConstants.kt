@@ -31,6 +31,7 @@ enum class MangaScreenItem {
     CHAPTER_PREVIEW_MORE,
 
     // SY <--
+    COLLECTION_BADGES,
     CHAPTER_HEADER,
     CHAPTER,
 

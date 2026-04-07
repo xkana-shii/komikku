@@ -49,6 +49,7 @@ import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.ui.browse.source.SourcesScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
+import eu.kanade.tachiyomi.ui.collection.CollectionManagementScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -191,8 +192,39 @@ data object LibraryTab : Tab {
                     },
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
-                )
-            },
+                },
+                onClickCollections = {
+                    navigator.push(CollectionManagementScreen())
+                },
+                searchQuery = state.searchQuery,
+                onSearchQueryChange = screenModel::search,
+                // For scroll overlay when no tab
+                scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
+            )
+
+            DropdownMenu(
+                expanded = showCategoryMenu,
+                onDismissRequest = { showCategoryMenu = false },
+            ) {
+                state.displayedCategories.forEachIndexed { index, category ->
+                    DropdownMenuItem(
+                        text = { Text(category.visualName) },
+                        onClick = {
+                            showCategoryMenu = false
+                            screenModel.updateActiveCategoryIndex(index)
+                        },
+                        trailingIcon = if (state.coercedActiveCategoryIndex == index) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Outlined.Check,
+                                    contentDescription = null,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    )
+                },
             bottomBar = {
                 LibraryBottomActionMenu(
                     visible = state.selectionMode,
@@ -314,6 +346,7 @@ data object LibraryTab : Tab {
                         showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
                         onChangeCurrentPage = screenModel::updateActiveCategoryIndex,
                         onClickManga = { navigator.push(MangaScreen(it)) },
+                        onClickCollection = { navigator.push(eu.kanade.tachiyomi.ui.collection.CollectionScreen(it)) },
                         onContinueReadingClicked = { it: LibraryManga ->
                             scope.launchIO {
                                 val chapter = screenModel.getNextUnreadChapter(it.manga)
