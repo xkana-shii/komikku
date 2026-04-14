@@ -60,4 +60,6 @@ dependencies {
     implementation(sylibs.xlog)
     implementation(sylibs.exifinterface)
     // SY <--
+
+    implementation(libs.injekt)
 }

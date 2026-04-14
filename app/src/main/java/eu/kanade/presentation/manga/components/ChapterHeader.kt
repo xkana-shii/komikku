@@ -1,6 +1,6 @@
 package eu.kanade.presentation.manga.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,15 +25,17 @@ fun ChapterHeader(
     chapterCount: Int?,
     missingChapterCount: Int,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         // KMK <--
         modifier = modifier
             .fillMaxWidth()
-            .clickable(
+            .combinedClickable(
                 enabled = enabled,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
             .padding(horizontal = 16.dp, vertical = 4.dp),
         // KMK -->

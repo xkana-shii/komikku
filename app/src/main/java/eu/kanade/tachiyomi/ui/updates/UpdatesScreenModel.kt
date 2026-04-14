@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.updates
 
 import android.app.Application
+import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -9,9 +10,11 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
+import eu.kanade.core.util.combine
 import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.updates.UpdatesUiModel
+import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
@@ -73,6 +76,7 @@ class UpdatesScreenModel(
     // SY -->
     readerPreferences: ReaderPreferences = Injekt.get(),
     // SY <--
+    private val libraryUpdateStatus: LibraryUpdateStatus = Injekt.get(),
 ) : StateScreenModel<UpdatesScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
@@ -103,6 +107,7 @@ class UpdatesScreenModel(
                             unread = it.filterUnread.toBooleanOrNull(),
                             started = it.filterStarted.toBooleanOrNull(),
                             bookmarked = it.filterBookmarked.toBooleanOrNull(),
+                            fillermarked = it.filterFillermarked.toBooleanOrNull(),
                             hideExcludedScanlators = it.filterExcludedScanlators,
                         ).distinctUntilChanged()
                     },
@@ -128,16 +133,19 @@ class UpdatesScreenModel(
                             isLoading = false,
                             items = updateItems
                                 // KMK -->
-                                .groupBy { it.update.dateFetch.toLocalDate() }
-                                .flatMap { (_, mangas) ->
-                                    mangas.groupBy { it.update.mangaId }
-                                        .values
-                                        .flatMap { mangaChapters ->
-                                            val (unread, read) = mangaChapters.partition { !it.update.read }
-                                            unread.sortedBy { it.update.dateFetch } +
-                                                read.sortedByDescending { it.update.dateFetch }
-                                        }
+                                .groupBy { it.update.mangaId }
+                                .values
+                                .flatMap { mangaUpdates ->
+                                    val withDate = mangaUpdates.map { it to it.update.dateFetch.toLocalDate() }
+                                    val latestDate = withDate.maxOf { (_, date) -> date }
+                                    val latestItems = withDate
+                                        .filter { (_, date) -> date == latestDate }
+                                        .map { (item, _) -> item }
+                                    val (unread, read) = latestItems.partition { !it.update.read }
+                                    unread.sortedBy { it.update.dateFetch } +
+                                        read.sortedByDescending { it.update.dateFetch }
                                 }
+                                .sortedByDescending { it.update.dateFetch.toLocalDate() }
                                 .toPersistentList(),
                             // KMK <--
                         )
@@ -158,6 +166,7 @@ class UpdatesScreenModel(
                     prefs.filterDownloaded,
                     prefs.filterStarted,
                     prefs.filterBookmarked,
+                    prefs.filterFillermarked,
                 )
                     .any { it != TriState.DISABLED }
             }
@@ -216,9 +225,20 @@ class UpdatesScreenModel(
     fun updateLibrary(): Boolean {
         val started = LibraryUpdateJob.startNow(Injekt.get<Application>())
         screenModelScope.launch {
+            if (started) {
+                libraryUpdateStatus.start()
+            }
             _events.send(Event.LibraryUpdateTriggered(started))
         }
         return started
+    }
+
+    fun cancelLibraryUpdate(context: Context): Boolean {
+        LibraryUpdateJob.stop(context)
+        screenModelScope.launch {
+            libraryUpdateStatus.stop()
+        }
+        return true
     }
 
     /**
@@ -304,6 +324,16 @@ class UpdatesScreenModel(
             updates
                 .filterNot { it.update.bookmark == bookmark }
                 .map { ChapterUpdate(id = it.update.chapterId, bookmark = bookmark) }
+                .let { updateChapter.awaitAll(it) }
+        }
+        toggleAllSelection(false)
+    }
+
+    fun fillermarkUpdates(updates: List<UpdatesItem>, fillermark: Boolean) {
+        screenModelScope.launchIO {
+            updates
+                .filterNot { it.update.fillermark == fillermark }
+                .map { ChapterUpdate(id = it.update.chapterId, fillermark = fillermark) }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
@@ -526,6 +556,9 @@ class UpdatesScreenModel(
             LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> {
                 bookmarkUpdates(listOf(updateItem), !update.bookmark)
             }
+            LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
+                fillermarkUpdates(listOf(updateItem), !update.fillermark)
+            }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction = when (updateItem.downloadStateProvider()) {
                     Download.State.ERROR,
@@ -552,13 +585,15 @@ class UpdatesScreenModel(
             updatesPreferences.filterUnread().changes(),
             updatesPreferences.filterStarted().changes(),
             updatesPreferences.filterBookmarked().changes(),
+            updatesPreferences.filterFillermarked().changes(),
             updatesPreferences.filterExcludedScanlators().changes(),
-        ) { downloaded, unread, started, bookmarked, excludedScanlators ->
+        ) { downloaded, unread, started, bookmarked, fillermarked, excludedScanlators ->
             ItemPreferences(
                 filterDownloaded = downloaded,
                 filterUnread = unread,
                 filterStarted = started,
                 filterBookmarked = bookmarked,
+                filterFillermarked = fillermarked,
                 filterExcludedScanlators = excludedScanlators,
             )
         }
@@ -574,6 +609,7 @@ class UpdatesScreenModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
+        val filterFillermarked: TriState,
         val filterExcludedScanlators: Boolean,
     )
 

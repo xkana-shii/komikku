@@ -150,7 +150,7 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { ChapterCache(app, get(), get()) }
         addSingletonFactory { CoverCache(app) }
 
-        addSingletonFactory { NetworkHelper(app, get(), isDebugBuildType) }
+        addSingletonFactory { NetworkHelper(app, get(), get(), isDebugBuildType) }
         addSingletonFactory { JavaScriptEngine(app) }
 
         addSingletonFactory<SourceManager> { AndroidSourceManager(app, get(), get()) }

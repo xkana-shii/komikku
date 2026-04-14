@@ -37,3 +37,8 @@ DELETE FROM saved_search;
 
 selectLastInsertedRowId:
 SELECT last_insert_rowid();
+
+update:
+UPDATE saved_search
+SET name = :name, query = :query, filters_json = :filtersJson
+WHERE _id = :id;

@@ -9,4 +9,6 @@ data class ReaderChapterItem(
     val manga: Manga,
     val isCurrent: Boolean,
     val dateFormat: DateTimeFormatter,
+    val downloadState: eu.kanade.tachiyomi.data.download.model.Download.State = eu.kanade.tachiyomi.data.download.model.Download.State.NOT_DOWNLOADED,
+    val downloadProgress: Int = 0,
 )

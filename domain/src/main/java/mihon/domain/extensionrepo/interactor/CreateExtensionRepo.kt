@@ -74,6 +74,7 @@ class CreateExtensionRepo(
         const val REPO_HELP = "https://komikku-app.github.io/docs/guides/getting-started#adding-sources"
 
         // cuong-tran's key
+        const val KANASHII_SIGNATURE = "0df5b32b5dba0c61eae08fa46394585f1146c44b166e8ef6e5b7de37106026e3"
         const val KOMIKKU_SIGNATURE = "cbec121aa82ebb02aaa73806992e0368a97d47b5451ed6524816d03084c45905"
         const val REPO_SIGNATURE = "9add655a78e96c4ec7a53ef89dccb557cb5d767489fac5e785d671a5a75d4da2"
     }

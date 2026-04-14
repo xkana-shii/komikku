@@ -9,10 +9,10 @@ sqlite = "2.6.2"
 voyager = "1.1.0-beta03"
 spotless = "8.2.1"
 ktlint-core = "1.8.0"
-firebase-bom = "34.9.0"
 markdown = "0.39.2"
 junit = "6.0.3"
 materialKolor = "5.0.0-alpha06"
+material3-version = "1.4.0"
 
 [libraries]
 desugar = "com.android.tools:desugar_jdk_libs:2.1.5"
@@ -75,10 +75,6 @@ moko-core = { module = "dev.icerock.moko:resources", version.ref = "moko" }
 timber = "com.jakewharton.timber:timber:5.0.1"
 logcat = "com.squareup.logcat:logcat:0.4"
 
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
-firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
-
 aboutLibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutlib_version" }
 
 shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku_version" }
@@ -107,17 +103,16 @@ ktlint-core = { module = "com.pinterest.ktlint:ktlint-cli", version.ref = "ktlin
 
 markdown-core = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "markdown" }
 markdown-coil = { module = "com.mikepenz:multiplatform-markdown-renderer-coil3", version.ref = "markdown" }
+material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3-version" }
 
 stringSimilarity = { module = "com.aallam.similarity:string-similarity-kotlin", version = "0.1.0" }
 
 materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
 
 [plugins]
-google-services = { id = "com.google.gms.google-services", version = "4.4.4" }
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlib_version" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 moko = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "moko" }
-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.6" }
 
 [bundles]
 okhttp = ["okhttp-core", "okhttp-logging", "okhttp-brotli", "okhttp-dnsoverhttps"]

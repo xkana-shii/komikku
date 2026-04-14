@@ -83,3 +83,11 @@ SET source = coalesce(:source, source),
     feed_order = coalesce(:feed_order, feed_order)
 WHERE _id = :id;
 -- KMK <--
+
+updatePartial:
+UPDATE feed_saved_search
+SET source = :source,
+    saved_search = :saved_search,
+    global = :global,
+    feed_order = :feed_order
+WHERE _id = :id;

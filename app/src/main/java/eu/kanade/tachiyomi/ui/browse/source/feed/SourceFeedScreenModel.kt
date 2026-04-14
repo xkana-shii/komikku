@@ -55,8 +55,10 @@ import tachiyomi.domain.source.interactor.GetFeedSavedSearchBySourceId
 import tachiyomi.domain.source.interactor.GetSavedSearchBySourceIdFeed
 import tachiyomi.domain.source.interactor.InsertFeedSavedSearch
 import tachiyomi.domain.source.interactor.ReorderFeed
+import tachiyomi.domain.source.interactor.UpdateFeedSavedSearch
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearch
+import tachiyomi.domain.source.model.FeedSavedSearchUpdate
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
@@ -79,6 +81,7 @@ open class SourceFeedScreenModel(
     private val getSavedSearchBySourceIdFeed: GetSavedSearchBySourceIdFeed = Injekt.get(),
     private val countFeedSavedSearchBySourceId: CountFeedSavedSearchBySourceId = Injekt.get(),
     private val insertFeedSavedSearch: InsertFeedSavedSearch = Injekt.get(),
+    private val updateFeedSavedSearch: UpdateFeedSavedSearch = Injekt.get(),
     private val deleteFeedSavedSearchById: DeleteFeedSavedSearchById = Injekt.get(),
     private val getExhSavedSearch: GetExhSavedSearch = Injekt.get(),
     // KMK -->
@@ -172,16 +175,32 @@ open class SourceFeedScreenModel(
     }
 
     fun createFeed(savedSearchId: Long) {
+        val sourceId = source.id
         screenModelScope.launchNonCancellable {
-            insertFeedSavedSearch.await(
-                FeedSavedSearch(
-                    id = -1,
-                    source = source.id,
-                    savedSearch = savedSearchId,
-                    global = false,
-                    feedOrder = 0,
-                ),
-            )
+            val existing = getFeedSavedSearchBySourceId.await(sourceId)
+                .find { it.savedSearch == savedSearchId && !it.global }
+            if (existing != null) {
+                updateFeedSavedSearch.await(
+                    FeedSavedSearchUpdate(
+                        id = existing.id,
+                        source = sourceId,
+                        savedSearch = savedSearchId,
+                        global = false,
+                        feedOrder = existing.feedOrder,
+                    ),
+                )
+            } else {
+                insertFeedSavedSearch.await(
+                    FeedSavedSearch(
+                        id = -1,
+                        source = sourceId,
+                        savedSearch = savedSearchId,
+                        global = false,
+                        feedOrder = 0,
+                    ),
+                )
+            }
+            reloadFeeds()
         }
     }
 
@@ -270,6 +289,29 @@ open class SourceFeedScreenModel(
                     }
                 }
             }.awaitAll()
+        }
+    }
+
+    private fun reloadFeeds() {
+        screenModelScope.launchIO {
+            val feeds = getFeedSavedSearchBySourceId.await(source.id)
+            val savedSearches = getSavedSearchBySourceIdFeed.await(source.id).associateBy { it.id }
+
+            val items = (
+                listOfNotNull(
+                    if ((source as? CatalogueSource)?.supportsLatest == true) SourceFeedUI.Latest(null) else null,
+                    SourceFeedUI.Browse(null),
+                ) + feeds.mapNotNull { feed ->
+                    val savedSearch = savedSearches[feed.savedSearch]
+                    if (savedSearch != null) {
+                        SourceFeedUI.SourceSavedSearch(feed, savedSearch, null)
+                    } else {
+                        null
+                    }
+                }
+                ).toImmutableList()
+
+            mutableState.update { it.copy(items = items) }
         }
     }
 

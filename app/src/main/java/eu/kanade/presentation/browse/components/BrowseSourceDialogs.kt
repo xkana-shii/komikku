@@ -94,43 +94,80 @@ fun SavedSearchCreateDialog(
     var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(""))
     }
+    var showOverwriteDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text(text = stringResource(SYMR.strings.save_search)) },
-        text = {
-            OutlinedTextField(
-                value = textFieldValue,
-                onValueChange = { textFieldValue = it },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(text = stringResource(SYMR.strings.save_search_hint))
-                },
-            )
-        },
-        properties = DialogProperties(
-            usePlatformDefaultWidth = true,
-        ),
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val searchName = textFieldValue.text.trim()
-                    if (searchName.isNotBlank() && searchName !in currentSavedSearches) {
-                        saveSearch(searchName)
+
+    if (showOverwriteDialog) {
+        AlertDialog(
+            onDismissRequest = { showOverwriteDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        saveSearch(textFieldValue.text.trim())
+                        showOverwriteDialog = false
                         onDismissRequest()
-                    } else {
-                        context.toast(SYMR.strings.save_search_invalid_name)
-                    }
-                },
-            ) {
-                Text(text = stringResource(MR.strings.action_ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(text = stringResource(MR.strings.action_cancel))
-            }
-        },
-    )
+                    },
+                ) {
+                    Text(text = stringResource(MR.strings.action_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showOverwriteDialog = false },
+                ) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+            title = {
+                Text(text = stringResource(SYMR.strings.save_search))
+            },
+            text = {
+                Text(text = stringResource(SYMR.strings.save_search_overwrite_confirm))
+            },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = true,
+            ),
+        )
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text(text = stringResource(SYMR.strings.save_search)) },
+            text = {
+                OutlinedTextField(
+                    value = textFieldValue,
+                    onValueChange = { textFieldValue = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(text = stringResource(SYMR.strings.save_search_hint))
+                    },
+                )
+            },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = true,
+            ),
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val searchName = textFieldValue.text.trim()
+                        if (searchName.isBlank()) {
+                            context.toast(SYMR.strings.save_search_invalid_name)
+                        } else if (searchName in currentSavedSearches) {
+                            showOverwriteDialog = true
+                        } else {
+                            saveSearch(searchName)
+                            onDismissRequest()
+                        }
+                    },
+                ) {
+                    Text(text = stringResource(MR.strings.action_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+        )
+    }
 }

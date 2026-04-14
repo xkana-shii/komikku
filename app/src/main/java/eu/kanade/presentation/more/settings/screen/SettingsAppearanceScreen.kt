@@ -251,6 +251,11 @@ object SettingsAppearanceScreen : SearchableSettings {
                         true
                     },
                 ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = uiPreferences.libraryParentChildLayout(),
+                    title = "Library parent/child layout",
+                    subtitle = "Use parent-sub categories in Library tab",
+                ),
                 Preference.PreferenceItem.ListPreference(
                     preference = uiPreferences.dateFormat(),
                     entries = DateFormats
@@ -273,6 +278,11 @@ object SettingsAppearanceScreen : SearchableSettings {
                 Preference.PreferenceItem.SwitchPreference(
                     preference = uiPreferences.imagesInDescription(),
                     title = stringResource(MR.strings.pref_display_images_description),
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = uiPreferences.showFlags(),
+                    title = stringResource(KMR.strings.pref_language_flags),
+                    subtitle = stringResource(KMR.strings.pref_language_flags_summary),
                 ),
             ),
         )

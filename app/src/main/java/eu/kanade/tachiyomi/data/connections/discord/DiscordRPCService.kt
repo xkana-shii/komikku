@@ -160,7 +160,13 @@ class DiscordRPCService : Service() {
             setUsesChronometer(true)
         }
 
-        startForeground(Notifications.ID_DISCORD_RPC, builder.build())
+        try {
+            startForeground(Notifications.ID_DISCORD_RPC, builder.build())
+        } catch (_: Exception) {
+            rpc?.closeRPC()
+            rpc = null
+            stopSelf()
+        }
     }
 
     companion object {

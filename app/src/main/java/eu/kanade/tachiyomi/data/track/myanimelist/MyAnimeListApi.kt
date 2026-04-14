@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALListItem
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALListItemStatus
+import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALListItemStatusWrapper
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALManga
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALMangaMetadata
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALOAuth
@@ -14,7 +15,9 @@ import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALSearchResult
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALUser
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.POST
+import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.PkceUtil
@@ -107,25 +110,57 @@ class MyAnimeListApi(
 
     suspend fun updateItem(track: Track): Track {
         return withIOContext {
+            // Fetch current list status to determine if reread count should be incremented
+            val previousStatus = getCurrentListStatus(track.remote_id)
+
+            val targetStatus = track.toMyAnimeListStatus() ?: "reading"
+            val isTargetCompleted = targetStatus == "completed"
+            val wasRereading = previousStatus?.isRereading == true
+
             val formBodyBuilder = FormBody.Builder()
-                .add("status", track.toMyAnimeListStatus() ?: "reading")
-                .add("is_rereading", (track.status == MyAnimeList.REREADING).toString())
+                .add("status", targetStatus)
                 .add("score", track.score.toString())
                 .add("num_chapters_read", track.last_chapter_read.toInt().toString())
+            // If changing status from rereading -> completed, increment MAL's num_times_reread
+            val initialIsRereading = (track.status == MyAnimeList.REREADING)
+            var finalIsRereading = initialIsRereading
+            if (isTargetCompleted && wasRereading) {
+                val nextRereadCount = (previousStatus?.numTimesReread ?: 0) + 1
+                formBodyBuilder.add("num_times_reread", nextRereadCount.toString())
+                // Ensure rereading flag is false when completed
+                finalIsRereading = false
+            }
             convertToIsoDate(track.started_reading_date)?.let {
                 formBodyBuilder.add("start_date", it)
             }
             convertToIsoDate(track.finished_reading_date)?.let {
                 formBodyBuilder.add("finish_date", it)
             }
+            // Add is_rereading only once after finalizing its value
+            formBodyBuilder.add("is_rereading", finalIsRereading.toString())
 
             val request = Request.Builder()
                 .url(mangaUrl(track.remote_id).toString())
                 .put(formBodyBuilder.build())
                 .build()
             with(json) {
-                authClient.newCall(request)
-                    .awaitSuccess()
+                val response = authClient
+                    .newCall(request)
+                    .await()
+
+                if (!response.isSuccessful) {
+                    if (response.body.string().contains("invalid_content")) {
+                        // MAL returns unapproved titles in search but does not allow adding them to the list
+                        // returns 400 with this body: {"message":"Invalid content","error":"invalid_content"}
+                        // These unapproved titles cannot be filtered out in search and are also returned by the
+                        // endpoint we use for id prefix search
+                        throw MALTitleNotApproved()
+                    } else {
+                        throw HttpException(response.code)
+                    }
+                }
+
+                response
                     .parseAs<MALListItemStatus>()
                     .let { parseMangaItem(it, track) }
             }
@@ -144,7 +179,7 @@ class MyAnimeListApi(
         return withIOContext {
             val uri = "$BASE_API_URL/manga".toUri().buildUpon()
                 .appendPath(track.remote_id.toString())
-                .appendQueryParameter("fields", "num_chapters,my_list_status{start_date,finish_date}")
+                .appendQueryParameter("fields", "num_chapters,my_list_status{start_date,finish_date,is_rereading,num_times_reread}")
                 .build()
             with(json) {
                 authClient.newCall(GET(uri.toString()))
@@ -264,6 +299,21 @@ class MyAnimeListApi(
                 // count all with "Story" or "Story & Art" as authors, like is done for library entries
                 .filter { authorNode -> authorNode.role.contains("Story") }
                 .mapNotNull { authorNode -> authorNode.node.getFullName() }
+        }
+    }
+
+    private suspend fun getCurrentListStatus(remoteId: Long): MALListItemStatus? {
+        return withIOContext {
+            val uri = "$BASE_API_URL/manga".toUri().buildUpon()
+                .appendPath(remoteId.toString())
+                .appendQueryParameter("fields", "my_list_status{is_rereading,num_times_reread}")
+                .build()
+            with(json) {
+                val wrapper = authClient.newCall(GET(uri.toString()))
+                    .awaitSuccess()
+                    .parseAs<MALListItemStatusWrapper>()
+                wrapper.myListStatus
+            }
         }
     }
 

@@ -81,6 +81,7 @@ import tachiyomi.domain.manga.model.toMangaUpdate
 import tachiyomi.domain.source.interactor.DeleteSavedSearchById
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.interactor.InsertSavedSearch
+import tachiyomi.domain.source.interactor.UpdateSavedSearch
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.model.StubSource
@@ -127,6 +128,7 @@ open class BrowseSourceScreenModel(
     private val getFlatMetadataById: GetFlatMetadataById = Injekt.get(),
     private val deleteSavedSearchById: DeleteSavedSearchById = Injekt.get(),
     private val insertSavedSearch: InsertSavedSearch = Injekt.get(),
+    private val updateSavedSearch: UpdateSavedSearch = Injekt.get(),
     private val getExhSavedSearch: GetExhSavedSearch = Injekt.get(),
     // SY <--
 ) : StateScreenModel<BrowseSourceScreenModel.State>(State(Listing.valueOf(listingQuery))) {
@@ -420,7 +422,7 @@ open class BrowseSourceScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate())
+            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             // KMK -->
             val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd().get()
             val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd().get()
@@ -669,17 +671,37 @@ open class BrowseSourceScreenModel(
                 it.isBlank() || it == GetRemoteManga.QUERY_POPULAR || it == GetRemoteManga.QUERY_LATEST
             }?.trim()
             val filterList = state.value.filters.ifEmpty { source.getFilterList() }
-            insertSavedSearch.await(
-                SavedSearch(
-                    id = -1,
-                    source = source.id,
-                    name = name.trim(),
-                    query = query,
-                    filtersJson = runCatching {
-                        filterSerializer.serialize(filterList).ifEmpty { null }?.let { Json.encodeToString(it) }
-                    }.getOrNull(),
-                ),
-            )
+
+            val nameTrimmed = name.trim()
+            val existing = state.value.savedSearches.find {
+                it.name.equals(nameTrimmed, ignoreCase = true)
+            }
+
+            if (existing != null) {
+                updateSavedSearch.await(
+                    SavedSearch(
+                        id = existing.id,
+                        source = source.id,
+                        name = nameTrimmed,
+                        query = query,
+                        filtersJson = runCatching {
+                            filterSerializer.serialize(filterList).ifEmpty { null }?.let { Json.encodeToString(it) }
+                        }.getOrNull(),
+                    ),
+                )
+            } else {
+                insertSavedSearch.await(
+                    SavedSearch(
+                        id = -1,
+                        source = source.id,
+                        name = nameTrimmed,
+                        query = query,
+                        filtersJson = runCatching {
+                            filterSerializer.serialize(filterList).ifEmpty { null }?.let { Json.encodeToString(it) }
+                        }.getOrNull(),
+                    ),
+                )
+            }
         }
     }
 

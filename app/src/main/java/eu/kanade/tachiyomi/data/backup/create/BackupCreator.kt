@@ -33,6 +33,7 @@ import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.interactor.GetMergedManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -56,6 +57,7 @@ class BackupCreator(
     private val preferenceBackupCreator: PreferenceBackupCreator = PreferenceBackupCreator(),
     private val extensionRepoBackupCreator: ExtensionRepoBackupCreator = ExtensionRepoBackupCreator(),
     private val sourcesBackupCreator: SourcesBackupCreator = SourcesBackupCreator(),
+    private val sourceManager: SourceManager = Injekt.get(),
     // KMK -->
     private val feedBackupCreator: FeedBackupCreator = FeedBackupCreator(),
     // KMK <--
@@ -96,13 +98,33 @@ class BackupCreator(
             val backupManga =
                 backupMangas(getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */, options)
 
+            // Compute source preferences first so we can include those sources in backupSources
+            val sourcePrefs = backupSourcePreferences(options)
+
+            // Existing sources from manga
+            val mangaSources = backupSources(backupManga)
+
+            // Derive additional sources from source preference keys: "source_<id>"
+            val prefSourceIds = sourcePrefs
+                .mapNotNull { it.sourceKey.removePrefix("source_").toLongOrNull() }
+                .toSet()
+            val prefSources = prefSourceIds
+                .map { id ->
+                    val src = sourceManager.getOrStub(id)
+                    BackupSource(name = src.name, sourceId = src.id)
+                }
+
+            // Union by sourceId
+            val allSources = (mangaSources + prefSources)
+                .distinctBy { it.sourceId }
+
             val backup = Backup(
                 backupManga = backupManga,
                 backupCategories = backupCategories(options),
-                backupSources = backupSources(backupManga),
+                backupSources = allSources,
                 backupPreferences = backupAppPreferences(options),
                 backupExtensionRepo = backupExtensionRepos(options),
-                backupSourcePreferences = backupSourcePreferences(options),
+                backupSourcePreferences = sourcePrefs,
 
                 // SY -->
                 backupSavedSearches = backupSavedSearches(options),

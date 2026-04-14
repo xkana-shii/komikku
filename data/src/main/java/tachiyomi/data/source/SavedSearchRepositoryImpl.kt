@@ -52,6 +52,17 @@ class SavedSearchRepositoryImpl(
         }
     }
 
+    override suspend fun update(savedSearch: SavedSearch) {
+        handler.await {
+            saved_searchQueries.update(
+                name = savedSearch.name,
+                query = savedSearch.query,
+                filtersJson = savedSearch.filtersJson,
+                id = savedSearch.id,
+            )
+        }
+    }
+
     override suspend fun insertAll(savedSearch: List<SavedSearch>) {
         handler.await(true) {
             savedSearch.forEach {

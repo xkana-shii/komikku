@@ -104,6 +104,11 @@ class LibraryPreferences(
         TriState.DISABLED,
     )
 
+    fun filterFillermarked() = preferenceStore.getEnum(
+        "pref_filter_library_fillermarked_v2",
+        TriState.DISABLED,
+    )
+
     fun filterCompleted() = preferenceStore.getEnum(
         "pref_filter_library_completed_v2",
         TriState.DISABLED,
@@ -168,6 +173,8 @@ class LibraryPreferences(
 
     fun categoryTabs() = preferenceStore.getBoolean("display_category_tabs", true)
 
+    fun subcategoryTabs() = preferenceStore.getBoolean("display_subcategory_tabs", false)
+
     fun categoryNumberOfItems() = preferenceStore.getBoolean("display_number_of_items", false)
 
     fun categorizedDisplaySettings() = preferenceStore.getBoolean("categorized_display", false)
@@ -179,6 +186,13 @@ class LibraryPreferences(
     fun updateCategories() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_PREF_KEY, emptySet())
 
     fun updateCategoriesExclude() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
+
+    // KMK -->
+    fun updateSourcesExclude() = preferenceStore.getStringSet(
+        LIBRARY_UPDATE_SOURCES_EXCLUDE_PREF_KEY,
+        emptySet(),
+    )
+    // KMK <--
 
     // endregion
 
@@ -196,6 +210,11 @@ class LibraryPreferences(
 
     fun filterChapterByBookmarked() = preferenceStore.getLong(
         "default_chapter_filter_by_bookmarked",
+        Manga.SHOW_ALL,
+    )
+
+    fun filterChapterByFillermarked() = preferenceStore.getLong(
+        "default_chapter_filter_by_fillermarked",
         Manga.SHOW_ALL,
     )
 
@@ -219,6 +238,7 @@ class LibraryPreferences(
         filterChapterByRead().set(manga.unreadFilterRaw)
         filterChapterByDownloaded().set(manga.downloadedFilterRaw)
         filterChapterByBookmarked().set(manga.bookmarkedFilterRaw)
+        filterChapterByFillermarked().set(manga.fillermarkedFilterRaw)
         sortChapterBySourceOrNumber().set(manga.sorting)
         displayChapterByNameOrNumber().set(manga.displayMode)
         sortChapterByAscendingOrDescending().set(
@@ -256,6 +276,7 @@ class LibraryPreferences(
     enum class ChapterSwipeAction {
         ToggleRead,
         ToggleBookmark,
+        ToggleFillermark,
         Download,
         Disabled,
     }
@@ -269,6 +290,17 @@ class LibraryPreferences(
     fun groupLibraryBy() = preferenceStore.getInt("group_library_by", LibraryGroup.BY_DEFAULT)
 
     // SY <--
+
+    // KMK -->
+    // New preferences added for developer options UI in Settings:
+    fun libraryUpdateCacheSkip() = preferenceStore.getBoolean("library_update_cache_skip", false)
+
+    fun libraryUpdateParallelSlots() = preferenceStore.getInt("library_update_parallel_slots", 1)
+    // KMK <--
+
+    fun autoRefreshOpenedManga() = preferenceStore.getBoolean("auto_refresh_opened_manga", false)
+
+    fun autoResetChapterFlagsOnRefresh() = preferenceStore.getBoolean("auto_reset_chapter_flags_on_refresh", false)
 
     companion object {
         const val DEVICE_ONLY_ON_WIFI = "wifi"
@@ -286,6 +318,9 @@ class LibraryPreferences(
         const val DEFAULT_CATEGORY_PREF_KEY = "default_category"
         private const val LIBRARY_UPDATE_CATEGORIES_PREF_KEY = "library_update_categories"
         private const val LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY = "library_update_categories_exclude"
+        // KMK -->
+        private const val LIBRARY_UPDATE_SOURCES_EXCLUDE_PREF_KEY = "library_update_sources_exclude"
+        // KMK <--
 
         // KMK -->
         private const val FILTER_LIBRARY_CATEGORIES_INCLUDE_PREF_KEY = "pref_filter_library_categories_include"

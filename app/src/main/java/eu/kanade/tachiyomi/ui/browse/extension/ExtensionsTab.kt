@@ -105,6 +105,7 @@ fun extensionsTab(
                 onUninstallExtension = { extensionsScreenModel.uninstallExtension(it) },
                 onUpdateExtension = extensionsScreenModel::updateExtension,
                 onRefresh = extensionsScreenModel::findAvailableExtensions,
+                onSearchQueryChange = extensionsScreenModel::updateSearchQuery,
             )
 
             privateExtensionToUninstall?.let { extension ->

@@ -58,6 +58,7 @@ class BulkFavoriteScreenModel(
     private val coverCache: CoverCache = Injekt.get(),
     private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags = Injekt.get(),
     private val addTracks: AddTracks = Injekt.get(),
+    // KMK -->
     private val syncChaptersWithSource: SyncChaptersWithSource = Injekt.get(),
 ) : StateScreenModel<BulkFavoriteScreenModel.State>(initialState) {
 
@@ -249,6 +250,16 @@ class BulkFavoriteScreenModel(
         if (manga.favorite) return
 
         screenModelScope.launchIO {
+            updateManga.awaitUpdateFavorite(manga.id, true)
+            setMangaDefaultChapterFlags.await(manga)
+            val new = manga.copy(
+                favorite = !manga.favorite,
+                dateAdded = when (manga.favorite) {
+                    true -> 0
+                    false -> Instant.now().toEpochMilli()
+                },
+            )
+            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             try {
                 val source = sourceManager.getOrStub(manga.source)
                 setMangaDefaultChapterFlags.await(manga)
@@ -353,7 +364,7 @@ class BulkFavoriteScreenModel(
                 addTracks.bindEnhancedTrackers(manga, source)
             }
 
-            updateManga.await(new.toMangaUpdate())
+            updateManga.await(new.toMangaUpdate().copy(chapterFlags = null))
             val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd().get()
             val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd().get()
             if (new.favorite && (fetchMetadataOnAdd || fetchChaptersOnAdd)) {

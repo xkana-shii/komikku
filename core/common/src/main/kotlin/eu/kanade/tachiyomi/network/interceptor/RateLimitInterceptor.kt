@@ -1,9 +1,12 @@
 package eu.kanade.tachiyomi.network.interceptor
 
 import android.os.SystemClock
+import eu.kanade.tachiyomi.network.NetworkPreferences
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.io.IOException
 import java.util.ArrayDeque
 import java.util.concurrent.Semaphore
@@ -65,6 +68,9 @@ internal class RateLimitInterceptor(
     private val rateLimitMillis = period.inWholeMilliseconds
     private val fairLock = Semaphore(1, true)
 
+    // Lazy-resolve preferences so we don't force construction at class load
+    private val preferences: NetworkPreferences by lazy { Injekt.get() }
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val call = chain.call()
         if (call.isCanceled()) throw IOException("Canceled")
@@ -73,6 +79,11 @@ internal class RateLimitInterceptor(
         when (host) {
             null, request.url.host -> {} // need rate limit
             else -> return chain.proceed(request)
+        }
+
+        // If the user has chosen to ignore rate limits, bypass limiter entirely.
+        if (preferences.ignoreRateLimits().get()) {
+            return chain.proceed(request)
         }
 
         try {

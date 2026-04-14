@@ -24,6 +24,7 @@ class GetUpdates(
         unread: Boolean?,
         started: Boolean?,
         bookmarked: Boolean?,
+        fillermarked: Boolean?,
         hideExcludedScanlators: Boolean,
     ): Flow<List<UpdatesWithRelations>> {
         return repository.subscribeAll(
@@ -32,6 +33,7 @@ class GetUpdates(
             unread = unread,
             started = started,
             bookmarked = bookmarked,
+            fillermarked = fillermarked,
             hideExcludedScanlators = hideExcludedScanlators,
         )
             // SY -->

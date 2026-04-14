@@ -13,6 +13,7 @@ interface UpdatesRepository {
         unread: Boolean?,
         started: Boolean?,
         bookmarked: Boolean?,
+        fillermarked: Boolean?,
         hideExcludedScanlators: Boolean,
     ): Flow<List<UpdatesWithRelations>>
 

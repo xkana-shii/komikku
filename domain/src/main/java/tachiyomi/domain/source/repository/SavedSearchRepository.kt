@@ -15,5 +15,7 @@ interface SavedSearchRepository {
 
     suspend fun insert(savedSearch: SavedSearch): Long?
 
+    suspend fun update(savedSearch: SavedSearch)
+
     suspend fun insertAll(savedSearch: List<SavedSearch>)
 }

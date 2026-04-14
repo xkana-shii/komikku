@@ -29,14 +29,16 @@ class NHentaiSearchMetadata : RaisedSearchMetadata() {
 
     var mediaId: String? = null
 
-    var mediaServer: Int? = null
-
     var japaneseTitle by titleDelegate(TITLE_TYPE_JAPANESE)
     var englishTitle by titleDelegate(TITLE_TYPE_ENGLISH)
     var shortTitle by titleDelegate(TITLE_TYPE_SHORT)
 
+    var coverImageUrl: String? = null
     var coverImageType: String? = null
-    var pageImageTypes: List<String> = emptyList()
+
+    var pageImagePreviewUrls: List<String> = emptyList()
+
+    var thumbnailImageUrl: String? = null
     var thumbnailImageType: String? = null
 
     var scanlator: String? = null
@@ -45,16 +47,6 @@ class NHentaiSearchMetadata : RaisedSearchMetadata() {
 
     override fun createMangaInfo(manga: SManga): SManga {
         val key = nhId?.let { nhIdToPath(it) }
-
-        val cover = if (mediaId != null) {
-            // Default media server for cover is always 1 (see in page header)
-            val server = mediaServer ?: 1
-            typeToExtension(coverImageType)?.let {
-                "https://t$server.nhentai.net/galleries/$mediaId/cover.$it"
-            }
-        } else {
-            null
-        }
 
         val title = when (preferredTitle) {
             TITLE_TYPE_SHORT -> shortTitle ?: englishTitle ?: japaneseTitle ?: manga.title
@@ -88,7 +80,7 @@ class NHentaiSearchMetadata : RaisedSearchMetadata() {
 
         return manga.copy(
             url = key ?: manga.url,
-            thumbnail_url = cover ?: manga.thumbnail_url,
+            thumbnail_url = coverImageUrl ?: thumbnailImageUrl ?: manga.thumbnail_url,
             title = title,
             artist = group ?: manga.artist,
             author = artist ?: manga.artist,
@@ -117,7 +109,7 @@ class NHentaiSearchMetadata : RaisedSearchMetadata() {
                 getItem(englishTitle) { stringResource(SYMR.strings.english_title) },
                 getItem(shortTitle) { stringResource(SYMR.strings.short_title) },
                 getItem(coverImageType) { stringResource(SYMR.strings.cover_image_file_type) },
-                getItem(pageImageTypes.size) { stringResource(SYMR.strings.page_count) },
+                getItem(pageImagePreviewUrls.size) { stringResource(SYMR.strings.page_count) },
                 getItem(thumbnailImageType) { stringResource(SYMR.strings.thumbnail_image_file_type) },
                 getItem(scanlator) { stringResource(MR.strings.scanlator) },
             )

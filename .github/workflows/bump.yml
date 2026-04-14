@@ -1,0 +1,62 @@
+name: Spotless, bump version, and tag
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: spotless-bump-and-tag
+  cancel-in-progress: false
+
+jobs:
+  spotless_bump_and_tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Spotless apply
+        run: ./gradlew spotlessApply
+
+      - name: Commit Spotless changes
+        run: |
+          git diff --quiet && exit 0
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: spotlessApply"
+          git push
+
+      - name: Bump version
+        run: bash .github/scripts/bump_version.sh
+
+      - name: Commit version bump
+        run: |
+          git diff --quiet && exit 0
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts
+          git commit -m "chore: bump version"
+          git push
+
+      - name: Tag release
+        run: |
+          tag="v$(grep 'versionName = ' app/build.gradle.kts | sed -n 's/.*"\(.*\)".*/\1/p')"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "tag $tag already exists"
+            exit 1
+          fi
+
+          git tag "$tag"
+          git push origin "$tag"
