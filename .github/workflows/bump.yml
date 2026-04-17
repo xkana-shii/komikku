@@ -50,8 +50,11 @@ jobs:
           git push
 
       - name: Tag release
+        env:
+          REPO_PAT: ${{ secrets.BOT_PAT }}
         run: |
-          tag="v$(grep 'versionName = ' app/build.gradle.kts | sed -n 's/.*"\(.*\)".*/\1/p')"
+          set -e
+          tag="v$(grep 'versionName = ' app/build.gradle.kts | sed -n 's/.*\"\(.*\)\".*/\1/p')"
 
           if git rev-parse "$tag" >/dev/null 2>&1; then
             echo "tag $tag already exists"
@@ -59,4 +62,4 @@ jobs:
           fi
 
           git tag "$tag"
-          git push origin "$tag"
+          git push "https://x-access-token:${REPO_PAT}@github.com/${GITHUB_REPOSITORY}.git" "$tag"
