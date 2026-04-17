@@ -49,17 +49,66 @@ jobs:
           git commit -m "chore: bump version"
           git push
 
-      - name: Tag release
+      - name: Create tag via Release and delete Release (keep tag)
         env:
-          REPO_PAT: ${{ secrets.BOT_PAT }}
+          BOT_PAT: ${{ secrets.BOT_PAT }}
         run: |
-          set -e
-          tag="v$(grep 'versionName = ' app/build.gradle.kts | sed -n 's/.*\"\(.*\)\".*/\1/p')"
+          set -euo pipefail
 
-          if git rev-parse "$tag" >/dev/null 2>&1; then
-            echo "tag $tag already exists"
+          # compute tag from build.gradle.kts versionName
+          tag="v$(grep 'versionName = ' app/build.gradle.kts | sed -n 's/.*\"\(.*\)\".*/\1/p')"
+          echo "Computed tag: ${tag}"
+
+          # check remote tag does not already exist
+          if git ls-remote --tags "https://x-access-token:${BOT_PAT}@github.com/${GITHUB_REPOSITORY}.git" | grep -q "refs/tags/${tag}"; then
+            echo "Tag ${tag} already exists on remote. Aborting."
             exit 1
           fi
 
-          git tag "$tag"
-          git push "https://x-access-token:${REPO_PAT}@github.com/${GITHUB_REPOSITORY}.git" "$tag"
+          # get commit-ish to point tag to (use current HEAD)
+          commitish=$(git rev-parse --verify HEAD)
+          echo "Using commitish: ${commitish}"
+
+          api_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases"
+
+          # create release -> this will create a tag if it does not exist
+          echo "Creating release (and tag) for ${tag}..."
+          resp=$(curl -s -X POST \
+            -H "Authorization: token ${BOT_PAT}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api_url}" \
+            -d "{\"tag_name\":\"${tag}\",\"target_commitish\":\"${commitish}\",\"name\":\"${tag}\",\"body\":\"Release ${tag}\",\"draft\":false,\"prerelease\":false}")
+
+          echo "Create release response: $resp"
+
+          # extract release id (no jq dependency)
+          release_id=$(printf '%s' "$resp" | grep -Po '"id":\s*\K[0-9]+' | head -n1 || true)
+          if [ -z "$release_id" ]; then
+            echo "Failed to create release or could not parse release id. Full response:"
+            printf '%s\n' "$resp"
+            exit 1
+          fi
+          echo "Created release id: ${release_id}"
+
+          # verify tag exists on remote
+          echo "Verifying remote tag exists..."
+          if git ls-remote --tags "https://x-access-token:${BOT_PAT}@github.com/${GITHUB_REPOSITORY}.git" | grep -q "refs/tags/${tag}"; then
+            echo "Tag ${tag} is present on remote."
+          else
+            echo "Tag ${tag} was not found on remote after release creation. Response from create: $resp"
+            exit 1
+          fi
+
+          # delete the release object but DO NOT delete the tag itself
+          echo "Deleting release id ${release_id} (tag will remain) ..."
+          del_status=$(curl -s -o /dev/stderr -w "%{http_code}" -X DELETE \
+            -H "Authorization: token ${BOT_PAT}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api_url}/${release_id}" 2>&1) || true
+
+          if [ "${del_status}" != "204" ]; then
+            echo "Failed to delete release id ${release_id}. HTTP status: ${del_status}"
+            exit 1
+          fi
+
+          echo "Release deleted successfully. Tag ${tag} remains on the repository."
