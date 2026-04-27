@@ -1,72 +1,70 @@
 package tachiyomi.data.category
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.category.repository.CategoryRepository
 
+// KMK -->
+
 class CategoryRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : CategoryRepository {
 
     override suspend fun get(id: Long): Category? {
-        return handler.awaitOneOrNull { categoriesQueries.getCategory(id, CategoryMapper::mapCategory) }
+        return database.categoriesQueries.getCategory(id, CategoryMapper::mapCategory).awaitAsOneOrNull()
     }
 
     override suspend fun getAll(): List<Category> {
-        return handler.awaitList { categoriesQueries.getCategories(CategoryMapper::mapCategory) }
+        return database.categoriesQueries.getCategories(CategoryMapper::mapCategory).awaitAsList()
     }
 
     override fun getAllAsFlow(): Flow<List<Category>> {
-        return handler.subscribeToList { categoriesQueries.getCategories(CategoryMapper::mapCategory) }
+        return database.categoriesQueries.getCategories(CategoryMapper::mapCategory).subscribeToList()
     }
 
     override suspend fun getCategoriesByMangaId(mangaId: Long): List<Category> {
-        return handler.awaitList {
-            categoriesQueries.getCategoriesByMangaId(mangaId, CategoryMapper::mapCategory)
-        }
+        return database.categoriesQueries.getCategoriesByMangaId(mangaId, CategoryMapper::mapCategory).awaitAsList()
     }
 
     override fun getCategoriesByMangaIdAsFlow(mangaId: Long): Flow<List<Category>> {
-        return handler.subscribeToList {
-            categoriesQueries.getCategoriesByMangaId(mangaId, CategoryMapper::mapCategory)
-        }
+        return database.categoriesQueries.getCategoriesByMangaId(mangaId, CategoryMapper::mapCategory).subscribeToList()
     }
 
     // SY -->
     override suspend fun insert(category: Category): Long {
-        return handler.awaitOneExecutable(true) {
-            categoriesQueries.insert(
+        return database.transactionWithResult {
+            database.categoriesQueries.insertReturningId(
                 name = category.name,
                 order = category.order,
                 flags = category.flags,
                 // KMK -->
                 hidden = if (category.hidden) 1L else 0L,
                 // KMK <--
-            )
-            categoriesQueries.selectLastInsertedRowId()
+            ).awaitAsOne()
         }
     }
     // SY <--
 
     override suspend fun updatePartial(update: CategoryUpdate) {
-        handler.await {
-            updatePartialBlocking(update)
-        }
+        updatePartialBlocking(update)
     }
 
     override suspend fun updatePartial(updates: List<CategoryUpdate>) {
-        handler.await(inTransaction = true) {
+        database.transaction {
             for (update in updates) {
                 updatePartialBlocking(update)
             }
         }
     }
 
-    private fun Database.updatePartialBlocking(update: CategoryUpdate) {
-        categoriesQueries.update(
+    private suspend fun updatePartialBlocking(update: CategoryUpdate) {
+        database.categoriesQueries.update(
             name = update.name,
             order = update.order,
             flags = update.flags,
@@ -78,16 +76,13 @@ class CategoryRepositoryImpl(
     }
 
     override suspend fun updateAllFlags(flags: Long?) {
-        handler.await {
-            categoriesQueries.updateAllFlags(flags)
-        }
+        database.categoriesQueries.updateAllFlags(flags)
     }
 
     override suspend fun delete(categoryId: Long) {
-        handler.await {
-            categoriesQueries.delete(
-                categoryId = categoryId,
-            )
-        }
+        database.categoriesQueries.delete(
+            categoryId = categoryId,
+        )
     }
 }
+// KMK <--
