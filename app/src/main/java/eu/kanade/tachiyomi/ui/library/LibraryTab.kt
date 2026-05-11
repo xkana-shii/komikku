@@ -130,7 +130,6 @@ data object LibraryTab : Tab {
 
         val snackbarHostState = remember { SnackbarHostState() }
         var showCategoryMenu by rememberSaveable { mutableStateOf(false) }
-        var showAddToCollectionDialog by remember { mutableStateOf(false) }
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
             // SY -->
