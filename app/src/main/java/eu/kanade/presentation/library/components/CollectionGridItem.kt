@@ -94,14 +94,14 @@ fun CollectionListItem(
                 mangaId = cover.mangaId,
                 sourceId = cover.sourceId,
                 isMangaFavorite = cover.isFavorite,
-                url = cover.thumbnailUrl,
+                ogUrl = cover.ogThumbnailUrl,
                 lastModified = cover.coverLastModified,
             )
         } ?: MangaCoverModel(
             mangaId = 0,
             sourceId = 0,
             isMangaFavorite = false,
-            url = null,
+            ogUrl = null,
             lastModified = 0,
         ),
         badge = {},
@@ -161,7 +161,7 @@ private fun BoxScope.StackedCollectionCover(
                         mangaId = firstCover.mangaId,
                         sourceId = firstCover.sourceId,
                         isMangaFavorite = firstCover.isFavorite,
-                        url = firstCover.thumbnailUrl,
+                        ogUrl = firstCover.ogThumbnailUrl,
                         lastModified = firstCover.coverLastModified,
                     ),
                 )

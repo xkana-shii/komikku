@@ -135,6 +135,7 @@ fun LibraryPager(
                     searchQuery = searchQuery,
                     onGlobalSearchClicked = onGlobalSearchClicked,
                     usePanoramaCover = true,
+                    onClickCollection = onClickCollection,
                 )
             }
             // KMK <--

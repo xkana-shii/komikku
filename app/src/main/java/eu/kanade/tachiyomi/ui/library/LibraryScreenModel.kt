@@ -1844,7 +1844,13 @@ class LibraryScreenModel(
             val filteredCollections: List<LibraryGridItem> = if (searchQuery.isNullOrEmpty()) {
                 libraryData.collectionItems
             } else {
-                libraryData.collectionItems.filter { it.matches(searchQuery) }
+                // Simple filter: NO matches(), use direct property match (case-insensitive)
+                libraryData.collectionItems.filter { item ->
+                    val q = searchQuery.trim()
+                    // You can adjust these fields as your Collection model exposes
+                    item.collection.name.contains(q, ignoreCase = true) ||
+                        item.collection.description.contains(q, ignoreCase = true)
+                }
             }
             return mangaItems + filteredCollections
         }

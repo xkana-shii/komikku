@@ -3,7 +3,7 @@ package tachiyomi.domain.collection.model
 data class CollectionCoverData(
     val mangaId: Long,
     val sourceId: Long,
-    val thumbnailUrl: String?,
+    val ogThumbnailUrl: String?,
     val coverLastModified: Long,
     val isFavorite: Boolean,
 )

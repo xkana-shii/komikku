@@ -55,25 +55,25 @@ internal fun LibraryCompactGrid(
                             lastModified = manga.coverLastModified,
                         ),
                         coverBadgeStart = {
-                            DownloadsBadge(count = libraryItem.downloadCount)
-                            UnreadBadge(count = libraryItem.unreadCount)
+                            DownloadsBadge(count = gridItem.downloadCount)
+                            UnreadBadge(count = gridItem.unreadCount)
                         },
                         coverBadgeEnd = {
                             LanguageBadge(
-                                isLocal = libraryItem.isLocal,
-                                sourceLanguage = libraryItem.sourceLanguage,
+                                isLocal = gridItem.isLocal,
+                                sourceLanguage = gridItem.sourceLanguage,
                                 // KMK -->
-                                useLangIcon = libraryItem.useLangIcon,
+                                useLangIcon = gridItem.useLangIcon,
                                 // KMK <--
                             )
                             // KMK -->
-                            SourceIconBadge(source = libraryItem.source)
+                            SourceIconBadge(source = gridItem.source)
                             // KMK <--
                         },
-                        onLongClick = { onLongClick(libraryItem.libraryManga) },
-                        onClick = { onClick(libraryItem.libraryManga) },
-                        onClickContinueReading = if (onClickContinueReading != null && libraryItem.unreadCount > 0) {
-                            { onClickContinueReading(libraryItem.libraryManga) }
+                        onLongClick = { onLongClick(gridItem.libraryManga) },
+                        onClick = { onClick(gridItem.libraryManga) },
+                        onClickContinueReading = if (onClickContinueReading != null && gridItem.unreadCount > 0) {
+                            { onClickContinueReading(gridItem.libraryManga) }
                         } else {
                             null
                         },

@@ -41,6 +41,7 @@ fun AddToCollectionDialog(
             onDismissRequest = { showCreateDialog = false },
             onCreate = { name ->
                 onCreateCollection(name)
+                showCreateDialog = false
             },
         )
         return

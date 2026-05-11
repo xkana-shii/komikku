@@ -13,7 +13,6 @@ internal const val LOCAL_SOURCE_ID_ALIAS = "local"
 
 sealed interface LibraryGridItem {
     val id: Long
-    fun matches(constraint: String): Boolean
 }
 
 data class LibraryCollectionItem(
@@ -22,10 +21,6 @@ data class LibraryCollectionItem(
     val entryCount: Long,
 ) : LibraryGridItem {
     override val id: Long = -collection.id
-    override fun matches(constraint: String): Boolean {
-        return collection.name.contains(constraint, true) ||
-            collection.description.contains(constraint, true)
-    }
 }
 
 data class LibraryItem(

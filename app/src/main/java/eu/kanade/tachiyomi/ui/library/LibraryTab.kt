@@ -7,6 +7,10 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -14,8 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +37,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.category.visualName
+import eu.kanade.presentation.collection.components.AddToCollectionDialog
+import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
 import eu.kanade.presentation.library.components.LibraryContent
@@ -50,6 +60,7 @@ import eu.kanade.tachiyomi.ui.browse.source.SourcesScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.collection.CollectionManagementScreen
+import eu.kanade.tachiyomi.ui.collection.CollectionScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -118,6 +129,8 @@ data object LibraryTab : Tab {
         val state by screenModel.state.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
+        var showCategoryMenu by rememberSaveable { mutableStateOf(false) }
+        var showAddToCollectionDialog by remember { mutableStateOf(false) }
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
             // SY -->
@@ -151,6 +164,7 @@ data object LibraryTab : Tab {
                     defaultCategoryTitle = stringResource(MR.strings.label_default),
                     page = state.coercedActiveCategoryIndex,
                 )
+
                 LibraryToolbar(
                     hasActiveFilters = state.hasActiveFilters,
                     selectedCount = state.selection.size,
@@ -192,39 +206,36 @@ data object LibraryTab : Tab {
                     },
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
-                },
-                onClickCollections = {
-                    navigator.push(CollectionManagementScreen())
-                },
-                searchQuery = state.searchQuery,
-                onSearchQueryChange = screenModel::search,
-                // For scroll overlay when no tab
-                scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
-            )
+                    onClickCollections = {
+                        navigator.push(CollectionManagementScreen())
+                    },
+                )
 
-            DropdownMenu(
-                expanded = showCategoryMenu,
-                onDismissRequest = { showCategoryMenu = false },
-            ) {
-                state.displayedCategories.forEachIndexed { index, category ->
-                    DropdownMenuItem(
-                        text = { Text(category.visualName) },
-                        onClick = {
-                            showCategoryMenu = false
-                            screenModel.updateActiveCategoryIndex(index)
-                        },
-                        trailingIcon = if (state.coercedActiveCategoryIndex == index) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Outlined.Check,
-                                    contentDescription = null,
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                    )
-                },
+                DropdownMenu(
+                    expanded = showCategoryMenu,
+                    onDismissRequest = { showCategoryMenu = false },
+                ) {
+                    state.displayedCategories.forEachIndexed { index, category ->
+                        DropdownMenuItem(
+                            text = { Text(category.visualName) },
+                            onClick = {
+                                showCategoryMenu = false
+                                screenModel.updateActiveCategoryIndex(index)
+                            },
+                            trailingIcon = if (state.coercedActiveCategoryIndex == index) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Check,
+                                        contentDescription = null,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
+            },
             bottomBar = {
                 LibraryBottomActionMenu(
                     visible = state.selectionMode,
