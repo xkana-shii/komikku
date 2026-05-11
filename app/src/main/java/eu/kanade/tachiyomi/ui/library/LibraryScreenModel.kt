@@ -226,6 +226,7 @@ class LibraryScreenModel(
                     isInitialized = true,
                     categories = categories,
                     favorites = filteredFavorites,
+                    collectionItems = state.value.libraryData.collectionItems,
                     tracksMap = tracksMap,
                     loggedInTrackerIds = trackingFilters.keys,
                 )
