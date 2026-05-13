@@ -299,8 +299,8 @@ private fun UpdatesUiItem(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = {
-                        onLongClick()
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick()
                     },
                 )
                 .padding(top = if (isLeader) MaterialTheme.padding.small else 0.dp)
@@ -322,7 +322,7 @@ private fun UpdatesUiItem(
                     MangaCoverHide.Book(
                         modifier = Modifier
                             .width(UpdateItemWidth),
-                        bgColor = bgColor ?: (MaterialTheme.colorScheme.surface.takeIf { selected }),
+                        bgColor = bgColor ?: MaterialTheme.colorScheme.surface.takeIf { selected },
                         tint = onBgColor,
                         size = MangaCover.Size.Medium,
                     )
