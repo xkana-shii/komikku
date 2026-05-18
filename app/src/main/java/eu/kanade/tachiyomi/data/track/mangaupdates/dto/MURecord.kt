@@ -45,10 +45,10 @@ data class MUAuthor(
     val name: String? = null,
 )
 
-private val UNESCAPE_HYPHEN = Regex("""\\-""")
-private val UNESCAPE_NEWLINE = Regex("""\\n""")
-private val LEADING_MARKDOWN_LIST = Regex("(?m)^\\s*-\\s+")
-private val MULTI_NEWLINES = Regex("\\n{3,}")
+private val hyphen = Regex("""\\-""")
+private val newline = Regex("""\\n""")
+private val markdownlist = Regex("(?m)^\\s*-\\s+")
+private val newlines = Regex("\\n{3,}")
 
 fun prepareDescription(raw: String?): String {
     if (raw.isNullOrBlank()) return ""
@@ -57,10 +57,10 @@ fun prepareDescription(raw: String?): String {
         .replace("\r\n", "\n")
         .replace('\r', '\n')
 
-    s = UNESCAPE_HYPHEN.replace(s, "-")
-    s = UNESCAPE_NEWLINE.replace(s, "\n")
-    s = LEADING_MARKDOWN_LIST.replace(s, "• ")
-    s = MULTI_NEWLINES.replace(s, "\n\n")
+    s = hyphen.replace(s, "-")
+    s = newline.replace(s, "\n")
+    s = markdownlist.replace(s, "• ")
+    s = newlines.replace(s, "\n\n")
     val decoded = s.htmlDecode()
 
     return decoded.replace(Regex("\\n{3,}"), "\n\n").trim()
