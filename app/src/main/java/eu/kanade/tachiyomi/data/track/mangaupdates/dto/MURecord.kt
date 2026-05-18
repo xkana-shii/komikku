@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.util.Locale
 
 @Serializable
 data class MURecord(
@@ -30,7 +31,7 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         title = this@toTrackSearch.title?.htmlDecode() ?: ""
         total_chapters = 0
         cover_url = this@toTrackSearch.image?.url?.original ?: ""
-        summary = this@toTrackSearch.description?.htmlDecode() ?: ""
+        summary = prepareDescription(this@toTrackSearch.description)
         tracking_url = this@toTrackSearch.url ?: ""
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()
@@ -43,3 +44,24 @@ data class MUAuthor(
     val type: String? = null,
     val name: String? = null,
 )
+
+private val UNESCAPE_HYPHEN = Regex("""\\-""")
+private val UNESCAPE_NEWLINE = Regex("""\\n""")
+private val LEADING_MARKDOWN_LIST = Regex("(?m)^\\s*-\\s+")
+private val MULTI_NEWLINES = Regex("\\n{3,}")
+
+fun prepareDescription(raw: String?): String {
+    if (raw.isNullOrBlank()) return ""
+
+    var s = raw
+        .replace("\r\n", "\n")
+        .replace('\r', '\n')
+
+    s = UNESCAPE_HYPHEN.replace(s, "-")
+    s = UNESCAPE_NEWLINE.replace(s, "\n")
+    s = LEADING_MARKDOWN_LIST.replace(s, "• ")
+    s = MULTI_NEWLINES.replace(s, "\n\n")
+    val decoded = s.htmlDecode()
+
+    return decoded.replace(Regex("\\n{3,}"), "\n\n").trim()
+}

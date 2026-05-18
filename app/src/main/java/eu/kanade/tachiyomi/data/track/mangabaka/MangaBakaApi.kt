@@ -241,7 +241,7 @@ class MangaBakaApi(
         return TrackSearch.create(trackId).apply {
             remote_id = item.mergedWith ?: item.id
             title = item.title
-            summary = item.description.orEmpty().htmlDecode().trim()
+            summary = prepareDescription(item.description)
             score = item.rating?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)?.toDouble() ?: -1.0
             cover_url = item.cover.x350.x3.orEmpty()
             tracking_url = "$BASE_URL/${item.mergedWith ?: item.id}"
@@ -347,12 +347,33 @@ class MangaBakaApi(
                     remoteId = it.mergedWith ?: it.id,
                     title = it.title,
                     thumbnailUrl = it.cover.raw.url,
-                    description = it.description.orEmpty().htmlDecode().trim().ifEmpty { null },
+                    description = prepareDescription(it.description).ifEmpty { null },
                     authors = it.authors?.joinToString(", ")?.ifEmpty { null },
                     artists = it.artists?.joinToString(", ")?.ifEmpty { null },
                 )
             }
         }
+    }
+
+    private val UNESCAPE_HYPHEN = Regex("""\\-""")
+    private val UNESCAPE_NEWLINE = Regex("""\\n""")
+    private val LEADING_MARKDOWN_LIST = Regex("(?m)^\\s*-\\s+")
+    private val MULTI_NEWLINES = Regex("\\n{3,}")
+
+    private fun prepareDescription(raw: String?): String {
+        if (raw.isNullOrBlank()) return ""
+
+        var s = raw
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+
+        s = UNESCAPE_HYPHEN.replace(s, "-")
+        s = UNESCAPE_NEWLINE.replace(s, "\n")
+        s = LEADING_MARKDOWN_LIST.replace(s, "• ")
+        s = MULTI_NEWLINES.replace(s, "\n\n")
+        val decoded = s.htmlDecode()
+
+        return decoded.replace(Regex("\\n{3,}"), "\n\n").trim()
     }
 
     fun verifyOAuthState(state: String): Boolean = state == oauthStateParam

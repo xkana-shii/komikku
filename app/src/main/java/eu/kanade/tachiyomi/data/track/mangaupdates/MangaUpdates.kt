@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MUListItem
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MURating
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.copyTo
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.toTrackSearch
+import eu.kanade.tachiyomi.data.track.mangaupdates.dto.prepareDescription
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
@@ -125,7 +126,7 @@ class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker
                 it.seriesId,
                 it.title?.htmlDecode(),
                 it.image?.url?.original,
-                it.description?.htmlDecode(),
+                prepareDescription(it.description),
                 it.authors?.filter { it.type != null && "Author" in it.type }
                     ?.joinToString(separator = ", ") { it.name ?: "" },
                 it.authors?.filter { it.type != null && "Artist" in it.type }
