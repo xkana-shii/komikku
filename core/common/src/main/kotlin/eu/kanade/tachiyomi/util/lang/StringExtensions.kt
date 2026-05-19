@@ -65,3 +65,32 @@ fun String.takeBytes(n: Int): String {
 fun String.htmlDecode(): String {
     return this.parseAsHtml().toString()
 }
+
+private val UNESCAPE_HYPHEN = Regex("""\\-""")
+private val UNESCAPE_NEWLINE = Regex("""\\n""")
+private val LEADING_MARKDOWN_LIST = Regex("(?m)^\\s*-\\s+")
+private val MULTI_NEWLINES = Regex("\\n{3,}")
+
+private const val NEWLINE_TOKEN = "n_tkn"
+
+fun prepareDescription(raw: String?): String {
+    if (raw.isNullOrBlank()) return ""
+
+    var s = raw
+        .replace("\r\n", "\n")
+        .replace('\r', '\n')
+
+    s = UNESCAPE_HYPHEN.replace(s, "-")
+    s = UNESCAPE_NEWLINE.replace(s, "\n")
+
+    s = LEADING_MARKDOWN_LIST.replace(s, "• ")
+
+    s = MULTI_NEWLINES.replace(s, "\n\n")
+
+    val protected = s.replace("\n", NEWLINE_TOKEN)
+
+    val decoded = protected.htmlDecode()
+
+    val restored = decoded.replace(NEWLINE_TOKEN, "\n")
+    return MULTI_NEWLINES.replace(restored, "\n\n").trim()
+}

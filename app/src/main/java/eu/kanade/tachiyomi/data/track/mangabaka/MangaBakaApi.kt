@@ -22,6 +22,7 @@ import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.PkceUtil
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import eu.kanade.tachiyomi.util.lang.prepareDescription
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -353,27 +354,6 @@ class MangaBakaApi(
                 )
             }
         }
-    }
-
-    private val hyphen = Regex("""\\-""")
-    private val newline = Regex("""\\n""")
-    private val markdownlist = Regex("(?m)^\\s*-\\s+")
-    private val newlines = Regex("\\n{3,}")
-
-    private fun prepareDescription(raw: String?): String {
-        if (raw.isNullOrBlank()) return ""
-
-        var s = raw
-            .replace("\r\n", "\n")
-            .replace('\r', '\n')
-
-        s = hyphen.replace(s, "-")
-        s = newline.replace(s, "\n")
-        s = markdownlist.replace(s, "• ")
-        s = newlines.replace(s, "\n\n")
-        val decoded = s.htmlDecode()
-
-        return decoded.replace(Regex("\\n{3,}"), "\n\n").trim()
     }
 
     fun verifyOAuthState(state: String): Boolean = state == oauthStateParam

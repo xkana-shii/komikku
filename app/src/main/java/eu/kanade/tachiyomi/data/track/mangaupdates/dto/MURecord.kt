@@ -2,9 +2,9 @@ package eu.kanade.tachiyomi.data.track.mangaupdates.dto
 
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import eu.kanade.tachiyomi.util.lang.prepareDescription
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.util.Locale
 
 @Serializable
 data class MURecord(
@@ -44,24 +44,3 @@ data class MUAuthor(
     val type: String? = null,
     val name: String? = null,
 )
-
-private val hyphen = Regex("""\\-""")
-private val newline = Regex("""\\n""")
-private val markdownlist = Regex("(?m)^\\s*-\\s+")
-private val newlines = Regex("\\n{3,}")
-
-fun prepareDescription(raw: String?): String {
-    if (raw.isNullOrBlank()) return ""
-
-    var s = raw
-        .replace("\r\n", "\n")
-        .replace('\r', '\n')
-
-    s = hyphen.replace(s, "-")
-    s = newline.replace(s, "\n")
-    s = markdownlist.replace(s, "• ")
-    s = newlines.replace(s, "\n\n")
-    val decoded = s.htmlDecode()
-
-    return decoded.replace(Regex("\\n{3,}"), "\n\n").trim()
-}
