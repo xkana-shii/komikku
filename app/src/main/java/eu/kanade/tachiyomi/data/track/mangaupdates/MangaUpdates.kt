@@ -9,10 +9,10 @@ import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MUListItem
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MURating
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.copyTo
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.toTrackSearch
-import eu.kanade.tachiyomi.util.lang.prepareDescription
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import eu.kanade.tachiyomi.util.lang.prepareDescription
 import exh.log.xLogW
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
