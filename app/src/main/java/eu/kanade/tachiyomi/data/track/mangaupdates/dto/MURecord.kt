@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.data.track.mangaupdates.dto
 
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import eu.kanade.tachiyomi.util.lang.prepareDescription
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -30,7 +31,7 @@ fun MURecord.toTrackSearch(id: Long): TrackSearch {
         title = this@toTrackSearch.title?.htmlDecode() ?: ""
         total_chapters = 0
         cover_url = this@toTrackSearch.image?.url?.original ?: ""
-        summary = this@toTrackSearch.description?.htmlDecode() ?: ""
+        summary = prepareDescription(this@toTrackSearch.description)
         tracking_url = this@toTrackSearch.url ?: ""
         publishing_status = ""
         publishing_type = this@toTrackSearch.type.toString()

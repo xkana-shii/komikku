@@ -22,6 +22,7 @@ import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.PkceUtil
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import eu.kanade.tachiyomi.util.lang.prepareDescription
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -241,7 +242,7 @@ class MangaBakaApi(
         return TrackSearch.create(trackId).apply {
             remote_id = item.mergedWith ?: item.id
             title = item.title
-            summary = item.description.orEmpty().htmlDecode().trim()
+            summary = prepareDescription(item.description)
             score = item.rating?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)?.toDouble() ?: -1.0
             cover_url = item.cover.x350.x3.orEmpty()
             tracking_url = "$BASE_URL/${item.mergedWith ?: item.id}"
@@ -347,7 +348,7 @@ class MangaBakaApi(
                     remoteId = it.mergedWith ?: it.id,
                     title = it.title,
                     thumbnailUrl = it.cover.raw.url,
-                    description = it.description.orEmpty().htmlDecode().trim().ifEmpty { null },
+                    description = prepareDescription(it.description).ifEmpty { null },
                     authors = it.authors?.joinToString(", ")?.ifEmpty { null },
                     artists = it.artists?.joinToString(", ")?.ifEmpty { null },
                 )

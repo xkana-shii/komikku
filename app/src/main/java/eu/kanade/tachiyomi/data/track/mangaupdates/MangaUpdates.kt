@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.track.mangaupdates.dto.toTrackSearch
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.util.lang.htmlDecode
+import eu.kanade.tachiyomi.util.lang.prepareDescription
 import exh.log.xLogW
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -125,7 +126,7 @@ class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker
                 it.seriesId,
                 it.title?.htmlDecode(),
                 it.image?.url?.original,
-                it.description?.htmlDecode(),
+                prepareDescription(it.description),
                 it.authors?.filter { it.type != null && "Author" in it.type }
                     ?.joinToString(separator = ", ") { it.name ?: "" },
                 it.authors?.filter { it.type != null && "Artist" in it.type }
