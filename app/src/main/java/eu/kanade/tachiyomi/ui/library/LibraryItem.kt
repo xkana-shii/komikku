@@ -13,14 +13,25 @@ data class LibraryItem(
     val downloadCount: Long = -1,
     val unreadCount: Long = -1,
     val isLocal: Boolean = false,
-    val sourceLanguage: String = "",
     // KMK -->
+    val badges: Badges = Badges(),
     val useLangIcon: Boolean = true,
     val source: Source? = null,
     // KMK <--
     private val sourceManager: SourceManager = Injekt.get(),
 ) {
     val id: Long = libraryManga.id
+
+    // KMK -->
+    val isDownloaded: Boolean get() = isLocal || downloadCount > 0
+
+    data class Badges(
+        val downloadCount: Long = 0,
+        val unreadCount: Long = 0,
+        val isLocal: Boolean = false,
+        val sourceLanguage: String = "",
+    )
+    // KMK <--
 
 //    /**
 //     * Checks if a query matches the manga
@@ -72,3 +83,21 @@ data class LibraryItem(
     //     }
     // }
 }
+
+// KMK -->
+internal fun libraryBadges(
+    downloadCount: Long,
+    unreadCount: Long,
+    isLocal: Boolean,
+    downloadBadge: Boolean,
+    unreadBadge: Boolean,
+    localBadge: Boolean,
+    languageBadge: Boolean,
+    sourceLanguage: String,
+) = LibraryItem.Badges(
+    downloadCount = if (downloadBadge) downloadCount else 0,
+    unreadCount = if (unreadBadge) unreadCount else 0,
+    isLocal = localBadge && isLocal,
+    sourceLanguage = if (languageBadge) sourceLanguage else "",
+)
+// KMK <--

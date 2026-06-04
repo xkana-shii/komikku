@@ -454,22 +454,11 @@ class LibraryScreenModel(
         val filterLewd = preferences.filterLewd
         // SY <--
 
-        val filterFnDownloaded: suspend (LibraryItem) -> Boolean = {
-            applyFilter(filterDownloaded) {
-                it.libraryManga.manga.isLocal() ||
-                    it.downloadCount > 0 ||
-                    // KMK -->
-                    if (it.libraryManga.manga.source == MERGED_SOURCE_ID) {
-                        // FIXME: Calling await in filter could lead to N+1 performance issues.
-                        //  Should include all the merged references in library query instead.
-                        getMergedMangaById.await(it.libraryManga.manga.id)
-                            .sumOf { manga -> downloadManager.getDownloadCount(manga) } > 0
-                    } else {
-                        // KMK <--
-                        downloadManager.getDownloadCount(it.libraryManga.manga) > 0
-                    }
-            }
+        // KMK -->
+        val filterFnDownloaded: (LibraryItem) -> Boolean = {
+            applyFilter(filterDownloaded) { it.isDownloaded }
         }
+        // KMK <--
 
         val filterFnUnread: (LibraryItem) -> Boolean = {
             applyFilter(filterUnread) { it.libraryManga.unreadCount > 0 }
@@ -796,37 +785,29 @@ class LibraryScreenModel(
                 // KMK -->
                 val source = sourceManager.getOrStub(manga.manga.source)
                 // KMK <--
+                // KMK -->
+                val downloadCount = if (manga.manga.source == MERGED_SOURCE_ID) {
+                    getMergedMangaById.await(manga.manga.id)
+                        .sumOf { downloadManager.getDownloadCount(it) }.toLong()
+                } else {
+                    downloadManager.getDownloadCount(manga.manga).toLong()
+                }
                 LibraryItem(
                     libraryManga = manga,
-                    downloadCount = if (preferences.downloadBadge) {
-                        // SY -->
-                        if (manga.manga.source == MERGED_SOURCE_ID) {
-                            // FIXME: N+1 performance issues.
-                            //  Should include all the merged references in library query instead.
-                            getMergedMangaById.await(manga.manga.id)
-                                .sumOf { downloadManager.getDownloadCount(it) }.toLong()
-                        } else {
-                            // SY <--
-                            downloadManager.getDownloadCount(manga.manga).toLong()
-                        }
-                    } else {
-                        0
-                    },
-                    unreadCount = if (preferences.unreadBadge) {
-                        manga.unreadCount
-                    } else {
-                        0
-                    },
-                    isLocal = if (preferences.localBadge) {
-                        manga.manga.isLocal()
-                    } else {
-                        false
-                    },
-                    sourceLanguage = if (preferences.languageBadge) {
-                        sourceManager.getOrStub(manga.manga.source).lang
-                    } else {
-                        ""
-                    },
+                    downloadCount = downloadCount,
+                    unreadCount = manga.unreadCount,
+                    isLocal = manga.manga.isLocal(),
+                    badges = libraryBadges(
+                        downloadCount = downloadCount,
+                        unreadCount = manga.unreadCount,
+                        isLocal = manga.manga.isLocal(),
+                        downloadBadge = preferences.downloadBadge,
+                        unreadBadge = preferences.unreadBadge,
+                        localBadge = preferences.localBadge,
+                        languageBadge = preferences.languageBadge,
+                        sourceLanguage = source.lang,
+                    ),
+                    // KMK <--
                     // KMK -->
                     useLangIcon = preferences.useLangIcon,
                     source = if (preferences.sourceBadge) {
