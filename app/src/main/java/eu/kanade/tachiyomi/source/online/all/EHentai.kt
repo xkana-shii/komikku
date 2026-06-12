@@ -562,7 +562,14 @@ class EHentai(
         val jumpSeekValue = filters.firstNotNullOfOrNull { (it as? JumpSeekFilter)?.state?.nullIfBlank() }
 
         uri.appendQueryParameter("f_apply", "Apply+Filter")
-        uri.appendQueryParameter("f_search", (query + " " + combineQuery(filters)).trim())
+        uri.appendQueryParameter(
+            "f_search",
+            if (isLangNatural()) {
+                languageTag() + "," + (query + " " + combineQuery(filters)).trim()
+            } else {
+                (query + " " + combineQuery(filters)).trim()
+            },
+        )
         filters.forEach {
             if (it is UriFilter) it.addToUri(uri)
         }
@@ -1129,7 +1136,7 @@ class EHentai(
             if (entry.or) stringBuilder.append("~")
             val namespace = entry.search.first?.let { "$it:" }.orEmpty()
             if (entry.search.second.contains(" ")) {
-                stringBuilder.append(("""$namespace"${entry.search.second}$""""))
+                stringBuilder.append(("""$namespace"${entry.search.second}$"""))
             } else {
                 stringBuilder.append("$namespace${entry.search.second}$")
             }
@@ -1177,7 +1184,7 @@ class EHentai(
     class AdvancedGroup : UriGroup<Filter<*>>(
         "Advanced Options",
         listOf(
-            AdvancedOption("Browse Expunged Galleries", "f_sh").apply { state = true },
+            AdvancedOption("Browse Expunged Galleries", "f_sh").apply { state = false },
             AdvancedOption("Require Gallery Torrent", "f_sto"),
             RatingOption(),
             MinPagesOption(),
