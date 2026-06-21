@@ -353,7 +353,12 @@ class MangaBakaApi(
 
             val item = try {
                 with(json) {
-                    client.newCall(GET("$API_BASE_URL/v1/series/$resolvedId"))
+                    client.newCall(
+                        GET("$API_BASE_URL/v1/series/$resolvedId")
+                            .newBuilder()
+                            .header("Cache-Control", "no-cache")
+                            .build(),
+                    )
                         .awaitSuccess()
                         .parseAs<MangaBakaItemResult>()
                         .data
@@ -365,7 +370,7 @@ class MangaBakaApi(
             TrackMangaMetadata(
                 remoteId = item.mergedWith ?: item.id,
                 title = item.title,
-                thumbnailUrl = item.cover.x350.x3.orEmpty(),
+                thumbnailUrl = item.cover.raw.url,
                 description = prepareDescription(item.description).ifEmpty { null },
                 authors = item.authors?.joinToString(", ")?.ifEmpty { null },
                 artists = item.artists?.joinToString(", ")?.ifEmpty { null },
