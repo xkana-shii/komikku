@@ -5,7 +5,7 @@ import tachiyomi.core.common.preference.PreferenceStore
 class DownloadPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
-
+m
     fun downloadOnlyOverWifi() = preferenceStore.getBoolean(
         "pref_download_only_over_wifi_key",
         true,
