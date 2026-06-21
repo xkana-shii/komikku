@@ -109,6 +109,9 @@ class GlobalSearchScreen(
                 bulkFavoriteScreenModel = bulkFavoriteScreenModel,
                 hasPinnedSources = screenModel.hasPinnedSources(),
                 // KMK <--
+                // KMK KNS -->
+                onChangeCategory = screenModel::setSelectedCategory,
+                // KMK KNS <--
             )
         }
 

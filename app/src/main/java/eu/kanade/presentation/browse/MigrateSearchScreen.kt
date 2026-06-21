@@ -31,6 +31,9 @@ fun MigrateSearchScreen(
     bulkFavoriteScreenModel: BulkFavoriteScreenModel,
     hasPinnedSources: Boolean,
     // KMK <--
+    // KMK KNS -->
+    onChangeCategory: (String) -> Unit,
+    // KMK KNS <--
 ) {
     // KMK -->
     val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
@@ -78,6 +81,11 @@ fun MigrateSearchScreen(
                     isRunning = bulkFavoriteState.isRunning,
                     hasPinnedSources = hasPinnedSources,
                     // KMK <--
+                    // KMK KNS -->
+                    onChangeCategory = onChangeCategory,
+                    categories = state.categories,
+                    selectedCategory = state.selectedCategory,
+                    // KMK KNS <--
                 )
             }
         },

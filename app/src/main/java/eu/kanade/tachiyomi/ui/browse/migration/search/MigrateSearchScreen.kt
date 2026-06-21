@@ -67,6 +67,9 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
             bulkFavoriteScreenModel = bulkFavoriteScreenModel,
             hasPinnedSources = screenModel.hasPinnedSources(),
             // KMK <--
+            // KMK KNS-->
+            onChangeCategory = screenModel::setSelectedCategory,
+            // KMK KNS <--
         )
 
         when (val dialog = state.dialog) {

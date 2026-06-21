@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SourceFilter
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
@@ -53,6 +56,11 @@ fun GlobalSearchToolbar(
     isRunning: Boolean,
     hasPinnedSources: Boolean,
     // KMK <--
+    // KMK KNS -->
+    onChangeCategory: (String) -> Unit,
+    categories: ImmutableList<String> = persistentListOf(),
+    selectedCategory: String = "",
+    // KMK KNS <--
 ) {
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
         Box {
@@ -125,6 +133,29 @@ fun GlobalSearchToolbar(
                         Text(text = stringResource(MR.strings.all))
                     },
                 )
+
+                // KMK KNS -->
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = sourceFilter == SourceFilter.Category && selectedCategory == category,
+                        onClick = {
+                            onChangeSearchFilter(SourceFilter.Category)
+                            onChangeCategory(category)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.Label,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(FilterChipDefaults.IconSize),
+                            )
+                        },
+                        label = {
+                            Text(text = category)
+                        },
+                    )
+                }
+                // KMK KNS <--
 
                 VerticalDivider()
             }
