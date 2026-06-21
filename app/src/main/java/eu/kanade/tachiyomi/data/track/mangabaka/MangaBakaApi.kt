@@ -343,16 +343,33 @@ class MangaBakaApi(
 
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         return withIOContext {
-            fetchSeriesData(track.remoteId).let {
-                TrackMangaMetadata(
-                    remoteId = it.mergedWith ?: it.id,
-                    title = it.title,
-                    thumbnailUrl = it.cover.raw.url,
-                    description = prepareDescription(it.description).ifEmpty { null },
-                    authors = it.authors?.joinToString(", ")?.ifEmpty { null },
-                    artists = it.artists?.joinToString(", ")?.ifEmpty { null },
-                )
+            val resolvedId = try {
+                resolveId(track.remoteId)
+            } catch (_: Exception) {
+                track.remoteId
             }
+
+            seriesCache.remove(resolvedId)
+
+            val item = try {
+                with(json) {
+                    client.newCall(GET("$API_BASE_URL/v1/series/$resolvedId"))
+                        .awaitSuccess()
+                        .parseAs<MangaBakaItemResult>()
+                        .data
+                }
+            } catch (_: Exception) {
+                fetchSeriesData(resolvedId)
+            }
+
+            TrackMangaMetadata(
+                remoteId = item.mergedWith ?: item.id,
+                title = item.title,
+                thumbnailUrl = item.cover.x350.x3.orEmpty(),
+                description = prepareDescription(item.description).ifEmpty { null },
+                authors = item.authors?.joinToString(", ")?.ifEmpty { null },
+                artists = item.artists?.joinToString(", ")?.ifEmpty { null },
+            )
         }
     }
 
