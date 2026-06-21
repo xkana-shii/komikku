@@ -10,6 +10,9 @@ plugins {
     kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
     alias(libs.plugins.aboutLibraries)
+    // KMK -->
+    alias(libs.plugins.androidx.baselineProfile)
+    // KMK <--
     id("com.github.ben-manes.versions")
 }
 
@@ -27,8 +30,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku.kns"
 
-        versionCode = 137
-        versionName = "1.21.23"
+        versionCode = 140
+        versionName = "1.22.2"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
@@ -46,6 +49,9 @@ android {
             isPseudoLocalesEnabled = true
         }
         val release by getting {
+            // KMK -->
+            isProfileable = true
+            // KMK <--
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
 
@@ -120,7 +126,6 @@ android {
                 "libconscrypt_jni",
                 "libimagedecoder",
                 "libquickjs",
-                "libsqlite3x",
             )
                 .map { "**/$it.so" }
         }
@@ -182,7 +187,32 @@ kotlin {
     }
 }
 
+// KMK -->
+baselineProfile {
+    baselineProfileOutputDir = "baselineProfiles"
+    mergeIntoMain = true
+}
+
+androidComponents.finalizeDsl { android ->
+    // The profile plugin copies Kotlin source providers as "provider(?)" with this Kotlin/AGP
+    // combination. Resolve the original directories explicitly; '?' is invalid on Windows.
+    android.sourceSets.filter { it.name.startsWith("nonMinified") || (it.name.startsWith("benchmark") && it.name != "benchmark") }
+        .forEach { sourceSet ->
+            val originalName = sourceSet.name.removePrefix("nonMinified").removePrefix("benchmark")
+                .replaceFirstChar(Char::lowercaseChar)
+            val original = android.sourceSets.findByName(originalName) ?: return@forEach
+            @Suppress("DEPRECATION")
+            sourceSet.kotlin.setSrcDirs(
+                (sourceSet.kotlin.directories + original.kotlin.directories).filterNot { it.endsWith("provider(?)") },
+            )
+        }
+}
+// KMK <--
+
 dependencies {
+    // KMK -->
+    baselineProfile(projects.baselineProfile)
+    // KMK <--
     implementation(projects.i18n)
     // KMK -->
     implementation(projects.i18nKmk)
@@ -216,7 +246,9 @@ dependencies {
     implementation(androidx.paging.runtime)
     implementation(androidx.paging.compose)
 
-    implementation(androidx.sqlite.bundled)
+    // KMK -->
+    implementation(libs.sqlite.bundled)
+    // KMK <--
     // SY -->
     implementation(sylibs.sqlcipher)
     // SY <--
@@ -226,8 +258,6 @@ dependencies {
 
     implementation(platform(kotlinx.coroutines.bom))
     implementation(kotlinx.bundles.coroutines)
-
-    implementation(libs.sqldelight.async)
 
     // AndroidX libraries
     implementation(androidx.annotation)
@@ -314,6 +344,9 @@ dependencies {
 
     // Tests
     testImplementation(libs.bundles.test)
+    // KMK -->
+    testImplementation(libs.sqldelight.sqlite.driver)
+    // KMK <--
     testImplementation(libs.okhttp.mockwebserver)
     testRuntimeOnly(libs.junit.platform.launcher)
 

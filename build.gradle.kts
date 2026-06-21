@@ -6,6 +6,9 @@ buildscript {
 }
 
 plugins {
+    // KMK -->
+    alias(libs.plugins.androidx.baselineProfile) apply false
+    // KMK <--
     alias(kotlinx.plugins.serialization) apply false
     alias(libs.plugins.aboutLibraries) apply false
     alias(libs.plugins.moko) apply false

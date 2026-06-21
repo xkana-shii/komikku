@@ -18,3 +18,9 @@ val isReleaseBuildType: Boolean
 
 val isFossBuildType: Boolean
     inline get() = BuildConfig.BUILD_TYPE == "foss"
+
+// KMK -->
+val isBenchmarkBuildType: Boolean
+    inline get() = BuildConfig.BUILD_TYPE.contains("nonMinified", ignoreCase = true) ||
+        BuildConfig.BUILD_TYPE.contains("benchmark", ignoreCase = true)
+// KMK <--

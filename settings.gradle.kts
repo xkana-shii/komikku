@@ -42,6 +42,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 rootProject.name = "Komikku"
 include(":app")
+include(":baseline-profile")
 include(":core-metadata")
 include(":core:archive")
 include(":core:common")
@@ -55,7 +56,6 @@ include(":flagkit")
 // SY -->
 include(":i18n-sy")
 // SY <--
-include(":macrobenchmark")
 include(":presentation-core")
 include(":presentation-widget")
 include(":source-api")
