@@ -22,6 +22,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -52,23 +53,23 @@ class BackupRestoreJob(private val context: Context, workerParams: WorkerParamet
 
         setForegroundSafely()
 
-        return try {
-            BackupRestorer(context, notifier, isSync).restore(uri, options)
-            Result.success()
-        } catch (e: Exception) {
-            if (e is CancellationException) {
-                notifier.showRestoreError(context.stringResource(MR.strings.restoring_backup_canceled))
+        return withIOContext {
+            try {
+                BackupRestorer(context, notifier, isSync).restore(uri, options)
                 Result.success()
-            } else {
-                logcat(LogPriority.ERROR, e)
-                notifier.showRestoreError(e.message)
-                Result.failure()
+            } catch (e: Exception) {
+                if (e is CancellationException) {
+                    notifier.showRestoreError(context.stringResource(MR.strings.restoring_backup_canceled))
+                    Result.success()
+                } else {
+                    logcat(LogPriority.ERROR, e)
+                    notifier.showRestoreError(e.message)
+                    Result.failure()
+                }
+            } finally {
+                context.cancelNotification(Notifications.ID_RESTORE_PROGRESS)
+                backupRestoreStatus.stop()
             }
-        } finally {
-            context.cancelNotification(Notifications.ID_RESTORE_PROGRESS)
-            // KMK -->
-            backupRestoreStatus.stop()
-            // KMK <--
         }
     }
 

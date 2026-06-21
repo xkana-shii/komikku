@@ -27,6 +27,7 @@ import okio.buffer
 import okio.gzip
 import okio.sink
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.backup.service.BackupPreferences
 import tachiyomi.domain.manga.interactor.GetFavorites
@@ -67,7 +68,7 @@ class BackupCreator(
     // SY <--
 ) {
 
-    suspend fun backup(uri: Uri, options: BackupOptions): String {
+    suspend fun backup(uri: Uri, options: BackupOptions): String = withIOContext {
         var file: UniFile? = null
         try {
             file = if (isAutoBackup) {
@@ -157,7 +158,7 @@ class BackupCreator(
                 backupPreferences.lastAutoBackupTimestamp().set(Instant.now().toEpochMilli())
             }
 
-            return fileUri.toString()
+            fileUri.toString()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             file?.delete()

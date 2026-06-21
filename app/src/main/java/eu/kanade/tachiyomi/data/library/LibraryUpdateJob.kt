@@ -173,9 +173,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         val group = inputData.getInt(KEY_GROUP, LibraryGroup.BY_DEFAULT)
         val groupExtra = inputData.getString(KEY_GROUP_EXTRA)
         // SY <--
-        addMangaToQueue(categoryId, group, groupExtra)
 
         return withIOContext {
+            addMangaToQueue(categoryId, group, groupExtra)
             try {
                 when (target) {
                     Target.CHAPTERS -> updateChapterList()
