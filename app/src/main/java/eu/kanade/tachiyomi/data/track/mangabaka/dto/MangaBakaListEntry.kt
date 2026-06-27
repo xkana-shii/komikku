@@ -41,7 +41,7 @@ data class MangaBakaListEntry(
     fun toTrack(resolvedId: Long, seriesData: MangaBakaItem): Track =
         Track.create(TrackerManager.MANGABAKA).apply {
             remote_id = resolvedId
-            title = seriesData.title
+            title = seriesData.chooseBestTitle()
             status = getStatus()
             score = rating?.toDouble() ?: 0.0
             started_reading_date = startDate?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0

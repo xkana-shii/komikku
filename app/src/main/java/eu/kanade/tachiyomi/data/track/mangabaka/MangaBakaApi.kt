@@ -21,7 +21,6 @@ import eu.kanade.tachiyomi.network.PUT
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.PkceUtil
-import eu.kanade.tachiyomi.util.lang.htmlDecode
 import eu.kanade.tachiyomi.util.lang.prepareDescription
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.async
@@ -101,7 +100,7 @@ class MangaBakaApi(
             seriesCache.remove(resolvedId)
 
             // only returns 201 with the body { "status": 201, "data": true }, so no library ID for us
-            track.title = seriesData.title
+            track.title = seriesData.chooseBestTitle()
             track.total_chapters = seriesData.totalChapters?.toLongOrNull() ?: 0
             track
         }
@@ -215,7 +214,7 @@ class MangaBakaApi(
             libraryCache.remove(track.remote_id)
             seriesCache.remove(track.remote_id)
 
-            track.title = seriesData.title
+            track.title = seriesData.chooseBestTitle()
             track.total_chapters = seriesData.totalChapters?.toLongOrNull() ?: 0
             track
         }
@@ -241,7 +240,7 @@ class MangaBakaApi(
     private fun parseSearchItem(item: MangaBakaItem): TrackSearch {
         return TrackSearch.create(trackId).apply {
             remote_id = item.mergedWith ?: item.id
-            title = item.title
+            title = item.chooseBestTitle()
             summary = prepareDescription(item.description)
             score = item.rating?.toBigDecimal()?.setScale(2, RoundingMode.HALF_UP)?.toDouble() ?: -1.0
             cover_url = item.cover.x350.x3.orEmpty()
@@ -369,7 +368,7 @@ class MangaBakaApi(
 
             TrackMangaMetadata(
                 remoteId = item.mergedWith ?: item.id,
-                title = item.title,
+                title = item.chooseBestTitle(),
                 thumbnailUrl = item.cover.raw.url,
                 description = prepareDescription(item.description).ifEmpty { null },
                 authors = item.authors?.joinToString(", ")?.ifEmpty { null },
