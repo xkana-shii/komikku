@@ -20,7 +20,6 @@ class TrackerManager {
         const val KITSU = 3L
         const val KAVITA = 8L
 
-        // 10 is in-progress Hikka
         const val MANGABAKA = 11L
 
         // SY --> Mangadex from Neko
