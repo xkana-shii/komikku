@@ -27,6 +27,9 @@ class TrackLoginActivity : BaseOAuthLoginActivity() {
                 when (uri.host) {
                     "anilist-auth" -> handleAniList(data["access_token"])
                     "bangumi-auth" -> handleBangumi(data["code"])
+                    // KMK -->
+                    "hikka-auth" -> handleHikka(data["reference"])
+                    // KMK <--
                     "mangabaka-auth" -> handleMangaBaka(data["code"], data["state"])
                     "myanimelist-auth" -> handleMyAnimeList(data["code"])
                     "shikimori-auth" -> handleShikimori(data["code"])
@@ -82,6 +85,14 @@ class TrackLoginActivity : BaseOAuthLoginActivity() {
             trackerManager.shikimori.login(code)
         } else {
             trackerManager.shikimori.logout()
+        }
+    }
+
+    private suspend fun handleHikka(reference: String?) {
+        if (reference != null) {
+            trackerManager.hikka.login(reference)
+        } else {
+            trackerManager.hikka.logout()
         }
     }
 }
