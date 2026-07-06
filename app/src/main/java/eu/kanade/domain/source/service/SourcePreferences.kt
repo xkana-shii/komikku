@@ -97,6 +97,13 @@ class SourcePreferences(
     fun disabledRepos() = preferenceStore.getStringSet("disabled_repos", emptySet())
     // KMK <--
 
+    // KMK KNS -->
+    fun globalSearchCategoryFilter() = preferenceStore.getString(
+        Preference.appStateKey("global_search_category_filter"),
+        "",
+    )
+    // KMK KNS <--
+
     // SY -->
     fun enableSourceBlacklist() = preferenceStore.getBoolean("eh_enable_source_blacklist", true)
 

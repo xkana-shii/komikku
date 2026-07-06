@@ -9,9 +9,12 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.mutate
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.coroutines.Job
@@ -79,6 +82,23 @@ abstract class SearchScreenModel(
             }
         }
         // KMK <--
+        // KMK KNS -->
+        screenModelScope.launch {
+            preferences.sourcesTabCategories().changes().collectLatest { categories ->
+                mutableState.update { it.copy(categories = categories.toImmutableList()) }
+            }
+        }
+        screenModelScope.launch {
+            preferences.sourcesTabSourcesInCategories().changes().collectLatest { sourcesInCats ->
+                mutableState.update { it.copy(sourcesInCategories = sourcesInCats) }
+            }
+        }
+        screenModelScope.launch {
+            preferences.globalSearchCategoryFilter().changes().collectLatest { category ->
+                mutableState.update { it.copy(selectedCategory = category) }
+            }
+        }
+        // KMK KNS <--
     }
 
     @Composable
@@ -116,19 +136,31 @@ abstract class SearchScreenModel(
     private fun getSelectedSources(): List<CatalogueSource> {
         val enabledSources = getEnabledSources()
 
-        val filter = extensionFilter
-        if (filter.isNullOrEmpty()) {
-            return enabledSources
+        val filteredByExtension = if (extensionFilter.isNullOrEmpty()) {
+            enabledSources
+        } else {
+            // KMK KNS -->
+            val filteredSourceIds = extensionManager.installedExtensionsFlow.value
+                .filter { it.pkgName == extensionFilter }
+                .flatMap { it.sources }
+                .filterIsInstance<CatalogueSource>()
+                .map { it.id }
+            enabledSources.filter { it.id in filteredSourceIds }
+            // KMK KNS <--
         }
 
-        // SY -->
-        val filteredSourceIds = extensionManager.installedExtensionsFlow.value
-            .filter { it.pkgName == filter }
-            .flatMap { it.sources }
-            .filterIsInstance<CatalogueSource>()
-            .map { it.id }
-        return enabledSources.filter { it.id in filteredSourceIds }
-        // SY <--
+        // KMK KNS -->
+        return when (state.value.sourceFilter) {
+            SourceFilter.Category -> {
+                val categoryName = state.value.selectedCategory
+                val sourcesInThisCategory = state.value.sourcesInCategories
+                    .filter { it.substringAfter("|") == categoryName }
+                    .map { it.substringBefore("|").toLong() }
+                filteredByExtension.filter { it.id in sourcesInThisCategory }
+            }
+            else -> filteredByExtension
+        }
+        // KMK KNS <--
     }
 
     fun updateSearchQuery(query: String?) {
@@ -139,6 +171,14 @@ abstract class SearchScreenModel(
         preferences.globalSearchPinnedState().set(filter)
         search()
     }
+
+    // KMK KNS -->
+    fun setSelectedCategory(categoryName: String) {
+        preferences.globalSearchCategoryFilter().set(categoryName)
+        mutableState.update { it.copy(selectedCategory = categoryName) }
+        search()
+    }
+    // KMK KNS <--
 
     fun toggleFilterResults() {
         preferences.globalSearchFilterState().toggle()
@@ -242,6 +282,11 @@ abstract class SearchScreenModel(
         val onlyShowHasResults: Boolean = false,
         val items: PersistentMap<CatalogueSource, SearchItemResult> = persistentMapOf(),
         val dialog: Dialog? = null,
+        // KMK KNS -->
+        val categories: ImmutableList<String> = persistentListOf(),
+        val sourcesInCategories: Set<String> = emptySet(),
+        val selectedCategory: String = "",
+        // KMK KNS <--
     ) {
         val progress: Int = items.count { it.value !is SearchItemResult.Loading }
         val total: Int = items.size
@@ -257,6 +302,9 @@ abstract class SearchScreenModel(
 enum class SourceFilter {
     All,
     PinnedOnly,
+    // KMK KNS -->
+    Category,
+    // KMK KNS <--
 }
 
 sealed interface SearchItemResult {
