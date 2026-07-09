@@ -258,7 +258,7 @@ class BackupRestorer(
 
     private fun CoroutineScope.restoreExtensionStores(
         backupExtensionStores: List<BackupExtensionStore>,
-    ) = launch {
+    ) = launch(dispatcher) {
         backupExtensionStores
             .forEach {
                 ensureActive()
