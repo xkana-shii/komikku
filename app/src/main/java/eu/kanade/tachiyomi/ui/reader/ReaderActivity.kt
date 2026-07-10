@@ -694,6 +694,11 @@ class ReaderActivity : BaseActivity() {
                 isScrollingThroughPages = true
                 moveToPageIndex(it)
             },
+            // KMK -->
+            onPageIndexChangeFinished = {
+                isScrollingThroughPages = false
+            },
+            // KMK <--
 
             readingMode = ReadingMode.fromPreference(
                 viewModel.getMangaReadingMode(resolveDefault = false),
