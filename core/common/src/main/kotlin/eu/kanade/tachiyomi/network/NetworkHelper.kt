@@ -101,8 +101,6 @@ import kotlin.random.Random
         }
     }
 
-    val nonCloudflareClient /* KMK --> */ by lazy /* KMK <-- */ { clientBuilder().build() }
-
     /* SY --> */ open /* SY <-- */ val client /* KMK --> */ by lazy /* KMK <-- */ {
         clientBuilder()
             .addNetworkInterceptor(
