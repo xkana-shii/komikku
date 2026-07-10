@@ -16,8 +16,6 @@ import eu.kanade.tachiyomi.source.model.SManga
 import exh.log.maybeInjectEHLogger
 import exh.pref.DelegateSourcePreferences
 import exh.source.DelegatedHttpSource
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -319,17 +317,31 @@ abstract class HttpSource : CatalogueSource {
      *
      * @since komikku/extensions-lib 1.6
      * @param manga the current manga to get related mangas.
-     * @return the related mangas for the current manga.
-     * @throws UnsupportedOperationException if a source doesn't support related mangas.
+     * @return the related mangas for the current manga, or empty if a source doesn't support related mangas.
      */
-    override suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> = coroutineScope {
-        async {
-            client.newCall(relatedMangaListRequest(manga))
-                .execute()
-                .let { response ->
-                    relatedMangaListParse(response)
+    override suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> {
+        if (!isRelatedMangaListParseAvailable) return emptyList()
+
+        return client.newCall(relatedMangaListRequest(manga))
+            .awaitSuccess()
+            .use { response ->
+                relatedMangaListParse(response)
+            }
+    }
+
+    private val isRelatedMangaListParseAvailable by lazy(LazyThreadSafetyMode.NONE) {
+        try {
+            var clazz: Class<*>? = javaClass
+            while (clazz != null && clazz != HttpSource::class.java) {
+                if (clazz.declaredMethods.any { it.name == "relatedMangaListParse" || it.name == "popularMangaParse" }) {
+                    return@lazy true
                 }
-        }.await()
+                clazz = clazz.superclass
+            }
+            false
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /**
