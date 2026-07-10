@@ -26,7 +26,7 @@ class PreferenceBackupCreator(
     }
 
     fun createSource(includePrivatePreferences: Boolean): List<BackupSourcePreferences> {
-        return sourceManager.getCatalogueSources()
+        return sourceManager.getAll()
             .map { source ->
                 val key = "source_${source.id}"
                 val prefs = sourcePreferences(key).all

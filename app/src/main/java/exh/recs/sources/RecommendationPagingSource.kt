@@ -3,11 +3,12 @@ package exh.recs.sources
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.network.NetworkHelper
-import eu.kanade.tachiyomi.source.CatalogueSource
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.model.SMangaUpdate
 import exh.md.similar.MangaDexSimilarPagingSource
 import exh.source.MANGADEX_IDS
 import kotlinx.serialization.json.Json
@@ -133,10 +134,9 @@ abstract class TrackerRecommendationPagingSource(
 class RecommendationSource(
     override val id: Long = RECOMMENDS_SOURCE,
     sourceManager: SourceManager = Injekt.get(),
-) : CatalogueSource {
+) : Source {
     private val delegate by lazy {
         sourceManager.get(id)
-            ?.let { it as CatalogueSource }
     }
 
     fun isMangaDexSource(): Boolean = id in MANGADEX_IDS
@@ -145,12 +145,15 @@ class RecommendationSource(
     override val lang: String by lazy { delegate?.lang ?: "all" }
     override val supportsLatest by lazy { delegate?.supportsLatest ?: false }
 
-    override suspend fun getMangaDetails(manga: SManga) =
-        delegate?.getMangaDetails(manga)
+    override suspend fun getMangaUpdate(
+        manga: SManga,
+        chapters: List<SChapter>,
+        fetchDetails: Boolean,
+        fetchChapters: Boolean,
+    ): SMangaUpdate =
+        delegate?.getMangaUpdate(manga, chapters, fetchDetails, fetchChapters)
             ?: throw UnsupportedOperationException()
-    override suspend fun getChapterList(manga: SManga) =
-        delegate?.getChapterList(manga)
-            ?: throw UnsupportedOperationException()
+
     override suspend fun getPageList(chapter: SChapter) =
         delegate?.getPageList(chapter)
             ?: throw UnsupportedOperationException()
