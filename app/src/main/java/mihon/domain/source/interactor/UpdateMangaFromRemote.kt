@@ -88,6 +88,7 @@ class UpdateMangaFromRemote(
     ): Result<RemoteMangaUpdate> {
         return try {
             val chapters = chapterRepository.getChapterByMangaId(manga.id)
+                .sortedBy { it.sourceOrder }
             val update = withIOContext {
                 // SY -->
                 if (source is EHentai) {
@@ -186,6 +187,7 @@ class UpdateMangaFromRemote(
                 status = remoteManga.status.toLong(),
                 updateStrategy = remoteManga.update_strategy,
                 initialized = true,
+                memo = remoteManga.memo,
             ),
         )
         if (success && title != null) {
