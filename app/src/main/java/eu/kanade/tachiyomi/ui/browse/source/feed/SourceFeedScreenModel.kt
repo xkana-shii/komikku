@@ -160,9 +160,15 @@ open class SourceFeedScreenModel(
 
     fun createFeed(savedSearchId: Long) {
         val sourceId = source.id
+
         screenModelScope.launchNonCancellable {
-            val existing = getFeedSavedSearchBySourceId.await(sourceId)
-                .find { it.savedSearch == savedSearchId && !it.global }
+            val feeds: List<FeedSavedSearch> =
+                Injekt.get<GetFeedSavedSearchBySourceId>().await(sourceId)
+
+            val existing: FeedSavedSearch? = feeds.find { feed: FeedSavedSearch ->
+                feed.savedSearch == savedSearchId && !feed.global
+            }
+
             if (existing != null) {
                 updateFeedSavedSearch.await(
                     FeedSavedSearchUpdate(
@@ -184,6 +190,7 @@ open class SourceFeedScreenModel(
                     ),
                 )
             }
+
             reloadFeeds()
         }
     }
@@ -270,24 +277,38 @@ open class SourceFeedScreenModel(
 
     private fun reloadFeeds() {
         screenModelScope.launchIO {
-            val feeds = getFeedSavedSearchBySourceId.await(source.id)
-            val savedSearches = getSavedSearchBySourceIdFeed.await(source.id).associateBy { it.id }
+            val feeds: List<FeedSavedSearch> =
+                Injekt.get<GetFeedSavedSearchBySourceId>().await(source.id)
 
-            val items = (
-                listOfNotNull(
-                    if ((source as? CatalogueSource)?.supportsLatest == true) SourceFeedUI.Latest(null) else null,
-                    SourceFeedUI.Browse(null),
-                ) + feeds.mapNotNull { feed ->
+            val savedSearches = getSavedSearchBySourceIdFeed
+                .await(source.id)
+                .associateBy { savedSearch -> savedSearch.id }
+
+            val items = buildList<SourceFeedUI> {
+                if (source.supportsLatest) {
+                    add(SourceFeedUI.Latest(null))
+                }
+
+                add(SourceFeedUI.Browse(null))
+
+                feeds.forEach { feed: FeedSavedSearch ->
                     val savedSearch = savedSearches[feed.savedSearch]
+
                     if (savedSearch != null) {
-                        SourceFeedUI.SourceSavedSearch(feed, savedSearch, null)
-                    } else {
-                        null
+                        add(
+                            SourceFeedUI.SourceSavedSearch(
+                                feed = feed,
+                                savedSearch = savedSearch,
+                                results = null,
+                            ),
+                        )
                     }
                 }
-                ).toImmutableList()
+            }.toImmutableList()
 
-            mutableState.update { it.copy(items = items) }
+            mutableState.update { currentState ->
+                currentState.copy(items = items)
+            }
         }
     }
 
