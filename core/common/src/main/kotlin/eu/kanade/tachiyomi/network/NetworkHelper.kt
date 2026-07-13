@@ -2,11 +2,9 @@ package eu.kanade.tachiyomi.network
 
 import android.content.Context
 import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
-import eu.kanade.tachiyomi.network.interceptor.FlareSolverrInterceptor
 import eu.kanade.tachiyomi.network.interceptor.IgnoreGzipInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
-import kotlinx.serialization.json.Json
 import logcat.LogPriority
 import okhttp3.Cache
 import okhttp3.Dispatcher
@@ -25,9 +23,6 @@ import kotlin.random.Random
 /* SY --> */ open /* SY <-- */ class NetworkHelper(
     private val context: Context,
     private val preferences: NetworkPreferences,
-    // KMK -->
-    private val json: Json,
-    // KMK <--
     // SY -->
     val isDebugBuild: Boolean,
     // SY <--
@@ -100,15 +95,8 @@ import kotlin.random.Random
 
     /* SY --> */ open /* SY <-- */ val client /* KMK --> */ by lazy /* KMK <-- */ {
         clientBuilder()
-            .addNetworkInterceptor(
-                FlareSolverrInterceptor(
-                    preferences = preferences,
-                    network = this,
-                    json = json,
-                ),
-            )
             .addInterceptor(
-                CloudflareInterceptor(context, cookieJar, preferences, ::defaultUserAgentProvider),
+                CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
             )
             // KMK -->
             // FIXME (KMK): Dirty hack to fetch MangaDex covers
@@ -141,15 +129,8 @@ import kotlin.random.Random
         readTimeout: Long = 30,
         callTimeout: Long = 120,
     ) = clientBuilder(connectTimeout, readTimeout, callTimeout)
-        .addNetworkInterceptor(
-            FlareSolverrInterceptor(
-                preferences = preferences,
-                network = this,
-                json = json,
-            ),
-        )
         .addInterceptor(
-            CloudflareInterceptor(context, cookieJar, preferences, ::defaultUserAgentProvider),
+            CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
         )
         .build()
 
