@@ -24,7 +24,7 @@ okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.
 okhttp-brotli = { module = "com.squareup.okhttp3:okhttp-brotli", version.ref = "okhttp_version" }
 okhttp-dnsoverhttps = { module = "com.squareup.okhttp3:okhttp-dnsoverhttps", version.ref = "okhttp_version" }
 okhttp-zstd = { module = "com.squareup.okhttp3:okhttp-zstd", version.ref = "okhttp_version" }
-okio = "com.squareup.okio:okio:3.16.4"
+okio = "com.squareup.okio:okio:3.17.0"
 
 conscrypt-android = "org.conscrypt:conscrypt-android:2.5.3"
 
@@ -64,7 +64,7 @@ directionalviewpager = "com.github.tachiyomiorg:DirectionalViewPager:1.0.0"
 compose-materialmotion = "io.github.fornewid:material-motion-compose-core:2.0.1"
 compose-webview = "io.github.kevinnzou:compose-webview:0.33.6"
 compose-grid = "io.woong.compose.grid:grid:1.2.2"
-reorderable = { module = "sh.calvin.reorderable:reorderable", version = "3.0.0" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version = "3.1.0" }
 palette-ktx = "androidx.palette:palette-ktx:1.0.0"
 haze = "dev.chrisbanes.haze:haze:1.7.2"
 

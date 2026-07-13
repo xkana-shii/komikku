@@ -13,7 +13,6 @@ import okhttp3.Dispatcher
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
-import okhttp3.brotli.BrotliInterceptor
 import okhttp3.logging.HttpLoggingInterceptor
 import okio.IOException
 import tachiyomi.core.common.util.system.logcat
@@ -61,8 +60,6 @@ import kotlin.random.Random
             )
             .addInterceptor(UncaughtExceptionInterceptor())
             .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
-            .addNetworkInterceptor(IgnoreGzipInterceptor())
-            .addNetworkInterceptor(BrotliInterceptor)
 
         // Apply dispatcher limits from preferences so max concurrent requests slider takes effect.
         try {
@@ -113,6 +110,25 @@ import kotlin.random.Random
             .addInterceptor(
                 CloudflareInterceptor(context, cookieJar, preferences, ::defaultUserAgentProvider),
             )
+            // KMK -->
+            // FIXME (KMK): Dirty hack to fetch MangaDex covers
+            .addInterceptor { chain ->
+                val originalRequest = chain.request()
+                val url = originalRequest.url
+                if (url.host == "uploads.mangadex.org" && url.encodedPath.startsWith("/covers/")) {
+                    val newRequest = originalRequest
+                        .newBuilder()
+                        .header("Referer", "https://mangadex.org/")
+                        .header("Origin", "https://mangadex.org")
+                        .header("sec-fetch-dest", "image")
+                        .header("sec-fetch-mode", "no-cors")
+                        .build()
+                    chain.proceed(newRequest)
+                } else {
+                    chain.proceed(originalRequest)
+                }
+            }
+            // KMK <--
             .build()
     }
 
