@@ -35,8 +35,8 @@ import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.tachiyomi.R
 import kotlinx.collections.immutable.persistentListOf
 import mihon.domain.extension.model.ExtensionStore
-import mihon.domain.extension.model.KOMIKKU_SIGNATURE
 import mihon.domain.extension.model.KANASHII_SIGNATURE
+import mihon.domain.extension.model.KOMIKKU_SIGNATURE
 import mihon.domain.extension.model.REPO_SIGNATURE
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
