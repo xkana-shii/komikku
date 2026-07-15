@@ -2,10 +2,10 @@ package eu.kanade.domain.chapter.interactor
 
 import eu.kanade.domain.download.interactor.DeleteDownload
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
-import eu.kanade.tachiyomi.ui.library.LibraryScreenModel
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
+import eu.kanade.tachiyomi.ui.library.LibraryViewModel
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
-import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel
+import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel
 import exh.source.MERGED_SOURCE_ID
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withNonCancellableContext
@@ -40,9 +40,9 @@ class SetReadStatus(
      * Mark chapters as read/unread, also delete downloaded chapters if 'After manually marked as read' is set.
      *
      * Called from:
-     *  - [LibraryScreenModel]: Manually select mangas & mark as read
-     *  - [MangaScreenModel.markChaptersRead]: Manually select chapters & mark as read or swipe chapter as read
-     *  - [UpdatesScreenModel.markUpdatesRead]: Manually select chapters & mark as read
+     *  - [LibraryViewModel]: Manually select mangas & mark as read
+     *  - [MangaViewModel.markChaptersRead]: Manually select chapters & mark as read or swipe chapter as read
+     *  - [UpdatesViewModel.markUpdatesRead]: Manually select chapters & mark as read
      *  - [LibraryUpdateJob.updateChapterList]: when a manga is updated and has new chapter but already read,
      *  it will mark that new **duplicated** chapter as read & delete downloading/downloaded -> should be treat as
      *  automatically ~ no auto delete

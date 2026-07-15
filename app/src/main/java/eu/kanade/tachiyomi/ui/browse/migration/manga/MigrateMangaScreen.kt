@@ -39,7 +39,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
@@ -76,9 +77,14 @@ data class MigrateMangaScreen(
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { MigrateMangaScreenModel(sourceId) }
+        val viewModel = viewModel<MigrateMangaViewModel>(
+            factory = MigrateMangaViewModel.Factory,
+            extras = CreationExtras {
+                set(MigrateMangaViewModel.SOURCE_ID_KEY, sourceId)
+            },
+        )
 
-        val state by screenModel.state.collectAsState()
+        val state by viewModel.state.collectAsState()
 
         if (state.isLoading) {
             LoadingScreen()
@@ -86,7 +92,7 @@ data class MigrateMangaScreen(
         }
 
         BackHandler(enabled = state.selectionMode) {
-            screenModel.clearSelection()
+            viewModel.clearSelection()
         }
 
         val lazyListState = rememberLazyListState()
@@ -118,9 +124,9 @@ data class MigrateMangaScreen(
                     },
                     itemCnt = state.titles.size,
                     selectedCount = state.selection.size,
-                    onClickUnselectAll = screenModel::clearSelection,
-                    onClickSelectAll = screenModel::toggleAllSelection,
-                    onClickInvertSelection = screenModel::invertSelection,
+                    onClickUnselectAll = viewModel::clearSelection,
+                    onClickSelectAll = viewModel::toggleAllSelection,
+                    onClickInvertSelection = viewModel::invertSelection,
                     // KMK <--
                     scrollBehavior = scrollBehavior,
                 )
@@ -161,7 +167,7 @@ data class MigrateMangaScreen(
                 contentPadding = contentPadding,
                 state = state,
                 // KMK -->
-                onMangaSelected = screenModel::toggleSelection,
+                onMangaSelected = viewModel::toggleSelection,
                 onClickItem = { navigator.push(MigrationConfigScreen(it.id)) },
                 // KMK <--
                 onClickCover = { navigator.push(MangaScreen(it.id)) },
@@ -169,7 +175,7 @@ data class MigrateMangaScreen(
         }
 
         LaunchedEffect(Unit) {
-            screenModel.events.collectLatest { event ->
+            viewModel.events.collectLatest { event ->
                 when (event) {
                     MigrationMangaEvent.FailedFetchingFavorites -> {
                         context.toast(MR.strings.internal_error)
@@ -183,7 +189,7 @@ data class MigrateMangaScreen(
     private fun MigrateMangaContent(
         lazyListState: LazyListState,
         contentPadding: PaddingValues,
-        state: MigrateMangaScreenModel.State,
+        state: MigrateMangaViewModel.State,
         // KMK -->
         onMangaSelected: (Manga, Boolean, Boolean) -> Unit,
         // KMK <--

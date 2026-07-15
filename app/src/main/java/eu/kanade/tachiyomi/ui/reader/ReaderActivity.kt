@@ -58,6 +58,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.hippo.unifile.UniFile
@@ -99,7 +100,7 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
-import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsViewModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
@@ -320,8 +321,8 @@ class ReaderActivity : BaseActivity() {
             // KMK <--
             val state by viewModel.state.collectAsState()
             val showPageNumber by readerPreferences.showPageNumber().collectAsState()
-            val settingsScreenModel = remember {
-                ReaderSettingsScreenModel(
+            val settingsScreenModel = viewModel {
+                ReaderSettingsViewModel(
                     readerState = viewModel.state,
                     onChangeReadingMode = viewModel::setMangaReadingMode,
                     onChangeOrientation = viewModel::setMangaOrientationType,
@@ -385,14 +386,14 @@ class ReaderActivity : BaseActivity() {
                         onDismissRequest = onDismissRequest,
                         onShowMenus = { setMenuVisibility(true) },
                         onHideMenus = { setMenuVisibility(false) },
-                        screenModel = settingsScreenModel,
+                        viewModel = settingsScreenModel,
                     )
                 }
 
                 is ReaderViewModel.Dialog.ReadingModeSelect -> {
                     ReadingModeSelectDialog(
                         onDismissRequest = onDismissRequest,
-                        screenModel = settingsScreenModel,
+                        viewModel = settingsScreenModel,
                         onChange = { stringRes ->
                             menuToggleToast?.cancel()
                             if (!readerPreferences.showReadingMode().get()) {
@@ -405,7 +406,7 @@ class ReaderActivity : BaseActivity() {
                 is ReaderViewModel.Dialog.OrientationModeSelect -> {
                     OrientationSelectDialog(
                         onDismissRequest = onDismissRequest,
-                        screenModel = settingsScreenModel,
+                        viewModel = settingsScreenModel,
                         onChange = { stringRes ->
                             menuToggleToast?.cancel()
                             menuToggleToast = toast(stringRes)
@@ -474,7 +475,7 @@ class ReaderActivity : BaseActivity() {
                                 }
                             }.toImmutableList()
                         },
-                        state.dateRelativeTime,
+                        dateRelativeTime = state.dateRelativeTime,
                     )
                 }
                 // SY -->

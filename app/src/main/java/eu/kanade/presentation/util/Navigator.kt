@@ -44,9 +44,10 @@ abstract class Screen : Screen {
     override val key: ScreenKey = uniqueScreenKey
 }
 
+// KMK -->
 /**
  * A variant of ScreenModel.coroutineScope except with the IO dispatcher instead of the
- * main dispatcher.
+ * main dispatcher. Fork-only Voyager models still use this until they migrate independently.
  */
 val ScreenModel.ioCoroutineScope: CoroutineScope
     get() = ScreenModelStore.getOrPutDependency(
@@ -55,6 +56,7 @@ val ScreenModel.ioCoroutineScope: CoroutineScope
         factory = { key -> CoroutineScope(Dispatchers.IO + SupervisorJob()) + CoroutineName(key) },
         onDispose = { scope -> scope.cancel() },
     )
+// KMK <--
 
 interface AssistContentScreen {
     fun onProvideAssistUrl(): String?

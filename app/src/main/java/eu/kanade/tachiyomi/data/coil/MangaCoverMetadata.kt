@@ -4,7 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.palette.graphics.Palette
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverMetadata.setRatioAndColors
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import okio.BufferedSource
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.MangaCover
@@ -70,7 +70,7 @@ object MangaCoverMetadata {
      * @param force if true then it will always re-calculate ratio & color for favorite mangas.
      *
      * This is only for loading color first time it appears on Library/Browse. Any new colors caused by loading new
-     * cover when open a manga detail or change cover will be updated separately on [MangaScreenModel.setPaletteColor].
+     * cover when open a manga detail or change cover will be updated separately on [MangaViewModel.setPaletteColor].
      *
      * @author Jays2Kings, cuong-tran
      */

@@ -11,6 +11,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -24,7 +25,7 @@ import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel
+import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
@@ -47,7 +48,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
-        val screenModel = rememberScreenModel { MangaDexFollowsScreenModel(sourceId) }
+        val screenModel = viewModel { MangaDexFollowsViewModel(sourceId) }
         val state by screenModel.state.collectAsState()
 
         // KMK -->
@@ -135,9 +136,9 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                         scope.launchIO {
                             val duplicates = screenModel.getDuplicateLibraryManga(manga)
                             when {
-                                manga.favorite -> screenModel.setDialog(BrowseSourceScreenModel.Dialog.RemoveManga(manga))
+                                manga.favorite -> screenModel.setDialog(BrowseSourceViewModel.Dialog.RemoveManga(manga))
                                 duplicates.isNotEmpty() -> screenModel.setDialog(
-                                    BrowseSourceScreenModel.Dialog.AddDuplicateManga(manga, duplicates),
+                                    BrowseSourceViewModel.Dialog.AddDuplicateManga(manga, duplicates),
                                 )
                                 else -> screenModel.addFavorite(manga)
                             }
@@ -152,7 +153,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
 
         val onDismissRequest = { screenModel.setDialog(null) }
         when (val dialog = state.dialog) {
-            is BrowseSourceScreenModel.Dialog.AddDuplicateManga -> {
+            is BrowseSourceViewModel.Dialog.AddDuplicateManga -> {
                 DuplicateMangaDialog(
                     duplicates = dialog.duplicates,
                     onDismissRequest = onDismissRequest,
@@ -160,12 +161,12 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                     onOpenManga = { navigator.push(MangaScreen(it.id)) },
                     // KMK -->
                     targetManga = dialog.manga,
-                    onMigrate = { screenModel.setDialog(BrowseSourceScreenModel.Dialog.Migrate(dialog.manga, it)) },
+                    onMigrate = { screenModel.setDialog(BrowseSourceViewModel.Dialog.Migrate(dialog.manga, it)) },
                     // KMK <--
                 )
             }
             // KMK -->
-            is BrowseSourceScreenModel.Dialog.Migrate -> {
+            is BrowseSourceViewModel.Dialog.Migrate -> {
                 MigrateMangaDialog(
                     current = dialog.current,
                     target = dialog.target,
@@ -175,7 +176,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                 )
             }
             // KMK <--
-            is BrowseSourceScreenModel.Dialog.RemoveManga -> {
+            is BrowseSourceViewModel.Dialog.RemoveManga -> {
                 RemoveMangaDialog(
                     onDismissRequest = onDismissRequest,
                     onConfirm = {
@@ -184,7 +185,7 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                     mangaToRemove = dialog.manga,
                 )
             }
-            is BrowseSourceScreenModel.Dialog.ChangeMangaCategory -> {
+            is BrowseSourceViewModel.Dialog.ChangeMangaCategory -> {
                 ChangeCategoryDialog(
                     initialSelection = dialog.initialSelection,
                     onDismissRequest = onDismissRequest,

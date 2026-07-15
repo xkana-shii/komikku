@@ -20,6 +20,10 @@ profileinstaller = "androidx.profileinstaller:profileinstaller:1.4.1"
 lifecycle-common = { module = "androidx.lifecycle:lifecycle-common", version.ref = "lifecycle_version" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle_version" }
 lifecycle-runtimektx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle_version" }
+# KMK -->
+lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle_version" }
+lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle_version" }
+# KMK <--
 
 workmanager = "androidx.work:work-runtime:2.11.2"
 
@@ -37,4 +41,6 @@ test-espresso-core = "androidx.test.espresso:espresso-core:3.7.0"
 test-uiautomator = "androidx.test.uiautomator:uiautomator:2.4.0"
 
 [bundles]
-lifecycle = ["lifecycle-common", "lifecycle-process", "lifecycle-runtimektx"]
+# KMK -->
+lifecycle = ["lifecycle-common", "lifecycle-process", "lifecycle-runtimektx", "lifecycle-viewmodel", "lifecycle-viewmodel-compose"]
+# KMK <--

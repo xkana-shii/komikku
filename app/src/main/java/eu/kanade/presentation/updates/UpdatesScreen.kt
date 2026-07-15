@@ -30,7 +30,7 @@ import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.MangaBottomActionMenu
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
-import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel
+import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,7 +49,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun UpdateScreen(
-    state: UpdatesScreenModel.State,
+    state: UpdatesViewModel.State,
     snackbarHostState: SnackbarHostState,
     lastUpdated: Long,
     // SY -->
@@ -72,7 +72,7 @@ fun UpdateScreen(
     updateSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     onUpdateSwipe: (UpdatesItem, LibraryPreferences.ChapterSwipeAction) -> Unit,
     // KMK <--
-    onUpdateSelected: (UpdatesItem, /* KMK --> */ UpdatesScreenModel.UpdateSelectionOptions /* KMK <-- */) -> Unit,
+    onUpdateSelected: (UpdatesItem, /* KMK --> */ UpdatesViewModel.UpdateSelectionOptions /* KMK <-- */) -> Unit,
     onOpenChapter: (UpdatesItem) -> Unit,
     onFilterClicked: () -> Unit,
     hasActiveFilters: Boolean,

@@ -15,7 +15,7 @@ import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.util.animateItemFastScroll
-import eu.kanade.tachiyomi.ui.browse.source.SourcesFilterScreenModel
+import eu.kanade.tachiyomi.ui.browse.source.SourcesFilterViewModel
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
@@ -33,7 +33,7 @@ import uy.kohesive.injekt.api.get
 @Composable
 fun SourcesFilterScreen(
     navigateUp: () -> Unit,
-    state: SourcesFilterScreenModel.State.Success,
+    state: SourcesFilterViewModel.State.Success,
     onClickLanguage: (String) -> Unit,
     onClickSource: (Source) -> Unit,
     // SY -->
@@ -71,7 +71,7 @@ fun SourcesFilterScreen(
 @Composable
 private fun SourcesFilterContent(
     contentPadding: PaddingValues,
-    state: SourcesFilterScreenModel.State.Success,
+    state: SourcesFilterViewModel.State.Success,
     onClickLanguage: (String) -> Unit,
     onClickSource: (Source) -> Unit,
     // SY -->

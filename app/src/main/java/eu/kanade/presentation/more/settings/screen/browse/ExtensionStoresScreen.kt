@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.settings.screen.browse.components.ExtensionStoreConfirmDialog
@@ -28,11 +28,11 @@ class ExtensionStoresScreen(
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { ExtensionStoresScreenModel() }
-        val state by screenModel.state.collectAsState()
+        val viewModel = viewModel<ExtensionStoresViewModel>()
+        val state by viewModel.state.collectAsState()
 
         LaunchedEffect(url) {
-            url?.let { screenModel.addFromDeeplink(url) }
+            url?.let { viewModel.addFromDeeplink(url) }
         }
 
         if (state is ExtensionStoreScreenState.Loading) {
@@ -44,24 +44,24 @@ class ExtensionStoresScreen(
 
         ExtensionStoresScreen(
             state = successState,
-            onClickCreate = { screenModel.showDialog(ExtensionStoreDialog.Create()) },
+            onClickCreate = { viewModel.showDialog(ExtensionStoreDialog.Create()) },
             onCopy = { context.copyToClipboard(it.indexUrl, it.indexUrl) },
             onOpenWebsite = { it.contact.website.let(context::openInBrowser) },
             onOpenDiscord = { it.contact.discord?.let(context::openInBrowser) },
             // KMK -->
             onClickEnable = {
-                screenModel.enableStore(it.indexUrl)
-                screenModel.refreshExtensionList()
+                viewModel.enableStore(it.indexUrl)
+                viewModel.refreshExtensionList()
                 context.toast(KMR.strings.extensions_page_need_refresh)
             },
             onClickDisable = {
-                screenModel.disableStore(it.indexUrl)
-                screenModel.refreshExtensionList()
+                viewModel.disableStore(it.indexUrl)
+                viewModel.refreshExtensionList()
                 context.toast(KMR.strings.extensions_page_need_refresh)
             },
             // KMK <--
-            onClickDelete = { screenModel.showDialog(ExtensionStoreDialog.Delete(it)) },
-            onClickRefresh = { screenModel.refreshRepos() },
+            onClickDelete = { viewModel.showDialog(ExtensionStoreDialog.Delete(it)) },
+            onClickRefresh = { viewModel.refreshRepos() },
             navigateUp = navigator::pop,
         )
 
@@ -69,8 +69,8 @@ class ExtensionStoresScreen(
             null -> {}
             is ExtensionStoreDialog.Create -> {
                 ExtensionStoreCreateDialog(
-                    onDismissRequest = screenModel::dismissDialog,
-                    onCreate = { screenModel.createRepo(it) },
+                    onDismissRequest = viewModel::dismissDialog,
+                    onCreate = { viewModel.createRepo(it) },
                     storeIndexUrls = successState.stores.map { it.indexUrl }.toSet(),
                     processing = dialog.processing,
                     errorMessage = dialog.errorMessage,
@@ -78,16 +78,16 @@ class ExtensionStoresScreen(
             }
             is ExtensionStoreDialog.Delete -> {
                 ExtensionStoreDeleteDialog(
-                    onDismissRequest = screenModel::dismissDialog,
-                    onDelete = { screenModel.deleteRepo(dialog.store.indexUrl) },
+                    onDismissRequest = viewModel::dismissDialog,
+                    onDelete = { viewModel.deleteRepo(dialog.store.indexUrl) },
                     storeName = dialog.store.name,
                     storeIndexUrl = dialog.store.indexUrl,
                 )
             }
             is ExtensionStoreDialog.Confirm -> {
                 ExtensionStoreConfirmDialog(
-                    onDismissRequest = screenModel::dismissDialog,
-                    onCreate = { screenModel.createRepo(dialog.url) },
+                    onDismissRequest = viewModel::dismissDialog,
+                    onCreate = { viewModel.createRepo(dialog.url) },
                     storeIndexUrl = dialog.url,
                     storeAlreadyExists = dialog.alreadyExists,
                     processing = dialog.processing,

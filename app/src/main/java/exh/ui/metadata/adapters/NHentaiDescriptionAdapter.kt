@@ -13,7 +13,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.databinding.DescriptionAdapterNhBinding
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel.State
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.dpToPx
 import exh.metadata.MetadataUtil
