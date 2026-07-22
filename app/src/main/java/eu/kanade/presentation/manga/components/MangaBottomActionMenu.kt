@@ -100,7 +100,9 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false) }
+            // KNS
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false, false) }
+            // KNS
             var resetJob by remember { mutableStateOf<Job?>(null) }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)

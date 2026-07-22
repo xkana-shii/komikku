@@ -173,7 +173,14 @@ private fun HistoryScreenContent(
     ) {
         items(
             items = history,
-            key = { "history-${it.hashCode()}" },
+            // KNS
+            key = {
+                when (it) {
+                    is HistoryUiModel.Header -> "history-header-${it.date}"
+                    is HistoryUiModel.Item -> "history-item-${it.item.chapterId}-${it.item.mangaId}"
+                }
+            },
+            // KNS
             contentType = {
                 when (it) {
                     is HistoryUiModel.Header -> "header"
