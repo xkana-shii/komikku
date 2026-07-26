@@ -432,7 +432,7 @@ class ReaderViewModel @JvmOverloads constructor(
                     // 1) Reset local chapters based on preference
                     val resetMode = trackPreferences.autoRereadResetMode().get()
                     val currentChapterId = state.value.currentChapter?.chapter?.id
-                    val orderedUnfiltered = unfilteredChapterList
+                    val orderedUnfiltered = getUnfilteredChapterList()
                         .sortedWith(getChapterSort(manga, sortDescending = true))
                     when (resetMode) {
                         AutoRereadResetMode.RESET_TO_ZERO -> {
