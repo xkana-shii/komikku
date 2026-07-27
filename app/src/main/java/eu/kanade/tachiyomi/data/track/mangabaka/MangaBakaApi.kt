@@ -55,7 +55,7 @@ class MangaBakaApi(
             .header(
                 "User-Agent",
                 buildString {
-                    append("${MR.strings.app_name}/v${BuildConfig.VERSION_NAME} ")
+                    append("Komikku KNS/v${BuildConfig.VERSION_NAME} ")
                     append("(${BuildConfig.APPLICATION_ID} ${BuildConfig.COMMIT_SHA}) ")
                     append("(Android) (https://github.com/xkana-shii/komikku)")
                 },
@@ -383,7 +383,7 @@ class MangaBakaApi(
         private const val CLIENT_ID = "wOWYtfnAMjnornECeqIclcxOdUayYGqA"
 
         internal const val BASE_URL = "https://mangabaka.org"
-        private const val API_BASE_URL = "https://api.mangabaka.dev"
+        private const val API_BASE_URL = "https://api.mangabaka.org"
         private const val LIBRARY_API_URL = "$API_BASE_URL/v1/my/library"
         private const val OAUTH_URL = "$BASE_URL/auth/oauth2"
         private const val SCOPES = "library.read library.write offline_access openid"
