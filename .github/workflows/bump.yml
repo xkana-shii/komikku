@@ -23,10 +23,25 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Check whether Spotless should be skipped
+        id: spotless_check
+        run: |
+          commit_message="$(git log -1 --pretty=%B)"
+          echo "Last commit message:"
+          echo "$commit_message"
+          if echo "$commit_message" | grep -Fq "[no spotless]"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping Spotless because the last commit contains [no spotless]."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Spotless apply
+        if: steps.spotless_check.outputs.skip != 'true'
         run: ./gradlew spotlessApply
 
       - name: Commit Spotless changes
+        if: steps.spotless_check.outputs.skip != 'true'
         run: |
           git diff --quiet && exit 0
           git config user.name "github-actions[bot]"
