@@ -134,7 +134,7 @@ class EHentai(
     private fun languageTag(enforceLanguageFilter: Boolean = getEnforceLanguagePref()): String {
         return if (enforceLanguageFilter) "language:$ehLang" else ""
     }
-    
+
     private val enforceLanguagePreferences by lazy {
         context.getSharedPreferences(ENFORCE_LANGUAGE_PREF_FILE, Context.MODE_PRIVATE)
     }
@@ -165,9 +165,11 @@ class EHentai(
                 (
                     !isLangNatural() ||
                         !getEnforceLanguagePref() ||
-                        (element.select("div[title^=language]").firstOrNull()?.let {
-                            it.text().equals(ehLang, ignoreCase = true)
-                        } ?: true)
+                        (
+                            element.select("div[title^=language]").firstOrNull()?.let {
+                                it.text().equals(ehLang, ignoreCase = true)
+                            } ?: true
+                            )
                     )
         }.map { body ->
             val thumbnailElement = body.selectFirst(".gl1e img, .gl2c .glthumb img")!!
