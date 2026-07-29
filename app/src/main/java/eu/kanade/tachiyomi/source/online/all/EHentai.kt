@@ -131,8 +131,20 @@ class EHentai(
     // true if lang is a "natural human language"
     private fun isLangNatural(): Boolean = lang !in listOf("none", "other", "all")
 
-    private fun languageTag(): String {
-        return "language:$ehLang"
+    private fun languageTag(enforceLanguageFilter: Boolean = getEnforceLanguagePref()): String {
+        return if (enforceLanguageFilter) "language:$ehLang" else ""
+    }
+    
+    private val enforceLanguagePreferences by lazy {
+        context.getSharedPreferences(ENFORCE_LANGUAGE_PREF_FILE, Context.MODE_PRIVATE)
+    }
+
+    private fun getEnforceLanguagePref(): Boolean {
+        return enforceLanguagePreferences.getBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", true)
+    }
+
+    private fun setEnforceLanguagePref(value: Boolean) {
+        enforceLanguagePreferences.edit().putBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", value).apply()
     }
     // KMK <--
 
@@ -148,7 +160,15 @@ class EHentai(
         // Parse mangas (supports compact + extended layout)
         val parsedMangas = select(".itg > tbody > tr").filter { element ->
             // Do not parse header and ads
-            element.selectFirst("th") == null && element.selectFirst(".itd") == null
+            element.selectFirst("th") == null &&
+                element.selectFirst(".itd") == null &&
+                (
+                    !isLangNatural() ||
+                        !getEnforceLanguagePref() ||
+                        (element.select("div[title^=language]").firstOrNull()?.let {
+                            it.text().equals(ehLang, ignoreCase = true)
+                        } ?: true)
+                    )
         }.map { body ->
             val thumbnailElement = body.selectFirst(".gl1e img, .gl2c .glthumb img")!!
             val column2 = body.selectFirst(".gl3e, .gl2c")!!
@@ -561,6 +581,10 @@ class EHentai(
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
+        val enforceLanguageFilter = filters.firstNotNullOfOrNull { (it as? EnforceLanguageFilter)?.state }
+            ?: getEnforceLanguagePref()
+        setEnforceLanguagePref(enforceLanguageFilter)
+
         val toplist = ToplistOption.entries[filters.firstNotNullOfOrNull { (it as? ToplistOptions)?.state } ?: 0]
         if (toplist != ToplistOption.NONE) {
             val uri = "https://e-hentai.org".toUri().buildUpon()
@@ -575,14 +599,13 @@ class EHentai(
         val isReverseFilterEnabled = filters.any { it is ReverseFilter && it.state }
         val jumpSeekValue = filters.firstNotNullOfOrNull { (it as? JumpSeekFilter)?.state?.nullIfBlank() }
 
+        val searchQuery = (query + " " + combineQuery(filters)).trim()
+        val languageQuery = if (isLangNatural()) languageTag(enforceLanguageFilter) else ""
+
         uri.appendQueryParameter("f_apply", "Apply+Filter")
         uri.appendQueryParameter(
             "f_search",
-            if (isLangNatural()) {
-                languageTag() + "," + (query + " " + combineQuery(filters)).trim()
-            } else {
-                (query + " " + combineQuery(filters)).trim()
-            },
+            listOf(languageQuery, searchQuery).filter { it.isNotBlank() }.joinToString(","),
         )
         filters.forEach {
             if (it is UriFilter) it.addToUri(uri)
@@ -1017,6 +1040,7 @@ class EHentai(
     // Filters
     override fun getFilterList(): FilterList {
         return FilterList(
+            EnforceLanguageFilter(getEnforceLanguagePref()),
             Filter.Header("Note: Will ignore other parameters!"),
             ToplistOptions(),
             Filter.Separator(),
@@ -1030,6 +1054,8 @@ class EHentai(
             Filter.Header("or Jump by number of days/weeks/months/years: 7d, 4w, 12m, 10y"),
         )
     }
+
+    class EnforceLanguageFilter(default: Boolean) : Filter.CheckBox("Enforce language", default)
 
     class Watched(val isEnabled: Boolean) : Filter.CheckBox("Watched List", isEnabled), UriFilter {
         override fun addToUri(builder: Uri.Builder) {
@@ -1426,6 +1452,8 @@ class EHentai(
 
     companion object {
         private const val TR_SUFFIX = "TR"
+        private const val ENFORCE_LANGUAGE_PREF_FILE = "ehentai_language_preferences"
+        private const val ENFORCE_LANGUAGE_PREF_KEY = "enforce_language"
         private const val REVERSE_PARAM = "TEH_REVERSE"
         private val PAGE_COUNT_REGEX = "[0-9]*".toRegex()
         private val RATING_REGEX = "([0-9]*)px".toRegex()

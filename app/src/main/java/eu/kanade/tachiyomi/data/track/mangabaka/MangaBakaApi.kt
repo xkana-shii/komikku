@@ -68,8 +68,8 @@ class MangaBakaApi(
 
     suspend fun addLibManga(track: Track, knownSeriesData: MangaBakaItem? = null, numberOfRereads: Int = 0): Track {
         return withIOContext {
-            val seriesData = knownSeriesData ?: fetchSeriesData(track.remote_id)
-            val resolvedId = seriesData.mergedWith ?: seriesData.id
+            val seriesData = resolveSeriesData(track.remote_id, knownSeriesData)
+            val resolvedId = seriesData.id
             track.remote_id = resolvedId
             val body = buildJsonObject {
                 put("is_private", track.private)
@@ -126,11 +126,12 @@ class MangaBakaApi(
                     async { fetchLibraryEntry(originalId) } to async { runCatching { fetchSeriesData(originalId) } }
                 }.let { (a, b) -> a.await() to b.await() }
 
-                val seriesData = seriesResult.getOrElse { e ->
+                val originalSeriesData = seriesResult.getOrElse { e ->
                     if (e is HttpException && e.code == 404) fetchSeriesData(resolveId(originalId)) else throw e
                 }
 
-                val resolvedId = seriesData.mergedWith ?: seriesData.id
+                val seriesData = resolveSeriesData(originalId, originalSeriesData)
+                val resolvedId = seriesData.id
 
                 if (userData == null) return@withIOContext null
 
@@ -159,7 +160,7 @@ class MangaBakaApi(
         return withIOContext {
             val originalId = track.remote_id
 
-            val (seriesData, entry) = if (knownSeriesData != null && knownEntry != null) {
+            val (initialSeriesData, entry) = if (knownSeriesData != null && knownEntry != null) {
                 knownSeriesData to knownEntry
             } else {
                 coroutineScope {
@@ -169,7 +170,8 @@ class MangaBakaApi(
                 }
             }
 
-            track.remote_id = seriesData.mergedWith ?: seriesData.id
+            val seriesData = resolveSeriesData(originalId, initialSeriesData)
+            track.remote_id = seriesData.id
 
             val nextRereads = if (track.toApiStatus() == "completed" && entry?.state == "rereading") {
                 (entry.numberOfRereads ?: 0) + 1
@@ -335,9 +337,34 @@ class MangaBakaApi(
         }
     }
 
+    private suspend fun resolveSeriesData(seriesId: Long, knownSeriesData: MangaBakaItem? = null): MangaBakaItem {
+        var currentId = knownSeriesData?.id ?: seriesId
+        var seriesData = knownSeriesData ?: fetchSeriesData(currentId)
+        val visitedIds = mutableSetOf<Long>()
+
+        repeat(MAX_MERGE_HOPS + 1) { hop ->
+            if (!visitedIds.add(currentId)) {
+                throw IllegalStateException("MangaBaka merge cycle detected for ID $seriesId")
+            }
+
+            val mergedWith = seriesData.mergedWith
+            if (mergedWith == null || mergedWith <= 0 || mergedWith == currentId) {
+                return seriesData
+            }
+
+            if (hop == MAX_MERGE_HOPS) {
+                throw IllegalStateException("MangaBaka merge chain exceeded $MAX_MERGE_HOPS hops for ID $seriesId")
+            }
+
+            currentId = mergedWith
+            seriesData = fetchSeriesData(currentId)
+        }
+
+        throw IllegalStateException("Could not resolve MangaBaka ID $seriesId")
+    }
+
     suspend fun resolveId(seriesId: Long): Long {
-        val item = fetchSeriesData(seriesId)
-        return item.mergedWith ?: item.id
+        return resolveSeriesData(seriesId).id
     }
 
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
@@ -366,13 +393,15 @@ class MangaBakaApi(
                 fetchSeriesData(resolvedId)
             }
 
+            val seriesData = resolveSeriesData(resolvedId, item)
+
             TrackMangaMetadata(
-                remoteId = item.mergedWith ?: item.id,
-                title = item.chooseBestTitle(),
-                thumbnailUrl = item.cover.raw.url,
-                description = prepareDescription(item.description).ifEmpty { null },
-                authors = item.authors?.joinToString(", ")?.ifEmpty { null },
-                artists = item.artists?.joinToString(", ")?.ifEmpty { null },
+                remoteId = seriesData.id,
+                title = seriesData.chooseBestTitle(),
+                thumbnailUrl = seriesData.cover.raw.url,
+                description = prepareDescription(seriesData.description).ifEmpty { null },
+                authors = seriesData.authors?.joinToString(", ")?.ifEmpty { null },
+                artists = seriesData.artists?.joinToString(", ")?.ifEmpty { null },
             )
         }
     }
@@ -394,6 +423,7 @@ class MangaBakaApi(
 
         private const val CACHE_TTL_MS = 20_000L
         private const val MAX_CACHE_SIZE = 100
+        private const val MAX_MERGE_HOPS = 10
 
         private var codeVerifier: String = ""
         private var oauthStateParam: String = ""
