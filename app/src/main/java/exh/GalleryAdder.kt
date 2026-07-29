@@ -8,13 +8,21 @@ import eu.kanade.tachiyomi.source.online.UrlImportableSource
 import eu.kanade.tachiyomi.source.online.all.EHentai
 import exh.log.ResettableLogger
 import exh.log.safeXLogStackTag
+import exh.metadata.metadata.EHentaiSearchMetadata
+import exh.source.EHENTAI_EXT_SOURCES
+import exh.source.EH_SOURCE_ID
+import exh.source.EXHENTAI_EXT_SOURCES
+import exh.source.EXH_SOURCE_ID
 import exh.source.getMainSource
+import exh.util.nullIfBlank
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.sy.SYMR
 import uy.kohesive.injekt.Injekt
@@ -26,6 +34,7 @@ class GalleryAdder(
     private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getChapter: GetChapter = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
+    private val getFlatMetadataById: GetFlatMetadataById = Injekt.get(),
 ) {
 
     private val filters: Pair<Set<String>, Set<Long>> = Injekt.get<SourcePreferences>().run {
@@ -40,6 +49,25 @@ class GalleryAdder(
     // KMK -->
     private val logger = ResettableLogger { safeXLogStackTag() }
     // KMK <--
+
+    // KMK KNS -->
+    private val ehLanguageAliases = buildMap {
+        EHentai.languageMapping.forEach { (code, language) ->
+            val normalizedCode = code.lowercase()
+
+            put(normalizedCode, normalizedCode)
+            put(language.lowercase(), normalizedCode)
+        }
+    }
+
+    private val ehentaiSourceIdsByLanguage = EHENTAI_EXT_SOURCES.entries.associate { (sourceId, language) ->
+        (ehLanguageAliases[language.lowercase()] ?: language.lowercase()) to sourceId
+    }
+
+    private val exhentaiSourceIdsByLanguage = EXHENTAI_EXT_SOURCES.entries.associate { (sourceId, language) ->
+        (ehLanguageAliases[language.lowercase()] ?: language.lowercase()) to sourceId
+    }
+    // KMK KNS <--
 
     fun pickSource(url: String): List<UrlImportableSource> {
         val uri = url.toUri()
@@ -151,6 +179,53 @@ class GalleryAdder(
                     throttleFunc = throttleFunc,
                 ).getOrThrow().manga
             }
+
+            // KMK KNS -->
+            if (manga.source == EH_SOURCE_ID || manga.source == EXH_SOURCE_ID) {
+                try {
+                    val flatMeta = try {
+                        getFlatMetadataById.await(manga.id)
+                    } catch (_: Exception) {
+                        null
+                    }
+
+                    val ehMeta = flatMeta?.raise<EHentaiSearchMetadata>()
+                    val targetMap = if (manga.source == EXH_SOURCE_ID) exhentaiSourceIdsByLanguage else ehentaiSourceIdsByLanguage
+
+                    val candidateFromLanguage = ehMeta?.language
+                        ?.trim()
+                        ?.nullIfBlank()
+                        ?.lowercase()
+                        ?.let { ehLanguageAliases[it] ?: it }
+                        ?.takeIf { it in targetMap }
+
+                    val candidateFromTag = ehMeta?.tags
+                        ?.asSequence()
+                        ?.filter { it.namespace.equals(EHentaiSearchMetadata.EH_LANGUAGE_NAMESPACE, ignoreCase = true) }
+                        ?.mapNotNull { it.name.trim().nullIfBlank()?.lowercase() }
+                        ?.map { ehLanguageAliases[it] ?: it }
+                        ?.firstOrNull { it in targetMap }
+
+                    val galleryLanguageNormalized = candidateFromLanguage ?: candidateFromTag
+                    val matchingSourceId = galleryLanguageNormalized?.let(targetMap::get)
+
+                    if (matchingSourceId != null && matchingSourceId != manga.source && matchingSourceId !in filters.disabledSources) {
+                        updateManga.await(
+                            MangaUpdate(
+                                id = manga.id,
+                                source = matchingSourceId,
+                            ),
+                        )
+                        manga = manga.copy(source = matchingSourceId)
+                        logger()?.d("Remapped gallery $url -> source id $matchingSourceId (lang=$galleryLanguageNormalized)")
+                    } else if (galleryLanguageNormalized != null) {
+                        logger()?.d("No matching language-specific source found for gallery $url (lang=$galleryLanguageNormalized)")
+                    }
+                } catch (e: Exception) {
+                    logger()?.w("Failed to remap EH gallery to language-specific source", e)
+                }
+            }
+            // KMK KNS <--
 
             if (fav) {
                 updateManga.awaitUpdateFavorite(manga.id, true)
