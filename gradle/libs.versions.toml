@@ -46,6 +46,9 @@ sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sql
 # KMK <--
 
 preferencektx = "androidx.preference:preference-ktx:1.2.1"
+# KMK -->
+androidx-webkit = "androidx.webkit:webkit:1.16.0"
+# KMK <--
 
 injekt = "com.github.mihonapp:injekt:91edab2317"
 

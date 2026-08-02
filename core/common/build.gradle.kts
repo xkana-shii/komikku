@@ -44,6 +44,9 @@ dependencies {
     api(kotlinx.serialization.json.okio)
 
     api(libs.preferencektx)
+    // KMK -->
+    implementation(libs.androidx.webkit)
+    // KMK <--
 
     implementation(libs.jsoup)
 
