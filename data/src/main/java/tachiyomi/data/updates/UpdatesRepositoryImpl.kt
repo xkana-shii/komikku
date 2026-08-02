@@ -32,6 +32,8 @@ class UpdatesRepositoryImpl(
         started: Boolean?,
         bookmarked: Boolean?,
         hideExcludedScanlators: Boolean,
+        includedCategories: List<Long>,
+        excludedCategories: List<Long>,
     ): Flow<List<UpdatesWithRelations>> {
         return database.updatesViewQueries.getRecentUpdatesWithFilters(
             after = after,
@@ -41,6 +43,12 @@ class UpdatesRepositoryImpl(
             started = started?.toLong(),
             bookmarked = bookmarked,
             hideExcludedScanlators = hideExcludedScanlators.toLong(),
+            // KMK -->
+            includedEmpty = includedCategories.isEmpty(),
+            excludedEmpty = excludedCategories.isEmpty(),
+            includedCategories = includedCategories,
+            excludedCategories = excludedCategories,
+            // KMK <--
             mapper = ::mapUpdatesWithRelations,
         ).subscribeToList()
     }
