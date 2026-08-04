@@ -34,9 +34,8 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.domain.category.interactor.CreateCategoryWithName
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
-import tachiyomi.domain.category.interactor.UpdateCategory
 import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.category.model.CategoryUpdate
+import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.FavoriteEntry
@@ -56,7 +55,9 @@ class FavoritesSyncHelper(val context: Context) {
     private val updateManga: UpdateManga by injectLazy()
     private val setMangaCategories: SetMangaCategories by injectLazy()
     private val createCategoryWithName: CreateCategoryWithName by injectLazy()
-    private val updateCategory: UpdateCategory by injectLazy()
+    // KMK -->
+    private val categoryRepository: CategoryRepository by injectLazy()
+    // KMK <--
 
     private val exhPreferences: ExhPreferences by injectLazy()
 
@@ -208,16 +209,9 @@ class FavoritesSyncHelper(val context: Context) {
 
             // Ensure consistent ordering and naming
             if (local.name != remote || local.order != index.toLong()) {
-                val result = updateCategory.await(
-                    CategoryUpdate(
-                        id = local.id,
-                        order = index.toLong().takeIf { it != local.order },
-                        name = remote.takeIf { it != local.name },
-                    ),
-                )
-                if (result is UpdateCategory.Result.Error) {
-                    throw result.error
-                }
+                // KMK -->
+                categoryRepository.updateNameAndOrder(local.id, remote, index.toLong())
+                // KMK <--
             }
         }
     }
