@@ -11,6 +11,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Fixed
+- Avoid checking for app and extension updates again on configuration changes.
+
 ### Added
 - [Hikka](https://hikka.io/) tracker support ([@Lorg0n](https://github.com/Lorg0n)) ([#1386](https://github.com/mihonapp/mihon/pull/1386))
   - Fix Hikka not defaulting to "Plan to Read" for unread titles ([@MajorTanya](https://github.com/MajorTanya)) ([#3534](https://github.com/mihonapp/mihon/pull/3534))

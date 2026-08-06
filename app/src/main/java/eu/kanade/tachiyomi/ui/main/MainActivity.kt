@@ -390,7 +390,7 @@ class MainActivity : BaseActivity() {
                 // KMK <--
                 // KMK -->
                 if (!isBenchmarkBuildType) {
-                    CheckForUpdates()
+                    if (isLaunch) CheckForUpdates()
                     ShowOnboarding()
                 }
                 // KMK <--
