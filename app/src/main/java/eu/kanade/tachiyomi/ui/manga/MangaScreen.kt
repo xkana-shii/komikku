@@ -555,7 +555,7 @@ class MangaScreen(
                         set(MangaCoverViewModel.MANGA_ID_KEY, successState.manga.id)
                     },
                 )
-                val manga by sm.state.collectAsState()
+                val manga by sm.state.collectAsStateWithLifecycle()
                 if (manga != null) {
                     val getContent = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
                         if (it == null) return@rememberLauncherForActivityResult

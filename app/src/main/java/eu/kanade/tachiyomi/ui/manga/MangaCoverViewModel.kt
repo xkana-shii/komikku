@@ -20,9 +20,12 @@ import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.util.editCover
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.toShareIntent
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
@@ -35,6 +38,7 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import kotlin.time.Duration.Companion.seconds
 
 class MangaCoverViewModel(
     private val mangaId: Long,
@@ -45,9 +49,6 @@ class MangaCoverViewModel(
 
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : ViewModel() {
-
-    val state: StateFlow<Manga?>
-        field = MutableStateFlow<Manga?>(null)
 
     companion object {
         val MANGA_ID_KEY = CreationExtras.Key<Long>()
@@ -61,12 +62,9 @@ class MangaCoverViewModel(
         }
     }
 
-    init {
-        viewModelScope.launchIO {
-            getManga.subscribe(mangaId)
-                .collect { newManga -> state.update { newManga } }
-        }
-    }
+    val state: StateFlow<Manga?> = getManga.subscribe(mangaId)
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
 
     fun saveCover(context: Context) {
         viewModelScope.launch {
@@ -152,7 +150,6 @@ class MangaCoverViewModel(
     }
 
     fun deleteCustomCover(context: Context) {
-        val mangaId = state.value?.id ?: return
         viewModelScope.launchIO {
             try {
                 coverCache.deleteCustomCover(mangaId)
