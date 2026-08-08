@@ -8,8 +8,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -41,7 +41,7 @@ fun Screen.sourcesTab(
 ): TabContent {
     val navigator = LocalNavigator.currentOrThrow
     val viewModel = viewModel { SourcesViewModel(smartSearchConfig = smartSearchConfig) }
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     return TabContent(
         // SY -->
