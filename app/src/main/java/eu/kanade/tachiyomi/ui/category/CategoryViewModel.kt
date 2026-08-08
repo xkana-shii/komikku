@@ -8,9 +8,12 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tachiyomi.domain.category.interactor.CreateCategoryWithName
@@ -23,6 +26,7 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import kotlin.time.Duration.Companion.seconds
 
 class CategoryViewModel(
     private val getCategories: GetCategories = Injekt.get(),
@@ -35,26 +39,21 @@ class CategoryViewModel(
     // KMK <--
 ) : ViewModel() {
 
-    val state: StateFlow<CategoryScreenState>
-        field = MutableStateFlow<CategoryScreenState>(CategoryScreenState.Loading)
-
     private val _events: Channel<CategoryEvent> = Channel()
     val events = _events.receiveAsFlow()
 
-    init {
-        viewModelScope.launch {
-            getCategories.subscribe()
-                .collectLatest { categories ->
-                    state.update {
-                        CategoryScreenState.Success(
-                            categories = categories
-                                .filterNot(Category::isSystemCategory)
-                                .toImmutableList(),
-                        )
-                    }
-                }
-        }
+    private val dialog = MutableStateFlow<CategoryDialog?>(null)
+
+    val state: StateFlow<CategoryScreenState> = combine(
+        getCategories.subscribe(),
+        dialog,
+    ) { categories, dialog ->
+        CategoryScreenState.Success(
+            categories = categories.filterNot(Category::isSystemCategory).toImmutableList(),
+            dialog = dialog,
+        )
     }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), CategoryScreenState.Loading)
 
     fun createCategory(name: String) {
         viewModelScope.launch {
@@ -104,21 +103,11 @@ class CategoryViewModel(
     }
 
     fun showDialog(dialog: CategoryDialog) {
-        state.update {
-            when (it) {
-                CategoryScreenState.Loading -> it
-                is CategoryScreenState.Success -> it.copy(dialog = dialog)
-            }
-        }
+        this.dialog.update { dialog }
     }
 
     fun dismissDialog() {
-        state.update {
-            when (it) {
-                CategoryScreenState.Loading -> it
-                is CategoryScreenState.Success -> it.copy(dialog = null)
-            }
-        }
+        dialog.update { null }
     }
 }
 
