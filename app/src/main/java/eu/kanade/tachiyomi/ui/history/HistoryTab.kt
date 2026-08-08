@@ -7,11 +7,11 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -87,7 +87,7 @@ data object HistoryTab : Tab {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val viewModel = viewModel { HistoryViewModel() }
-        val state by viewModel.state.collectAsState()
+        val state by viewModel.state.collectAsStateWithLifecycle()
         // KMK -->
         val settingsScreenModel = rememberScreenModel { HistorySettingsScreenModel() }
         val usePanoramaCover by settingsScreenModel.historyPreferences.usePanoramaCover().collectAsState()
