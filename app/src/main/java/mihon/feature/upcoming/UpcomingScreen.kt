@@ -1,8 +1,8 @@
 package mihon.feature.upcoming
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -17,7 +17,7 @@ class UpcomingScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
 
         val viewModel = viewModel<UpcomingViewModel>()
-        val state by viewModel.state.collectAsState()
+        val state by viewModel.state.collectAsStateWithLifecycle()
 
         UpcomingScreenContent(
             state = state,
