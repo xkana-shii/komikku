@@ -6,11 +6,11 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.Navigator
@@ -79,7 +79,7 @@ data object BrowseTab : Tab {
 
         // Hoisted for extensions tab's search bar
         val extensionsViewModel = viewModel<ExtensionsViewModel>()
-        val extensionsState by extensionsViewModel.state.collectAsState()
+        val extensionsSearchQuery by extensionsViewModel.searchQuery.collectAsStateWithLifecycle()
 
         // KMK -->
         val feedScreenModel = rememberScreenModel { FeedScreenModel() }
@@ -129,7 +129,7 @@ data object BrowseTab : Tab {
             titleRes = MR.strings.browse,
             tabs = tabs,
             state = state,
-            searchQuery = extensionsState.searchQuery,
+            searchQuery = extensionsSearchQuery,
             onChangeSearchQuery = extensionsViewModel::search,
             // KMK -->
             feedScreenModel = feedScreenModel,
