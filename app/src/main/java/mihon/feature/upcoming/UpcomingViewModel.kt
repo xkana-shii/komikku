@@ -2,6 +2,7 @@ package mihon.feature.upcoming
 
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMapIndexedNotNull
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.util.insertSeparatorsReversed
 import eu.kanade.tachiyomi.util.lang.toLocalDate
@@ -11,10 +12,11 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import mihon.core.viewmodel.StateViewModel
 import mihon.domain.upcoming.interactor.GetUpcomingManga
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
@@ -25,7 +27,10 @@ import java.time.YearMonth
 
 class UpcomingViewModel(
     private val getUpcomingManga: GetUpcomingManga = Injekt.get(),
-) : StateViewModel<UpcomingViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<UpcomingViewModel.State>
+        field = MutableStateFlow<UpcomingViewModel.State>(State())
     // KMK -->
     private val libraryPreferences: LibraryPreferences = Injekt.get()
     // KMK <--
@@ -33,7 +38,7 @@ class UpcomingViewModel(
     init {
         viewModelScope.launch {
             getUpcomingManga.subscribe().collectLatest {
-                mutableState.update { state ->
+                state.update { state ->
                     val upcomingItems = it.toUpcomingUIModels()
                     state.copy(
                         // KMK -->
@@ -48,7 +53,7 @@ class UpcomingViewModel(
         }
         // KMK -->
         viewModelScope.launch {
-            mutableState.update { state ->
+            state.update { state ->
                 val updatingItems = getUpcomingManga.updatingMangas().toUpcomingUIModels()
                 state.copy(
                     isLoadingUpdating = false,
@@ -98,14 +103,14 @@ class UpcomingViewModel(
     }
 
     fun setSelectedYearMonth(yearMonth: YearMonth) {
-        mutableState.update { it.copy(selectedYearMonth = yearMonth) }
+        state.update { it.copy(selectedYearMonth = yearMonth) }
     }
 
     // KMK -->
     val restriction by lazy { libraryPreferences.autoUpdateMangaRestrictions().get() }
 
     fun showUpdatingMangas() {
-        mutableState.update { state ->
+        state.update { state ->
             state.copy(
                 isShowingUpdatingMangas = true,
             )
@@ -113,7 +118,7 @@ class UpcomingViewModel(
     }
 
     fun hideUpdatingMangas() {
-        mutableState.update { state ->
+        state.update { state ->
             state.copy(
                 isShowingUpdatingMangas = false,
             )

@@ -79,6 +79,8 @@ import exh.source.MERGED_SOURCE_ID
 import exh.source.getMainSource
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -86,7 +88,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.launchNonCancellable
@@ -334,7 +335,10 @@ data class TrackInfoDialogHomeScreen(
         // KMK -->
         private val sourceManager: SourceManager = Injekt.get(),
         // KMK <--
-    ) : StateViewModel<Model.State>(State()) {
+    ) : ViewModel() {
+
+        val state: StateFlow<Model.State>
+            field = MutableStateFlow<Model.State>(State())
         companion object {
             val MANGA_ID_KEY = CreationExtras.Key<Long>()
             val SOURCE_ID_KEY = CreationExtras.Key<Long>()
@@ -366,7 +370,7 @@ data class TrackInfoDialogHomeScreen(
                     .catch { logcat(LogPriority.ERROR, it) }
                     .distinctUntilChanged()
                     .map { it.mapToTrackItem() }
-                    .collectLatest { trackItems -> mutableState.update { it.copy(trackItems = trackItems) } }
+                    .collectLatest { trackItems -> state.update { it.copy(trackItems = trackItems) } }
             }
         }
 
@@ -405,12 +409,12 @@ data class TrackInfoDialogHomeScreen(
                     // Check if the tracker id is contained in the metadata
                     val result = getTrackerIdFromMetadata(item.tracker.id)
                     if (result != null) {
-                        mutableState.update { it.copy(isLoading = true) }
+                        state.update { it.copy(isLoading = true) }
 
                         // Try to register tracking by id
                         val success = registerTrackingById(item.tracker.id, result)
 
-                        mutableState.update { it.copy(isLoading = false) }
+                        state.update { it.copy(isLoading = false) }
 
                         if (success) {
                             // Return on success
@@ -490,11 +494,11 @@ data class TrackInfoDialogHomeScreen(
         }
 
         fun toggleUnifiedEditMode() {
-            mutableState.update { it.copy(unifiedEditMode = !it.unifiedEditMode) }
+            state.update { it.copy(unifiedEditMode = !it.unifiedEditMode) }
         }
 
         private suspend fun runUnifiedTrackerOperation(change: UpdateTracks.Change) = operations.run {
-            mutableState.update { it.copy(synchronizing = true, skippedTrackerIds = emptySet()) }
+            state.update { it.copy(synchronizing = true, skippedTrackerIds = emptySet()) }
             val context = Injekt.get<Application>()
             try {
                 val result = withIOContext { Injekt.get<UpdateTracks>().awaitDetailed(mangaId, change) }
@@ -502,7 +506,7 @@ data class TrackInfoDialogHomeScreen(
                     logcat(LogPriority.ERROR, error) { "Tracker operation failed: ${tracker?.name.orEmpty()}" }
                 }
                 val updatedItems = withIOContext { getTracks.await(mangaId).mapToTrackItem() }
-                mutableState.update {
+                state.update {
                     it.copy(
                         trackItems = updatedItems,
                         skippedTrackerIds = result.skippedTrackerIds,
@@ -515,9 +519,9 @@ data class TrackInfoDialogHomeScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                mutableState.update { it.copy(errors = listOf(with(context) { e.formattedMessage }), skippedTrackerIds = emptySet()) }
+                state.update { it.copy(errors = listOf(with(context) { e.formattedMessage }), skippedTrackerIds = emptySet()) }
             } finally {
-                mutableState.update { it.copy(synchronizing = false) }
+                state.update { it.copy(synchronizing = false) }
             }
         }
 
@@ -527,7 +531,7 @@ data class TrackInfoDialogHomeScreen(
         }
 
         private suspend fun runTrackerOperation(operation: suspend () -> List<Pair<Tracker?, Throwable>>) = operations.run {
-            mutableState.update { it.copy(synchronizing = true) }
+            state.update { it.copy(synchronizing = true) }
             val context = Injekt.get<Application>()
             try {
                 val failures = withIOContext { operation() }
@@ -535,7 +539,7 @@ data class TrackInfoDialogHomeScreen(
                     logcat(LogPriority.ERROR, error) { "Tracker operation failed: ${tracker?.name.orEmpty()}" }
                 }
                 val updatedItems = withIOContext { getTracks.await(mangaId).mapToTrackItem() }
-                mutableState.update {
+                state.update {
                     it.copy(
                         trackItems = updatedItems,
                         errorTrackerIds = failures.mapNotNull { failure -> failure.first?.id }.toSet(),
@@ -545,9 +549,9 @@ data class TrackInfoDialogHomeScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                mutableState.update { it.copy(errors = listOf(with(context) { e.formattedMessage })) }
+                state.update { it.copy(errors = listOf(with(context) { e.formattedMessage })) }
             } finally {
-                mutableState.update { it.copy(synchronizing = false) }
+                state.update { it.copy(synchronizing = false) }
             }
         }
 
@@ -628,7 +632,10 @@ private data class TrackStatusSelectorScreen(
     private class Model(
         private val track: Track,
         private val tracker: Tracker,
-    ) : StateViewModel<Model.State>(State(track.status)) {
+    ) : ViewModel() {
+
+        val state: StateFlow<Model.State>
+            field = MutableStateFlow<Model.State>(State(track.status))
 
         companion object {
             val TRACK_KEY = CreationExtras.Key<Track>()
@@ -649,7 +656,7 @@ private data class TrackStatusSelectorScreen(
         }
 
         fun setSelection(selection: Long) {
-            mutableState.update { it.copy(selection = selection) }
+            state.update { it.copy(selection = selection) }
         }
 
         fun setStatus() {
@@ -697,7 +704,10 @@ private data class TrackChapterSelectorScreen(
     private class Model(
         private val track: Track,
         private val tracker: Tracker,
-    ) : StateViewModel<Model.State>(State(track.lastChapterRead.toInt())) {
+    ) : ViewModel() {
+
+        val state: StateFlow<Model.State>
+            field = MutableStateFlow<Model.State>(State(track.lastChapterRead.toInt()))
 
         companion object {
             val TRACK_KEY = CreationExtras.Key<Track>()
@@ -723,7 +733,7 @@ private data class TrackChapterSelectorScreen(
         }
 
         fun setSelection(selection: Int) {
-            mutableState.update { it.copy(selection = selection) }
+            state.update { it.copy(selection = selection) }
         }
 
         fun setChapter() {
@@ -771,7 +781,10 @@ private data class TrackScoreSelectorScreen(
     private class Model(
         private val track: Track,
         private val tracker: Tracker,
-    ) : StateViewModel<Model.State>(State(tracker.displayScore(track))) {
+    ) : ViewModel() {
+
+        val state: StateFlow<Model.State>
+            field = MutableStateFlow<Model.State>(State(tracker.displayScore(track)))
 
         companion object {
             val TRACK_KEY = CreationExtras.Key<Track>()
@@ -792,7 +805,7 @@ private data class TrackScoreSelectorScreen(
         }
 
         fun setSelection(selection: String) {
-            mutableState.update { it.copy(selection = selection) }
+            state.update { it.copy(selection = selection) }
         }
 
         fun setScore() {
@@ -1094,7 +1107,10 @@ data class TrackerSearchScreen(
         initialQuery: String,
         private val tracker: Tracker,
         private val searchResolver: TrackerSearchResolver,
-    ) : StateViewModel<Model.State>(State()) {
+    ) : ViewModel() {
+
+        val state: StateFlow<Model.State>
+            field = MutableStateFlow<Model.State>(State())
 
         val supportsPrivateTracking = tracker.supportsPrivateTracking
 
@@ -1108,7 +1124,7 @@ data class TrackerSearchScreen(
         fun trackingSearch(query: String) {
             viewModelScope.launch {
                 // To show loading state
-                mutableState.update { it.copy(queryResult = null, selected = null) }
+                state.update { it.copy(queryResult = null, selected = null) }
 
                 val result = withIOContext {
                     try {
@@ -1118,7 +1134,7 @@ data class TrackerSearchScreen(
                         Result.failure(e)
                     }
                 }
-                mutableState.update { oldState ->
+                state.update { oldState ->
                     oldState.copy(
                         queryResult = result,
                         selected = result.getOrNull()?.find { it.tracking_url == currentUrl },
@@ -1132,7 +1148,7 @@ data class TrackerSearchScreen(
         }
 
         fun updateSelection(selected: TrackSearch) {
-            mutableState.update { it.copy(selected = selected) }
+            state.update { it.copy(selected = selected) }
         }
 
         @Immutable

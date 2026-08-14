@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.browse.source.globalsearch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.produceState
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -19,13 +20,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import mihon.core.viewmodel.StateViewModel
 import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
@@ -45,7 +47,16 @@ abstract class SearchViewModel(
     private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
     private val preferences: SourcePreferences = Injekt.get(),
-) : StateViewModel<SearchViewModel.State>(initialState) {
+) : ViewModel() {
+
+    val state: StateFlow<State>
+        field = MutableStateFlow<State>(initialState)
+
+    // Subclasses can't touch the backing field (Kotlin forbids a visibility modifier on one),
+    // so state writes from them go through here.
+    protected fun updateState(function: (State) -> State) {
+        state.update(function)
+    }
 
     // KMK -->
     private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(5)
@@ -71,31 +82,31 @@ abstract class SearchViewModel(
 
     init {
         viewModelScope.launch {
-            preferences.globalSearchFilterState().changes().collectLatest { state ->
-                mutableState.update { it.copy(onlyShowHasResults = state) }
+            preferences.globalSearchFilterState().changes().collectLatest { onlyShowHasResults ->
+                state.update { it.copy(onlyShowHasResults = onlyShowHasResults) }
             }
         }
         // KMK -->
         viewModelScope.launch {
             preferences.globalSearchPinnedState().changes().collectLatest { state ->
-                mutableState.update { it.copy(sourceFilter = state) }
+                this@SearchViewModel.state.update { it.copy(sourceFilter = state) }
             }
         }
         // KMK <--
         // KMK KNS -->
         viewModelScope.launch {
             preferences.sourcesTabCategories().changes().collectLatest { categories ->
-                mutableState.update { it.copy(categories = categories.toImmutableList()) }
+                state.update { it.copy(categories = categories.toImmutableList()) }
             }
         }
         viewModelScope.launch {
             preferences.sourcesTabSourcesInCategories().changes().collectLatest { sourcesInCats ->
-                mutableState.update { it.copy(sourcesInCategories = sourcesInCats) }
+                state.update { it.copy(sourcesInCategories = sourcesInCats) }
             }
         }
         viewModelScope.launch {
             preferences.globalSearchCategoryFilter().changes().collectLatest { category ->
-                mutableState.update { it.copy(selectedCategory = category) }
+                state.update { it.copy(selectedCategory = category) }
             }
         }
         // KMK KNS <--
@@ -164,13 +175,13 @@ abstract class SearchViewModel(
     }
 
     fun updateSearchQuery(query: String?) {
-        mutableState.update { it.copy(searchQuery = query) }
+        state.update { it.copy(searchQuery = query) }
     }
 
     fun setSourceFilter(filter: SourceFilter) {
         preferences.globalSearchPinnedState().set(filter)
         // KMK --> The preference flow can arrive after search reads the current filter.
-        mutableState.update { it.copy(sourceFilter = filter) }
+        state.update { it.copy(sourceFilter = filter) }
         // KMK <--
         search()
     }
@@ -178,7 +189,7 @@ abstract class SearchViewModel(
     // KMK KNS -->
     fun setSelectedCategory(categoryName: String) {
         preferences.globalSearchCategoryFilter().set(categoryName)
-        mutableState.update { it.copy(selectedCategory = categoryName) }
+        state.update { it.copy(selectedCategory = categoryName) }
         search()
     }
     // KMK KNS <--
@@ -252,7 +263,7 @@ abstract class SearchViewModel(
     }
 
     private fun updateItems(items: Map<Source, SearchItemResult>) {
-        mutableState.update {
+        state.update {
             it.copy(
                 items = items
                     .toSortedMap(sortComparator(items))
@@ -263,7 +274,7 @@ abstract class SearchViewModel(
 
     private fun updateItem(source: Source, result: SearchItemResult) {
         // KMK -->
-        mutableState.update { currentState ->
+        state.update { currentState ->
             val newItems = currentState.items + (source to result)
             currentState.copy(
                 items = newItems.toSortedMap(sortComparator(newItems)).toPersistentMap(),
@@ -275,12 +286,12 @@ abstract class SearchViewModel(
     fun setMigrateDialog(currentId: Long, target: Manga) {
         viewModelScope.launchIO {
             val current = getManga.await(currentId) ?: return@launchIO
-            mutableState.update { it.copy(dialog = Dialog.Migrate(target, current)) }
+            state.update { it.copy(dialog = Dialog.Migrate(target, current)) }
         }
     }
 
     fun clearDialog() {
-        mutableState.update { it.copy(dialog = null) }
+        state.update { it.copy(dialog = null) }
     }
 
     @Immutable

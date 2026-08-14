@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.browse.extension
 
 import android.app.Application
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.base.BasePreferences
@@ -16,6 +17,7 @@ import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -28,7 +30,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -41,7 +42,10 @@ class ExtensionsViewModel(
     basePreferences: BasePreferences = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
     private val getExtensions: GetExtensionsByType = Injekt.get(),
-) : StateViewModel<ExtensionsViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<ExtensionsViewModel.State>
+        field = MutableStateFlow<ExtensionsViewModel.State>(State())
 
     private val currentDownloads = MutableStateFlow<Map<String, InstallStep>>(hashMapOf())
 
@@ -120,7 +124,7 @@ class ExtensionsViewModel(
                 }
             }
                 .collectLatest { items ->
-                    mutableState.update { state ->
+                    state.update { state ->
                         state.copy(
                             isLoading = false,
                             items = items,
@@ -132,11 +136,11 @@ class ExtensionsViewModel(
         viewModelScope.launchIO { findAvailableExtensions() }
 
         preferences.extensionUpdatesCount().changes()
-            .onEach { mutableState.update { state -> state.copy(updates = it) } }
+            .onEach { state.update { state -> state.copy(updates = it) } }
             .launchIn(viewModelScope)
 
         basePreferences.extensionInstaller().changes()
-            .onEach { mutableState.update { state -> state.copy(installer = it) } }
+            .onEach { state.update { state -> state.copy(installer = it) } }
             .launchIn(viewModelScope)
     }
 
@@ -171,7 +175,7 @@ class ExtensionsViewModel(
     }
 
     fun search(query: String?) {
-        mutableState.update {
+        state.update {
             it.copy(searchQuery = query)
         }
     }
@@ -239,19 +243,19 @@ class ExtensionsViewModel(
 
     fun findAvailableExtensions() {
         viewModelScope.launchIO {
-            mutableState.update { it.copy(isRefreshing = true) }
+            state.update { it.copy(isRefreshing = true) }
 
             extensionManager.findAvailableExtensions()
 
             // Fake slower refresh so it doesn't seem like it's not doing anything
             delay(1.seconds)
 
-            mutableState.update { it.copy(isRefreshing = false) }
+            state.update { it.copy(isRefreshing = false) }
         }
     }
 
     fun updateSearchQuery(query: String?) {
-        mutableState.update { it.copy(searchQuery = query) }
+        state.update { it.copy(searchQuery = query) }
     }
 
     fun trustExtension(extension: Extension.Untrusted) {
@@ -262,7 +266,7 @@ class ExtensionsViewModel(
 
     // KMK -->
     fun toggleNsfwOnly() {
-        mutableState.update {
+        state.update {
             it.copy(nsfwOnly = !it.nsfwOnly)
         }
     }

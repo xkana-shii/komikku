@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.manga
 import android.content.Context
 import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
@@ -19,10 +20,11 @@ import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.util.editCover
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.toShareIntent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
@@ -42,7 +44,10 @@ class MangaCoverViewModel(
     private val updateManga: UpdateManga = Injekt.get(),
 
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
-) : StateViewModel<Manga?>(null) {
+) : ViewModel() {
+
+    val state: StateFlow<Manga?>
+        field = MutableStateFlow<Manga?>(null)
 
     companion object {
         val MANGA_ID_KEY = CreationExtras.Key<Long>()
@@ -59,7 +64,7 @@ class MangaCoverViewModel(
     init {
         viewModelScope.launchIO {
             getManga.subscribe(mangaId)
-                .collect { newManga -> mutableState.update { newManga } }
+                .collect { newManga -> state.update { newManga } }
         }
     }
 

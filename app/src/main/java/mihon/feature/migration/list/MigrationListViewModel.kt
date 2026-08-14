@@ -1,6 +1,7 @@
 package mihon.feature.migration.list
 
 import androidx.annotation.FloatRange
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
@@ -23,13 +24,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import mihon.domain.migration.usecases.MigrateMangaUseCase
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import mihon.feature.migration.list.models.MigratingManga
@@ -59,7 +61,10 @@ class MigrationListViewModel(
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
     private val migrateManga: MigrateMangaUseCase = Injekt.get(),
     private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get(),
-) : StateViewModel<MigrationListViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<MigrationListViewModel.State>
+        field = MutableStateFlow<MigrationListViewModel.State>(State())
 
     companion object {
         val MANGA_IDS_KEY = CreationExtras.Key<Collection<Long>>()
@@ -130,7 +135,7 @@ class MigrationListViewModel(
                 }
                 .awaitAll()
                 .filterNotNull()
-            mutableState.update { it.copy(items = manga.toImmutableList()) }
+            state.update { it.copy(items = manga.toImmutableList()) }
             // KMK -->
             if (runManually) return@launchIO
             // KMK <--
@@ -268,7 +273,7 @@ class MigrationListViewModel(
     }
 
     private suspend fun updateMigrationProgress() {
-        mutableState.update { state ->
+        state.update { state ->
             state.copy(
                 // KMK -->
                 finishedCount = state.items.count { it.searchResult.value != SearchResult.Searching },
@@ -331,7 +336,7 @@ class MigrationListViewModel(
 
     private fun migrateMangas(replace: Boolean) {
         migrateJob = viewModelScope.launchIO {
-            mutableState.update { it.copy(dialog = Dialog.Progress(0f)) }
+            state.update { it.copy(dialog = Dialog.Progress(0f)) }
             val items = items
             try {
                 items.forEachIndexed { index, manga ->
@@ -358,14 +363,14 @@ class MigrationListViewModel(
                         if (e is CancellationException) throw e
                         logcat(LogPriority.WARN, throwable = e)
                     }
-                    mutableState.update {
+                    state.update {
                         it.copy(dialog = Dialog.Progress((index.toFloat() / items.size).coerceAtMost(1f)))
                     }
                 }
 
                 navigateBack()
             } finally {
-                mutableState.update { it.copy(dialog = null) }
+                state.update { it.copy(dialog = null) }
                 migrateJob = null
             }
         }
@@ -413,7 +418,7 @@ class MigrationListViewModel(
     }
 
     private fun removeManga(item: MigratingManga) {
-        mutableState.update { it.copy(items = items.toPersistentList().remove(item)) }
+        state.update { it.copy(items = items.toPersistentList().remove(item)) }
     }
 
     override fun onCleared() {
@@ -423,7 +428,7 @@ class MigrationListViewModel(
     }
 
     fun showMigrateDialog(copy: Boolean) {
-        mutableState.update { state ->
+        state.update { state ->
             state.copy(
                 dialog = Dialog.Migrate(
                     copy = copy,
@@ -437,18 +442,18 @@ class MigrationListViewModel(
     }
 
     fun showExitDialog() {
-        mutableState.update {
+        state.update {
             it.copy(dialog = Dialog.Exit)
         }
     }
 
     fun dismissDialog() {
-        mutableState.update { it.copy(dialog = null) }
+        state.update { it.copy(dialog = null) }
     }
 
     // KMK -->
     fun openOptionsDialog() {
-        mutableState.update {
+        state.update {
             it.copy(dialog = Dialog.Options)
         }
     }

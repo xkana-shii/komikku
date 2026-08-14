@@ -11,6 +11,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -24,8 +25,9 @@ import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
@@ -144,28 +146,31 @@ class CreateBackupScreen : Screen() {
     }
 }
 
-private class CreateBackupViewModel : StateViewModel<CreateBackupViewModel.State>(State()) {
+private class CreateBackupViewModel : ViewModel() {
+
+    val state: StateFlow<CreateBackupViewModel.State>
+        field = MutableStateFlow<CreateBackupViewModel.State>(State())
 
     init {
         viewModelScope.launchIO {
             val categories = Injekt.get<GetCategories>().await().filterNot { it.isSystemCategory }
-            mutableState.update { it.copy(categories = listOf(Category(0, "", 0, 0, false)) + categories) }
+            state.update { it.copy(categories = listOf(Category(0, "", 0, 0, false)) + categories) }
         }
     }
 
     fun selectAllCategories(all: Boolean) {
-        mutableState.update { it.copy(options = it.options.copy(includedCategoryIds = if (all) null else emptySet())) }
+        state.update { it.copy(options = it.options.copy(includedCategoryIds = if (all) null else emptySet())) }
     }
 
     fun toggleCategory(id: Long, selected: Boolean) {
-        mutableState.update {
+        state.update {
             val ids = it.options.includedCategoryIds ?: it.categories.map { category -> category.id }.toSet()
             it.copy(options = it.options.copy(includedCategoryIds = if (selected) ids + id else ids - id))
         }
     }
 
     fun toggle(setter: (BackupOptions, Boolean) -> BackupOptions, enabled: Boolean) {
-        mutableState.update {
+        state.update {
             it.copy(
                 options = setter(it.options, enabled),
             )

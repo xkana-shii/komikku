@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.migration.sources
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.source.interactor.GetSourcesWithFavoriteCount
 import eu.kanade.domain.source.interactor.SetMigrateSorting
@@ -11,6 +12,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -22,7 +25,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.source.model.Source
@@ -33,7 +35,10 @@ class MigrateSourceViewModel(
     preferences: SourcePreferences = Injekt.get(),
     private val getSourcesWithFavoriteCount: GetSourcesWithFavoriteCount = Injekt.get(),
     private val setMigrateSorting: SetMigrateSorting = Injekt.get(),
-) : StateViewModel<MigrateSourceViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<MigrateSourceViewModel.State>
+        field = MutableStateFlow<MigrateSourceViewModel.State>(State())
 
     private val _channel = Channel<Event>(Int.MAX_VALUE)
     val channel = _channel.receiveAsFlow()
@@ -68,7 +73,7 @@ class MigrateSourceViewModel(
                     _channel.send(Event.FailedFetchingSourcesWithCount)
                 }
                 .collectLatest { sources ->
-                    mutableState.update {
+                    state.update {
                         it.copy(
                             isLoading = false,
                             items = sources.toImmutableList(),
@@ -78,11 +83,11 @@ class MigrateSourceViewModel(
         }
 
         preferences.migrationSortingDirection().changes()
-            .onEach { mutableState.update { state -> state.copy(sortingDirection = it) } }
+            .onEach { state.update { state -> state.copy(sortingDirection = it) } }
             .launchIn(viewModelScope)
 
         preferences.migrationSortingMode().changes()
-            .onEach { mutableState.update { state -> state.copy(sortingMode = it) } }
+            .onEach { state.update { state -> state.copy(sortingMode = it) } }
             .launchIn(viewModelScope)
     }
 
@@ -110,7 +115,7 @@ class MigrateSourceViewModel(
 
     // KMK -->
     fun search(query: String?) {
-        mutableState.update {
+        state.update {
             it.copy(searchQuery = query)
         }
     }

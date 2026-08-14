@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.browse.extension.details
 import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
@@ -22,6 +23,8 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -30,7 +33,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
@@ -45,7 +47,10 @@ class ExtensionDetailsViewModel(
     private val toggleSource: ToggleSource = Injekt.get(),
     private val toggleIncognito: ToggleIncognito = Injekt.get(),
     private val preferences: SourcePreferences = Injekt.get(),
-) : StateViewModel<ExtensionDetailsViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<ExtensionDetailsViewModel.State>
+        field = MutableStateFlow<ExtensionDetailsViewModel.State>(State())
 
     companion object {
         val PKG_NAME_KEY = CreationExtras.Key<String>()
@@ -73,7 +78,7 @@ class ExtensionDetailsViewModel(
                             _events.send(ExtensionDetailsEvent.Uninstalled)
                             return@collectLatest
                         }
-                        mutableState.update { state ->
+                        state.update { state ->
                             state.copy(extension = extension)
                         }
                     }
@@ -95,10 +100,10 @@ class ExtensionDetailsViewModel(
                         }
                         .catch { throwable ->
                             logcat(LogPriority.ERROR, throwable)
-                            mutableState.update { it.copy(_sources = persistentListOf()) }
+                            this@ExtensionDetailsViewModel.state.update { it.copy(_sources = persistentListOf()) }
                         }
                         .collectLatest { sources ->
-                            mutableState.update { it.copy(_sources = sources.toImmutableList()) }
+                            this@ExtensionDetailsViewModel.state.update { it.copy(_sources = sources.toImmutableList()) }
                         }
                 }
             }
@@ -108,7 +113,7 @@ class ExtensionDetailsViewModel(
                     .map { pkgName in it }
                     .distinctUntilChanged()
                     .collectLatest { isIncognito ->
-                        mutableState.update { it.copy(isIncognito = isIncognito) }
+                        state.update { it.copy(isIncognito = isIncognito) }
                     }
             }
         }

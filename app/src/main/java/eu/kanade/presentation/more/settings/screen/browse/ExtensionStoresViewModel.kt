@@ -1,14 +1,16 @@
 package eu.kanade.presentation.more.settings.screen.browse
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import mihon.core.viewmodel.StateViewModel
 import mihon.domain.extension.interactor.AddExtensionStore
 import mihon.domain.extension.interactor.GetExtensionStores
 import mihon.domain.extension.interactor.RemoveExtensionStore
@@ -27,12 +29,15 @@ class ExtensionStoresViewModel(
     // KMK -->
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     // KMK <--
-) : StateViewModel<ExtensionStoreScreenState>(ExtensionStoreScreenState.Loading) {
+) : ViewModel() {
+
+    val state: StateFlow<ExtensionStoreScreenState>
+        field = MutableStateFlow<ExtensionStoreScreenState>(ExtensionStoreScreenState.Loading)
 
     private inline fun updateSuccessState(
         func: (ExtensionStoreScreenState.Success) -> ExtensionStoreScreenState.Success,
     ) {
-        mutableState.update {
+        state.update {
             when (it) {
                 ExtensionStoreScreenState.Loading -> it
                 is ExtensionStoreScreenState.Success -> func(it)
@@ -44,7 +49,7 @@ class ExtensionStoresViewModel(
         viewModelScope.launchIO {
             getExtensionStores.subscribe()
                 .collectLatest { stores ->
-                    mutableState.update {
+                    state.update {
                         when (it) {
                             ExtensionStoreScreenState.Loading -> ExtensionStoreScreenState.Success(
                                 stores = stores,
@@ -61,7 +66,7 @@ class ExtensionStoresViewModel(
         // KMK -->
         sourcePreferences.disabledRepos().changes()
             .onEach { disabledRepos ->
-                mutableState.update {
+                state.update {
                     when (it) {
                         is ExtensionStoreScreenState.Success -> it.copy(disabledRepos = disabledRepos)
                         else -> it

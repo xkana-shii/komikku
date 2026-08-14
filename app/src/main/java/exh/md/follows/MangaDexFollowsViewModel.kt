@@ -7,7 +7,6 @@ import exh.metadata.metadata.RaisedSearchMetadata
 import exh.source.getMainSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.repository.SourcePagingSource
 
@@ -22,6 +21,6 @@ class MangaDexFollowsViewModel(sourceId: Long) : BrowseSourceViewModel(sourceId,
     }
 
     init {
-        mutableState.update { it.copy(filterable = false) }
+        updateState { it.copy(filterable = false) }
     }
 }

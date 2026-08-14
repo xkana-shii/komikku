@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.manga.interactor.GetManga
@@ -62,6 +61,6 @@ class BrowseRecommendsViewModel(
     }
 
     init {
-        mutableState.update { it.copy(filterable = false) }
+        updateState { it.copy(filterable = false) }
     }
 }

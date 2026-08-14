@@ -5,7 +5,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.NewUpdateScreen
@@ -27,7 +27,7 @@ class NewUpdateScreen(
             changelogInfo
         }
 
-        val model = rememberScreenModel { NewUpdateScreenModel(downloadLink, versionName) }
+        val model = viewModel { NewUpdateScreenModel(downloadLink, versionName) }
         val downloadState by model.state.collectAsState()
 
         NewUpdateScreen(

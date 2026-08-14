@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.util.fastFilter
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
@@ -29,6 +30,8 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -42,7 +45,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
@@ -77,7 +79,10 @@ class UpdatesViewModel(
     readerPreferences: ReaderPreferences = Injekt.get(),
     // SY <--
     private val libraryUpdateStatus: LibraryUpdateStatus = Injekt.get(),
-) : StateViewModel<UpdatesViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<UpdatesViewModel.State>
+        field = MutableStateFlow<UpdatesViewModel.State>(State())
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
     val events: Flow<Event> = _events.receiveAsFlow()
@@ -128,7 +133,7 @@ class UpdatesViewModel(
                     _events.send(Event.InternalError)
                 }
                 .collectLatest { updateItems ->
-                    mutableState.update { state ->
+                    state.update { state ->
                         state.copy(
                             isLoading = false,
                             items = updateItems
@@ -172,7 +177,7 @@ class UpdatesViewModel(
             }
             .distinctUntilChanged()
             .onEach {
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(hasActiveFilters = it)
                 }
             }
@@ -247,7 +252,7 @@ class UpdatesViewModel(
      * @param download download object containing progress.
      */
     private fun updateDownloadState(download: Download) {
-        mutableState.update { state ->
+        state.update { state ->
             val newItems = state.items.mutate { list ->
                 val modifiedIndex = list.indexOfFirst { it.update.chapterId == download.chapter.id }
                 if (modifiedIndex < 0) return@mutate
@@ -407,7 +412,7 @@ class UpdatesViewModel(
         // KMK -->
         val (selected, fromLongPress, isGroup, isExpanded) = selectionOptions
         // KMK <--
-        mutableState.update { state ->
+        state.update { state ->
             // KMK -->
             val selectedIndex = state.items.indexOfFirst { it.update.chapterId == item.update.chapterId }
             if (selectedIndex < 0) return@update state
@@ -486,7 +491,7 @@ class UpdatesViewModel(
     }
 
     fun toggleAllSelection(selected: Boolean) {
-        mutableState.update { state ->
+        state.update { state ->
             val newItems = state.items.map {
                 selectedChapterIds.addOrRemove(it.update.chapterId, selected)
                 it.copy(selected = selected)
@@ -500,7 +505,7 @@ class UpdatesViewModel(
     }
 
     fun invertSelection() {
-        mutableState.update { state ->
+        state.update { state ->
             val newItems = state.items.map {
                 selectedChapterIds.addOrRemove(it.update.chapterId, !it.selected)
                 it.copy(selected = !it.selected)
@@ -514,7 +519,7 @@ class UpdatesViewModel(
     }
 
     fun setDialog(dialog: Dialog?) {
-        mutableState.update { it.copy(dialog = dialog) }
+        state.update { it.copy(dialog = dialog) }
     }
 
     fun resetNewUpdatesCount() {
@@ -523,7 +528,7 @@ class UpdatesViewModel(
 
     // KMK -->
     fun toggleExpandedState(key: String) {
-        mutableState.update {
+        state.update {
             it.copy(
                 expandedState = it.expandedState.toMutableSet().apply {
                     if (it.expandedState.contains(key)) remove(key) else add(key)
@@ -603,7 +608,7 @@ class UpdatesViewModel(
     }
 
     fun showFilterDialog() {
-        mutableState.update { it.copy(dialog = Dialog.FilterSheet) }
+        state.update { it.copy(dialog = Dialog.FilterSheet) }
     }
 
     @Immutable

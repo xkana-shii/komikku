@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.history
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.util.fastFilter
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.interactor.UpdateManga
@@ -15,6 +16,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -28,7 +31,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.core.common.utils.mutate
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.mapAsCheckboxState
@@ -70,7 +72,10 @@ class HistoryViewModel(
     // KMK -->
     private val historyPreferences: HistoryPreferences = Injekt.get(),
     // KMK <--
-) : StateViewModel<HistoryViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<HistoryViewModel.State>
+        field = MutableStateFlow<HistoryViewModel.State>(State())
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
     val events: Flow<Event> = _events.receiveAsFlow()
@@ -109,7 +114,7 @@ class HistoryViewModel(
                         .flowOn(Dispatchers.IO)
                 }
                 .collect { newList ->
-                    mutableState.update {
+                    state.update {
                         it.copy(
                             // KMK -->
                             isLoading = false,
@@ -132,7 +137,7 @@ class HistoryViewModel(
             }
             .distinctUntilChanged()
             .onEach {
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(hasActiveFilters = it)
                 }
             }
@@ -181,11 +186,11 @@ class HistoryViewModel(
     }
 
     fun updateSearchQuery(query: String?) {
-        mutableState.update { it.copy(searchQuery = query) }
+        state.update { it.copy(searchQuery = query) }
     }
 
     fun setDialog(dialog: Dialog?) {
-        mutableState.update { it.copy(dialog = dialog) }
+        state.update { it.copy(dialog = dialog) }
     }
 
     /**
@@ -228,7 +233,7 @@ class HistoryViewModel(
 
             val duplicates = getDuplicateLibraryManga(manga)
             if (duplicates.isNotEmpty()) {
-                mutableState.update { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
+                state.update { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
                 return@launchIO
             }
 
@@ -268,7 +273,7 @@ class HistoryViewModel(
     }
 
     fun showMigrateDialog(target: Manga, current: Manga) {
-        mutableState.update { currentState ->
+        state.update { currentState ->
             currentState.copy(dialog = Dialog.Migrate(target = target, current = current))
         }
     }
@@ -277,7 +282,7 @@ class HistoryViewModel(
         viewModelScope.launch {
             val categories = getCategories()
             val selection = getMangaCategoryIds(manga)
-            mutableState.update { currentState ->
+            state.update { currentState ->
                 currentState.copy(
                     dialog = Dialog.ChangeCategory(
                         manga = manga,
@@ -300,7 +305,7 @@ class HistoryViewModel(
     ) {
         val (selected, fromLongPress) = selectionOptions
 
-        mutableState.update { state ->
+        state.update { state ->
             if (item.chapterId in state.selection == selected) return@update state
             val selectedIndex = state.list.indexOfFirst { it.chapterId == item.chapterId }
             if (selectedIndex < 0) return@update state
@@ -359,7 +364,7 @@ class HistoryViewModel(
     }
 
     fun toggleAllSelection(selected: Boolean) {
-        mutableState.update { state ->
+        state.update { state ->
             val selection = if (selected) {
                 state.list.mapTo(mutableSetOf()) { it.chapterId }
             } else {
@@ -375,7 +380,7 @@ class HistoryViewModel(
     }
 
     fun invertSelection() {
-        mutableState.update { state ->
+        state.update { state ->
             val selection = state.selection.mutate { list ->
                 state.list.forEach { item ->
                     if (!list.remove(item.chapterId)) list.add(item.chapterId)
@@ -391,7 +396,7 @@ class HistoryViewModel(
         if (newMode == false || state.value.selectionMode) {
             toggleAllSelection(false)
         } else {
-            mutableState.update { it.copy(selectionMode = newMode ?: !it.selectionMode) }
+            state.update { it.copy(selectionMode = newMode ?: !it.selectionMode) }
         }
     }
     // KMK <--
@@ -411,7 +416,7 @@ class HistoryViewModel(
     }
 
     fun showFilterDialog() {
-        mutableState.update { it.copy(dialog = Dialog.FilterSheet) }
+        state.update { it.copy(dialog = Dialog.FilterSheet) }
     }
 
     @Immutable

@@ -1,16 +1,18 @@
 package eu.kanade.tachiyomi.ui.category
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.icerock.moko.resources.StringResource
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.domain.category.interactor.CreateCategoryWithName
 import tachiyomi.domain.category.interactor.DeleteCategory
 import tachiyomi.domain.category.interactor.GetCategories
@@ -31,7 +33,10 @@ class CategoryViewModel(
     // KMK -->
     private val hideCategory: HideCategory = Injekt.get(),
     // KMK <--
-) : StateViewModel<CategoryScreenState>(CategoryScreenState.Loading) {
+) : ViewModel() {
+
+    val state: StateFlow<CategoryScreenState>
+        field = MutableStateFlow<CategoryScreenState>(CategoryScreenState.Loading)
 
     private val _events: Channel<CategoryEvent> = Channel()
     val events = _events.receiveAsFlow()
@@ -40,7 +45,7 @@ class CategoryViewModel(
         viewModelScope.launch {
             getCategories.subscribe()
                 .collectLatest { categories ->
-                    mutableState.update {
+                    state.update {
                         CategoryScreenState.Success(
                             categories = categories
                                 .filterNot(Category::isSystemCategory)
@@ -99,7 +104,7 @@ class CategoryViewModel(
     }
 
     fun showDialog(dialog: CategoryDialog) {
-        mutableState.update {
+        state.update {
             when (it) {
                 CategoryScreenState.Loading -> it
                 is CategoryScreenState.Success -> it.copy(dialog = dialog)
@@ -108,7 +113,7 @@ class CategoryViewModel(
     }
 
     fun dismissDialog() {
-        mutableState.update {
+        state.update {
             when (it) {
                 CategoryScreenState.Loading -> it
                 is CategoryScreenState.Success -> it.copy(dialog = null)

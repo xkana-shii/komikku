@@ -9,6 +9,7 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMapNotNull
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.core.preference.asState
@@ -63,6 +64,8 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -80,7 +83,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.runBlocking
 import mihon.core.common.utils.mutate
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
@@ -162,7 +164,10 @@ class LibraryViewModel(
     // KMK -->
     private val smartSearchMerge: SmartSearchMerge = Injekt.get(),
     // KMK <--
-) : StateViewModel<LibraryViewModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<LibraryViewModel.State>
+        field = MutableStateFlow<LibraryViewModel.State>(State())
 
     // SY -->
     val favoritesSync = FavoritesSyncHelper(preferences.context)
@@ -172,7 +177,7 @@ class LibraryViewModel(
     // SY <--
 
     init {
-        mutableState.update { state ->
+        state.update { state ->
             state.copy(activeCategoryIndex = libraryPreferences.lastUsedCategory().get())
         }
         viewModelScope.launchIO {
@@ -227,7 +232,7 @@ class LibraryViewModel(
             }
                 .distinctUntilChanged()
                 .collectLatest { libraryData ->
-                    mutableState.update { state ->
+                    state.update { state ->
                         state.copy(libraryData = libraryData)
                     }
                 }
@@ -305,7 +310,7 @@ class LibraryViewModel(
                 // KMK <--
             }
                 .collectLatest {
-                    mutableState.update { state ->
+                    state.update { state ->
                         state.copy(
                             isLoading = false,
                             groupedFavorites = it,
@@ -320,7 +325,7 @@ class LibraryViewModel(
             libraryPreferences.showContinueReadingButton().changes(),
         ) { a, b, c -> arrayOf(a, b, c) }
             .onEach { (showCategoryTabs, showMangaCount, showMangaContinueButton) ->
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(
                         showCategoryTabs = showCategoryTabs,
                         showMangaCount = showMangaCount,
@@ -354,7 +359,7 @@ class LibraryViewModel(
         }
             .distinctUntilChanged()
             .onEach {
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(hasActiveFilters = it)
                 }
             }
@@ -370,7 +375,7 @@ class LibraryViewModel(
         }
             .distinctUntilChanged()
             .onEach {
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(showSyncExh = it)
                 }
             }
@@ -378,7 +383,7 @@ class LibraryViewModel(
 
         libraryPreferences.groupLibraryBy().changes()
             .onEach {
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(groupType = it)
                 }
             }
@@ -387,7 +392,7 @@ class LibraryViewModel(
             .changes()
             .distinctUntilChanged()
             .onEach { syncService ->
-                mutableState.update { it.copy(isSyncEnabled = syncService != 0) }
+                state.update { it.copy(isSyncEnabled = syncService != 0) }
             }
             .launchIn(viewModelScope)
         // SY <--
@@ -406,7 +411,7 @@ class LibraryViewModel(
         }
             .distinctUntilChanged()
             .onEach { (filter, included, excluded) ->
-                mutableState.update { state ->
+                state.update { state ->
                     state.copy(
                         filterCategory = filter,
                         includedCategories = included,
@@ -1161,13 +1166,13 @@ class LibraryViewModel(
     }
 
     fun showSettingsDialog() {
-        mutableState.update { it.copy(dialog = Dialog.SettingsSheet) }
+        state.update { it.copy(dialog = Dialog.SettingsSheet) }
     }
 
     // SY -->
     fun showRecommendationSearchDialog() {
         val mangaList = state.value.selectedManga
-        mutableState.update { it.copy(dialog = Dialog.RecommendationSearchSheet(mangaList)) }
+        state.update { it.copy(dialog = Dialog.RecommendationSearchSheet(mangaList)) }
     }
 
     private suspend fun filterLibrary(unfiltered: List<LibraryItem>, query: String?, loggedInTrackServices: Map<Long, TriState>): List<LibraryItem> {
@@ -1291,11 +1296,11 @@ class LibraryViewModel(
 
     fun clearSelection() {
         lastSelectionCategory = null
-        mutableState.update { it.copy(selection = setOf()) }
+        state.update { it.copy(selection = setOf()) }
     }
 
     fun toggleSelection(category: Category, manga: LibraryManga) {
-        mutableState.update { state ->
+        state.update { state ->
             val newSelection = state.selection.mutate { set ->
                 if (!set.remove(manga.id)) set.add(manga.id)
             }
@@ -1309,7 +1314,7 @@ class LibraryViewModel(
      * same category as the given manga
      */
     fun toggleRangeSelection(category: Category, manga: LibraryManga) {
-        mutableState.update { state ->
+        state.update { state ->
             val newSelection = state.selection.mutate { list ->
                 val lastSelected = list.lastOrNull()
                 if (lastSelectionCategory != category.id) {
@@ -1336,7 +1341,7 @@ class LibraryViewModel(
 
     fun selectAll() {
         lastSelectionCategory = null
-        mutableState.update { state ->
+        state.update { state ->
             val newSelection = state.selection.mutate { list ->
                 state.getItemsForCategoryId(state.activeCategory?.id).fastMap { it.id }.let(list::addAll)
             }
@@ -1346,7 +1351,7 @@ class LibraryViewModel(
 
     fun invertSelection() {
         lastSelectionCategory = null
-        mutableState.update { state ->
+        state.update { state ->
             val newSelection = state.selection.mutate { list ->
                 val itemIds = state.getItemsForCategoryId(state.activeCategory?.id).fastMap { it.id }
                 val (toRemove, toAdd) = itemIds.partition { it in list }
@@ -1358,11 +1363,11 @@ class LibraryViewModel(
     }
 
     fun search(query: String?) {
-        mutableState.update { it.copy(searchQuery = query) }
+        state.update { it.copy(searchQuery = query) }
     }
 
     fun updateActiveCategoryIndex(index: Int) {
-        val newIndex = mutableState.updateAndGet { state ->
+        val newIndex = state.updateAndGet { state ->
             state.copy(
                 activeCategoryIndex = index,
                 // KMK -->
@@ -1399,16 +1404,16 @@ class LibraryViewModel(
                 }
                 .toImmutableList()
             // KMK <--
-            mutableState.update { it.copy(dialog = Dialog.ChangeCategory(mangaList, preselected)) }
+            state.update { it.copy(dialog = Dialog.ChangeCategory(mangaList, preselected)) }
         }
     }
 
     fun openDeleteMangaDialog() {
-        mutableState.update { it.copy(dialog = Dialog.DeleteManga(state.value.selectedManga)) }
+        state.update { it.copy(dialog = Dialog.DeleteManga(state.value.selectedManga)) }
     }
 
     fun closeDialog() {
-        mutableState.update { it.copy(dialog = null) }
+        state.update { it.copy(dialog = null) }
     }
 
     sealed interface Dialog {
@@ -1563,7 +1568,7 @@ class LibraryViewModel(
     }
 
     fun openFavoritesSyncDialog() {
-        mutableState.update {
+        state.update {
             it.copy(
                 dialog = if (exhPreferences.exhShowSyncIntro().get()) {
                     Dialog.SyncFavoritesWarning

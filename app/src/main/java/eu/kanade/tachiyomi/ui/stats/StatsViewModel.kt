@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.stats
 
 import androidx.compose.ui.util.fastDistinctBy
 import androidx.compose.ui.util.fastFilter
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.util.fastCountNot
 import eu.kanade.presentation.more.stats.StatsScreenState
@@ -10,11 +11,11 @@ import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.domain.history.interactor.GetTotalReadDuration
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -39,7 +40,10 @@ class StatsViewModel(
     // SY -->
     private val getReadMangaNotInLibraryView: GetReadMangaNotInLibraryView = Injekt.get(),
     // SY <--
-) : StateViewModel<StatsScreenState>(StatsScreenState.Loading) {
+) : ViewModel() {
+
+    val state: StateFlow<StatsScreenState>
+        field = MutableStateFlow<StatsScreenState>(StatsScreenState.Loading)
 
     private val loggedInTrackers by lazy { trackerManager.loggedInTrackers() }
 
@@ -51,7 +55,7 @@ class StatsViewModel(
     init {
         // SY -->
         _allRead.onEach { allRead ->
-            mutableState.update { StatsScreenState.Loading }
+            state.update { StatsScreenState.Loading }
             val libraryManga = getLibraryManga.await() + if (allRead) {
                 getReadMangaNotInLibraryView.await()
             } else {
@@ -92,7 +96,7 @@ class StatsViewModel(
                 trackerCount = loggedInTrackers.size,
             )
 
-            mutableState.update {
+            state.update {
                 StatsScreenState.Success(
                     overview = overviewStatData,
                     titles = titlesStatData,

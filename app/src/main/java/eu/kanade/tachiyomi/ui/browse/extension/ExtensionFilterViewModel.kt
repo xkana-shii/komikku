@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.extension
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.extension.interactor.GetExtensionLanguages
 import eu.kanade.domain.source.interactor.ToggleLanguage
@@ -12,6 +13,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -19,7 +22,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
-import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -28,7 +30,10 @@ class ExtensionFilterViewModel(
     private val preferences: SourcePreferences = Injekt.get(),
     private val getExtensionLanguages: GetExtensionLanguages = Injekt.get(),
     private val toggleLanguage: ToggleLanguage = Injekt.get(),
-) : StateViewModel<ExtensionFilterState>(ExtensionFilterState.Loading) {
+) : ViewModel() {
+
+    val state: StateFlow<ExtensionFilterState>
+        field = MutableStateFlow<ExtensionFilterState>(ExtensionFilterState.Loading)
 
     private val _events: Channel<ExtensionFilterEvent> = Channel()
     val events: Flow<ExtensionFilterEvent> = _events.receiveAsFlow()
@@ -44,7 +49,7 @@ class ExtensionFilterViewModel(
                     _events.send(ExtensionFilterEvent.FailedFetchingLanguages)
                 }
                 .collectLatest { (extensionLanguages, enabledLanguages) ->
-                    mutableState.update {
+                    state.update {
                         ExtensionFilterState.Success(
                             languages = extensionLanguages.toImmutableList(),
                             enabledLanguages = enabledLanguages.toImmutableSet(),
