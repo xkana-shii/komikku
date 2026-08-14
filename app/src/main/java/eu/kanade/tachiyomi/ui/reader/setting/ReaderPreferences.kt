@@ -124,6 +124,11 @@ class ReaderPreferences(
 
     fun dualPageRotateToFitInvertWebtoon() = preferenceStore.getBoolean("pref_dual_page_rotate_invert_webtoon", false)
 
+    val dualPageView: Preference<DualPageView> = preferenceStore.getEnum(
+        "pref_dual_page_view",
+        DualPageView.NEVER,
+    )
+
     // endregion
 
     // region Color filter
@@ -219,6 +224,15 @@ class ReaderPreferences(
     fun archiveReaderMode() = preferenceStore.getInt("archive_reader_mode", ArchiveReaderMode.LOAD_FROM_FILE)
     // SY <--
 
+    // region WebGpu
+
+    val transitionAnimation: Preference<TransitionAnimation> =
+        preferenceStore.getEnum("webgpu_transition_animation", TransitionAnimation.DEFAULT)
+
+    val cutoutMode: Preference<CutoutMode> = preferenceStore.getEnum("webgpu_cutout_mode", CutoutMode.AVOID)
+
+    // endregion
+
     enum class FlashColor {
         BLACK,
         WHITE,
@@ -231,8 +245,14 @@ class ReaderPreferences(
         val shouldInvertVertical: Boolean = false,
     ) {
         NONE(MR.strings.tapping_inverted_none),
-        HORIZONTAL(MR.strings.tapping_inverted_horizontal, shouldInvertHorizontal = true),
-        VERTICAL(MR.strings.tapping_inverted_vertical, shouldInvertVertical = true),
+        HORIZONTAL(
+            MR.strings.tapping_inverted_horizontal,
+            shouldInvertHorizontal = true,
+        ),
+        VERTICAL(
+            MR.strings.tapping_inverted_vertical,
+            shouldInvertVertical = true,
+        ),
         BOTH(MR.strings.tapping_inverted_both, shouldInvertHorizontal = true, shouldInvertVertical = true),
     }
 
@@ -267,6 +287,41 @@ class ReaderPreferences(
         const val LOAD_FROM_FILE = 0
         const val LOAD_INTO_MEMORY = 1
         const val CACHE_TO_DISK = 2
+    }
+
+    enum class TransitionAnimation(val titleRes: StringResource) {
+        DEFAULT(MR.strings.transition_animation_default),
+        FLIP_LEFT(MR.strings.transition_animation_flip_left),
+        FLIP_RIGHT(
+            MR.strings.transition_animation_flip_right,
+        ),
+        STACK_LEFT(MR.strings.transition_animation_stack_left),
+        STACK_RIGHT(MR.strings.transition_animation_stack_right),
+        STACK_UP(
+            MR.strings.transition_animation_stack_up,
+        ),
+        STACK_DOWN(MR.strings.transition_animation_stack_down),
+        SPHERE(MR.strings.transition_animation_sphere),
+        CUBE_INSIDE(
+            MR.strings.transition_animation_cube_inside,
+        ),
+        CUBE_OUTSIDE(MR.strings.transition_animation_cube_outside),
+        FADE(MR.strings.transition_animation_fade),
+        FADE_WHITE(
+            MR.strings.transition_animation_fade_white,
+        ),
+    }
+
+    enum class CutoutMode(val titleRes: StringResource) {
+        IGNORE(MR.strings.cutout_mode_ignore),
+        AVOID(MR.strings.cutout_mode_avoid),
+        SHIFT(MR.strings.cutout_mode_shift),
+    }
+
+    enum class DualPageView(val titleRes: StringResource) {
+        NEVER(MR.strings.dual_page_view_never),
+        ALWAYS(MR.strings.dual_page_view_always),
+        WIDE(MR.strings.dual_page_view_wide),
     }
 
     companion object {
