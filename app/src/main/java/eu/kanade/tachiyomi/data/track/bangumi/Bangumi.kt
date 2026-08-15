@@ -70,6 +70,12 @@ class Bangumi(id: Long) : BaseTracker(id, "Bangumi") {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        if (query.startsWith(SEARCH_ID_PREFIX)) {
+            query.substringAfter(SEARCH_ID_PREFIX).trim().toIntOrNull()?.let { id ->
+                return api.getMangaDetails(id)?.let { listOf(it) } ?: emptyList()
+            }
+        }
+
         return api.search(query)
     }
 
@@ -149,6 +155,10 @@ class Bangumi(id: Long) : BaseTracker(id, "Bangumi") {
         private val SCORE_LIST = IntRange(0, 10)
             .map(Int::toString)
             .toImmutableList()
+
+        // KMK -->
+        private const val SEARCH_ID_PREFIX = "id:"
+        // KMK <--
     }
 
     // KMK -->

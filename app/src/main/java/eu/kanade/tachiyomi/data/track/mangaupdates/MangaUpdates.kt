@@ -40,6 +40,10 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
                 }
             }
             .toImmutableList()
+
+        // KMK -->
+        private const val SEARCH_ID_PREFIX = "id:"
+        // KMK <--
     }
 
     private val sessionLock = Any()
@@ -109,6 +113,17 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        if (query.startsWith(SEARCH_ID_PREFIX)) {
+            return try {
+                val stringId = query.substringAfter(SEARCH_ID_PREFIX).trim()
+                val searchId = stringId.toLongOrNull() ?: stringId.toLong(36)
+
+                api.getSeriesDetails(searchId)?.let { listOf(it.toTrackSearch(id)) } ?: emptyList()
+            } catch (_: NumberFormatException) {
+                emptyList()
+            }
+        }
+
         return api.search(query)
             .map {
                 it.toTrackSearch(id)
