@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Tiada sumber ditemui</string>
     <string name="action_sort_unread_count">Bilangan belum dibaca</string>
     <string name="action_sort_last_manga_update">Semakan kemas kini terakhir</string>
-    <string name="split_tall_images_summary">Meningkatkan prestasi pembaca</string>
-    <string name="download_notifier_split_page_not_found">Muka surat %d tidak dijumpai ketika memisah</string>
     <string name="download_notifier_split_page_path_not_found">Lokasi fail muka surat %d tidak ditemui</string>
     <string name="pref_reset_viewer_flags_summary">Menetapkan semula mod bacaan dan orientasi semua siri</string>
     <string name="pref_reset_viewer_flags_success">Tetapan pembaca diset semula</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Sembunyikan entri yang sudah ada di dalam pustaka</string>
     <string name="action_copy_to_clipboard">Salin ke papan keratan</string>
     <string name="action_update_category">Kemas kini kategori</string>
-    <string name="split_tall_images">Memisah imej yang tinggi</string>
     <string name="overlay_header">Tindanan</string>
     <string name="pref_page_rotate_invert">Terbalikkan orientasi muka surat lebar yang diputarkan</string>
     <string name="pref_page_rotate">Putar muka surat lebar agar muat</string>

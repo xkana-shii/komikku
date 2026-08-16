@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Kaynak bulunamadı</string>
     <string name="action_sort_last_manga_update">Son güncelleme kontrolü</string>
     <string name="action_sort_unread_count">Okunmamış sayısı</string>
-    <string name="split_tall_images_summary">Okuyucu performansını iyileştirir</string>
-    <string name="download_notifier_split_page_not_found">Bölünürken %d. sayfa bulunamadı</string>
     <string name="download_notifier_split_page_path_not_found">%d. sayfa için dosya yolu bulunamadı</string>
     <string name="pref_reset_viewer_flags">Her seri için okuyucu ayarlarını sıfırla</string>
     <string name="pref_reset_viewer_flags_summary">Tüm serilerin okuma modunu ve yönünü sıfırlar</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Zaten kitaplıkta bulunan girdileri gizle</string>
     <string name="action_copy_to_clipboard">Panoya kopyala</string>
     <string name="action_update_category">Kategoriyi güncelle</string>
-    <string name="split_tall_images">Uzun görselleri böl</string>
     <string name="overlay_header">Üstünde göster</string>
     <string name="pref_page_rotate">Geniş sayfaları sığdırmak için döndür</string>
     <string name="pref_page_rotate_invert">Döndürülen geniş sayfaların yönünü ters çevir</string>

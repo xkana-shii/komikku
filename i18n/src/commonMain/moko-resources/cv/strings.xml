@@ -526,11 +526,9 @@
     <string name="extension_api_error">Хушмасен йат-йышне илесси пулаймарӗ</string>
     <string name="categorized_display_settings">Кашни пухмӑшӑн хӑйӗн ала ӗнерӗвӗсем</string>
     <string name="ext_app_info">Ап ҫинчен</string>
-    <string name="split_tall_images_summary">Вулӑшӑн тухӑҫа лайӑхлатать</string>
     <string name="error_user_agent_string_blank">User agent пушӑ пулмалла мар</string>
     <string name="ext_info_language">Чӗлхе</string>
     <string name="pref_navigate_pan">Пуснӑ чухне анлӑ сӑнсене сарӑмлатни</string>
-    <string name="split_tall_images">Вӑрӑм сӑнсене пайлани</string>
     <string name="missing_storage_permission">Управ ирӗкӗсене паман</string>
     <string name="ext_info_version">Верҫҫи</string>
     <string name="ext_update_all">Пурне те ҫӗнет</string>
