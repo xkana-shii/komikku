@@ -48,9 +48,10 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
 
     override suspend fun decode(): DecodeResult {
         // SY -->
+        val source = resources.source()
         var coverStream: BufferedInputStream? = null
-        if (resources.sourceOrNull()?.peek()?.use { CbzCrypto.detectCoverImageArchive(it.inputStream()) } == true) {
-            if (resources.source().peek().use { ImageUtil.findImageType(it.inputStream()) == null }) {
+        if (source.peek().use { CbzCrypto.detectCoverImageArchive(it.inputStream()) }) {
+            if (source.peek().use { ImageUtil.findImageType(it.inputStream()) == null }) {
                 coverStream = UniFile.fromFile(resources.file().toFile())
                     ?.archiveReader(context = context)
                     ?.getCoverStream()
@@ -58,10 +59,10 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
         }
         // SY <--
 
-        val decoder = resources.sourceOrNull()?.use { source ->
+        val decoder = source.use {
             coverStream.use { archiveCover ->
                 try {
-                    ImageDecoder.new(archiveCover ?: source.inputStream())
+                    ImageDecoder.new(archiveCover ?: it.inputStream())
                 } catch (e: ImageDecoder.DecodeException) {
                     logcat(LogPriority.ERROR, e) { "ImageDecoder.new failed: ${e.message}" }
                     null

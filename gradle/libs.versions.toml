@@ -16,7 +16,7 @@ flexibleAdapter = "5.1.0"
 markdown = "0.39.2"
 junit = "6.1.3"
 kim = "0.34.0"
-webgpuviewer = "28"
+webgpuviewer = "31"
 materialKolor = "5.0.0-alpha07"
 
 [libraries]
