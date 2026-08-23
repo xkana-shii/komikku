@@ -310,6 +310,7 @@ class ReaderPreferences(
         FADE_WHITE(
             MR.strings.transition_animation_fade_white,
         ),
+        NONE(MR.strings.transition_animation_none),
     }
 
     enum class CutoutMode(val titleRes: StringResource) {
