@@ -238,6 +238,8 @@ class ReaderPreferences(
 
     val continuousMinWidth: Preference<Int> = preferenceStore.getInt("webgpu_continuous_minwidth", 100)
 
+    val continuousGap: Preference<Int> = preferenceStore.getInt("webgpu_continuous_gap", 10)
+
     // endregion
 
     enum class FlashColor {

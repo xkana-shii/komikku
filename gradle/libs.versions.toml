@@ -16,7 +16,7 @@ flexibleAdapter = "5.1.0"
 markdown = "0.39.2"
 junit = "6.1.3"
 kim = "0.34.0"
-webgpuviewer = "40"
+webgpuviewer = "41"
 materialKolor = "5.0.0-alpha07"
 
 [libraries]
@@ -57,7 +57,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 
 subsamplingscaleimageview = "com.github.mihonapp:subsampling-scale-image-view:94915e6f73"
-image-decoder = "ca.mpreg:imagedecoder:10"
+image-decoder = "ca.mpreg:imagedecoder:13"
 kim = { module = "de.stefan-oltmann:kim", version.ref = "kim" }
 webgpuviewer = { module = "ca.mpreg:webgpuviewer", version.ref = "webgpuviewer" }
 
