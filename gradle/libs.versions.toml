@@ -15,8 +15,7 @@ ktlint-core = "1.8.0"
 flexibleAdapter = "5.1.0"
 markdown = "0.39.2"
 junit = "6.1.3"
-kim = "0.34.0"
-webgpuviewer = "41"
+webgpuviewer = "46"
 materialKolor = "5.0.0-alpha07"
 
 [libraries]
@@ -57,8 +56,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 
 subsamplingscaleimageview = "com.github.mihonapp:subsampling-scale-image-view:94915e6f73"
-image-decoder = "ca.mpreg:imagedecoder:13"
-kim = { module = "de.stefan-oltmann:kim", version.ref = "kim" }
+image-decoder = "ca.mpreg:imagedecoder:14"
 webgpuviewer = { module = "ca.mpreg:webgpuviewer", version.ref = "webgpuviewer" }
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"

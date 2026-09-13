@@ -55,8 +55,8 @@ object ImageUtil {
 
     fun findImageType(stream: InputStream): ImageType? {
         return try {
-            val decoder = ImageDecoder.new(stream)
-            when (decoder.format) {
+            val format = ImageDecoder.new(stream).use { dec -> dec.format }
+            when (format) {
                 "jpeg" -> ImageType.JPEG
                 "png" -> ImageType.PNG
                 "webp" -> ImageType.WEBP
@@ -74,7 +74,7 @@ object ImageUtil {
 
     fun decodeBitmap(stream: InputStream): Bitmap? {
         return try {
-            val result = ImageDecoder.new(stream).decode()
+            val result = ImageDecoder.new(stream).use { decoder -> decoder.decode() }
             createBitmap(result.width, result.height).also { bitmap ->
                 result.image.rewind()
                 bitmap.copyPixelsFromBuffer(result.image)
@@ -97,8 +97,7 @@ object ImageUtil {
                 ImageType.GIF -> true
                 ImageType.WEBP, ImageType.HEIF -> {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
-                    val decoder = ImageDecoder.new(source.peek().inputStream())
-                    decoder.pages > 1
+                    ImageDecoder.new(source.peek().inputStream()).use { dec -> dec.pages > 1 }
                 }
 
                 else -> false
