@@ -406,7 +406,6 @@
     <string name="network_not_metered">Kai duomenys neapmokestinami</string>
     <string name="action_move_to_top_all_for_series">Perkelti seriją į viršų</string>
     <string name="backup_restore_missing_trackers">Sekimo priemonės, neprijungtos prie:</string>
-    <string name="split_tall_images_summary">Pagerina skaitytuvo našumą</string>
     <string name="ext_info_language">Kalba</string>
     <string name="rotation_reverse_portrait">Apverstas portretas</string>
     <string name="action_track">Trasa</string>
@@ -472,7 +471,6 @@
     <string name="database_clean">Nėra ką išvalyti</string>
     <string name="webview_data_deleted">„WebView“ duomenys išvalyti</string>
     <string name="getting_started_guide">Darbo pradžios vadovas</string>
-    <string name="download_notifier_split_page_not_found">Puslapis %d nerastas skaidant</string>
     <string name="download_notifier_split_page_path_not_found">Nepavyko rasti puslapio failo kelio %d</string>
     <string name="channel_common">Bendras</string>
     <string name="channel_complete">Baigtas</string>

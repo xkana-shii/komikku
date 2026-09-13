@@ -327,7 +327,6 @@
     <string name="tracking_info">Usa ka paagi nga pag-sync aron ma-update ang pag-uswag sa kapitulo sa mga serbisyo sa pagsubay. I-set up ang tracking para sa indibidwal nga manga entries gikan sa ilang tracking button.</string>
     <string name="enhanced_services">Gipalambo nga mga serbisyo</string>
     <string name="pref_auto_update_manga_sync">Ang pag-uswag sa pag-update pagkahuman sa pagbasa</string>
-    <string name="split_tall_images_summary">Nagpauswag sa pasundayag sa magbabasa pinaagi sa pagbahin sa taas nga na-download nga mga imahe.</string>
     <string name="services">Mga serbisyo</string>
     <string name="pref_viewer_nav">Pag-tap sa mga zone</string>
     <string name="pref_create_backup">Paghimo og backup</string>

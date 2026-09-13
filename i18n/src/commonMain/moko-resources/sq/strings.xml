@@ -87,7 +87,6 @@
     <string name="channel_ext_updates">Përditësimet shtesë</string>
     <string name="channel_new_chapters">Përditësimet e kapitullit</string>
     <string name="download_notifier_cache_renewal">Shkarkimet e indeksimit</string>
-    <string name="download_notifier_split_page_not_found">Faqja %d nuk u gjet gjatë ndarjes</string>
     <string name="download_notifier_downloader_title">Shkarkues</string>
     <string name="information_webview_outdated">Përditësoni aplikacionin WebView për përputhshmëri më të mirë</string>
     <string name="label_default">E paracaktuar</string>
@@ -374,7 +373,6 @@
     <string name="pref_download_new_categories_details">Elementet në kategoritë e përjashtuara nuk do të shkarkohen edhe nëse janë gjithashtu në kategoritë e përfshira.</string>
     <string name="download_ahead_info">Punon vetëm në hyrjet në bibliotekë dhe nëse kapitulli aktual plus kapitulli tjetër janë shkarkuar tashmë</string>
     <string name="services">Gjurmuesët</string>
-    <string name="split_tall_images_summary">Përmirëson performancën e lexuesit</string>
     <string name="pref_auto_update_manga_sync">Përditëso progresin pas leximit</string>
     <string name="tracking_info">Sinkronizimi i njëanshëm për të përditësuar përparimin e kapitullit në shërbimet e gjurmimit. Konfiguro gjurmimin për elementet individuale nga butoni i tyre i gjurmimit.</string>
     <string name="action_filter_bookmarked">Faqeshënuar</string>

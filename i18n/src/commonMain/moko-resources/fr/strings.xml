@@ -565,8 +565,6 @@
     <string name="action_sort_last_manga_update">Dernière vérification des mises à jour</string>
     <string name="action_sort_unread_count">Nombre de non-lus</string>
     <string name="source_empty_screen">Aucune source trouvée</string>
-    <string name="split_tall_images_summary">Améliore les performances du lecteur</string>
-    <string name="download_notifier_split_page_not_found">Page %d introuvable lors du fractionnement</string>
     <string name="download_notifier_split_page_path_not_found">Impossible de trouver le chemin du fichier de la page %d</string>
     <string name="pref_reset_viewer_flags">Réinitialiser les paramètres du lecteur par série</string>
     <string name="pref_reset_viewer_flags_summary">Réinitialise le mode de lecture et l\'orientation de toutes les séries</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Masquer les séries déjà présentes dans la bibliothèque</string>
     <string name="action_copy_to_clipboard">Copier dans le presse-papier</string>
     <string name="action_update_category">Mettre à jour la catégorie</string>
-    <string name="split_tall_images">Diviser les grandes images</string>
     <string name="overlay_header">Superposition</string>
     <string name="pref_page_rotate_invert">Inverser l\'orientation des pages larges retournées</string>
     <string name="pref_page_rotate">Tourner les pages larges pour qu\'elles rentrent</string>

@@ -541,7 +541,6 @@
     <string name="pref_high">Korkea</string>
     <string name="download_ahead">Etukäteen lataus</string>
     <string name="auto_download_while_reading">Automaattinen lataus luetessa</string>
-    <string name="split_tall_images_summary">Parantaa lukijan suorituskykyä</string>
     <string name="delete_category_confirmation">Haluatko poistaa kategorian \"%s\"?</string>
     <string name="download_ahead_info">Toimii vain kirjastossa oleville sarjoille joissa nykyinen ja seuraava luku on jo ladattu</string>
     <string name="restore_miui_warning">Varmuuskopiointi/palautus ei välttämättä toimi oikein, jos MIUI-optimointi on poistettu käytöstä.</string>
@@ -635,7 +634,6 @@
     <string name="pref_double_tap_zoom">Tuplanapauta lähentääksesi</string>
     <string name="pref_flash_page_summ">Vähentää haamujälkiä e-paperi näytöillä</string>
     <string name="pref_skip_dupe_chapters">Ohita kaksoisluvut</string>
-    <string name="split_tall_images">Jaa korkeat kuvat</string>
     <string name="action_create">Luo</string>
     <string name="pref_page_rotate">Sovita leveät sivut kääntämällä</string>
     <string name="pref_hide_threshold">Valikon piilottamisen herkkyys vierittäessä</string>
