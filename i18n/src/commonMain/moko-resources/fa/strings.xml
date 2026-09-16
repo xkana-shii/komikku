@@ -554,7 +554,6 @@
     <string name="label_downloaded">دانلود شد</string>
     <string name="action_not_now">الان نه</string>
     <string name="action_display_show_continue_reading_button">نمایش دکمه ادامه خواندن</string>
-    <string name="split_tall_images_summary">بهبود کارکرد ابزار خواندن</string>
     <string name="download_ahead_info">اگر قسمت فعلی و بعدی دانلود شده باشند، تنها برای ورودی‌های کتابخانه کار می‌کند.</string>
     <string name="missing_storage_permission">اجازه دسترسی به حافظه داده نشد</string>
     <string name="backup_restore_content_full">ممکن است لازم باشد افزونه‌های احتمالیِ موجود نبودن را نصب کنید و پس از آن، برای استفاده از سرویس‌های ردیابی، به آن‌ها وارد شوید.</string>
@@ -612,7 +611,6 @@
     <string name="ext_revoke_trust">لغو اعتماد افزونه های ناشناخته</string>
     <string name="pref_page_rotate_invert">جهت چرخش صفحات گسترده را برعکس کن</string>
     <string name="no_location_set">مکان ذخیره سازی تنظیم نشده است</string>
-    <string name="split_tall_images">عکس های بلند را تقسیم کن</string>
     <string name="track_activity_name">ورود به ناضر</string>
     <string name="pref_hide_in_library_items">اجرای داخل کتاب خانه را مخفی کن</string>
     <string name="pref_storage_location">محل زخیره سازی</string>
@@ -882,7 +880,6 @@
     <string name="onboarding_storage_info">پوشه‌ای را انتخاب کنید که %1$s فایل‌های دانلودشده‌ی چپترها، نسخه‌های پشتیبان و موارد دیگر را در آن ذخیره کند.\n\nاستفاده از یک پوشه‌ی اختصاصی توصیه می‌شود.\n\nپوشه‌ی انتخاب‌شده: %2$s</string>
     <string name="onboarding_permission_analytics_description">برای بهبود قابلیت‌های برنامه، داده‌های استفاده را به‌صورت ناشناس ارسال کنید.</string>
     <string name="pref_flash_duration">مدت‌زمان فلاش</string>
-    <string name="download_notifier_split_page_not_found">برگه %d هنگام تفکیک یافت نشد</string>
     <string name="author">نویسنده</string>
     <string name="action_notes">یادداشت‌ها</string>
     <string name="wish_list">فهرست علاقه‌مندی‌</string>

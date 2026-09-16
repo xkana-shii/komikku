@@ -622,7 +622,6 @@
     <string name="pref_download_new_unread_chapters_only">Ne elŝuti duoblaĵojn de legitaj ĉapitroj</string>
     <string name="pref_always_show_chapter_transition">Ĉiam montri ĉapitrajn transpaŝojn</string>
     <string name="pref_landscape_zoom">Aŭtomate zomi larĝajn bildojn</string>
-    <string name="split_tall_images">Dividi altajn bildojn</string>
     <string name="enhanced_services_not_installed">Disponebla sed fonto ne estas instalita: %s</string>
     <string name="fifth_to_last">La 5-a laste legita ĉapitro</string>
     <string name="pref_auto_update_manga_sync">Ĝisdatigi progreson post lego</string>
@@ -631,7 +630,6 @@
     <string name="pref_zoom_start">Komenca zoma pozicio</string>
     <string name="third_to_last">La 3-a laste legita ĉapitro</string>
     <string name="download_ahead">Elŝuti antaŭe</string>
-    <string name="split_tall_images_summary">Plibonigas legilan rendimenton</string>
     <string name="pref_webtoon_disable_zoom_out">Malebligi malzomon</string>
     <string name="library_sync_complete">Biblioteka sinkronigo finita</string>
     <string name="non_library_settings">Ĉiuj legitaj elementoj</string>
@@ -811,7 +809,6 @@
     <string name="download_notifier_unknown_error">Ne eblis elŝuti ĉapitron pro neatendita eraro</string>
     <string name="download_notifier_text_only_wifi">Neniu Wi-Fi-konekto disponebla</string>
     <string name="download_notifier_no_network">Neniu retkonekto disponebla</string>
-    <string name="download_notifier_split_page_not_found">Paĝo %d netrovita dum dividado</string>
     <string name="download_notifier_cache_renewal">Kontrolado de elŝutoj</string>
     <string name="appwidget_updates_description">Vidi vian laste ĝisdatigitaj elementoj</string>
     <string name="appwidget_unavailable_locked">Fenestraĵo nedisponebla kiam apa ŝloso estas ŝaltita</string>

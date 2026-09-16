@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Nenhuma fonte encontrada</string>
     <string name="action_sort_unread_count">Contagem de não lidos</string>
     <string name="action_sort_last_manga_update">Última checagem de atualização</string>
-    <string name="split_tall_images_summary">Melhora o desempenho do leitor</string>
-    <string name="download_notifier_split_page_not_found">Página %d não encontrada durante a divisão</string>
     <string name="download_notifier_split_page_path_not_found">Não foi possível encontrar o caminho do arquivo da página %d</string>
     <string name="pref_reset_viewer_flags_summary">Redefine o modo de leitura e orientação de todas as séries</string>
     <string name="pref_reset_viewer_flags_success">Todas as configurações do leitor foram redefinidas</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Ocultar títulos que já estão na biblioteca</string>
     <string name="action_copy_to_clipboard">Copiar para a área de transferência</string>
     <string name="action_update_category">Atualizar categoria</string>
-    <string name="split_tall_images">Dividir imagens compridas</string>
     <string name="overlay_header">Sobreposição</string>
     <string name="pref_page_rotate">Rotacionar páginas largas para caber</string>
     <string name="pref_page_rotate_invert">Inverter a orientação das páginas largas rotacionadas</string>

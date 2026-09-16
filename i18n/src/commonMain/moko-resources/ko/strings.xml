@@ -565,7 +565,6 @@
     <string name="action_close">닫기</string>
     <string name="pref_clear_webview_data">WebView 데이터 지우기</string>
     <string name="webview_data_deleted">WebView 데이터 삭제됨</string>
-    <string name="split_tall_images_summary">리더 성능 향상</string>
     <string name="ext_info_version">버전</string>
     <string name="ext_info_language">언어</string>
     <string name="reading_list">읽을 목록</string>
@@ -593,7 +592,6 @@
     <string name="cant_open_last_read_chapter">마지막 회차를 열 수 없습니다</string>
     <string name="appwidget_updates_description">최근에 업데이트된 항목 보기</string>
     <string name="on_hold_list">보류 목록</string>
-    <string name="download_notifier_split_page_not_found">분리 중 페이지 %d을 찾을 수 없습니다</string>
     <string name="appwidget_unavailable_locked">앱 잠금 사용 중에는 위젯을 이용할 수 없습니다</string>
     <string name="theme_tidalwave">파도</string>
     <string name="update_already_running">업데이트가 이미 실행 중입니다</string>
@@ -666,7 +664,6 @@
     <string name="action_copy_to_clipboard">클립보드에 복사</string>
     <string name="pref_hide_in_library_items">이미 서재에 있는 항목 숨기기</string>
     <string name="action_update_category">카테고리 업데이트</string>
-    <string name="split_tall_images">긴 이미지 분할</string>
     <string name="overlay_header">오버레이</string>
     <string name="pref_page_rotate">화면에 맞게 넓은 페이지 회전</string>
     <string name="pref_page_rotate_invert">회전된 넓은 페이지의 회전 방향</string>

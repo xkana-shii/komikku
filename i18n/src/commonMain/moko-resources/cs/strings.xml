@@ -573,10 +573,8 @@
     <string name="unfinished_list">Seznam nedokončených</string>
     <string name="ext_info_language">Jazyk</string>
     <string name="ext_info_version">Verze</string>
-    <string name="split_tall_images_summary">Zlepšuje výkon čtečky</string>
     <string name="pref_reset_viewer_flags_error">Nastavení čtečky se nepodařilo resetovat</string>
     <string name="empty_screen">No, tohle je trapné</string>
-    <string name="download_notifier_split_page_not_found">Stránka %d nebyla při rozdělení nalezena</string>
     <string name="download_notifier_split_page_path_not_found">Nepodařilo se najít cestu k souboru stránky %d</string>
     <string name="pref_navigate_pan">Posunutí širokých snímků</string>
     <string name="action_sort_unread_count">Počet nepřečtených</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Skrýt položky, které jsou již v knihovně</string>
     <string name="action_copy_to_clipboard">Zkopírovat do schránky</string>
     <string name="action_update_category">Aktualizovat kategorii</string>
-    <string name="split_tall_images">Rozdělit vysoké obrázky</string>
     <string name="overlay_header">Překrytí</string>
     <string name="pref_page_rotate_invert">Překlopení orientace otočených širokých stránek</string>
     <string name="pref_page_rotate">Otočení širokých stránek tak, aby se vešly</string>

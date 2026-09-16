@@ -343,7 +343,6 @@
     <string name="edge_nav">Шеті</string>
     <string name="pref_read_with_volume_keys">Дыбыс пернелері</string>
     <string name="tapping_inverted_both">Екеуі де</string>
-    <string name="split_tall_images_summary">Оқыманың өнімділігін жақсартады</string>
     <string name="pref_navigate_pan">Кең суретті басқанда панорамалау</string>
     <string name="l_nav">L тәріздес</string>
     <string name="action_search_hint">Іздеу…</string>
@@ -502,7 +501,6 @@
     <string name="source_empty_screen">Дереккөз табылмады</string>
     <string name="notification_cover_update_failed">Мұқаба жаңартылмады</string>
     <string name="update_check_notification_update_available">Жаңа нұсқа қолжетімді!</string>
-    <string name="download_notifier_split_page_not_found">%d бет табылмады, бөлінгенде</string>
     <string name="channel_complete">Аяқталды</string>
     <string name="pref_reader_summary">Оқу түрі, көрсету, навигация</string>
     <string name="pref_browse_summary">Дереккөздер, кеңейтулер, ауқымды іздеу</string>
@@ -670,7 +668,6 @@
     <string name="action_update_category">Санатты жаңарту</string>
     <string name="action_copy_to_clipboard">Айырбастау буферіне көшіріп алу</string>
     <string name="pref_hide_in_library_items">Кітапханада бар туындыларды жасыру</string>
-    <string name="split_tall_images">Ұзын суреттерді бөлу</string>
     <string name="overlay_header">Қабаттасу</string>
     <string name="pref_page_rotate">Кең беттерді сыйғызу үшін бұрыңыз</string>
     <string name="pref_page_rotate_invert">Бұрылған кең беттерді аудару бағдары</string>

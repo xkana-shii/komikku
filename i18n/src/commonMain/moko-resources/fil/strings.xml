@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Walang nakitang source</string>
     <string name="action_sort_last_manga_update">Huling pag-update</string>
     <string name="action_sort_unread_count">Dami ng di pa nabasa</string>
-    <string name="split_tall_images_summary">Pinapahusay ang performance ng reader</string>
-    <string name="download_notifier_split_page_not_found">Hindi nakita ang pahina %d habang naghahati</string>
     <string name="download_notifier_split_page_path_not_found">Di makita ang file path ng pahina %d</string>
     <string name="empty_screen">Paano ba \'to</string>
     <string name="pref_reset_viewer_flags_error">Di ma-reset ang pagsasaayos sa reader</string>
@@ -669,7 +667,6 @@
     <string name="pref_page_rotate">I-rotate ang malalawak na pahina upang magkasya</string>
     <string name="pref_page_rotate_invert">I-flip ang oryentasyon ng mga pinaikot na malalawak na pahina</string>
     <string name="overlay_header">Nakapatong (Overlay)</string>
-    <string name="split_tall_images">Hatiin ang mga matataas na larawan</string>
     <string name="pref_debug_info">Impormasyon sa pag-debug</string>
     <string name="pref_chapter_swipe_start">Kabanata sa pag-swipe pakaliwa</string>
     <string name="pref_double_tap_zoom">I-double tap para mag-zoom</string>

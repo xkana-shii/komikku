@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Не найдено источников</string>
     <string name="action_sort_last_manga_update">Последняя проверка обновления</string>
     <string name="action_sort_unread_count">Оставшиеся главы</string>
-    <string name="download_notifier_split_page_not_found">Страница %d не найдена, при разделении</string>
-    <string name="split_tall_images_summary">Улучшает производительность читалки</string>
     <string name="download_notifier_split_page_path_not_found">Путь к файлам страницы %d не найден</string>
     <string name="pref_reset_viewer_flags">Сбросить настройки читалки для каждой серии</string>
     <string name="pref_reset_viewer_flags_summary">Сбрасывает режим чтения и ориентацию для всех серий</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Скрывать серии, уже находящиеся в библиотеке</string>
     <string name="action_copy_to_clipboard">Копировать в буфер обмена</string>
     <string name="action_update_category">Обновить категорию</string>
-    <string name="split_tall_images">Разделять длинные изображения</string>
     <string name="overlay_header">Наложение</string>
     <string name="pref_page_rotate">Развернуть широкие страницы под размер экрана</string>
     <string name="pref_page_rotate_invert">Отразить ориентацию развёрнутых широких страниц</string>
@@ -912,7 +909,7 @@
     <string name="pref_category_extensions">Расширения</string>
     <string name="pref_apply_content_warnings_to_installed">Также применять на установленные расширения</string>
     <string name="pref_apply_content_warnings_to_installed_summary">Когда выключенно, расширения которые вы уже установили будут загружаться и обновляться независимо от предупреждения</string>
-    <string name="content_warnings_info">Установленные расширения, которые не загружены, остаются в списке без указания источников. Расширения, которые вы не устанавливали, скрываются. Это не предотвращает появления в приложении контента категории «18+» со стороны неофициальных или потенциально неправильно помеченных расширений.</string>
+    <string name="content_warnings_info">Перезапустите приложение для применения изменений. Установленные расширения, которые не загружены, остаются в списке без указания источников. Расширения, которые вы не устанавливали, скрываются. Это не предотвращает появления в приложении контента категории «18+» со стороны неофициальных или потенциально неправильно помеченных расширений.</string>
     <string name="ext_filtered">Отфильтровано</string>
     <string name="ext_not_loaded">Не загружено</string>
     <string name="ext_not_loaded_dialog">Не удалось загрузить</string>

@@ -329,8 +329,8 @@
     <string name="add_tracking">Tambahkan pelacak</string>
     <string name="manga_info_collapse">Lebih sedikit</string>
     <string name="manga_info_expand">Selengkapnya</string>
-    <string name="in_library">Di pustaka</string>
-    <string name="add_to_library">Tambah ke pustaka</string>
+    <string name="in_library">Di perpustakaan</string>
+    <string name="add_to_library">Tambahkan ke perpustakaan</string>
     <string name="licenses">Lisensi terbuka</string>
     <string name="restoring_backup_error">Gagal memulihkan data dari cadangan</string>
     <string name="creating_backup_error">Pencadangan data gagal</string>
@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Tidak ada sumber yang ditemukan</string>
     <string name="action_sort_last_manga_update">Pembaruan terakhir</string>
     <string name="action_sort_unread_count">Jumlah belum dibaca</string>
-    <string name="split_tall_images_summary">Meningkatkan kinerja pembaca</string>
-    <string name="download_notifier_split_page_not_found">Halaman %d tidak ditemukan saat dipisah</string>
     <string name="download_notifier_split_page_path_not_found">Tidak dapat menemukan jalur file halaman %d</string>
     <string name="pref_reset_viewer_flags_success">Atur ulang semua pengaturan pengguna</string>
     <string name="pref_reset_viewer_flags">Muat ulang pengaturan per-pengguna</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Semua catatan tersembunyi sudah ada di pustaka</string>
     <string name="action_copy_to_clipboard">Salin ke papan klip</string>
     <string name="action_update_category">Perbarui kategori</string>
-    <string name="split_tall_images">Potong gambar tinggi</string>
     <string name="overlay_header">Lapisan awal</string>
     <string name="pref_page_rotate">Memutar halaman lebar agar pas</string>
     <string name="pref_page_rotate_invert">Orientasi balik halaman lebar yang diputar</string>

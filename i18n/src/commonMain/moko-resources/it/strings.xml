@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Nessuna fonte trovata</string>
     <string name="action_sort_unread_count">Conteggio non letti</string>
     <string name="action_sort_last_manga_update">Ultimo aggiornamento</string>
-    <string name="split_tall_images_summary">Migliora le prestazioni del lettore</string>
-    <string name="download_notifier_split_page_not_found">Pagina %d non trovata durante la divisione</string>
     <string name="download_notifier_split_page_path_not_found">Impossibile trovare il percorso della pagina %d</string>
     <string name="pref_reset_viewer_flags_summary">Reimposta la modalità di lettura e l\'orientamento per tutte le serie</string>
     <string name="pref_reset_viewer_flags">Reimposta le opzioni del lettore per ogni serie</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Nascondi le voci già in libreria</string>
     <string name="action_copy_to_clipboard">Copia negli appunti</string>
     <string name="action_update_category">Aggiorna categoria</string>
-    <string name="split_tall_images">Dividi immagini alte</string>
     <string name="overlay_header">Sovrimpressione</string>
     <string name="pref_page_rotate">Ruota le pagine larghe per adattarle allo schermo</string>
     <string name="pref_page_rotate_invert">Capovolgi l\'orientamento delle pagine larghe ruotate</string>
@@ -880,7 +877,7 @@
     <string name="pref_category_extensions">Estensioni</string>
     <string name="ext_content_warning_mixed">Misto</string>
     <string name="ext_content_warning_safe">Sicuro</string>
-    <string name="content_warnings_info">Le estensioni installate ma non caricate restano nell\'elenco senza le loro sorgenti; quelle non installate vengono nascoste. Questo non impedisce che estensioni non ufficiali o segnalate in modo errato mostrino contenuti 18+ nell\'app.</string>
+    <string name="content_warnings_info">Per rendere effettive le modifiche è necessario riavviare l\'app. Le estensioni che non sono caricate non forniranno le loro fonti in nessuna parte dell\'app. Ciò non impedisce alle estensioni non ufficiali o potenzialmente contrassegnate in modo errato di mostrare contenuti 18+ all\'interno dell\'app.</string>
     <string name="pref_apply_content_warnings_to_installed_summary">Quando è disattivata, le estensioni già installate continuano a caricarsi e ad aggiornarsi a prescindere dal loro avviso</string>
     <string name="app_migrating_title">Completamento dell\'aggiornamento</string>
     <string name="app_migrating_summary">Stiamo completando i preparativi dopo l\'aggiornamento. Può richiedere qualche minuto, quindi tieni l\'app aperta.</string>
