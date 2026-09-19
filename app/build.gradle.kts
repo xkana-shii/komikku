@@ -5,11 +5,11 @@ import mihon.buildlogic.getCurrentTime
 import mihon.buildlogic.getLatestCommitCount
 import mihon.buildlogic.getLatestCommitSha
 import mihon.buildlogic.getLatestCommitTime
+import mihon.buildlogic.tasks.ReplaceShortcutsPlaceholderTask
 
 plugins {
     id("mihon.android.application")
     id("mihon.android.application.compose")
-    id("com.github.zellius.shortcut-helper")
     kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
     alias(libs.plugins.aboutLibraries)
@@ -19,13 +19,7 @@ plugins {
     id("com.github.ben-manes.versions")
 }
 
-val devSecret: String = if (project.hasProperty("devSecret")) {
-    project.property("devSecret") as String
-} else {
-    "default-secret"
-}
-
-shortcutHelper.setFilePath("./shortcuts.xml")
+val devSecret = providers.gradleProperty("devSecret").getOrElse("default-secret")
 
 android {
     namespace = "eu.kanade.tachiyomi"
@@ -390,6 +384,20 @@ androidComponents {
             }
         }
     }
+    // KMK -->
+    onVariants { variant ->
+        val resSource = variant.sources.res ?: return@onVariants
+
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val replaceShortcutsPlaceholderTask = tasks.register<ReplaceShortcutsPlaceholderTask>(
+            "replace${variantName}ShortcutPlaceholder",
+        ) {
+            applicationId.set(variant.applicationId)
+            shortcutsFile.set(projectDir.resolve("src/main/shortcuts.xml"))
+        }
+        resSource.addGeneratedSourceDirectory(replaceShortcutsPlaceholderTask) { it.outputDir }
+    }
+    // KMK <--
     onVariants(selector().withFlavor("default" to "standard")) {
         // Only excluding in standard flavor because this breaks
         // Layout Inspector's Compose tree

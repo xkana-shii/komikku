@@ -10,7 +10,6 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
-import org.gradle.kotlin.dsl.provideDelegate
 import org.gradle.kotlin.dsl.the
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension
@@ -47,8 +46,7 @@ internal fun Project.configureAndroid(commonExtension: CommonExtension<*, *, *, 
 
             // Treat all Kotlin warnings as errors (disabled by default)
             // Override by setting warningsAsErrors=true in your ~/.gradle/gradle.properties
-            val warningsAsErrors: String? by project
-            allWarningsAsErrors.set(warningsAsErrors.toBoolean())
+            allWarningsAsErrors.set(providers.gradleProperty("warningsAsErrors").orElse("false").map(String::toBoolean))
 
         }
     }
@@ -75,8 +73,8 @@ internal fun Project.configureCompose(commonExtension: CommonExtension<*, *, *, 
         val enableMetrics = project.providers.gradleProperty("enableComposeCompilerMetrics").orNull.toBoolean()
         val enableReports = project.providers.gradleProperty("enableComposeCompilerReports").orNull.toBoolean()
 
-        val rootBuildDir = rootProject.layout.buildDirectory.asFile.get()
-        val relativePath = projectDir.relativeTo(rootDir)
+        val rootBuildDir = layout.settingsDirectory.dir("build").asFile
+        val relativePath = projectDir.relativeTo(layout.settingsDirectory.asFile)
 
         if (enableMetrics) {
             rootBuildDir.resolve("compose-metrics").resolve(relativePath).let(metricsDestination::set)
