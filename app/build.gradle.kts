@@ -1,7 +1,10 @@
+import com.android.build.api.variant.ApplicationVariant
+import com.android.build.api.variant.BuildConfigField
 import mihon.buildlogic.Config
-import mihon.buildlogic.getBuildTime
-import mihon.buildlogic.getCommitCount
-import mihon.buildlogic.getGitSha
+import mihon.buildlogic.getCurrentTime
+import mihon.buildlogic.getLatestCommitCount
+import mihon.buildlogic.getLatestCommitSha
+import mihon.buildlogic.getLatestCommitTime
 
 plugins {
     id("mihon.android.application")
@@ -33,9 +36,6 @@ android {
         versionCode = 140
         versionName = "1.22.2"
 
-        buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
-        buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
-        buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = false)}\"")
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
         buildConfigField("String", "DEV_OPTIONS", "\"${devSecret}\"")
 
@@ -45,7 +45,6 @@ android {
     buildTypes {
         val debug by getting {
             applicationIdSuffix = ".dev"
-            versionNameSuffix = "-${getCommitCount()}"
             isPseudoLocalesEnabled = true
         }
         val release by getting {
@@ -56,8 +55,6 @@ android {
             isShrinkResources = Config.enableCodeShrink
 
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
-
-            buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = true)}\"")
         }
 
         val commonMatchingFallbacks = listOf(release.name)
@@ -83,19 +80,16 @@ android {
 
             applicationIdSuffix = ".beta"
 
-            versionNameSuffix = debug.versionNameSuffix
             signingConfig = debug.signingConfig
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
-
-            buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = false)}\"")
         }
         create("benchmark") {
             initWith(release)
 
             isDebuggable = false
             isProfileable = true
-            versionNameSuffix = "${debug.versionNameSuffix}-benchmark"
+            versionNameSuffix = "-benchmark"
             applicationIdSuffix = ".benchmark"
 
             signingConfig = debug.signingConfig
@@ -371,7 +365,31 @@ dependencies {
     implementation(sylibs.zxing.android.embedded)
 }
 
+val latestCommitCount = getLatestCommitCount()
+val latestCommitSha = getLatestCommitSha()
+val latestCommitTime = getLatestCommitTime()
+val currentTime = getCurrentTime()
+
+fun ApplicationVariant.buildConfigField(type: String, name: String, value: Provider<String>) {
+    buildConfigFields?.put(name, value.map { BuildConfigField(type, it, null) })
+}
+
 androidComponents {
+    onVariants { variant ->
+        val isUnstableBuild = variant.buildType in setOf("debug", "preview", "benchmark")
+        val buildTime = if (isUnstableBuild) currentTime else latestCommitTime
+
+        variant.buildConfigField("String", "COMMIT_COUNT", latestCommitCount.map { "\"$it\"" })
+        variant.buildConfigField("String", "COMMIT_SHA", latestCommitSha.map { "\"$it\"" })
+        variant.buildConfigField("String", "BUILD_TIME", buildTime.map { "\"$it\"" })
+
+        if (variant.buildType in setOf("debug", "preview")) {
+            variant.outputs.forEach { output ->
+                val versionName = output.versionName.get()
+                output.versionName.set(latestCommitCount.map { "$versionName-$it" })
+            }
+        }
+    }
     onVariants(selector().withFlavor("default" to "standard")) {
         // Only excluding in standard flavor because this breaks
         // Layout Inspector's Compose tree
