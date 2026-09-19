@@ -565,8 +565,6 @@
     <string name="source_empty_screen">Keine Quelle gefunden</string>
     <string name="action_sort_unread_count">Anzahl an Ungelesenem</string>
     <string name="action_sort_last_manga_update">Letzte Aktualisierungsprüfung</string>
-    <string name="split_tall_images_summary">Verbessert die Leserleistung</string>
-    <string name="download_notifier_split_page_not_found">Seite %d während des Aufteilens nicht gefunden</string>
     <string name="download_notifier_split_page_path_not_found">Dateipfad der Seite %d konnte nicht gefunden werden</string>
     <string name="pref_reset_viewer_flags_summary">Setzt den Lesemodus und die Ausrichtung aller Serien zurück</string>
     <string name="pref_reset_viewer_flags">Lesereinstellungen für jede Serie zurücksetzen</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Einträge verbergen, die bereits in der Bibliothek sind</string>
     <string name="action_copy_to_clipboard">In die Zwischenablage kopieren</string>
     <string name="action_update_category">Kategorie aktualisieren</string>
-    <string name="split_tall_images">Hohe Bilder teilen</string>
     <string name="overlay_header">Overlay</string>
     <string name="pref_page_rotate">Breite Seiten drehen, damit sie passen</string>
     <string name="pref_page_rotate_invert">Ausrichtung gedrehter breiter Seiten spiegeln</string>
