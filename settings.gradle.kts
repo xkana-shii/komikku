@@ -40,6 +40,20 @@ dependencyResolutionManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
+// KMK -->
+gradle.beforeProject {
+    if (path in setOf(":i18n", ":i18n-kmk", ":i18n-sy")) {
+        extra["kotlin.native.cocoapods.archs"] = ""
+        extra["kotlin.native.cocoapods.configuration"] = ""
+        extra["kotlin.native.cocoapods.platform"] = ""
+        extra["moko.resources.ARCHS"] = ""
+        extra["moko.resources.CONFIGURATION"] = ""
+        extra["moko.resources.PLATFORM_NAME"] = ""
+        extra["moko.resources.strictLineBreaks"] = "false"
+    }
+}
+// KMK <--
+
 rootProject.name = "Komikku"
 include(":app")
 include(":core-metadata")
