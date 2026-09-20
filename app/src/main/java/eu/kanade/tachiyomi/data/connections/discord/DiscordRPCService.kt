@@ -15,7 +15,6 @@ import android.os.Looper
 import androidx.compose.ui.util.fastAny
 import androidx.core.content.ContextCompat
 import eu.kanade.domain.connections.service.ConnectionsPreferences
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
@@ -37,6 +36,10 @@ import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import kotlin.math.ceil
 import kotlin.math.floor
+import eu.kanade.tachiyomi.R as AppR
+import tachiyomi.i18n.R as I18nR
+import tachiyomi.i18n.kmk.R as KmkR
+import tachiyomi.i18n.sy.R as SyR
 
 class DiscordRPCService : Service() {
 
@@ -147,13 +150,13 @@ class DiscordRPCService : Service() {
         // KMK <--
 
         val builder = context.notificationBuilder(Notifications.CHANNEL_DISCORD_RPC) {
-            setSmallIcon(R.drawable.ic_discord_24dp)
-            setColor(ContextCompat.getColor(context, R.color.ic_launcher))
-            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.komikku))
-            setContentText(context.getString(R.string.pref_discord_rpc))
+            setSmallIcon(AppR.drawable.ic_discord_24dp)
+            setColor(ContextCompat.getColor(context, AppR.color.ic_launcher))
+            setLargeIcon(BitmapFactory.decodeResource(context.resources, AppR.drawable.komikku))
+            setContentText(context.getString(KmkR.string.pref_discord_rpc))
             // KMK -->
-            setContentTitle(context.getString(R.string.app_name))
-            addAction(R.drawable.ic_close_24dp, context.getString(R.string.action_stop), stopIntent)
+            setContentTitle(context.getString(I18nR.string.app_name))
+            addAction(AppR.drawable.ic_close_24dp, context.getString(SyR.string.action_stop), stopIntent)
             // KMK <--
             setAutoCancel(false)
             setOngoing(true)
@@ -321,7 +324,7 @@ class DiscordRPCService : Service() {
             imageUrl: String,
             timestamps: Activity.Timestamps?,
             sinceTime: Long = since,
-            appName: String = context.getString(R.string.app_name),
+            appName: String = context.getString(I18nR.string.app_name),
             // KMK <--
         ) {
             val customMessage = connectionsPreferences.discordCustomMessage().get()
@@ -366,11 +369,11 @@ class DiscordRPCService : Service() {
                         largeImage = "$MP_PREFIX$imageUrl",
                         smallImage = "$MP_PREFIX${DiscordScreen.APP.imageUrl}",
                         largeText = context.getString(
-                            R.string.discord_status_description,
+                            KmkR.string.discord_status_description,
                             context.getString(discordScreen.details),
                             title ?: context.getString(discordScreen.text),
                         ),
-                        smallText = context.getString(R.string.discord_app_description),
+                        smallText = context.getString(KmkR.string.discord_app_description),
                     ),
                     buttons = buttonLabels.takeIf { it.isNotEmpty() },
                     metadata = metadata,

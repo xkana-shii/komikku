@@ -7,11 +7,12 @@
 package eu.kanade.tachiyomi.data.connections.discord
 
 import androidx.annotation.StringRes
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import tachiyomi.i18n.R as I18nR
+import tachiyomi.i18n.kmk.R as KmkR
 
 // Constant for logging tag
 const val RICH_PRESENCE_TAG = "discord_rpc"
@@ -19,7 +20,7 @@ const val RICH_PRESENCE_TAG = "discord_rpc"
 // Constant for application id
 internal const val RICH_PRESENCE_APPLICATION_ID = "1424627741256585271"
 
-val DOWNLOAD_BUTTON_LABEL_RES = R.string.discord_download_button
+val DOWNLOAD_BUTTON_LABEL_RES = KmkR.string.discord_download_button
 const val DOWNLOAD_BUTTON_URL = "https://komikku-app.github.io/download/"
 const val DISCORD_BUTTON_LABEL = "Discord"
 const val DISCORD_BUTTON_URL = "https://discord.gg/85jB7V5AJR"
@@ -186,14 +187,14 @@ enum class DiscordScreen(
     @StringRes val details: Int,
     val imageUrl: String,
 ) {
-    APP(R.string.app_name, R.string.discord_status_using, KOMIKKU_IMAGE),
-    LIBRARY(R.string.label_library, R.string.discord_status_browsing, LIBRARY_IMAGE_URL),
-    UPDATES(R.string.label_recent_updates, R.string.discord_status_scrolling, UPDATES_IMAGE_URL),
-    HISTORY(R.string.label_recent_manga, R.string.discord_status_scrolling, HISTORY_IMAGE_URL),
-    BROWSE(R.string.label_sources, R.string.discord_status_browsing, BROWSE_IMAGE_URL),
-    MORE(R.string.label_settings, R.string.discord_status_messing, MORE_IMAGE_URL),
-    WEBVIEW(R.string.action_web_view, R.string.discord_status_browsing, WEBVIEW_IMAGE_URL),
-    MANGA(R.string.manga, R.string.reading, MANGA_IMAGE_URL),
+    APP(I18nR.string.app_name, KmkR.string.discord_status_using, KOMIKKU_IMAGE),
+    LIBRARY(I18nR.string.label_library, KmkR.string.discord_status_browsing, LIBRARY_IMAGE_URL),
+    UPDATES(I18nR.string.label_recent_updates, KmkR.string.discord_status_scrolling, UPDATES_IMAGE_URL),
+    HISTORY(I18nR.string.label_recent_manga, KmkR.string.discord_status_scrolling, HISTORY_IMAGE_URL),
+    BROWSE(I18nR.string.label_sources, KmkR.string.discord_status_browsing, BROWSE_IMAGE_URL),
+    MORE(I18nR.string.label_settings, KmkR.string.discord_status_messing, MORE_IMAGE_URL),
+    WEBVIEW(I18nR.string.action_web_view, KmkR.string.discord_status_browsing, WEBVIEW_IMAGE_URL),
+    MANGA(I18nR.string.manga, I18nR.string.reading, MANGA_IMAGE_URL),
 }
 
 // Constants for standard Rich Presence image urls

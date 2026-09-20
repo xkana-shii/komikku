@@ -13,7 +13,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.NetworkState
 import eu.kanade.tachiyomi.util.system.activeNetworkState
@@ -29,6 +28,8 @@ import kotlinx.coroutines.flow.onEach
 import tachiyomi.domain.download.service.DownloadPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import eu.kanade.tachiyomi.R as AppR
+import tachiyomi.i18n.R as I18nR
 
 /**
  * This worker is used to manage the downloader. The system can decide to stop the worker, in
@@ -41,10 +42,10 @@ class DownloadJob(private val context: Context, workerParams: WorkerParameters) 
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         val notification = applicationContext.notificationBuilder(Notifications.CHANNEL_DOWNLOADER_PROGRESS) {
-            setContentTitle(applicationContext.getString(R.string.download_notifier_downloader_title))
+            setContentTitle(applicationContext.getString(I18nR.string.download_notifier_downloader_title))
             setSmallIcon(android.R.drawable.stat_sys_download)
-            setColor(ContextCompat.getColor(applicationContext, R.color.ic_launcher))
-            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.komikku))
+            setColor(ContextCompat.getColor(applicationContext, AppR.color.ic_launcher))
+            setLargeIcon(BitmapFactory.decodeResource(context.resources, AppR.drawable.komikku))
         }.build()
         return ForegroundInfo(
             Notifications.ID_DOWNLOAD_CHAPTER_PROGRESS,
@@ -93,12 +94,12 @@ class DownloadJob(private val context: Context, workerParams: WorkerParameters) 
             val noWifi = requireWifi && !state.isWifi
             if (noWifi) {
                 downloadManager.downloaderStop(
-                    applicationContext.getString(R.string.download_notifier_text_only_wifi),
+                    applicationContext.getString(I18nR.string.download_notifier_text_only_wifi),
                 )
             }
             !noWifi
         } else {
-            downloadManager.downloaderStop(applicationContext.getString(R.string.download_notifier_no_network))
+            downloadManager.downloaderStop(applicationContext.getString(I18nR.string.download_notifier_no_network))
             false
         }
     }
