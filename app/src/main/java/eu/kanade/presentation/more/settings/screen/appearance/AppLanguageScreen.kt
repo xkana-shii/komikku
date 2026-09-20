@@ -31,7 +31,6 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.extension.interactor.GetExtensionLanguages.Companion.getLanguageIconID
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -40,6 +39,8 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import eu.kanade.tachiyomi.R as AppR
+import tachiyomi.i18n.R as I18nR
 
 class AppLanguageScreen : Screen() {
 
@@ -87,7 +88,7 @@ class AppLanguageScreen : Screen() {
                         },
                         // KMK -->
                         leadingContent = {
-                            val iconResId = getLanguageIconID(it.langTag) ?: R.drawable.globe
+                            val iconResId = getLanguageIconID(it.langTag) ?: AppR.drawable.globe
                             Icon(
                                 painter = painterResource(id = iconResId),
                                 tint = Color.Unspecified,
@@ -115,7 +116,7 @@ class AppLanguageScreen : Screen() {
 
     private fun getLangs(context: Context): ImmutableList<Language> {
         val langs = mutableListOf<Language>()
-        val parser = context.resources.getXml(R.xml.locales_config)
+        val parser = context.resources.getXml(I18nR.xml.locales_config)
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG && parser.name == "locale") {

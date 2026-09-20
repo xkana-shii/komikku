@@ -5,12 +5,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_DEFAULT
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_HIGH
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.discord.RICH_PRESENCE_TAG
 import eu.kanade.tachiyomi.util.system.buildNotificationChannel
 import eu.kanade.tachiyomi.util.system.buildNotificationChannelGroup
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.R as KmkR
 
 /**
  * Class to manage the basic information of all the notifications used in the app.
@@ -199,7 +199,7 @@ object Notifications {
                 },
                 // AM (DISCORD) -->
                 buildNotificationChannel(CHANNEL_DISCORD_RPC, IMPORTANCE_LOW) {
-                    setName(context.getString(R.string.pref_discord_rpc))
+                    setName(context.getString(KmkR.string.pref_discord_rpc))
                 },
                 // <-- AM (DISCORD)
                 // SY -->

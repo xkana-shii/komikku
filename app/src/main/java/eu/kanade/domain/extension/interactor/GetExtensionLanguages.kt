@@ -10,12 +10,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.murgupluoglu.flagkit.R
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import eu.kanade.tachiyomi.R as AppR
 
 class GetExtensionLanguages(
     private val preferences: SourcePreferences,
@@ -41,7 +42,7 @@ class GetExtensionLanguages(
     companion object {
         fun getLanguageIconID(lang: String): Int? {
             return when (lang) {
-                "all" -> R.drawable.ic_flag_un
+                "all" -> AppR.drawable.ic_flag_un
                 // "other" -> R.drawable.globe
                 "af" -> R.drawable.za // Afrikaans -> South Africa, ZA
                 "am" -> R.drawable.et // Amharic -> Ethiopia, ET
@@ -61,7 +62,7 @@ class GetExtensionLanguages(
                 "de" -> R.drawable.de // German -> Germany, DE
                 "el" -> R.drawable.gr // Greek -> Greece, GR
                 "en" -> R.drawable.us // English -> United States, US
-                "eo" -> R.drawable.ic_flag_esperanto // Esperanto -> no country
+                "eo" -> AppR.drawable.ic_flag_esperanto // Esperanto -> no country
                 "es-419" -> R.drawable.mx // Spanish -> Mexico MX, Latin America, Latin America
                 "es" -> R.drawable.es // Spanish -> Spain, ES
                 "et" -> R.drawable.ee // Estonian -> Estonia, EE
@@ -308,7 +309,7 @@ private fun LanguageIconsPreview() {
     )
     FlowRow {
         languages.forEach { language ->
-            val iconResId = GetExtensionLanguages.getLanguageIconID(language) ?: R.drawable.globe
+            val iconResId = GetExtensionLanguages.getLanguageIconID(language) ?: AppR.drawable.globe
             Icon(
                 painter = painterResource(id = iconResId),
                 tint = Color.Unspecified,
