@@ -565,8 +565,6 @@
     <string name="source_empty_screen">No s’ha trobat cap font</string>
     <string name="action_sort_unread_count">Nombre de no llegits</string>
     <string name="action_sort_last_manga_update">Darrera comprovació d’actualitzacions</string>
-    <string name="split_tall_images_summary">Millora el rendiment del lector</string>
-    <string name="download_notifier_split_page_not_found">No s’ha trobat la pàgina %d en dividir</string>
     <string name="download_notifier_split_page_path_not_found">No s’ha trobat el camí del fitxer de la pàgina %d</string>
     <string name="pref_reset_viewer_flags">Restableix les opcions del lector per sèrie</string>
     <string name="pref_reset_viewer_flags_summary">Restableix el mode de lectura i l’orientació de totes les sèries</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">Amaga els elements que ja són a la biblioteca</string>
     <string name="action_copy_to_clipboard">Copia al porta-retalls</string>
     <string name="action_update_category">Actualitza la categoria</string>
-    <string name="split_tall_images">Divideix les imatges altes</string>
     <string name="pref_chapter_swipe_end">En lliscar cap a la dreta en un capítol</string>
     <string name="pref_chapter_swipe_start">En lliscar cap a l’esquerra en un capítol</string>
     <string name="pref_double_tap_zoom">Toca dues vegades per a ampliar</string>

@@ -565,8 +565,6 @@
     <string name="source_empty_screen">没有图源</string>
     <string name="action_sort_last_manga_update">检查更新时间</string>
     <string name="action_sort_unread_count">未读章数</string>
-    <string name="split_tall_images_summary">可以改善阅读器的性能</string>
-    <string name="download_notifier_split_page_not_found">分割时未找到第 %d 页</string>
     <string name="download_notifier_split_page_path_not_found">未找到第 %d 页的文件路径</string>
     <string name="pref_reset_viewer_flags">重置各作品阅读器独立设置</string>
     <string name="pref_reset_viewer_flags_summary">重置所有作品的阅读模式和屏幕方向</string>
@@ -666,7 +664,6 @@
     <string name="pref_hide_in_library_items">隐藏已添加到书架的作品</string>
     <string name="action_copy_to_clipboard">复制到剪贴板</string>
     <string name="action_update_category">更新分类</string>
-    <string name="split_tall_images">分割长图</string>
     <string name="overlay_header">标记和按钮</string>
     <string name="pref_page_rotate">旋转横向图片</string>
     <string name="pref_page_rotate_invert">旋转横向图片时反转方向</string>
