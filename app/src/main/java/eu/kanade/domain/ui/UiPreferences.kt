@@ -55,6 +55,8 @@ class UiPreferences(
     fun feedTabInFront() = preferenceStore.getBoolean("latest_tab_position", false)
 
     // KMK -->
+    fun showSequelPrequel() = preferenceStore.getBoolean("pref_sequel_prequel_enabled", false)
+
     fun expandRelatedMangas() = preferenceStore.getBoolean("expand_related_mangas", true)
 
     fun relatedMangasInOverflow() = preferenceStore.getBoolean("related_mangas_in_overflow", false)

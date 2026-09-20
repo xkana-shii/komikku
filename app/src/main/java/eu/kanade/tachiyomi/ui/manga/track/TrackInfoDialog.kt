@@ -11,9 +11,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -44,6 +47,7 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.track.interactor.RefreshTracks
+import eu.kanade.domain.track.interactor.UpdateTracks
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
@@ -54,6 +58,7 @@ import eu.kanade.presentation.track.TrackScoreSelector
 import eu.kanade.presentation.track.TrackStatusSelector
 import eu.kanade.presentation.track.TrackerSearch
 import eu.kanade.presentation.util.Screen
+import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
@@ -70,6 +75,7 @@ import exh.metadata.metadata.base.TrackerIdMetadata
 import exh.source.MERGED_SOURCE_ID
 import exh.source.getMainSource
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -92,6 +98,7 @@ import tachiyomi.domain.track.interactor.DeleteTrack
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.model.Track
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.AlertDialogContent
 import tachiyomi.presentation.core.components.material.padding
@@ -118,6 +125,48 @@ data class TrackInfoDialogHomeScreen(
         val dateFormat = remember { UiPreferences.dateFormat(Injekt.get<UiPreferences>().dateFormat().get()) }
         val state by screenModel.state.collectAsState()
 
+        val preferences = remember { Injekt.get<TrackPreferences>() }
+        val priority by remember { preferences.priorityTrackerId().changes() }.collectAsState(preferences.priorityTrackerId().get())
+        val preferred = remember(priority, state.trackItems) {
+            preferences.resolvePreferredTracker(mangaId, state.trackItems.filter { it.track != null }.map { it.tracker.id }.toSet())
+        }
+        var removalSelection by remember { mutableStateOf<Set<Long>?>(null) }
+        var removeRemotely by remember { mutableStateOf(false) }
+        val bound = state.trackItems.filter { it.track != null }
+        removalSelection?.let { selected ->
+            AlertDialog(
+                onDismissRequest = { removalSelection = null },
+                title = { Text(stringResource(KMR.strings.track_remove_selection)) },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        bound.forEach { item ->
+                            LabeledCheckbox(
+                                label = item.tracker.name,
+                                checked = item.tracker.id in selected,
+                                onCheckedChange = { checked -> removalSelection = if (checked) selected + item.tracker.id else selected - item.tracker.id },
+                            )
+                        }
+                        LabeledCheckbox(label = stringResource(KMR.strings.track_remove_remotely), checked = removeRemotely, onCheckedChange = { removeRemotely = it })
+                    }
+                },
+                confirmButton = {
+                    TextButton(enabled = selected.any { id -> bound.any { it.tracker.id == id } } && !state.synchronizing, onClick = {
+                        screenModel.removeSelected(selected, removeRemotely)
+                        removalSelection = null
+                    }) { Text(stringResource(MR.strings.action_remove)) }
+                },
+                dismissButton = { TextButton(onClick = { removalSelection = null }) { Text(stringResource(MR.strings.action_cancel)) } },
+            )
+        }
+        var editor by remember { mutableStateOf<Pair<TrackItem, UnifiedTrackField>?>(null) }
+        editor?.let { (item, field) ->
+            UnifiedTrackEditor(item, field, onApply = {
+                screenModel.updateUnified(it)
+                editor = null
+            }, onDismiss = { editor = null })
+            return
+        }
+
         // SY -->
         Column(modifier = Modifier.animateContentSize()) {
             if (state.isLoading) {
@@ -140,48 +189,84 @@ data class TrackInfoDialogHomeScreen(
             else {
                 TrackInfoDialogHome(
                     trackItems = state.trackItems,
+                    preferredId = preferred,
+                    onAdjustProgress = screenModel::adjustProgress,
+                    onRemoveTracking = {
+                        removalSelection = emptySet()
+                        removeRemotely = false
+                    },
+                    errorTrackerIds = state.errorTrackerIds,
+                    busy = state.synchronizing,
+                    header = {
+                        state.errors.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
+                        if (state.errors.isNotEmpty()) {
+                            TextButton(onClick = { screenModel.retryRefresh() }, enabled = !state.synchronizing) {
+                                Text(stringResource(MR.strings.action_retry))
+                            }
+                        }
+                    },
                     dateFormat = dateFormat,
                     onStatusClick = {
-                        navigator.push(
-                            TrackStatusSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
+                        if (bound.size >= 2) {
+                            editor = it to UnifiedTrackField.STATUS
+                        } else {
+                            navigator.push(
+                                TrackStatusSelectorScreen(
+                                    track = it.track!!,
+                                    serviceId = it.tracker.id,
+                                ),
+                            )
+                        }
                     },
                     onChapterClick = {
-                        navigator.push(
-                            TrackChapterSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
+                        if (bound.size >= 2) {
+                            editor = it to UnifiedTrackField.PROGRESS
+                        } else {
+                            navigator.push(
+                                TrackChapterSelectorScreen(
+                                    track = it.track!!,
+                                    serviceId = it.tracker.id,
+                                ),
+                            )
+                        }
                     },
                     onScoreClick = {
-                        navigator.push(
-                            TrackScoreSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
+                        if (bound.size >= 2) {
+                            editor = it to UnifiedTrackField.SCORE
+                        } else {
+                            navigator.push(
+                                TrackScoreSelectorScreen(
+                                    track = it.track!!,
+                                    serviceId = it.tracker.id,
+                                ),
+                            )
+                        }
                     },
                     onStartDateEdit = {
-                        navigator.push(
-                            TrackDateSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                                start = true,
-                            ),
-                        )
+                        if (bound.size >= 2) {
+                            editor = it to UnifiedTrackField.START_DATE
+                        } else {
+                            navigator.push(
+                                TrackDateSelectorScreen(
+                                    track = it.track!!,
+                                    serviceId = it.tracker.id,
+                                    start = true,
+                                ),
+                            )
+                        }
                     },
                     onEndDateEdit = {
-                        navigator.push(
-                            TrackDateSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                                start = false,
-                            ),
-                        )
+                        if (bound.size >= 2) {
+                            editor = it to UnifiedTrackField.END_DATE
+                        } else {
+                            navigator.push(
+                                TrackDateSelectorScreen(
+                                    track = it.track!!,
+                                    serviceId = it.tracker.id,
+                                    start = false,
+                                ),
+                            )
+                        }
                     },
                     onNewSearch = {
                         if (it.tracker is EnhancedTracker) {
@@ -194,13 +279,8 @@ data class TrackInfoDialogHomeScreen(
                     },
                     onOpenInBrowser = { openTrackerInBrowser(context, it) },
                     onRemoved = {
-                        navigator.push(
-                            TrackerRemoveScreen(
-                                mangaId = mangaId,
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
+                        removalSelection = emptySet()
+                        removeRemotely = false
                     },
                     onCopyLink = { context.copyTrackerLink(it) },
                     onTogglePrivate = screenModel::togglePrivate,
@@ -357,26 +437,53 @@ data class TrackInfoDialogHomeScreen(
         }
         // SY <--
 
-        private suspend fun refreshTrackers() {
-            val refreshTracks = Injekt.get<RefreshTracks>()
-            val context = Injekt.get<Application>()
+        fun retryRefresh() {
+            if (state.value.synchronizing) return
+            screenModelScope.launch { refreshTrackers() }
+        }
 
-            refreshTracks.await(mangaId)
-                .filter { it.first != null }
-                .forEach { (track, e) ->
-                    logcat(LogPriority.ERROR, e) {
-                        "Failed to refresh track data mangaId=$mangaId for service ${track!!.id}"
-                    }
-                    withUIContext {
-                        context.toast(
-                            context.stringResource(
-                                MR.strings.track_error,
-                                track!!.name,
-                                e.message ?: "",
-                            ),
-                        )
-                    }
+        private suspend fun refreshTrackers() = runTrackerOperation {
+            Injekt.get<RefreshTracks>().await(mangaId)
+        }
+
+        fun adjustProgress(delta: Int) {
+            if (state.value.synchronizing) return
+            screenModelScope.launch {
+                runTrackerOperation { Injekt.get<RefreshTracks>().adjustProgress(mangaId, delta) }
+            }
+        }
+
+        fun updateUnified(change: UpdateTracks.Change) {
+            if (state.value.synchronizing) return
+            screenModelScope.launch { runTrackerOperation { Injekt.get<UpdateTracks>().await(mangaId, change) } }
+        }
+
+        fun removeSelected(selected: Set<Long>, remotely: Boolean) {
+            if (state.value.synchronizing) return
+            screenModelScope.launch { runTrackerOperation { Injekt.get<UpdateTracks>().remove(mangaId, selected, remotely) } }
+        }
+
+        private suspend fun runTrackerOperation(operation: suspend () -> List<Pair<Tracker?, Throwable>>) {
+            if (state.value.synchronizing) return
+            mutableState.update { it.copy(synchronizing = true) }
+            val context = Injekt.get<Application>()
+            try {
+                val failures = withIOContext { operation() }
+                val updatedItems = withIOContext { getTracks.await(mangaId).mapToTrackItem() }
+                mutableState.update {
+                    it.copy(
+                        trackItems = updatedItems,
+                        errorTrackerIds = failures.mapNotNull { failure -> failure.first?.id }.toSet(),
+                        errors = failures.map { (tracker, error) -> "${tracker?.name.orEmpty()}: ${if (error is UpdateTracks.InvalidDate) context.stringResource(KMR.strings.track_date_conflict) else with(context) { error.formattedMessage }}" },
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                mutableState.update { it.copy(errors = listOf(with(context) { e.formattedMessage })) }
+            } finally {
+                mutableState.update { it.copy(synchronizing = false) }
+            }
         }
 
         fun togglePrivate(item: TrackItem) {
@@ -386,7 +493,7 @@ data class TrackInfoDialogHomeScreen(
         }
 
         private suspend fun List<Track>.mapToTrackItem(): List<TrackItem> {
-            val loggedInTrackers = trackerManager.loggedInTrackers()
+            val loggedInTrackers = trackerManager.trackers.filter { service -> service.isLoggedIn || any { it.trackerId == service.id } }
             val source = sourceManager.getOrStub(sourceId)
             return loggedInTrackers
                 // Map to TrackItem
@@ -399,7 +506,7 @@ data class TrackInfoDialogHomeScreen(
                     } else {
                         listOf(source)
                     }
-                    trackers.filter { (it.tracker as? EnhancedTracker)?.accept(sources) ?: true }
+                    trackers.filter { it.track != null || ((it.tracker as? EnhancedTracker)?.accept(sources) ?: true) }
                 }
             // KMK <--
         }
@@ -407,6 +514,9 @@ data class TrackInfoDialogHomeScreen(
         @Immutable
         data class State(
             val trackItems: List<TrackItem> = emptyList(),
+            val errors: List<String> = emptyList(),
+            val errorTrackerIds: Set<Long> = emptySet(),
+            val synchronizing: Boolean = false,
             // SY -->
             val isLoading: Boolean = false,
             // SY <--

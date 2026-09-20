@@ -52,9 +52,16 @@ class BackupCreateJob(private val context: Context, workerParams: WorkerParamete
         val options = inputData.getBooleanArray(OPTIONS_KEY)?.let { BackupOptions.fromBooleanArray(it) }
             ?: BackupOptions()
 
+        val selectedOptions = if (isAutoBackup) {
+            options
+        } else {
+            options.copy(
+                includedCategoryIds = inputData.getLongArray(CATEGORY_IDS_KEY)?.toSet(),
+            )
+        }
         return withIOContext {
             try {
-                val location = BackupCreator(context, isAutoBackup).backup(uri, options)
+                val location = BackupCreator(context, isAutoBackup).backup(uri, selectedOptions)
                 if (!isAutoBackup) {
                     notifier.showBackupComplete(UniFile.fromUri(context, location.toUri())!!)
                 }
@@ -122,6 +129,7 @@ class BackupCreateJob(private val context: Context, workerParams: WorkerParamete
                 IS_AUTO_BACKUP_KEY to false,
                 LOCATION_URI_KEY to uri.toString(),
                 OPTIONS_KEY to options.asBooleanArray(),
+                CATEGORY_IDS_KEY to options.includedCategoryIds?.toLongArray(),
             )
             val request = OneTimeWorkRequestBuilder<BackupCreateJob>()
                 .addTag(TAG_MANUAL)
@@ -149,4 +157,5 @@ private const val TAG_MANUAL = "$TAG_AUTO:manual"
 
 private const val IS_AUTO_BACKUP_KEY = "is_auto_backup" // Boolean
 private const val LOCATION_URI_KEY = "location_uri" // String
+private const val CATEGORY_IDS_KEY = "included_category_ids" // LongArray, absent means all
 private const val OPTIONS_KEY = "options" // BooleanArray

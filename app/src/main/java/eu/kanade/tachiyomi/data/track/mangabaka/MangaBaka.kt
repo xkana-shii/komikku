@@ -11,6 +11,8 @@ import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
+import tachiyomi.domain.manga.model.SequelPrequelEntry
+import tachiyomi.domain.manga.model.SequelPrequelRelation
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.injectLazy
 import tachiyomi.domain.track.model.Track as DomainTrack
@@ -65,6 +67,10 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             else -> throw Exception("Unknown score type")
         }
     }
+
+    override fun get10PointScore(track: DomainTrack): Double = track.score / 10.0
+
+    override fun indexToScore(index: Int): Double = getScoreList()[index].toDouble()
 
     override fun displayScore(track: DomainTrack): String = track.score.toInt().toString()
 
@@ -171,6 +177,23 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         }
         return track
     }
+
+    // KMK --> Reuse KNS's cached series resolver, including merged MangaBaka IDs.
+    override suspend fun getRelatedEntries(remoteId: Long): List<SequelPrequelEntry> {
+        val item = api.fetchSeriesData(api.resolveId(remoteId))
+        return item.relationships.orEmpty().distinctBy { it.seriesId }.take(50).map { relation ->
+            val related = api.fetchSeriesData(api.resolveId(relation.seriesId))
+            SequelPrequelEntry(
+                title = related.chooseBestTitle(),
+                url = "https://mangabaka.org/${related.id}",
+                relation = SequelPrequelRelation.from(relation.relationType),
+                trackerId = id,
+                remoteId = related.id,
+                coverUrl = related.cover.raw.url ?: related.cover.x350.x1,
+            )
+        }
+    }
+    // KMK <--
 
     override suspend fun login(username: String, password: String) = login(password)
 

@@ -37,9 +37,9 @@ class AddTracks(
         withIOContext {
             val allChapters = getChaptersByMangaId.await(mangaId)
             val hasReadChapters = allChapters.any { it.read }
-            tracker.bind(item, hasReadChapters)
+            val bound = tracker.bind(item, hasReadChapters)
 
-            var track = item.toDomainTrack(idRequired = false) ?: return@withIOContext
+            var track = bound.toDomainTrack(idRequired = false) ?: return@withIOContext
 
             insertTrack.await(track)
 

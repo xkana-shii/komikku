@@ -91,6 +91,8 @@ interface Tracker {
     // SY <--
 
     // KMK -->
+    suspend fun getRelatedEntries(remoteId: Long): List<tachiyomi.domain.manga.model.SequelPrequelEntry> = emptyList()
+
     fun hasNotStartedReading(status: Long): Boolean
     // KMK <--
 }

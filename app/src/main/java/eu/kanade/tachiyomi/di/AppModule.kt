@@ -190,6 +190,7 @@ class AppModule(val app: Application) : InjektModule {
 
         // AM (CONNECTIONS) -->
         addSingletonFactory { ConnectionsManager() }
+        addSingletonFactory { eu.kanade.tachiyomi.data.webhook.WebhookNotifier() }
         // <-- AM (CONNECTIONS)
 
         // Asynchronously init expensive components for a faster cold start

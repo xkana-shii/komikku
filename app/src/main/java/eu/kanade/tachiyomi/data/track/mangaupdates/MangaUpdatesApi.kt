@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MURecord
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MUSearchResult
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.PUT
 import eu.kanade.tachiyomi.network.await
@@ -23,19 +24,21 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
-import uy.kohesive.injekt.injectLazy
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 class MangaUpdatesApi(
-    interceptor: MangaUpdatesInterceptor,
+    interceptor: Interceptor,
     private val client: OkHttpClient,
+    private val json: Json = Injekt.get(),
 ) {
-    private val json: Json by injectLazy()
 
     private val authClient by lazy {
         client.newBuilder()
@@ -72,11 +75,9 @@ class MangaUpdatesApi(
             ),
         )
             .awaitSuccess()
-            .let {
-                if (it.code == 200) {
-                    track.status = status
-                    track.last_chapter_read = 1.0
-                }
+            .use {
+                track.status = status
+                track.last_chapter_read = 0.0
             }
     }
 
@@ -98,7 +99,7 @@ class MangaUpdatesApi(
                 body = body.toString().toRequestBody(CONTENT_TYPE),
             ),
         )
-            .awaitSuccess()
+            .awaitSuccess().close()
 
         updateSeriesRating(track)
     }
@@ -113,7 +114,7 @@ class MangaUpdatesApi(
                 body = body.toString().toRequestBody(CONTENT_TYPE),
             ),
         )
-            .awaitSuccess()
+            .awaitSuccess().close()
     }
 
     private suspend fun getSeriesRating(track: Track): MURating? {
@@ -123,7 +124,8 @@ class MangaUpdatesApi(
                     .awaitSuccess()
                     .parseAs<MURating>()
             }
-        } catch (e: Exception) {
+        } catch (e: HttpException) {
+            if (e.code != 404) throw e
             null
         }
     }
@@ -140,12 +142,12 @@ class MangaUpdatesApi(
                     body = body.toString().toRequestBody(CONTENT_TYPE),
                 ),
             )
-                .awaitSuccess()
+                .awaitSuccess().close()
         } else {
             authClient.newCall(
                 DELETE(url = "$BASE_URL/v1/series/${track.remote_id}/rating"),
             )
-                .awaitSuccess()
+                .awaitSuccess().close()
         }
     }
 

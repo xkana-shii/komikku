@@ -15,4 +15,9 @@ class DeleteTrack(
             logcat(LogPriority.ERROR, e)
         }
     }
+    // KMK --> Callers reporting per-tracker failures must observe database errors.
+    suspend fun awaitOrThrow(mangaId: Long, trackerId: Long) {
+        trackRepository.delete(mangaId, trackerId)
+    }
+    // KMK <--
 }

@@ -140,6 +140,9 @@ class MangaRestorer(
             // SY <--
             initialized = this.initialized || newer.initialized,
             version = newer.version,
+            lastUpdate = newer.lastUpdate.takeIf { it != 0L } ?: lastUpdate,
+            nextUpdate = newer.nextUpdate.takeIf { it != 0L } ?: nextUpdate,
+            fetchInterval = newer.fetchInterval.takeIf { it != 0 } ?: fetchInterval,
         )
     }
 
@@ -159,8 +162,8 @@ class MangaRestorer(
                 // SY <--
                 favorite = manga.favorite,
                 lastUpdate = manga.lastUpdate,
-                nextUpdate = null,
-                calculateInterval = null,
+                nextUpdate = manga.nextUpdate.takeIf { it != 0L },
+                calculateInterval = manga.fetchInterval.takeIf { it != 0 }?.toLong(),
                 initialized = manga.initialized,
                 viewer = manga.viewerFlags,
                 chapterFlags = manga.chapterFlags,
@@ -326,8 +329,8 @@ class MangaRestorer(
                 // SY <--
                 favorite = manga.favorite,
                 lastUpdate = manga.lastUpdate,
-                nextUpdate = 0L,
-                calculateInterval = 0L,
+                nextUpdate = manga.nextUpdate,
+                calculateInterval = manga.fetchInterval.toLong(),
                 initialized = manga.initialized,
                 viewerFlags = manga.viewerFlags,
                 chapterFlags = manga.chapterFlags,
@@ -361,7 +364,9 @@ class MangaRestorer(
         restoreTracking(manga, tracks)
         restoreHistory(manga, history)
         restoreExcludedScanlators(manga, excludedScanlators)
-        updateManga.awaitUpdateFetchInterval(manga, now, currentFetchWindow)
+        if (manga.nextUpdate == 0L || manga.fetchInterval == 0) {
+            updateManga.awaitUpdateFetchInterval(manga, now, currentFetchWindow)
+        }
         // SY -->
         restoreMergedMangaReferencesForManga(manga.id, mergedMangaReferences)
         flatMetadata?.let { restoreFlatMetadata(manga.id, it) }
@@ -580,28 +585,6 @@ class MangaRestorer(
         setCustomMangaInfo.set(mangaJson)
     }
 
-    private fun BackupManga.getCustomMangaInfo(): CustomMangaInfo? {
-        if (customTitle != null ||
-            customArtist != null ||
-            customAuthor != null ||
-            customThumbnailUrl != null ||
-            customDescription != null ||
-            customGenre != null ||
-            customStatus != 0
-        ) {
-            return CustomMangaInfo(
-                id = 0L,
-                title = customTitle,
-                author = customAuthor,
-                artist = customArtist,
-                thumbnailUrl = customThumbnailUrl,
-                description = customDescription,
-                genre = customGenre,
-                status = customStatus.takeUnless { it == 0 }?.toLong(),
-            )
-        }
-        return null
-    }
     // SY <--
 
     private fun Track.forComparison() = this.copy(id = 0L, mangaId = 0L)

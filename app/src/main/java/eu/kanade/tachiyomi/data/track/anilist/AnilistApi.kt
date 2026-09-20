@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.track.anilist
 import android.net.Uri
 import androidx.core.net.toUri
 import eu.kanade.tachiyomi.data.database.models.Track
+import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALAddMangaResult
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALCurrentUserResult
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALError
@@ -11,6 +12,7 @@ import eu.kanade.tachiyomi.data.track.anilist.dto.ALMangaMetadata
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALOAuth
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALSearchResult
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALUserListMangaQueryResult
+import eu.kanade.tachiyomi.data.track.anilist.dto.toAutofillMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.POST
@@ -18,11 +20,15 @@ import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.network.interceptor.rateLimit
 import eu.kanade.tachiyomi.network.jsonMime
 import eu.kanade.tachiyomi.network.parseAs
-import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import okhttp3.Call
@@ -30,6 +36,8 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.manga.model.SequelPrequelEntry
+import tachiyomi.domain.manga.model.SequelPrequelRelation
 import uy.kohesive.injekt.injectLazy
 import java.time.Instant
 import java.time.ZoneId
@@ -397,6 +405,9 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                         |large
                     |}
                     |description
+                    |status
+                    |genres
+                    |tags { name }
                     |staff {
                         |edges {
                             |role
@@ -433,22 +444,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                     .parseAs<ALMangaMetadata>()
                     .let { metadata ->
                         val media = metadata.data.media
-                        TrackMangaMetadata(
-                            remoteId = media.id,
-                            title = media.title.userPreferred,
-                            thumbnailUrl = media.coverImage.large,
-                            description = media.description?.htmlDecode()?.ifEmpty { null },
-                            authors = media.staff.edges
-                                .filter { "Story" in it.role }
-                                .mapNotNull { it.node.name() }
-                                .joinToString(", ")
-                                .ifEmpty { null },
-                            artists = media.staff.edges
-                                .filter { "Art" in it.role }
-                                .mapNotNull { it.node.name() }
-                                .joinToString(", ")
-                                .ifEmpty { null },
-                        )
+                        media.toAutofillMetadata()
                     }
             }
         }
@@ -471,6 +467,9 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                     |status
                     |chapters
                     |description
+                    |status
+                    |genres
+                    |tags { name }
                     |startDate {
                         |year
                         |month
@@ -505,6 +504,37 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
         }
     }
     // SY <--
+
+    // KMK --> Only public relation metadata; existing AniList API/error handling.
+    suspend fun getRelatedEntries(mediaId: Long): List<SequelPrequelEntry> = withIOContext {
+        val payload = buildJsonObject {
+            put("query", "query { Media(id: $mediaId, type: MANGA) { relations { edges { relationType(version: 2) node { id type title { userPreferred romaji english } siteUrl coverImage { large } } } } } }")
+        }
+        val result = with(json) {
+            client.newCall(POST(API_URL, body = payload.toString().toRequestBody(jsonMime)))
+                .awaitALSuccess().parseAs<JsonObject>()
+        }
+        ((result["data"] as? JsonObject)?.get("Media") as? JsonObject)?.get("relations")?.let { it as? JsonObject }
+            ?.get("edges")?.jsonArray.orEmpty().mapNotNull { element ->
+                val edge = element.jsonObject
+                val node = edge["node"] as? JsonObject ?: return@mapNotNull null
+                if (node["type"]?.jsonPrimitive?.contentOrNull != "MANGA") return@mapNotNull null
+                val remoteId = node["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
+                val titles = node["title"] as? JsonObject ?: return@mapNotNull null
+                val title = listOf("userPreferred", "english", "romaji").firstNotNullOfOrNull {
+                    titles[it]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+                } ?: return@mapNotNull null
+                SequelPrequelEntry(
+                    title = title,
+                    url = node["siteUrl"]?.jsonPrimitive?.contentOrNull ?: mangaUrl(remoteId),
+                    relation = SequelPrequelRelation.from(edge["relationType"]?.jsonPrimitive?.contentOrNull.orEmpty()),
+                    trackerId = TrackerManager.ANILIST,
+                    remoteId = remoteId,
+                    coverUrl = (node["coverImage"] as? JsonObject)?.get("large")?.jsonPrimitive?.contentOrNull,
+                )
+            }
+    }
+    // KMK <--
 
     private fun createDate(dateValue: Long): JsonObject {
         if (dateValue == 0L) {

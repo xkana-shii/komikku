@@ -82,6 +82,7 @@ class PreferenceModule(val app: Application) : InjektModule {
         }
         // AM (CONNECTIONS) -->
         addSingletonFactory { ConnectionsPreferences(get()) }
+        addSingletonFactory { eu.kanade.domain.connections.service.WebhookPreferences(get()) }
         // <-- AM (CONNECTIONS)
 
         addSingletonFactory {

@@ -59,6 +59,8 @@ class CustomMangaRepositoryImpl(context: Context) : CustomMangaRepository {
         if (jsonElements.isNotEmpty()) {
             editJson.delete()
             editJson.writeText(Json.encodeToString(MangaList(jsonElements)))
+        } else {
+            editJson.delete()
         }
     }
 

@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
 import tachiyomi.data.MemoColumnAdapter
+import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 
 @Suppress("DEPRECATION")
@@ -46,6 +47,11 @@ class BackupManga(
     @ProtoNumber(110) var notes: String = "",
     @ProtoNumber(111) var initialized: Boolean = false,
     @ProtoNumber(112) var memo: ByteArray = JsonObjectEmptyBytes,
+    // KMK --> Scheduling state, compatible with Mihon/Houri backups.
+    @ProtoNumber(113) var lastUpdate: Long = 0,
+    @ProtoNumber(114) var nextUpdate: Long = 0,
+    @ProtoNumber(115) var fetchInterval: Int = 0,
+    // KMK <--
 
     // SY specific values
     @ProtoNumber(600) var mergedMangaReferences: List<BackupMergedMangaReference> = emptyList(),
@@ -60,8 +66,33 @@ class BackupManga(
     // skipping 803 due to using duplicate value in previous builds
     @ProtoNumber(804) var customDescription: String? = null,
     @ProtoNumber(805) var customGenre: List<String>? = null,
+    // KMK --> Protobuf repeated fields cannot distinguish an empty override from absence.
+    @ProtoNumber(806) var customGenreSet: Boolean = false,
+    // KMK <--
 
 ) {
+    fun getCustomMangaInfo(): CustomMangaInfo? {
+        if (customTitle != null ||
+            customArtist != null ||
+            customAuthor != null ||
+            customThumbnailUrl != null ||
+            customDescription != null ||
+            customGenre != null || customGenreSet ||
+            customStatus != 0
+        ) {
+            return CustomMangaInfo(
+                id = 0L,
+                title = customTitle,
+                author = customAuthor,
+                artist = customArtist,
+                thumbnailUrl = customThumbnailUrl,
+                description = customDescription,
+                genre = customGenre ?: emptyList<String>().takeIf { customGenreSet },
+                status = customStatus.takeUnless { it == 0 }?.toLong(),
+            )
+        }
+        return null
+    }
     fun getMangaImpl(): Manga {
         return Manga.create().copy(
             url = this@BackupManga.url,
@@ -86,6 +117,9 @@ class BackupManga(
             notes = this@BackupManga.notes,
             initialized = this@BackupManga.initialized,
             memo = MemoColumnAdapter.decode(this@BackupManga.memo),
+            lastUpdate = this@BackupManga.lastUpdate,
+            nextUpdate = this@BackupManga.nextUpdate,
+            fetchInterval = this@BackupManga.fetchInterval,
         )
     }
 }

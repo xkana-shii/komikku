@@ -83,6 +83,7 @@ import eu.kanade.presentation.manga.components.PagePreviewItems
 import eu.kanade.presentation.manga.components.PagePreviews
 import eu.kanade.presentation.manga.components.RelatedMangasRow
 import eu.kanade.presentation.manga.components.SearchMetadataChips
+import eu.kanade.presentation.manga.components.SequelPrequelRow
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
@@ -781,6 +782,10 @@ private fun MangaScreenSmallImpl(
                     }
                     // SY <--
 
+                    // KMK -->
+                    item(key = "sequel-prequel") { SequelPrequelRow(state.manga) }
+                    // KMK <--
+
                     item(
                         key = MangaScreenItem.CHAPTER_HEADER,
                         contentType = MangaScreenItem.CHAPTER_HEADER,
@@ -1164,6 +1169,9 @@ private fun MangaScreenLargeImpl(
                             )
                         }
                         // SY <--
+                        // KMK -->
+                        SequelPrequelRow(state.manga)
+                        // KMK <--
                     }
                 },
                 endContent = {

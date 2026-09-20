@@ -2,6 +2,7 @@
 
 package eu.kanade.tachiyomi.ui.browse.feed
 
+import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
@@ -10,12 +11,15 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.browse.FeedItemUI
+import eu.kanade.presentation.util.formattedMessage
+import eu.kanade.tachiyomi.network.FreshNetworkRequests
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -25,17 +29,15 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import mihon.domain.manga.model.toDomainManga
-import tachiyomi.core.common.util.QuerySanitizer.sanitize
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
-import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.source.interactor.CountFeedSavedSearchGlobal
@@ -48,9 +50,9 @@ import tachiyomi.domain.source.interactor.ReorderFeed
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.i18n.kmk.KMR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import xyz.nulldev.ts.api.http.serializer.FilterSerializer
 import java.util.concurrent.Executors
 import tachiyomi.domain.manga.model.Manga as DomainManga
 
@@ -70,30 +72,34 @@ open class FeedScreenModel(
     private val deleteFeedSavedSearchById: DeleteFeedSavedSearchById = Injekt.get(),
     // KMK -->
     private val reorderFeed: ReorderFeed = Injekt.get(),
+    private val coroutineDispatcher: CoroutineDispatcher = Executors.newFixedThreadPool(1).asCoroutineDispatcher(),
+    private val formatError: (Throwable) -> String = { with(Injekt.get<Application>()) { if (it is FeedSearch.InvalidSavedSearch) stringResource(KMR.strings.feed_saved_search_invalid) else it.formattedMessage } },
     // KMK <--
 ) : StateScreenModel<FeedScreenState>(FeedScreenState()) {
 
     private val _events = Channel<Event>(Int.MAX_VALUE)
     val events = _events.receiveAsFlow()
 
-    private val coroutineDispatcher = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
     var pushed: Boolean = false
 
     init {
         getFeedSavedSearchGlobal.subscribe()
             .distinctUntilChanged()
-            .onEach {
+            .transformLatest { configured ->
+                // Invalidate the previous configuration before awaiting its replacement metadata.
+                mutableState.update { state -> state.copy(items = state.items?.map { it.copy(request = FeedRequest(), loading = true) }?.toImmutableList()) }
                 sourceManager.isInitialized.first { it }
-                val items = getSourcesToGetFeed(it).map { (feed, savedSearch) ->
+                val items = getSourcesToGetFeed(configured).map { (feed, savedSearch) ->
                     createCatalogueSearchItem(
                         feed = feed,
                         savedSearch = savedSearch,
                         source = sourceManager.get(feed.source),
-                        results = null,
+                        results = state.value.items?.find { it.feed == feed && it.savedSearch == savedSearch }?.results,
                     )
                 }
                 mutableState.update { state ->
                     state.copy(
+                        refreshing = false,
                         items = items
                             // KMK -->
                             .toImmutableList(),
@@ -101,6 +107,7 @@ open class FeedScreenModel(
                     )
                 }
                 getFeed(items)
+                emit(Unit)
             }
             .catch { _events.send(Event.FailedFetchingSources) }
             .launchIn(screenModelScope)
@@ -108,18 +115,13 @@ open class FeedScreenModel(
 
     fun init() {
         pushed = false
-        screenModelScope.launchIO {
-            val newItems = state.value.items?.map { it.copy(results = null) } ?: return@launchIO
-            mutableState.update { state ->
-                state.copy(
-                    items = newItems
-                        // KMK -->
-                        .toImmutableList(),
-                    // KMK <--
-                )
-            }
-            getFeed(newItems)
-        }
+        if (!state.value.isLoadingItems) refreshAll()
+    }
+
+    fun refreshAll() {
+        val items = state.value.items?.takeIf { it.isNotEmpty() } ?: return
+        mutableState.update { it.copy(refreshing = true) }
+        getFeed(items, forceRefresh = true)
     }
 
     fun openAddDialog() {
@@ -268,80 +270,79 @@ open class FeedScreenModel(
     /**
      * Initiates get manga per feed.
      */
-    private fun getFeed(feedSavedSearch: List<FeedItemUI>) {
+    private fun getFeed(feedSavedSearch: List<FeedItemUI>, forceRefresh: Boolean = false) {
+        // Publish ownership before scheduling work, including refreshes while a row is loading.
+        val requests = feedSavedSearch.map { it.copy(loading = true, error = null, request = FeedRequest()) }
+        val byId = requests.associateBy { it.feed.id }
+        mutableState.update { state -> state.copy(items = state.items?.map { byId[it.feed.id] ?: it }?.toImmutableList()) }
         screenModelScope.launch {
-            feedSavedSearch.map { itemUI ->
+            requests.map { itemUI ->
                 async {
-                    val page = try {
-                        if (itemUI.source != null) {
-                            withContext(coroutineDispatcher) {
-                                if (itemUI.savedSearch == null) {
-                                    // KMK -->
-                                    if (itemUI.source.supportsLatest) {
-                                        // KMK <--
-                                        itemUI.source.getLatestUpdates(1)
-                                        // KMK -->
-                                    } else {
-                                        itemUI.source.getPopularManga(1)
-                                    }
-                                    // KMK <--
-                                } else {
-                                    itemUI.source.getSearchManga(
-                                        1,
-                                        itemUI.savedSearch.query?.sanitize().orEmpty(),
-                                        getFilterList(itemUI.savedSearch, itemUI.source),
-                                    )
-                                }
-                            }.mangas
-                        } else {
-                            emptyList()
+                    val result = feedRequest(
+                        onError = { e -> itemUI.copy(loading = false, error = formatError(e)) },
+                    ) {
+                        sourceManager.isInitialized.first { it }
+                        val requestSource = sourceManager.get(itemUI.feed.source)
+                            ?: throw tachiyomi.domain.source.model.SourceNotInstalledException()
+                        val savedSearch = itemUI.feed.savedSearch?.let { id ->
+                            getSavedSearchGlobalFeed.await().find { it.id == id && it.source == itemUI.feed.source }
+                                ?: throw FeedSearch.InvalidSavedSearch()
                         }
-                    } catch (_: Exception) {
-                        emptyList()
-                    }
-
-                    val result = withIOContext {
-                        itemUI.copy(
-                            results = page
-                                .map { it.toDomainManga(itemUI.source!!.id) }
-                                .distinctBy { it.url }
-                                .let { networkToLocalManga(it) }
+                        val page = withContext(coroutineDispatcher + FreshNetworkRequests.context(forceRefresh)) {
+                            if (savedSearch == null) {
                                 // KMK -->
-                                .filter { !hideInLibraryFeedItems.get() || !it.favorite },
-                            // KMK <--
-                        )
-                    }
+                                if (requestSource.supportsLatest) {
+                                    // KMK <--
+                                    requestSource.getLatestUpdates(1)
+                                    // KMK -->
+                                } else {
+                                    requestSource.getPopularManga(1)
+                                }
+                                // KMK <--
+                            } else {
+                                FeedSearch.fetch(requestSource, savedSearch)
+                            }
+                        }.mangas
+
+                        // Obsolete responses must not update card subscriptions through the database either.
+                        if (state.value.items?.none { it.feed.id == itemUI.feed.id && it.request === itemUI.request } != false) return@feedRequest null
+                        withContext(coroutineDispatcher) {
+                            if (state.value.items?.none { it.feed.id == itemUI.feed.id && it.request === itemUI.request } != false) return@withContext null
+                            itemUI.copy(
+                                source = requestSource,
+                                savedSearch = savedSearch,
+                                loading = false,
+                                error = null,
+                                results = page
+                                    .map { it.toDomainManga(requestSource.id) }
+                                    .distinctBy { it.url }
+                                    .let { networkToLocalManga(it) }
+                                    // KMK -->
+                                    .filter { !hideInLibraryFeedItems.get() || !it.favorite },
+                                // KMK <--
+                            )
+                        }
+                    } ?: return@async
 
                     mutableState.update { state ->
-                        state.copy(
-                            items = state.items?.map { if (it.feed.id == result.feed.id) result else it }
-                                // KMK -->
-                                ?.toImmutableList(),
-                            // KMK <--
-                        )
+                        val items = state.items?.map { if (it.feed.id == itemUI.feed.id && it.request === itemUI.request) result else it }?.toImmutableList()
+                        state.copy(items = items, refreshing = state.refreshing && items?.any { it.loading } == true)
                     }
                 }
             }.awaitAll()
         }
     }
 
-    private val filterSerializer = FilterSerializer()
-
-    private fun getFilterList(savedSearch: SavedSearch, source: Source): FilterList {
-        val filters = savedSearch.filtersJson ?: return FilterList()
-        return runCatching {
-            val originalFilters = source.getFilterList()
-            filterSerializer.deserialize(
-                filters = originalFilters,
-                json = Json.decodeFromString(filters),
-            )
-            originalFilters
-        }.getOrElse { FilterList() }
+    fun retry(item: FeedItemUI) {
+        val current = state.value.items?.find { it.feed.id == item.feed.id } ?: return
+        if (current.loading) return
+        getFeed(listOf(current), forceRefresh = true)
     }
 
     @Composable
     fun getManga(initialManga: DomainManga): State<DomainManga> {
-        return produceState(initialValue = initialManga) {
+        return produceState(initialValue = initialManga, key1 = initialManga) {
+            value = initialManga
             getManga.subscribe(initialManga.url, initialManga.source)
                 .collectLatest { manga ->
                     if (manga == null) return@collectLatest
@@ -351,7 +352,7 @@ open class FeedScreenModel(
     }
     override fun onDispose() {
         super.onDispose()
-        coroutineDispatcher.close()
+        (coroutineDispatcher as? ExecutorCoroutineDispatcher)?.close()
     }
 
     // KMK -->
@@ -389,6 +390,7 @@ open class FeedScreenModel(
 data class FeedScreenState(
     val dialog: FeedScreenModel.Dialog? = null,
     val items: ImmutableList<FeedItemUI>? = null,
+    val refreshing: Boolean = false,
 ) {
     val isLoading
         get() = items == null
@@ -397,7 +399,7 @@ data class FeedScreenState(
         get() = items.isNullOrEmpty()
 
     val isLoadingItems
-        get() = items?.fastAny { it.results == null } != false
+        get() = items?.fastAny { it.loading } != false
 }
 
 const val MaxFeedItems = 20

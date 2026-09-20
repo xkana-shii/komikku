@@ -1,5 +1,6 @@
 package mihon.domain.migration.usecases
 
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.source.service.SourcePreferences
@@ -7,6 +8,7 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import kotlinx.coroutines.CancellationException
 import mihon.domain.migration.models.MigrationFlag
 import mihon.domain.source.interactor.UpdateMangaFromRemote
@@ -23,6 +25,8 @@ import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.time.Instant
 
 class MigrateMangaUseCase(
@@ -189,7 +193,9 @@ class MigrateMangaUseCase(
                 notes = if (MigrationFlag.NOTES in flags) current.notes else null,
             )
 
-            updateManga.awaitAll(listOfNotNull(currentMangaUpdate, targetMangaUpdate))
+            if (updateManga.awaitAll(listOfNotNull(currentMangaUpdate, targetMangaUpdate))) {
+                Injekt.get<WebhookNotifier>().notify(WebhookEvent.MANGA_MIGRATED, current)
+            }
         } catch (e: Throwable) {
             if (e is CancellationException) {
                 throw e

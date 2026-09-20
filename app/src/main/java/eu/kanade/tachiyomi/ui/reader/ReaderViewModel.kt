@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.domain.chapter.model.toDbChapter
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
 import eu.kanade.domain.manga.model.readerOrientation
 import eu.kanade.domain.manga.model.readingMode
@@ -35,6 +36,7 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
 import eu.kanade.tachiyomi.data.track.mangabaka.MangaBaka
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
@@ -202,6 +204,8 @@ class ReaderViewModel @JvmOverloads constructor(
      * The time the chapter was started reading
      */
     private var chapterReadStartTime: Long? = null
+    private val webhookOpenedChapters = mutableSetOf<Long>()
+    private var webhookMangaStarted = false
 
     private var chapterToDownload: Download? = null
 
@@ -972,6 +976,22 @@ class ReaderViewModel @JvmOverloads constructor(
         chapterPageIndex = pageIndex
 
         if (!incognitoMode && page.status !is Page.State.Error) {
+            try {
+                manga?.let { currentManga ->
+                    val id = readerChapter.chapter.id!!
+                    if (webhookOpenedChapters.add(id)) {
+                        Injekt.get<WebhookNotifier>().notify(WebhookEvent.CHAPTER_STARTED, currentManga, mapOf("chapter" to readerChapter.chapter.name))
+                        if (!webhookMangaStarted && getUnfilteredChapterList().none { it.read }) {
+                            webhookMangaStarted = true
+                            Injekt.get<WebhookNotifier>().notify(WebhookEvent.NEW_MANGA_STARTED, currentManga)
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN, e) { "Unable to prepare reader webhook" }
+            }
             readerChapter.chapter.last_page_read = pageIndex
 
             if (readerChapter.pages?.lastIndex == pageIndex ||
@@ -1007,7 +1027,26 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     private suspend fun updateChapterProgressOnComplete(readerChapter: ReaderChapter) {
+        val firstCompletion = !readerChapter.chapter.read
         readerChapter.chapter.read = true
+        try {
+            if (firstCompletion && !incognitoMode) {
+                manga?.let { currentManga ->
+                    val notifier = Injekt.get<WebhookNotifier>()
+                    notifier.notify(WebhookEvent.CHAPTER_READ, currentManga, mapOf("chapter" to readerChapter.chapter.name))
+                    val chapters = getUnfilteredChapterList()
+                    val liveRead = chapterList.associate { it.chapter.id to it.chapter.read }
+                    if (chapters.isNotEmpty() && chapters.all { (liveRead[it.id] ?: it.read) || it.id == readerChapter.chapter.id }) {
+                        notifier.notify(WebhookEvent.MANGA_CAUGHT_UP, currentManga)
+                        if (currentManga.status in listOf(2L, 4L, 61L)) notifier.notify(WebhookEvent.MANGA_FINISHED, currentManga)
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN, e) { "Unable to prepare reader webhook" }
+        }
         // SY -->
         if (manga?.isEhBasedManga() == true) {
             viewModelScope.launchNonCancellable {

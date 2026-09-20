@@ -11,9 +11,11 @@ import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.tachiyomi.data.BackupRestoreStatus
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isRunning
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
@@ -56,6 +58,7 @@ class BackupRestoreJob(private val context: Context, workerParams: WorkerParamet
         return withIOContext {
             try {
                 BackupRestorer(context, notifier, isSync).restore(uri, options)
+                if (!isSync) Injekt.get<WebhookNotifier>().notify(WebhookEvent.BACKUP_RESTORED)
                 Result.success()
             } catch (e: Exception) {
                 if (e is CancellationException) {

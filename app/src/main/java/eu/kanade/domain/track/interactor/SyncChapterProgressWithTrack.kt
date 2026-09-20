@@ -1,8 +1,10 @@
 package eu.kanade.domain.track.interactor
 
 import eu.kanade.domain.track.model.toDbTrack
+import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
+import kotlinx.coroutines.CancellationException
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -24,12 +26,13 @@ class SyncChapterProgressWithTrack(
         mangaId: Long,
         remoteTrack: Track,
         tracker: Tracker,
+        propagateErrors: Boolean = false,
     ): Int? {
         if (tracker !is EnhancedTracker) {
             return null
         }
         // KMK -->
-        return sync(mangaId, remoteTrack, tracker)
+        return sync(mangaId, remoteTrack, tracker, propagateErrors)
     }
 
     /**
@@ -39,6 +42,7 @@ class SyncChapterProgressWithTrack(
         mangaId: Long,
         remoteTrack: Track,
         tracker: Tracker,
+        propagateErrors: Boolean = false,
     ): Int? {
         // KMK <--
         // Current chapters in database, sort by source's order because database's order is a mess
@@ -80,9 +84,9 @@ class SyncChapterProgressWithTrack(
         try {
             // Update Tracker to localLastRead if needed
             if (lastRead > remoteTrack.lastChapterRead) {
-                tracker.update(updatedTrack.toDbTrack())
+                val returnedTrack = tracker.update(updatedTrack.toDbTrack()).toDomainTrack()!!
                 // update Track in database
-                insertTrack.await(updatedTrack)
+                insertTrack.await(returnedTrack)
             }
             // KMK -->
             // Always update local chapters following Tracker even past chapters
@@ -93,7 +97,10 @@ class SyncChapterProgressWithTrack(
                 return lastRead.toInt()
             }
             // KMK <--
-        } catch (e: Throwable) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (propagateErrors) throw e
             logcat(LogPriority.WARN, e)
         }
         // KMK -->

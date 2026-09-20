@@ -39,6 +39,7 @@ import eu.kanade.domain.DomainModule
 import eu.kanade.domain.KMKDomainModule
 import eu.kanade.domain.SYDomainModule
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
@@ -56,6 +57,7 @@ import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.di.AppModule
 import eu.kanade.tachiyomi.di.PreferenceModule
 import eu.kanade.tachiyomi.di.SYPreferenceModule
@@ -229,6 +231,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             migrations = migrations,
             onMigrationComplete = {
                 logcat { "Updating last version to ${BuildConfig.VERSION_CODE}" }
+                if (preference.get() > 0 && preference.get() != BuildConfig.VERSION_CODE) {
+                    Injekt.get<WebhookNotifier>().notify(WebhookEvent.APP_UPDATED, data = mapOf("version" to BuildConfig.VERSION_NAME))
+                }
                 preference.set(BuildConfig.VERSION_CODE)
             },
         )

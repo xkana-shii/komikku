@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.backup.create
 import android.content.Context
 import android.net.Uri
 import com.hippo.unifile.UniFile
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.backup.BackupFileValidator
 import eu.kanade.tachiyomi.data.backup.create.creators.CategoriesBackupCreator
@@ -21,6 +22,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import okio.buffer
@@ -30,9 +32,11 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.backup.service.BackupPreferences
+import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.interactor.GetMergedManga
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.repository.MangaMergeRepository
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
@@ -61,6 +65,8 @@ class BackupCreator(
     private val sourceManager: SourceManager = Injekt.get(),
     // KMK -->
     private val feedBackupCreator: FeedBackupCreator = FeedBackupCreator(),
+    private val getCategories: GetCategories = Injekt.get(),
+    private val mangaMergeRepository: MangaMergeRepository = Injekt.get(),
     // KMK <--
     // SY -->
     private val savedSearchBackupCreator: SavedSearchBackupCreator = SavedSearchBackupCreator(),
@@ -92,12 +98,7 @@ class BackupCreator(
                 throw IllegalStateException(context.stringResource(MR.strings.create_backup_file_error))
             }
 
-            val nonFavoriteManga = if (options.readEntries) mangaRepository.getReadMangaNotInLibrary() else emptyList()
-            // SY -->
-            val mergedManga = getMergedManga.await()
-            // SY <--
-            val backupManga =
-                backupMangas(getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */, options)
+            val backupManga = backupMangas(selectManga(options), options)
 
             // Compute source preferences first so we can include those sources in backupSources
             val sourcePrefs = backupSourcePreferences(options)
@@ -158,6 +159,7 @@ class BackupCreator(
                 backupPreferences.lastAutoBackupTimestamp().set(Instant.now().toEpochMilli())
             }
 
+            Injekt.get<WebhookNotifier>().notify(WebhookEvent.BACKUP_CREATED)
             fileUri.toString()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
@@ -166,10 +168,34 @@ class BackupCreator(
         }
     }
 
+    // KMK --> Category selection only affects manual library content.
+    internal suspend fun selectManga(options: BackupOptions): List<Manga> {
+        val nonFavoriteManga = if (options.readEntries && options.includedCategoryIds == null) mangaRepository.getReadMangaNotInLibrary() else emptyList()
+        // SY -->
+        val selectedIds = options.includedCategoryIds
+        val favorites = getFavorites.await().filter { manga ->
+            selectedIds == null || options.includesManga(getCategories.await(manga.id).map { it.id })
+        }
+        val mergedManga = if (selectedIds == null) {
+            getMergedManga.await()
+        } else {
+            // Retain dependencies of selected merged entries, even outside selected categories.
+            favorites.filter { it.source == exh.source.MERGED_SOURCE_ID }
+                .flatMap { mangaMergeRepository.getMergedMangaById(it.id) }
+        }
+        // SY <--
+        val selectedMangaIds = favorites.map { it.id }.toSet()
+        val dependencies = mergedManga.map {
+            if (selectedIds != null && it.id !in selectedMangaIds) it.copy(favorite = false) else it
+        }
+        return (favorites + nonFavoriteManga + dependencies).distinctBy { it.id }
+    }
+    // KMK <--
+
     suspend fun backupCategories(options: BackupOptions): List<BackupCategory> {
         if (!options.categories) return emptyList()
 
-        return categoriesBackupCreator()
+        return categoriesBackupCreator().filter { options.includedCategoryIds == null || it.id in options.includedCategoryIds }
     }
 
     suspend fun backupMangas(mangas: List<Manga>, options: BackupOptions): List<BackupManga> {

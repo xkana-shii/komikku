@@ -58,6 +58,8 @@ import kotlin.random.Random
                     maxSize = 5L * 1024 * 1024, // 5 MiB
                 ),
             )
+            .eventListenerFactory(FreshNetworkRequests)
+            .addInterceptor(FreshNetworkRequests)
             .addInterceptor(UncaughtExceptionInterceptor())
             .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
 

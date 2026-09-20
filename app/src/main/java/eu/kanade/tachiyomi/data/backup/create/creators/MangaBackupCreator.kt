@@ -94,6 +94,7 @@ class MangaBackupCreator(
         if (options.categories) {
             // Backup categories for this manga
             val categoriesForManga = getCategories.await(manga.id)
+                .filter { options.includedCategoryIds == null || it.id in options.includedCategoryIds }
             if (categoriesForManga.isNotEmpty()) {
                 mangaObject.categories = categoriesForManga.map { it.order }
             }
@@ -123,7 +124,7 @@ class MangaBackupCreator(
     }
 }
 
-private fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/* SY <-- */) =
+internal fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/* SY <-- */) =
     BackupManga(
         url = this.url,
         // SY -->
@@ -148,6 +149,9 @@ private fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/* 
         notes = this.notes,
         initialized = this.initialized,
         memo = MemoColumnAdapter.encode(this.memo),
+        lastUpdate = this.lastUpdate,
+        nextUpdate = this.nextUpdate,
+        fetchInterval = this.fetchInterval,
         // SY -->
     ).also { backupManga ->
         customMangaInfo?.let {
@@ -157,6 +161,7 @@ private fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/* 
             backupManga.customThumbnailUrl = it.thumbnailUrl
             backupManga.customDescription = it.description
             backupManga.customGenre = it.genre
+            backupManga.customGenreSet = it.genre != null
             backupManga.customStatus = it.status?.toInt() ?: 0
         }
     }

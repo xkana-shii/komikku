@@ -11,6 +11,8 @@ import eu.kanade.tachiyomi.extension.api.ExtensionUpdateNotifier
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
 import eu.kanade.tachiyomi.extension.model.LoadResult
+import eu.kanade.tachiyomi.extension.model.findMatchingExtension
+import eu.kanade.tachiyomi.extension.model.hasUpdateFrom
 import eu.kanade.tachiyomi.extension.util.ExtensionInstallReceiver
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
@@ -21,6 +23,7 @@ import exh.source.EHENTAI_EXT_SOURCES
 import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.ExhPreferences
 import exh.source.MERGED_SOURCE_ID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
@@ -28,10 +31,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import logcat.LogPriority
+import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.source.model.StubSource
@@ -72,6 +80,9 @@ class ExtensionManager(
 
     private val installedExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Installed>())
     val installedExtensionsFlow = installedExtensionMapFlow.mapExtensions(scope)
+    // KMK --> Source registration must not consume the lazy UI flow's empty startup seed.
+    internal val initializedInstalledExtensionsFlow = installedExtensionMapFlow.afterInitialization(isInitialized)
+    // KMK <--
 
     private val availableExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Available>())
 
@@ -84,7 +95,15 @@ class ExtensionManager(
     val untrustedExtensionsFlow = untrustedExtensionMapFlow.mapExtensions(scope)
 
     init {
-        initExtensions()
+        scope.launchIO {
+            try {
+                initExtensions()
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e)
+            } finally {
+                _isInitialized.value = true
+            }
+        }
         ExtensionInstallReceiver(InstallationListener()).register(context)
     }
 
@@ -187,6 +206,7 @@ class ExtensionManager(
      * Finds the available extensions in the [api] and updates [availableExtensionMapFlow].
      */
     suspend fun findAvailableExtensions() {
+        isInitialized.first { it }
         val extensions: List<Extension.Available> = try {
             api.findExtensions()
         } catch (e: Exception) {
@@ -246,12 +266,7 @@ class ExtensionManager(
         val installedExtensionsMap = installedExtensionMapFlow.value.toMutableMap()
         var changed = false
         for ((pkgName, extension) in installedExtensionsMap) {
-            val availableExt = availableExtensions.find {
-                // KMK -->
-                it.signatureHash == extension.signatureHash &&
-                    // KMK <--
-                    it.pkgName == pkgName
-            }
+            val availableExt = availableExtensions.findMatchingExtension(extension, allowSignatureFallback = true)
 
             if (availableExt == null &&
                 (!extension.isObsolete || /* KMK --> */ extension.hasUpdate /* KMK <-- */)
@@ -278,7 +293,7 @@ class ExtensionManager(
                     hasUpdate = hasUpdate,
                     store = availableExt.store,
                     isObsolete = false,
-                    storeName = extension.storeName ?: availableExt.storeName,
+                    storeName = availableExt.storeName,
                 )
                 // KMK <--
                 changed = true
@@ -360,11 +375,22 @@ class ExtensionManager(
 
         trustExtension.trust(extension.pkgName, extension.versionCode, extension.signatureHash)
 
-        untrustedExtensionMapFlow.value -= extension.pkgName
-
-        ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)
-            .let { it as? LoadResult.Success }
-            ?.let { registerNewExtension(it.extension) }
+        try {
+            when (val result = withIOContext { ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName) }) {
+                is LoadResult.Success -> {
+                    registerNewExtension(result.extension.withUpdateCheck())
+                    untrustedExtensionMapFlow.value -= extension.pkgName
+                }
+                is LoadResult.Untrusted -> untrustedExtensionMapFlow.value += result.extension
+                LoadResult.Error -> withUIContext { context.toast(MR.strings.extension_api_error) }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            withUIContext { context.toast(e.message) }
+        }
+        updatePendingUpdatesCount()
     }
 
     /**
@@ -443,19 +469,21 @@ class ExtensionManager(
      * Extension method to set the update field of an installed extension.
      */
     private fun Extension.Installed.withUpdateCheck(): Extension.Installed {
-        return if (updateExists()) {
-            copy(hasUpdate = true)
-        } else {
-            this
-        }
+        val available = availableExtensionMapFlow.value.values.findMatchingExtension(this, allowSignatureFallback = true)
+        return copy(
+            hasUpdate = available?.let(::hasUpdateFrom) == true,
+            isObsolete = availableExtensionMapFlow.value.isNotEmpty() && available == null,
+            store = available?.store ?: store,
+            storeName = available?.storeName ?: storeName,
+        )
     }
 
     private fun Extension.Installed.updateExists(availableExtension: Extension.Available? = null): Boolean {
         val availableExt = availableExtension
-            ?: availableExtensionMapFlow.value[pkgName]
+            ?: availableExtensionMapFlow.value.values.findMatchingExtension(this)
             ?: return false
 
-        return (availableExt.versionCode > versionCode || availableExt.libVersion > libVersion)
+        return hasUpdateFrom(availableExt)
     }
 
     private fun updatePendingUpdatesCount() {
@@ -472,3 +500,10 @@ class ExtensionManager(
         return map { it.values.toList() }.stateIn(scope, SharingStarted.Lazily, value.values.toList())
     }
 }
+
+// KMK --> Subscribe to the authoritative map only after extension loading has completed.
+internal fun <T> StateFlow<Map<String, T>>.afterInitialization(initialized: StateFlow<Boolean>): Flow<List<T>> = flow {
+    initialized.first { it }
+    emitAll(map { it.values.toList() })
+}
+// KMK <--

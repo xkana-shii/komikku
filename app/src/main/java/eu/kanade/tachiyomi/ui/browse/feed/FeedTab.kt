@@ -19,6 +19,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.presentation.browse.FeedActions
 import eu.kanade.presentation.browse.FeedAddDialog
 import eu.kanade.presentation.browse.FeedAddSearchDialog
 import eu.kanade.presentation.browse.FeedOrderScreen
@@ -134,6 +135,7 @@ fun Screen.feedTab(
                 } else {
                     // KMK <--
                     FeedScreen(
+                        actions = feedActions(screenModel),
                         state = state,
                         contentPadding = contentPadding,
                         onClickSavedSearch = { savedSearch, source ->
@@ -183,7 +185,6 @@ fun Screen.feedTab(
                         },
                         selection = bulkFavoriteState.selection,
                         // KMK <--
-                        onRefresh = screenModel::init,
                         getMangaState = { manga -> screenModel.getManga(initialManga = manga) },
                     )
                 }
@@ -261,3 +262,7 @@ fun Screen.feedTab(
         },
     )
 }
+
+// KMK --> Keep the global gesture and individual error button as separate UI actions.
+internal fun feedActions(screenModel: FeedScreenModel) = FeedActions(screenModel::refreshAll, screenModel::retry)
+// KMK <--

@@ -3,10 +3,12 @@ package eu.kanade.tachiyomi.data.download
 import android.content.Context
 import com.hippo.unifile.UniFile
 import eu.kanade.domain.chapter.model.toSChapter
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.model.getComicInfo
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.download.model.Download
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.storage.DiskUtil
@@ -264,6 +266,7 @@ class Downloader(
                 removeFromQueue(download)
             }
             if (areAllDownloadsFinished()) {
+                if (queueState.value.isEmpty()) Injekt.get<WebhookNotifier>().notify(WebhookEvent.DOWNLOADS_FINISHED, download.manga)
                 stop()
             }
         } catch (e: Throwable) {

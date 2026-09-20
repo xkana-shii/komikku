@@ -5,6 +5,8 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.LoadResult
+import eu.kanade.tachiyomi.extension.model.findMatchingExtension
+import eu.kanade.tachiyomi.extension.model.hasUpdateFrom
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
 import exh.source.BlacklistedSources
 import exh.source.ExhPreferences
@@ -80,11 +82,8 @@ internal class ExtensionApi {
 
         val extensionsWithUpdate = mutableListOf<Extension.Installed>()
         for (installedExt in installedExtensions) {
-            val pkgName = installedExt.pkgName
-            val availableExt = extensions.find { it.pkgName == pkgName } ?: continue
-            val hasUpdatedVer = availableExt.versionCode > installedExt.versionCode
-            val hasUpdatedLib = availableExt.libVersion > installedExt.libVersion
-            val hasUpdate = hasUpdatedVer || hasUpdatedLib
+            val availableExt = extensions.findMatchingExtension(installedExt) ?: continue
+            val hasUpdate = installedExt.hasUpdateFrom(availableExt)
             if (hasUpdate) {
                 extensionsWithUpdate.add(installedExt)
             }

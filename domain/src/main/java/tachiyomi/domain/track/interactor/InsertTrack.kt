@@ -17,6 +17,12 @@ class InsertTrack(
         }
     }
 
+    // KMK --> Explicit batch operations must report persistence failures to their caller.
+    suspend fun awaitOrThrow(track: Track) {
+        trackRepository.insert(track)
+    }
+    // KMK <--
+
     suspend fun awaitAll(tracks: List<Track>) {
         try {
             trackRepository.insertAll(tracks)

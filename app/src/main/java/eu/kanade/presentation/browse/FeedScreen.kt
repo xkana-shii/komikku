@@ -20,7 +20,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,10 +38,10 @@ import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.components.SourcesSearchBox
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
+import eu.kanade.tachiyomi.ui.browse.feed.FeedRequest
 import eu.kanade.tachiyomi.ui.browse.feed.FeedScreenState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.delay
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.FeedSavedSearch
@@ -59,7 +58,6 @@ import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.util.plus
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import kotlin.time.Duration.Companion.seconds
 import tachiyomi.domain.source.model.Source as DomainSource
 
 data class FeedItemUI(
@@ -69,7 +67,14 @@ data class FeedItemUI(
     val title: String,
     val subtitle: String,
     val results: List<Manga>?,
+    val error: String? = null,
+    val loading: Boolean = results == null,
+    val request: FeedRequest? = null,
 )
+
+// KMK --> Callbacks installed by FeedTab; refreshing is never derived from the error rows.
+data class FeedActions(val onRefresh: () -> Unit, val onRetry: (FeedItemUI) -> Unit)
+// KMK <--
 
 @Composable
 fun FeedScreen(
@@ -85,7 +90,7 @@ fun FeedScreen(
     onLongClickManga: (Manga) -> Unit,
     selection: List<Manga>,
     // KMK <--
-    onRefresh: () -> Unit,
+    actions: FeedActions,
     getMangaState: @Composable (Manga) -> State<Manga>,
 ) {
     when {
@@ -95,20 +100,10 @@ fun FeedScreen(
             modifier = Modifier.padding(contentPadding),
         )
         else -> {
-            var refreshing by remember { mutableStateOf(false) }
-            LaunchedEffect(refreshing) {
-                if (refreshing) {
-                    delay(1.seconds)
-                    refreshing = false
-                }
-            }
             PullRefresh(
-                refreshing = refreshing && state.isLoadingItems,
-                onRefresh = {
-                    refreshing = true
-                    onRefresh()
-                },
-                enabled = !state.isLoadingItems,
+                refreshing = state.refreshing,
+                onRefresh = actions.onRefresh,
+                enabled = true,
             ) {
                 ScrollbarLazyColumn(
                     contentPadding = contentPadding + topSmallPaddingValues,
@@ -122,6 +117,7 @@ fun FeedScreen(
                     ) { item ->
                         // KMK <--
                         GlobalSearchResultItem(
+                            onRetry = { actions.onRetry(item) }.takeIf { item.error != null && !item.loading },
                             title = item.title,
                             subtitle = item.subtitle,
                             onLongClick = {
@@ -165,16 +161,19 @@ fun FeedItem(
     selection: List<Manga>,
     // KMK <--
 ) {
+    if (item.error != null) {
+        GlobalSearchErrorResultItem(message = item.error)
+    }
     when {
-        item.results == null -> {
+        item.loading && item.results.isNullOrEmpty() -> {
             GlobalSearchLoadingResultItem()
         }
-        item.results.isEmpty() -> {
+        item.results.isNullOrEmpty() && item.error == null -> {
             GlobalSearchErrorResultItem(message = stringResource(MR.strings.no_results_found))
         }
-        else -> {
+        !item.results.isNullOrEmpty() -> {
             GlobalSearchCardRow(
-                titles = item.results,
+                titles = item.results.orEmpty(),
                 getManga = getMangaState,
                 onClick = onClickManga,
                 // KMK -->

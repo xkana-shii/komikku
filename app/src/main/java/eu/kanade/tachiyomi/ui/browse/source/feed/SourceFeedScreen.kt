@@ -110,6 +110,7 @@ class SourceFeedScreen(val sourceId: Long) : Screen() {
             } else {
                 // KMK <--
                 SourceFeedScreen(
+                    onRetry = screenModel::retry,
                     name = screenModel.source.name,
                     isLoading = state.isLoading,
                     items = state.items,

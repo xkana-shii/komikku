@@ -84,6 +84,11 @@ object SettingsBrowseScreen : SearchableSettings {
                         subtitle = stringResource(KMR.strings.pref_show_home_on_related_mangas_summary),
                         enabled = sourcePreferences.relatedMangas().get(),
                     ),
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = uiPreferences.showSequelPrequel(),
+                        title = stringResource(KMR.strings.pref_sequel_prequel),
+                        subtitle = stringResource(KMR.strings.pref_sequel_prequel_summary),
+                    ),
                     // KMK <--
                     run {
                         val count by sourcePreferences.sourcesTabCategories().collectAsState()

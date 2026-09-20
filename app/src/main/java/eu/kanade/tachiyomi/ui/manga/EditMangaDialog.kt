@@ -44,7 +44,6 @@ import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.presentation.track.components.TrackLogoIcon
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.databinding.EditMangaDialogBinding
@@ -184,7 +183,7 @@ fun EditMangaDialog(
             onDismissRequest = { showTrackerSelectionDialogue.value = false },
             onTrackerSelect = { tracker, track ->
                 scope.launch {
-                    autofillFromTracker(binding!!, track, tracker)
+                    autofillFromTracker(binding!!, track, tracker, scope, colorScheme)
                 }
             },
         )
@@ -390,16 +389,16 @@ private fun onViewCreated(
     binding.resetInfo.setOnClickListener { resetInfo(manga, binding, scope, colorScheme) }
     binding.autofillFromTracker.setOnClickListener {
         scope.launch {
-            getTrackers(manga, binding, context, getTracks, trackerManager, tracks, showTrackerSelectionDialogue)
+            getTrackers(manga, binding, context, getTracks, trackerManager, tracks, showTrackerSelectionDialogue, scope, colorScheme)
         }
     }
 }
 
-private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, context: Context, getTracks: GetTracks, trackerManager: TrackerManager, tracks: MutableState<List<Pair<Track, Tracker>>>, showTrackerSelectionDialogue: MutableState<Boolean>) {
+private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, context: Context, getTracks: GetTracks, trackerManager: TrackerManager, tracks: MutableState<List<Pair<Track, Tracker>>>, showTrackerSelectionDialogue: MutableState<Boolean>, scope: CoroutineScope, colorScheme: AndroidViewColorScheme) {
     tracks.value = getTracks.await(manga.id).mapNotNull { track ->
         track to (trackerManager.get(track.trackerId) ?: return@mapNotNull null)
     }
-        .filterNot { (_, tracker) -> tracker is EnhancedTracker }
+        .filter { (_, tracker) -> tracker.isLoggedIn }
 
     if (tracks.value.isEmpty()) {
         context.toast(context.stringResource(SYMR.strings.entry_not_tracked))
@@ -411,14 +410,14 @@ private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, c
         return
     }
 
-    autofillFromTracker(binding, tracks.value.first().first, tracks.value.first().second)
+    autofillFromTracker(binding, tracks.value.first().first, tracks.value.first().second, scope, colorScheme)
 }
 
 private fun setTextIfNotBlank(field: (String) -> Unit, value: String?) {
     value?.takeIf { it.isNotBlank() }?.let { field(it) }
 }
 
-private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: Track, tracker: Tracker) {
+private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: Track, tracker: Tracker, scope: CoroutineScope, colorScheme: AndroidViewColorScheme) {
     try {
         val trackerMangaMetadata = tracker.getMangaMetadata(track)
 
@@ -427,6 +426,14 @@ private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: 
         setTextIfNotBlank(binding.mangaArtist::setText, trackerMangaMetadata.artists)
         setTextIfNotBlank(binding.thumbnailUrl::setText, trackerMangaMetadata.thumbnailUrl)
         setTextIfNotBlank(binding.mangaDescription::setText, trackerMangaMetadata.description)
+        trackerMangaMetadata.tags?.takeIf { it.isNotEmpty() }?.let { tags ->
+            binding.mangaGenresTags.setChips((binding.mangaGenresTags.getTextStrings() + tags).distinct(), scope, colorScheme)
+        }
+        trackerMangaMetadata.status?.let { status ->
+            val statuses = listOf(SManga.ONGOING, SManga.COMPLETED, SManga.LICENSED, SManga.PUBLISHING_FINISHED, SManga.CANCELLED, SManga.ON_HIATUS)
+            val index = statuses.indexOf(status.toInt())
+            if (index >= 0) binding.status.setSelection(index + 1)
+        }
     } catch (e: Throwable) {
         tracker.logcat(LogPriority.ERROR, e)
         binding.root.context.toast(
@@ -447,7 +454,7 @@ private fun resetTags(
     colorScheme: AndroidViewColorScheme,
     // KMK <--
 ) {
-    if (manga.genre.isNullOrEmpty() || manga.isLocal()) {
+    if (manga.isLocal()) {
         binding.mangaGenresTags.setChips(emptyList(), scope, colorScheme)
     } else {
         binding.mangaGenresTags.setChips(manga.ogGenre.orEmpty(), scope, colorScheme)
@@ -484,6 +491,7 @@ private fun resetInfo(
     colorScheme: AndroidViewColorScheme,
     // KMK <--
 ) {
+    binding.status.setSelection(0)
     binding.title.text?.clear()
     binding.mangaAuthor.text?.clear()
     binding.mangaArtist.text?.clear()
@@ -560,7 +568,7 @@ private fun ChipGroup.setChips(
                     // KMK <--
                     val newTags = it.trimOrNull()
                     newTags?.let { tags ->
-                        setChips(items + tags.split(",").mapNotNull { tag -> tag.trimOrNull() }, scope, colorScheme)
+                        setChips((getTextStrings() + tags.split(",").mapNotNull { tag -> tag.trimOrNull() }).distinct(), scope, colorScheme)
                     }
                     // KMK -->
                 }
@@ -580,7 +588,7 @@ private fun ChipGroup.setChips(
 }
 
 private fun ChipGroup.getTextStrings(): List<String> = children.mapNotNull {
-    if (it is Chip && !it.text.toString().contains(context.stringResource(SYMR.strings.add_tags), ignoreCase = true)) {
+    if (it is Chip && it.isCloseIconVisible) {
         it.text.toString()
     } else {
         null

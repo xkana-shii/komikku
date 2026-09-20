@@ -249,7 +249,7 @@ class MangaBakaApi(
             tracking_url = "$BASE_URL/${item.mergedWith ?: item.id}"
             total_chapters = item.totalChapters?.toLongOrNull() ?: 0
             start_date = item.published.startDate.orEmpty()
-            publishing_status = item.status
+            publishing_status = item.status.orEmpty()
             publishing_type = item.type.replaceFirstChar { c ->
                 if (c.isLowerCase()) c.titlecase(Locale.getDefault()) else c.toString()
             }
@@ -395,14 +395,7 @@ class MangaBakaApi(
 
             val seriesData = resolveSeriesData(resolvedId, item)
 
-            TrackMangaMetadata(
-                remoteId = seriesData.id,
-                title = seriesData.chooseBestTitle(),
-                thumbnailUrl = seriesData.cover.raw.url,
-                description = prepareDescription(seriesData.description).ifEmpty { null },
-                authors = seriesData.authors?.joinToString(", ")?.ifEmpty { null },
-                artists = seriesData.artists?.joinToString(", ")?.ifEmpty { null },
-            )
+            seriesData.toAutofillMetadata(prepareDescription(seriesData.description))
         }
     }
 

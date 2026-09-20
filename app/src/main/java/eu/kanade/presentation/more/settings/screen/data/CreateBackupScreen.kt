@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
@@ -25,12 +26,18 @@ import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.update
+import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.model.Category
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.LazyColumnWithAction
 import tachiyomi.presentation.core.components.SectionCard
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class CreateBackupScreen : Screen() {
 
@@ -93,6 +100,23 @@ class CreateBackupScreen : Screen() {
                 }
 
                 item {
+                    SectionCard(MR.strings.categories) {
+                        LabeledCheckbox(
+                            label = stringResource(KMR.strings.backup_all_categories),
+                            checked = state.options.includedCategoryIds == null,
+                            onCheckedChange = { model.selectAllCategories(it) },
+                        )
+                        state.categories.forEach { category ->
+                            LabeledCheckbox(
+                                label = if (category.isSystemCategory) stringResource(MR.strings.label_default) else category.name,
+                                checked = state.options.includedCategoryIds?.contains(category.id) ?: true,
+                                onCheckedChange = { model.toggleCategory(category.id, it) },
+                            )
+                        }
+                    }
+                }
+
+                item {
                     SectionCard(MR.strings.label_settings) {
                         Options(BackupOptions.settingsOptions, state, model)
                     }
@@ -122,6 +146,24 @@ class CreateBackupScreen : Screen() {
 
 private class CreateBackupScreenModel : StateScreenModel<CreateBackupScreenModel.State>(State()) {
 
+    init {
+        screenModelScope.launchIO {
+            val categories = Injekt.get<GetCategories>().await().filterNot { it.isSystemCategory }
+            mutableState.update { it.copy(categories = listOf(Category(0, "", 0, 0, false)) + categories) }
+        }
+    }
+
+    fun selectAllCategories(all: Boolean) {
+        mutableState.update { it.copy(options = it.options.copy(includedCategoryIds = if (all) null else emptySet())) }
+    }
+
+    fun toggleCategory(id: Long, selected: Boolean) {
+        mutableState.update {
+            val ids = it.options.includedCategoryIds ?: it.categories.map { category -> category.id }.toSet()
+            it.copy(options = it.options.copy(includedCategoryIds = if (selected) ids + id else ids - id))
+        }
+    }
+
     fun toggle(setter: (BackupOptions, Boolean) -> BackupOptions, enabled: Boolean) {
         mutableState.update {
             it.copy(
@@ -137,5 +179,6 @@ private class CreateBackupScreenModel : StateScreenModel<CreateBackupScreenModel
     @Immutable
     data class State(
         val options: BackupOptions = BackupOptions(),
+        val categories: List<Category> = emptyList(),
     )
 }

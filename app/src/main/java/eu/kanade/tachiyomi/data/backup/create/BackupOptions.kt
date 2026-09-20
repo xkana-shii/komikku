@@ -21,7 +21,13 @@ data class BackupOptions(
     val customInfo: Boolean = true,
     val savedSearchesFeeds: Boolean = true,
     // SY <--
+    // KMK --> Not part of the legacy BooleanArray worker payload.
+    val includedCategoryIds: Set<Long>? = null,
+    // KMK <--
 ) {
+
+    fun includesManga(categoryIds: List<Long>): Boolean =
+        includedCategoryIds?.let { selected -> categoryIds.ifEmpty { listOf(0L) }.any { it in selected } } ?: true
 
     fun asBooleanArray() = booleanArrayOf(
         libraryEntries,

@@ -1,5 +1,6 @@
 package eu.kanade.domain
 
+import eu.kanade.domain.manga.interactor.GetSequelPrequel
 import tachiyomi.data.libraryUpdateError.LibraryUpdateErrorRepositoryImpl
 import tachiyomi.data.libraryUpdateError.LibraryUpdateErrorWithRelationsRepositoryImpl
 import tachiyomi.data.libraryUpdateErrorMessage.LibraryUpdateErrorMessageRepositoryImpl
@@ -22,6 +23,7 @@ import uy.kohesive.injekt.api.get
 class KMKDomainModule : InjektModule {
 
     override fun InjektRegistrar.registerInjectables() {
+        addSingletonFactory { GetSequelPrequel() }
         addSingletonFactory<LibraryUpdateErrorWithRelationsRepository> {
             LibraryUpdateErrorWithRelationsRepositoryImpl(get())
         }

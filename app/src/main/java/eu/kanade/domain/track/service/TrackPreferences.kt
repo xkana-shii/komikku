@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.track.mangabaka.MangaBaka
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
+import tachiyomi.domain.track.service.PreferredTrackerMap
 
 class TrackPreferences(
     private val preferenceStore: PreferenceStore,
@@ -69,5 +70,20 @@ class TrackPreferences(
 
     // KMK -->
     fun autoSyncProgressFromTrackers() = preferenceStore.getBoolean("pref_auto_sync_progress_from_trackers_key", true)
+    fun preferredTrackerForManga() = preferenceStore.getString(Preference.appStateKey("pref_preferred_tracker_for_manga"), "")
+
+    private val preferredTrackerLock = Any()
+    fun getPreferredTrackerForManga(mangaId: Long): Long? = PreferredTrackerMap.decode(preferredTrackerForManga().get())[mangaId]
+
+    fun setPreferredTrackerForManga(mangaId: Long, trackerId: Long?) = synchronized(preferredTrackerLock) {
+        if (mangaId > 0) preferredTrackerForManga().set(PreferredTrackerMap.update(preferredTrackerForManga().get(), mangaId, trackerId))
+    }
+
+    fun priorityTrackerId() = preferenceStore.getLong("pref_priority_tracker_id", 0L)
+    fun getPriorityTrackerId(): Long? = priorityTrackerId().get().takeIf { it > 0 }
+    fun setPriorityTrackerId(trackerId: Long?) = priorityTrackerId().set(trackerId?.takeIf { it > 0 } ?: 0L)
+
+    fun resolvePreferredTracker(mangaId: Long, applicable: Set<Long>): Long? =
+        getPriorityTrackerId()?.takeIf { it in applicable }
     // KMK <--
 }

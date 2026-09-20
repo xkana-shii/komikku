@@ -44,10 +44,6 @@ import exh.md.utils.MdUtil
 import exh.metadata.sql.models.SearchTag
 import exh.metadata.sql.models.SearchTitle
 import exh.recs.batch.RecommendationSearchHelper
-import exh.search.Namespace
-import exh.search.QueryComponent
-import exh.search.SearchEngine
-import exh.search.Text
 import exh.source.EH_SOURCE_ID
 import exh.source.ExhPreferences
 import exh.source.MANGADEX_IDS
@@ -104,6 +100,8 @@ import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibraryManga
+import tachiyomi.domain.library.model.LibrarySearchParser
+import tachiyomi.domain.library.model.LibrarySearchToken
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -156,7 +154,6 @@ class LibraryScreenModel(
     private val getIdsOfFavoriteMangaWithMetadata: GetIdsOfFavoriteMangaWithMetadata = Injekt.get(),
     private val getSearchTags: GetSearchTags = Injekt.get(),
     private val getSearchTitles: GetSearchTitles = Injekt.get(),
-    private val searchEngine: SearchEngine = Injekt.get(),
     private val setCustomMangaInfo: SetCustomMangaInfo = Injekt.get(),
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId = Injekt.get(),
     syncPreferences: SyncPreferences = Injekt.get(),
@@ -1216,7 +1213,7 @@ class LibraryScreenModel(
             }
             // AZ <--
             // Prepare filter object
-            val parsedQuery = searchEngine.parseQuery(query)
+            val parsedQuery = LibrarySearchParser.parse(query)
             val mangaWithMetaIds = getIdsOfFavoriteMangaWithMetadata.await()
             val tracks = if (loggedInTrackServices.isNotEmpty()) {
                 getTracks.await().groupBy { it.mangaId }
@@ -1229,18 +1226,7 @@ class LibraryScreenModel(
                 .associateBy { it.id }
             unfiltered.asFlow().cancellable().filter { item ->
                 val mangaId = item.libraryManga.manga.id
-                if (query.startsWith("id:", true)) {
-                    return@filter mangaId == query.substringAfter("id:").toLongOrNull()
-                }
                 val sourceId = item.libraryManga.manga.source
-                if (query.startsWith("src:", true)) {
-                    val querySource = query.substringAfter("src:")
-                    return@filter if (querySource.equals(LOCAL_SOURCE_ID_ALIAS, ignoreCase = true)) {
-                        sourceId == LocalSource.ID
-                    } else {
-                        sourceId == querySource.toLongOrNull()
-                    }
-                }
                 if (isMetadataSource(sourceId) && mangaWithMetaIds.binarySearch(mangaId) >= 0) {
                     val tags = getSearchTags.await(mangaId)
                     val titles = getSearchTitles.await(mangaId)
@@ -1252,7 +1238,7 @@ class LibraryScreenModel(
                         checkGenre = false,
                         searchTags = tags,
                         searchTitles = titles,
-                        loggedInTrackServices = loggedInTrackServices,
+                        uploader = if (parsedQuery.any { it.field == "uploader" }) Injekt.get<tachiyomi.domain.manga.repository.MangaMetadataRepository>().getMetadataById(mangaId)?.uploader else null,
                     )
                 } else {
                     // No meta? Filter using title
@@ -1261,7 +1247,6 @@ class LibraryScreenModel(
                         libraryManga = item.libraryManga,
                         tracks = tracks[mangaId],
                         source = sources[sourceId],
-                        loggedInTrackServices = loggedInTrackServices,
                     )
                 }
             }.toList()
@@ -1271,116 +1256,66 @@ class LibraryScreenModel(
     }
 
     private fun filterManga(
-        queries: List<QueryComponent>,
+        queries: List<LibrarySearchToken>,
         libraryManga: LibraryManga,
         tracks: List<Track>?,
         source: Source?,
         checkGenre: Boolean = true,
         searchTags: List<SearchTag>? = null,
         searchTitles: List<SearchTitle>? = null,
-        loggedInTrackServices: Map<Long, TriState>,
+        uploader: String? = null,
     ): Boolean {
         val manga = libraryManga.manga
-        val sourceIdString = manga.source.takeUnless { it == LocalSource.ID }?.toString()
-        val genre = if (checkGenre) manga.genre.orEmpty() else emptyList()
         val context = Injekt.get<Application>()
-        val uiPreferences = Injekt.get<UiPreferences>()
-        return queries.all { queryComponent ->
-            when (queryComponent.excluded) {
-                false -> when (queryComponent) {
-                    is Text -> {
-                        val query = queryComponent.asQuery()
-                        manga.title.contains(query, true) ||
-                            (manga.author?.contains(query, true) == true) ||
-                            (manga.artist?.contains(query, true) == true) ||
-                            (manga.description?.contains(query, true) == true) ||
-                            // KMK -->
-                            (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) == true) ||
-                            // KMK <--
-                            (sourceIdString != null && sourceIdString == query) ||
-                            (
-                                loggedInTrackServices.isNotEmpty() &&
-                                    tracks != null &&
-                                    filterTracks(query, tracks, context)
-                                ) ||
-                            (genre.fastAny { it.contains(query, true) }) ||
-                            (searchTags?.fastAny { it.name.contains(query, true) } == true) ||
-                            (searchTitles?.fastAny { it.title.contains(query, true) } == true)
-                    }
-                    is Namespace -> {
-                        searchTags != null &&
-                            searchTags.fastAny {
-                                val tag = queryComponent.tag
-                                (
-                                    it.namespace.equals(queryComponent.namespace, true) &&
-                                        tag?.run { it.name.contains(tag.asQuery(), true) } == true
-                                    ) ||
-                                    (tag == null && it.namespace.equals(queryComponent.namespace, true))
-                            }
-                    }
-                    else -> true
-                }
-                true -> when (queryComponent) {
-                    is Text -> {
-                        val query = queryComponent.asQuery()
-                        query.isBlank() ||
-                            (
-                                (!manga.title.contains(query, true)) &&
-                                    (manga.author?.contains(query, true) != true) &&
-                                    (manga.artist?.contains(query, true) != true) &&
-                                    (manga.description?.contains(query, true) != true) &&
-                                    // KMK -->
-                                    (source?.getNameForMangaInfo(uiPreferences = uiPreferences)?.contains(query, true) != true) &&
-                                    // KMK <--
-                                    (sourceIdString != null && sourceIdString != query) &&
-                                    (
-                                        loggedInTrackServices.isEmpty() ||
-                                            tracks == null ||
-                                            !filterTracks(query, tracks, context)
-                                        ) &&
-                                    (!genre.fastAny { it.contains(query, true) }) &&
-                                    (searchTags?.fastAny { it.name.contains(query, true) } != true) &&
-                                    (searchTitles?.fastAny { it.title.contains(query, true) } != true)
-                                )
-                    }
-                    is Namespace -> {
-                        val searchedTag = queryComponent.tag?.asQuery()
-                        searchTags == null ||
-                            (queryComponent.namespace.isBlank() && searchedTag.isNullOrBlank()) ||
-                            searchTags.fastAll { mangaTag ->
-                                if (queryComponent.namespace.isBlank() && !searchedTag.isNullOrBlank()) {
-                                    !mangaTag.name.contains(searchedTag, true)
-                                } else if (searchedTag.isNullOrBlank()) {
-                                    mangaTag.namespace == null ||
-                                        !mangaTag.namespace.equals(queryComponent.namespace, true)
-                                } else if (mangaTag.namespace.isNullOrBlank()) {
-                                    true
-                                } else {
-                                    !mangaTag.name.contains(searchedTag, true) ||
-                                        !mangaTag.namespace.equals(queryComponent.namespace, true)
-                                }
-                            }
-                    }
-                    else -> true
-                }
+        val sourceName = source?.getNameForMangaInfo(uiPreferences = Injekt.get<UiPreferences>())
+        val tags = searchTags.orEmpty()
+        val genres = if (checkGenre) manga.genre.orEmpty() else emptyList()
+        val trackerValues = tracks.orEmpty().flatMap { track ->
+            val tracker = trackerManager.get(track.trackerId)
+            listOfNotNull(tracker?.name, tracker?.getStatus(track.status)?.let { context.stringResource(it) })
+        }
+        val status = when (manga.status.toInt()) {
+            1 -> MR.strings.ongoing
+            2 -> MR.strings.completed
+            3 -> MR.strings.licensed
+            4, 61 -> MR.strings.publishing_finished
+            5, 62 -> MR.strings.cancelled
+            6, 63 -> MR.strings.on_hiatus
+            else -> null
+        }
+        val fields = mapOf(
+            "title" to (listOf(manga.title) + searchTitles.orEmpty().map { it.title }),
+            "author" to listOfNotNull(manga.author),
+            "artist" to (listOfNotNull(manga.artist) + tags.filter { it.namespace == "artist" }.map { it.name }),
+            "description" to listOfNotNull(manga.description),
+            "uploader" to listOfNotNull(uploader),
+            "genre" to genres,
+            "tag" to (genres + tags.map { it.name }),
+            "source" to listOfNotNull(sourceName, manga.source.toString(), "local".takeIf { manga.source == LocalSource.ID }),
+            "id" to listOf(manga.id.toString()),
+            "status" to listOfNotNull(manga.status.toString(), status?.let { context.stringResource(it) }),
+            "tracker" to trackerValues,
+            "category" to libraryManga.categories.ifEmpty { listOf(0L) }.flatMap { id ->
+                listOfNotNull(
+                    id.toString(),
+                    state.value.libraryData.categories.find { it.id == id }?.name,
+                    context.stringResource(MR.strings.label_default).takeIf { id == 0L },
+                )
+            },
+        )
+        val ordinary = fields.filterKeys { it !in setOf("category", "id", "status", "source", "uploader") }.values.flatten() + listOfNotNull(sourceName)
+        return queries.all { token ->
+            val values = if (token.field == null) {
+                ordinary
+            } else {
+                fields[token.field]
+                    ?: tags.filter { it.namespace.equals(token.field, true) }.map { it.name }
             }
+            val matches = token.matches(values) || (token.field == null && manga.source != LocalSource.ID && token.text == manga.source.toString())
+            matches != token.excluded
         }
     }
 
-    private fun filterTracks(constraint: String, tracks: List<Track>, context: Context): Boolean {
-        return tracks.fastAny { track ->
-            val trackService = trackerManager.get(track.trackerId)
-            if (trackService != null) {
-                val status = trackService.getStatus(track.status)?.let {
-                    context.stringResource(it)
-                }
-                val name = trackerManager.get(track.trackerId)?.name
-                status?.contains(constraint, true) == true || name?.contains(constraint, true) == true
-            } else {
-                false
-            }
-        }
-    }
     // SY <--
 
     private var lastSelectionCategory: Long? = null

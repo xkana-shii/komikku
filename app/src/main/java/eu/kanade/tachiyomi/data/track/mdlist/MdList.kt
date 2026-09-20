@@ -173,6 +173,8 @@ class MdList(id: Long) : BaseTracker(id, "MDList") {
                 description = manga.description,
                 authors = manga.author,
                 artists = manga.artist,
+                tags = manga.genre?.split(",")?.map(String::trim),
+                status = manga.status.toLong(),
             )
         }
     }

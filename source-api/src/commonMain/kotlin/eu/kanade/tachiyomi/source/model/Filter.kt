@@ -1,6 +1,17 @@
 package eu.kanade.tachiyomi.source.model
 
-sealed class Filter<T>(val name: String, var state: T) {
+sealed class Filter<T>(val name: String, var state: T) : Cloneable {
+    // KMK --> Preserve extension subclasses (and their IDs/converters) while isolating mutable states.
+    @Suppress("UNCHECKED_CAST")
+    fun copyForRequest(): Filter<T> = (super.clone() as Filter<T>).also { copy ->
+        copy.state = when (val value = state) {
+            is List<*> -> value.map { if (it is Filter<*>) it.copyForRequest() else it }
+            is Sort.Selection -> value.copy()
+            else -> value
+        } as T
+    }
+    // KMK <--
+
     open class Header(name: String) : Filter<Any>(name, 0)
     open class Separator(name: String = "") : Filter<Any>(name, 0)
     abstract class Select<V>(name: String, val values: Array<V>, state: Int = 0) : Filter<Int>(

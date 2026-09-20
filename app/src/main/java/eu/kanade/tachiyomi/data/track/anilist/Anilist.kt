@@ -237,6 +237,8 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
     }
 
     // SY -->
+    override suspend fun getRelatedEntries(remoteId: Long) = api.getRelatedEntries(remoteId)
+
     override suspend fun searchById(id: String): TrackSearch? {
         return try {
             api.searchById(id)

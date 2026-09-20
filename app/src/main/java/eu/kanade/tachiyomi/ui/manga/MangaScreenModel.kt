@@ -601,7 +601,7 @@ class MangaScreenModel(
 
     private suspend fun syncTrackers() {
         if (!trackPreferences.autoSyncProgressFromTrackers().get()) return
-        refreshTrackers(enhancedTrackersOnly = false)
+        refreshTrackers()
     }
     // KMK <--
 
@@ -734,7 +734,7 @@ class MangaScreenModel(
                 )
             }
         } else {
-            val genre = if (!tags.isNullOrEmpty() && tags != state.manga.ogGenre) {
+            val genre = if (tags != null && tags != state.manga.ogGenre.orEmpty()) {
                 tags
             } else {
                 null
@@ -742,11 +742,11 @@ class MangaScreenModel(
             setCustomMangaInfo.set(
                 CustomMangaInfo(
                     state.manga.id,
-                    title?.trimOrNull(),
-                    author?.trimOrNull(),
-                    artist?.trimOrNull(),
-                    thumbnailUrl?.trimOrNull(),
-                    description?.trimOrNull(),
+                    title?.trimOrNull()?.takeUnless { it == state.manga.ogTitle },
+                    author?.trimOrNull()?.takeUnless { it == state.manga.ogAuthor },
+                    artist?.trimOrNull()?.takeUnless { it == state.manga.ogArtist },
+                    thumbnailUrl?.trimOrNull()?.takeUnless { it == state.manga.ogThumbnailUrl },
+                    description?.trimOrNull()?.takeUnless { it == state.manga.ogDescription },
                     genre,
                     status.takeUnless { it == state.manga.ogStatus },
                 ),
@@ -1432,13 +1432,10 @@ class MangaScreenModel(
     }
 
     private suspend fun refreshTrackers(
-        // KMK -->
-        enhancedTrackersOnly: Boolean = true,
-        // KMK <--
         refreshTracks: RefreshTracks = Injekt.get(),
     ) {
         // KMK -->
-        refreshTracks.await(mangaId, enhancedTrackersOnly = enhancedTrackersOnly)
+        refreshTracks.await(mangaId)
             // KMK <--
             .filter { it.first != null }
             .forEach { (track, e) ->

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Webhook
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -84,6 +85,11 @@ object SettingsConnectionScreen : SearchableSettings {
         val isLoggedIn by connectionsManager.discord.isLoggedInFlow.collectAsState(connectionsManager.discord.isLogged)
 
         return listOf(
+            Preference.PreferenceItem.TextPreference(
+                title = stringResource(KMR.strings.webhooks),
+                icon = Icons.Outlined.Webhook,
+                onClick = { navigator.push(SettingsWebhookScreen) },
+            ),
             Preference.PreferenceGroup(
                 title = stringResource(KMR.strings.special_services),
                 preferenceItems = persistentListOf(

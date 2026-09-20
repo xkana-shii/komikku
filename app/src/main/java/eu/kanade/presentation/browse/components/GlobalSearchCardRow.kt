@@ -50,7 +50,9 @@ fun GlobalSearchCardRow(
         contentPadding = PaddingValues(MaterialTheme.padding.small),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
     ) {
-        items(titles) {
+        // KMK --> Keep the manga subscription attached to its title across refresh/reordering.
+        items(titles, key = { "${it.source}:${it.url}" }) {
+            // KMK <--
             val title by getManga(it)
             MangaItem(
                 title = title.title,

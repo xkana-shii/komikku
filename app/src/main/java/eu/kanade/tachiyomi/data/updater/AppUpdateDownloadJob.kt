@@ -19,6 +19,8 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
+import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.network.NetworkHelper
@@ -98,15 +100,11 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
         instance = WeakReference(this)
         // KMK <--
 
-        withIOContext {
-            downloadApk(title, url)
+        return try {
+            withIOContext { downloadApk(title, url) }
+        } finally {
+            instance = null
         }
-
-        // KMK -->
-        instance = null
-        // KMK <--
-
-        return Result.success()
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
@@ -126,7 +124,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
      *
      * @param url url location of file
      */
-    private suspend fun downloadApk(title: String, url: String) = coroutineScope {
+    private suspend fun downloadApk(title: String, url: String): Result = coroutineScope {
         // Show notification download starting.
         with(notifier) {
             onDownloadStarted(title)
@@ -157,36 +155,40 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     downloadedSize = totalSize - contentLength + bytesRead
                 }
                 // KMK <--
-                val progress = (100 * (downloadedSize.toFloat() / totalSize)).toInt()
+                val progress = if (totalSize > 0) (100 * downloadedSize / totalSize).toInt().coerceIn(0, 100) else 0
                 val currentTime = System.currentTimeMillis()
                 if (progress > savedProgress && currentTime - 200 > lastTick) {
                     savedProgress = progress
                     lastTick = currentTime
                     notifier.onProgressChange(progress)
+                    setProgressAsync(workDataOf(PROGRESS to progress))
                 }
             }
         }
 
         try {
             // File where the apk will be saved.
-            val apkFile = File(context.externalCacheDir, "update.apk")
+            val apkFile = File(context.externalCacheDir, "update-${urlTag(url).substringAfter(':')}.apk")
 
             // KMK -->
             network.downloadFileWithResume(url, apkFile, progressListener)
             if (isStopped) {
                 cancel()
-                return@coroutineScope
+                throw CancellationException("Update download stopped")
             }
             // KMK <--
 
             notifier.cancel()
             // KMK -->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (inputData.getBoolean(INLINE_INSTALL, false)) {
+                notifier.promptInstall(apkFile.getUriCompat(context))
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 startInstalling(apkFile, title)
             } else {
                 // KMK <--
                 notifier.promptInstall(apkFile.getUriCompat(context))
             }
+            Result.success(workDataOf(EXTRA_FILE_URI to apkFile.getUriCompat(context).toString()))
         } catch (e: Exception) {
             xLogE("App update stopped:", e)
             val shouldCancel = e is CancellationException ||
@@ -194,6 +196,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 (e is StreamResetException && e.errorCode == ErrorCode.CANCEL)
             if (shouldCancel) {
                 notifier.cancel()
+                throw CancellationException("Update download cancelled", e)
             } else {
                 notifier.onDownloadError(
                     url,
@@ -202,6 +205,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     // KMK <--
                 )
             }
+            Result.failure(workDataOf(ERROR to with(context) { e.formattedMessage }))
         }
     }
 
@@ -261,7 +265,11 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
     // KMK <--
 
     companion object {
-        private const val TAG = "AppUpdateDownload"
+        const val TAG = "AppUpdateDownload"
+        const val PROGRESS = "progress"
+        const val ERROR = "error"
+        private const val INLINE_INSTALL = "inline_install"
+        fun urlTag(url: String) = "$TAG:${java.security.MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }}"
 
         // KMK -->
         const val PACKAGE_INSTALLED_ACTION =
@@ -283,13 +291,16 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             title: String? = null,
             // KMK -->
             scheduled: Boolean = false,
+            inlineInstall: Boolean = false,
             // KMK <--
         ) {
             val data = Data.Builder()
             data.putString(EXTRA_DOWNLOAD_URL, url)
+            data.putBoolean(INLINE_INSTALL, inlineInstall)
             data.putString(EXTRA_DOWNLOAD_TITLE, title)
             val request = OneTimeWorkRequestBuilder<AppUpdateDownloadJob>()
                 .addTag(TAG)
+                .addTag(urlTag(url))
                 .apply {
                     // KMK -->
                     if (scheduled) {

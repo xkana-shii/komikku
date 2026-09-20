@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Error
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +40,7 @@ fun GlobalSearchResultItem(
     // SY -->
     onLongClick: (() -> Unit)? = null,
     // SY <--
+    onRetry: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     Column(modifier = modifier) {
@@ -61,13 +63,18 @@ fun GlobalSearchResultItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                 )
                 if (subtitle != null) {
                     Text(text = subtitle)
+                }
+            }
+            onRetry?.let { retry ->
+                IconButton(onClick = retry) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(MR.strings.action_retry))
                 }
             }
             IconButton(onClick = onClick) {

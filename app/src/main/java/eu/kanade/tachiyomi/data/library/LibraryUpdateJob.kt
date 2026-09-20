@@ -18,6 +18,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkQuery
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
@@ -29,6 +30,7 @@ import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.util.system.isConnectedToWifi
@@ -180,6 +182,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                     Target.PUSH_FAVORITES -> pushFavorites()
                     // SY <--
                 }
+                if (target == Target.CHAPTERS) Injekt.get<WebhookNotifier>().notify(WebhookEvent.LIBRARY_UPDATE)
                 Result.success()
             } catch (e: Exception) {
                 if (e is CancellationException) {
