@@ -10,6 +10,7 @@ import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.util.system.workManager
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
@@ -20,7 +21,7 @@ class NewUpdateScreenModel(
     private val downloadLink: String,
     private val versionName: String,
     private val context: Application = Injekt.get(),
-    private val work: kotlinx.coroutines.flow.Flow<List<WorkInfo>> = context.workManager.getWorkInfosForUniqueWorkFlow(AppUpdateDownloadJob.TAG),
+    private val work: Flow<List<WorkInfo>> = context.workManager.getWorkInfosForUniqueWorkFlow(AppUpdateDownloadJob.TAG),
     private val startDownload: () -> Unit = { AppUpdateDownloadJob.start(context, downloadLink, versionName, inlineInstall = true) },
     private val install: (String) -> Unit = { installDownloadedUpdate(context, it) },
 ) : StateScreenModel<NewUpdateScreenModel.State>(State(stage = Stage.Downloading)) {

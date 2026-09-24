@@ -169,6 +169,9 @@ abstract class SearchScreenModel(
 
     fun setSourceFilter(filter: SourceFilter) {
         preferences.globalSearchPinnedState().set(filter)
+        // KMK --> The preference flow can arrive after search reads the current filter.
+        mutableState.update { it.copy(sourceFilter = filter) }
+        // KMK <--
         search()
     }
 

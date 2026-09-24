@@ -1,5 +1,6 @@
 package eu.kanade.presentation.manga.components
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,24 +33,27 @@ fun RelatedMangasRow(
     onMangaClick: (Manga) -> Unit,
     onMangaLongClick: (Manga) -> Unit,
 ) {
-    when {
-        relatedMangas == null -> {
-            GlobalSearchLoadingResultItem()
-        }
-
-        relatedMangas.isNotEmpty() -> {
-            RelatedMangaCardRow(
-                relatedMangas = relatedMangas,
+    // KMK --> Key the transition on the phase so successful chunks update in place.
+    Crossfade(
+        targetState = when {
+            relatedMangas == null -> 0
+            relatedMangas.isEmpty() -> 1
+            else -> 2
+        },
+        label = "relatedMangasRow",
+    ) { state ->
+        when (state) {
+            0 -> GlobalSearchLoadingResultItem()
+            1 -> EmptyResultItem()
+            else -> RelatedMangaCardRow(
+                relatedMangas = relatedMangas.orEmpty(),
                 getManga = { getMangaState(it) },
                 onMangaClick = onMangaClick,
                 onMangaLongClick = onMangaLongClick,
             )
         }
-
-        else -> {
-            EmptyResultItem()
-        }
     }
+    // KMK <--
 }
 
 @Composable

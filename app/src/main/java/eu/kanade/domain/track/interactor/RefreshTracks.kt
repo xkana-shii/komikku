@@ -17,6 +17,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
+import tachiyomi.domain.track.model.Track
 import tachiyomi.domain.track.service.TrackerProgressSync
 import tachiyomi.i18n.kmk.KMR
 import uy.kohesive.injekt.Injekt
@@ -116,7 +117,7 @@ class RefreshTracks(
         errors
     }
 
-    private fun isRereading(service: Tracker, track: tachiyomi.domain.track.model.Track): Boolean =
+    private fun isRereading(service: Tracker, track: Track): Boolean =
         !(service is MdList && track.status == FollowStatus.UNFOLLOWED.long) &&
             service.getRereadingStatus() != service.getReadingStatus() && track.status == service.getRereadingStatus()
     // KMK <--

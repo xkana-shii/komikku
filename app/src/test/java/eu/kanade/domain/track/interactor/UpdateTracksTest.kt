@@ -20,6 +20,7 @@ import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.domain.track.model.Track
 import tachiyomi.i18n.MR
+import eu.kanade.tachiyomi.data.database.models.Track as DbTrack
 
 class UpdateTracksTest {
     private val getTracks = mockk<GetTracks>()
@@ -41,7 +42,7 @@ class UpdateTracksTest {
             every { indexToScore(any()) } answers { firstArg<Int>().toDouble() }
             every { get10PointScore(any()) } answers { firstArg<Track>().score }
             coEvery { refresh(any()) } answers { firstArg() }
-            coEvery { update(any(), any()) } answers { firstArg<eu.kanade.tachiyomi.data.database.models.Track>().toDomainTrack()!!.copy(startDate = binding.trackerId * 100).toDbTrack() }
+            coEvery { update(any(), any()) } answers { firstArg<DbTrack>().toDomainTrack()!!.copy(startDate = binding.trackerId * 100).toDbTrack() }
         }
     }
     init {

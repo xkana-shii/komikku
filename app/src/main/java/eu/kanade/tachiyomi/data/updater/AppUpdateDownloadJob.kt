@@ -51,6 +51,7 @@ import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.lang.ref.WeakReference
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -269,7 +270,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
         const val PROGRESS = "progress"
         const val ERROR = "error"
         private const val INLINE_INSTALL = "inline_install"
-        fun urlTag(url: String) = "$TAG:${java.security.MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }}"
+        fun urlTag(url: String) = "$TAG:${MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }}"
 
         // KMK -->
         const val PACKAGE_INSTALLED_ACTION =

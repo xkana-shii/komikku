@@ -49,6 +49,7 @@ import tachiyomi.domain.source.interactor.InsertFeedSavedSearch
 import tachiyomi.domain.source.interactor.ReorderFeed
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
+import tachiyomi.domain.source.model.SourceNotInstalledException
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.kmk.KMR
 import uy.kohesive.injekt.Injekt
@@ -283,7 +284,7 @@ open class FeedScreenModel(
                     ) {
                         sourceManager.isInitialized.first { it }
                         val requestSource = sourceManager.get(itemUI.feed.source)
-                            ?: throw tachiyomi.domain.source.model.SourceNotInstalledException()
+                            ?: throw SourceNotInstalledException()
                         val savedSearch = itemUI.feed.savedSearch?.let { id ->
                             getSavedSearchGlobalFeed.await().find { it.id == id && it.source == itemUI.feed.source }
                                 ?: throw FeedSearch.InvalidSavedSearch()

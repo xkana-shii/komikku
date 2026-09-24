@@ -4,6 +4,8 @@ import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.mdlist.MdList
+import exh.md.utils.FollowStatus
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.domain.track.model.Track
+import eu.kanade.tachiyomi.data.database.models.Track as DbTrack
 
 class RefreshTracksTest {
     private val getTracks = mockk<GetTracks>()
@@ -127,7 +130,7 @@ class RefreshTracksTest {
     fun `plus refreshes ahead remote and persists returned dates on every service`() = runTest {
         coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
         coEvery { two.refresh(any()) } returns track(2, 12.0).toDbTrack()
-        coEvery { one.update(any(), true) } answers { firstArg<eu.kanade.tachiyomi.data.database.models.Track>().apply { finished_reading_date = 99 } }
+        coEvery { one.update(any(), true) } answers { firstArg<DbTrack>().apply { finished_reading_date = 99 } }
         subject.adjustProgress(10, 1) shouldBe emptyList()
         coVerify {
             one.update(match { it.last_chapter_read == 13.0 }, true)
@@ -180,13 +183,13 @@ class RefreshTracksTest {
 
     @Test
     fun `unfollowed MDList is refreshed but never updated or imported`() = runTest {
-        val mdlist = mockk<eu.kanade.tachiyomi.data.track.mdlist.MdList> {
+        val mdlist = mockk<MdList> {
             every { id } returns 3L
             every { isLoggedIn } returns true
             coEvery { refresh(any()) } answers { firstArg() }
         }
         every { manager.get(3) } returns mdlist
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0), track(3, 90.0, exh.md.utils.FollowStatus.UNFOLLOWED.long))
+        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0), track(3, 90.0, FollowStatus.UNFOLLOWED.long))
         subject.adjustProgress(10, 1) shouldBe emptyList()
         subject.await(10) shouldBe emptyList()
         coVerify(exactly = 0) {

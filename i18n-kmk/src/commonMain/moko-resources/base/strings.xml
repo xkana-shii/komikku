@@ -294,7 +294,7 @@
     <string name="unified_tracker_progress_help">On refresh, advance lower progress to the preferred tracker or the highest progress. Higher progress is never reduced.</string>
     <string name="tracker_progress_mismatch">Tracked services have different chapter progress.</string>
     <string name="tracker_sync_progress">Synchronize progress</string>
-    <string name="sequel_prequel">Sequels, prequels and related titles</string>
+    <string name="sequel_prequel">Related titles</string>
     <string name="relation_find_source">Find this title in your installed sources, or open its website.</string>
     <string name="relation_prequel">Prequel</string>
     <string name="relation_sequel">Sequel</string>
@@ -349,9 +349,9 @@
     <string name="relation_preserialization">Preserialization</string>
     <string name="relation_serialization">Serialization</string>
     <string name="pref_priority_tracker">Priority tracker</string>
-    <string name="pref_sequel_prequel_title">Sequels &amp; Prequels</string>
-    <string name="pref_sequel_prequel">Sequels &amp; prequels</string>
-    <string name="pref_sequel_prequel_summary">Show sequel and prequel entries while viewing entry (uses cached tracker relations)</string>
+    <string name="pref_sequel_prequel_title">Related</string>
+    <string name="pref_sequel_prequel">Related</string>
+    <string name="pref_sequel_prequel_summary">Show related entries while viewing entry (uses cached tracker relations)</string>
     <string name="pref_webhook_enabled">Enable webhooks</string>
     <string name="webhook_events">Events</string>
     <string name="track_remove_all_trackers">Remove all tracking</string>

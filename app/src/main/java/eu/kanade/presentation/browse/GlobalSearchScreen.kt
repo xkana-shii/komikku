@@ -1,5 +1,6 @@
 package eu.kanade.presentation.browse
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
@@ -159,25 +160,29 @@ internal fun GlobalSearchContent(
                     onClick = { onClickSource(source) },
                     modifier = Modifier.animateItem(),
                 ) {
-                    when (result) {
-                        SearchItemResult.Loading -> {
-                            GlobalSearchLoadingResultItem()
-                        }
-                        is SearchItemResult.Success -> {
-                            GlobalSearchCardRow(
-                                titles = result.result,
-                                getManga = getManga,
-                                onClick = onClickItem,
-                                onLongClick = onLongClickItem,
-                                // KMK -->
-                                selection = selection,
-                                // KMK <--
-                            )
-                        }
-                        is SearchItemResult.Error -> {
-                            GlobalSearchErrorResultItem(message = result.throwable.message)
+                    // KMK -->
+                    Crossfade(targetState = result, label = "globalSearchResult") { resultState ->
+                        when (resultState) {
+                            SearchItemResult.Loading -> {
+                                GlobalSearchLoadingResultItem()
+                            }
+                            is SearchItemResult.Success -> {
+                                GlobalSearchCardRow(
+                                    titles = resultState.result,
+                                    getManga = getManga,
+                                    onClick = onClickItem,
+                                    onLongClick = onLongClickItem,
+                                    // KMK -->
+                                    selection = selection,
+                                    // KMK <--
+                                )
+                            }
+                            is SearchItemResult.Error -> {
+                                GlobalSearchErrorResultItem(message = resultState.throwable.message)
+                            }
                         }
                     }
+                    // KMK <--
                 }
             }
         }

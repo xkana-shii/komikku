@@ -1,6 +1,7 @@
 package eu.kanade.presentation.browse
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -296,29 +297,37 @@ fun SourceFeedItem(
     selection: List<Manga>,
     // KMK <--
 ) {
-    if (item.error != null) {
-        GlobalSearchErrorResultItem(message = item.error.orEmpty())
+    // KMK --> Snapshot presentation only; retained cards stay visible during refresh.
+    Crossfade(
+        targetState = Triple(item.error, item.results, item.loading && item.results.isNullOrEmpty()),
+        label = "sourceFeedItem",
+    ) { (error, results, loading) ->
+        Column {
+            if (error != null) {
+                GlobalSearchErrorResultItem(message = error.orEmpty())
+            }
+            when {
+                loading && results.isNullOrEmpty() -> {
+                    GlobalSearchLoadingResultItem()
+                }
+                results.isNullOrEmpty() && error == null -> {
+                    GlobalSearchErrorResultItem(message = stringResource(MR.strings.no_results_found))
+                }
+                !results.isNullOrEmpty() -> {
+                    GlobalSearchCardRow(
+                        titles = results.orEmpty(),
+                        getManga = getMangaState,
+                        onClick = onClickManga,
+                        // KMK -->
+                        onLongClick = onLongClickManga,
+                        selection = selection,
+                        // KMK <--
+                    )
+                }
+            }
+        }
     }
-    val results = item.results
-    when {
-        item.loading && results.isNullOrEmpty() -> {
-            GlobalSearchLoadingResultItem()
-        }
-        results.isNullOrEmpty() && item.error == null -> {
-            GlobalSearchErrorResultItem(message = stringResource(MR.strings.no_results_found))
-        }
-        !results.isNullOrEmpty() -> {
-            GlobalSearchCardRow(
-                titles = item.results.orEmpty(),
-                getManga = getMangaState,
-                onClick = onClickManga,
-                // KMK -->
-                onLongClick = onLongClickManga,
-                selection = selection,
-                // KMK <--
-            )
-        }
-    }
+    // KMK <--
 }
 
 @Composable

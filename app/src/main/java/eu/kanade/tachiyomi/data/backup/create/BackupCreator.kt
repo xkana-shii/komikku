@@ -23,6 +23,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import okio.buffer
@@ -180,7 +181,7 @@ class BackupCreator(
             getMergedManga.await()
         } else {
             // Retain dependencies of selected merged entries, even outside selected categories.
-            favorites.filter { it.source == exh.source.MERGED_SOURCE_ID }
+            favorites.filter { it.source == MERGED_SOURCE_ID }
                 .flatMap { mangaMergeRepository.getMergedMangaById(it.id) }
         }
         // SY <--

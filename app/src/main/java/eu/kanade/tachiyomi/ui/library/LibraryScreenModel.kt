@@ -115,6 +115,7 @@ import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.applyFilter
+import tachiyomi.domain.manga.repository.MangaMetadataRepository
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracks
@@ -1238,7 +1239,7 @@ class LibraryScreenModel(
                         checkGenre = false,
                         searchTags = tags,
                         searchTitles = titles,
-                        uploader = if (parsedQuery.any { it.field == "uploader" }) Injekt.get<tachiyomi.domain.manga.repository.MangaMetadataRepository>().getMetadataById(mangaId)?.uploader else null,
+                        uploader = if (parsedQuery.any { it.field == "uploader" }) Injekt.get<MangaMetadataRepository>().getMetadataById(mangaId)?.uploader else null,
                     )
                 } else {
                     // No meta? Filter using title

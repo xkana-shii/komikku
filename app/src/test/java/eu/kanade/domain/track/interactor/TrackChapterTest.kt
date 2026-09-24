@@ -2,6 +2,7 @@ package eu.kanade.domain.track.interactor
 
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.model.toDomainTrack
+import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.track.store.DelayedTrackingStore
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.domain.track.model.Track
+import eu.kanade.tachiyomi.data.database.models.Track as DbTrack
 
 class TrackChapterTest {
     private val getTracks = mockk<GetTracks>()
@@ -22,7 +24,7 @@ class TrackChapterTest {
     private val insert = mockk<InsertTrack>(relaxed = true)
     private val delayed = mockk<DelayedTrackingStore>(relaxed = true)
     private val service = mockk<BaseTracker>()
-    private val preferences = mockk<eu.kanade.domain.track.service.TrackPreferences>(relaxed = true)
+    private val preferences = mockk<TrackPreferences>(relaxed = true)
     private val refreshTracks = mockk<RefreshTracks>(relaxed = true)
     private val subject = TrackChapter(getTracks, manager, insert, delayed, preferences, refreshTracks)
     private val cached = Track(1, 2, 3, 4, null, "Title", 1.0, 100, 1, 0.0, "", 10, 20, false)
@@ -38,7 +40,7 @@ class TrackChapterTest {
     fun `already ahead remote progress is not rolled back and returned dates persist`() = runTest {
         coEvery { service.refresh(any()) } returns cached.copy(lastChapterRead = 12.0).toDbTrack()
         coEvery { service.update(any(), true) } answers {
-            firstArg<eu.kanade.tachiyomi.data.database.models.Track>().apply { finished_reading_date = 99 }
+            firstArg<DbTrack>().apply { finished_reading_date = 99 }
         }
         subject.await(mockk(), 2, 5.0, setupJobOnFailure = false)
         coVerify { service.update(match { it.last_chapter_read == 12.0 }, true) }

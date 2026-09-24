@@ -716,12 +716,12 @@ private fun MangaScreenSmallImpl(
                     ) {
                         if (expandRelatedMangas) {
                             if (state.relatedMangasSorted?.isNotEmpty() != false) {
-                                item { HorizontalDivider() }
+                                item { HorizontalDivider(modifier = Modifier.animateItem()) }
                                 item(
                                     key = MangaScreenItem.RELATED_MANGAS,
                                     contentType = MangaScreenItem.RELATED_MANGAS,
                                 ) {
-                                    Column {
+                                    Column(modifier = Modifier.animateItem()) {
                                         RelatedMangaTitle(
                                             title = stringResource(KMR.strings.pref_source_related_mangas),
                                             subtitle = null,
@@ -738,7 +738,7 @@ private fun MangaScreenSmallImpl(
                                         )
                                     }
                                 }
-                                item { HorizontalDivider() }
+                                item { HorizontalDivider(modifier = Modifier.animateItem()) }
                             }
                         } else if (!showRelatedMangasInOverflow) {
                             item(
@@ -749,6 +749,7 @@ private fun MangaScreenSmallImpl(
                                     text = stringResource(KMR.strings.pref_source_related_mangas)
                                         .uppercase(),
                                     onClick = onRelatedMangasScreenClick,
+                                    modifier = Modifier.animateItem(),
                                 )
                             }
                         }
@@ -1198,7 +1199,7 @@ private fun MangaScreenLargeImpl(
                                             key = MangaScreenItem.RELATED_MANGAS,
                                             contentType = MangaScreenItem.RELATED_MANGAS,
                                         ) {
-                                            Column {
+                                            Column(modifier = Modifier.animateItem()) {
                                                 RelatedMangaTitle(
                                                     title = stringResource(KMR.strings.pref_source_related_mangas)
                                                         .uppercase(),
@@ -1216,7 +1217,7 @@ private fun MangaScreenLargeImpl(
                                                 )
                                             }
                                         }
-                                        item { HorizontalDivider() }
+                                        item { HorizontalDivider(modifier = Modifier.animateItem()) }
                                     }
                                 } else if (!showRelatedMangasInOverflow) {
                                     item(
@@ -1226,6 +1227,7 @@ private fun MangaScreenLargeImpl(
                                         OutlinedButtonWithArrow(
                                             text = stringResource(KMR.strings.pref_source_related_mangas),
                                             onClick = onRelatedMangasScreenClick,
+                                            modifier = Modifier.animateItem(),
                                         )
                                     }
                                 }

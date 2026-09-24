@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import tachiyomi.domain.track.interactor.InsertTrack
 import tachiyomi.domain.track.model.Track
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 
 class MangaUpdatesAuthenticationTest {
@@ -50,7 +51,7 @@ class MangaUpdatesAuthenticationTest {
                 requests.last().authorization shouldBe emptyList()
                 session.set(null)
                 val count = requests.size
-                assertThrows<java.io.IOException> { service.update(track().toDbTrack(), false) }
+                assertThrows<IOException> { service.update(track().toDbTrack(), false) }
                 server.requests.size shouldBe count
             } finally {
                 client.connectionPool.evictAll()

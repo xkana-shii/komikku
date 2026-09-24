@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.jsonMime
 import exh.log.xLogE
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 import okhttp3.RequestBody.Companion.toRequestBody
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.repository.MangaMergeRepository
 import tachiyomi.domain.track.interactor.GetTracks
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -66,8 +68,8 @@ class WebhookNotifier(
     private suspend fun suppressed(manga: Manga?): Boolean {
         if (incognito.await(manga?.source)) return true
         if (manga == null) return false
-        if (manga.source == exh.source.MERGED_SOURCE_ID) {
-            val children = Injekt.get<tachiyomi.domain.manga.repository.MangaMergeRepository>().getMergedMangaById(manga.id)
+        if (manga.source == MERGED_SOURCE_ID) {
+            val children = Injekt.get<MangaMergeRepository>().getMergedMangaById(manga.id)
             if (children.any { incognito.await(it.source) }) return true
         }
         val categoryIds = categories.await(manga.id).map { it.id.toString() }.ifEmpty { listOf("0") }

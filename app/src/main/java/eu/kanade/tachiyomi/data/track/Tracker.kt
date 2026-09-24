@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.Flow
 import okhttp3.OkHttpClient
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 interface Tracker {
@@ -39,7 +40,10 @@ interface Tracker {
 
     fun getScoreList(): ImmutableList<String>
 
-    // TODO: Store all scores as 10 point in the future maybe?
+    /**
+     * Score normalized to 0..10 for display and cross-tracker averages.
+     * Services storing another native scale must override this to convert it.
+     */
     fun get10PointScore(track: DomainTrack): Double
 
     fun indexToScore(index: Int): Double
@@ -91,7 +95,7 @@ interface Tracker {
     // SY <--
 
     // KMK -->
-    suspend fun getRelatedEntries(remoteId: Long): List<tachiyomi.domain.manga.model.SequelPrequelEntry> = emptyList()
+    suspend fun getRelatedEntries(remoteId: Long): List<SequelPrequelEntry> = emptyList()
 
     fun hasNotStartedReading(status: Long): Boolean
     // KMK <--

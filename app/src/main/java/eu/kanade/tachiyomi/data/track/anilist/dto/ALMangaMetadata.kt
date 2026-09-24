@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.data.track.anilist.dto
 
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
+import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -56,11 +57,11 @@ internal fun ALMangaMetadataMedia.toAutofillMetadata(): TrackMangaMetadata {
         // KMK -->
         tags = (media.genres.orEmpty() + media.tags.orEmpty().map { it.name }).distinct().ifEmpty { null },
         status = when (media.status) {
-            "FINISHED" -> eu.kanade.tachiyomi.source.model.SManga.COMPLETED.toLong()
-            "RELEASING" -> eu.kanade.tachiyomi.source.model.SManga.ONGOING.toLong()
+            "FINISHED" -> SManga.COMPLETED.toLong()
+            "RELEASING" -> SManga.ONGOING.toLong()
             "NOT_YET_RELEASED" -> null
-            "CANCELLED" -> eu.kanade.tachiyomi.source.model.SManga.CANCELLED.toLong()
-            "HIATUS" -> eu.kanade.tachiyomi.source.model.SManga.ON_HIATUS.toLong()
+            "CANCELLED" -> SManga.CANCELLED.toLong()
+            "HIATUS" -> SManga.ON_HIATUS.toLong()
             else -> null
         },
         // KMK <--

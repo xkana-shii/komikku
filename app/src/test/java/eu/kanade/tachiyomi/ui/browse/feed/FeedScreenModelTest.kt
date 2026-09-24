@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
+import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.interactor.GetFeedSavedSearchGlobal
 import tachiyomi.domain.source.interactor.GetSavedSearchGlobalFeed
 import tachiyomi.domain.source.model.FeedSavedSearch
@@ -51,7 +52,7 @@ class FeedScreenModelTest {
     private val network = mockk<NetworkToLocalManga>()
 
     init {
-        coEvery { network.invoke(any<List<tachiyomi.domain.manga.model.Manga>>(), any<Boolean>()) } returns emptyList()
+        coEvery { network.invoke(any<List<Manga>>(), any<Boolean>()) } returns emptyList()
     }
 
     @Test

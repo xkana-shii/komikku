@@ -1,5 +1,10 @@
 package eu.kanade.presentation.manga.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,8 +59,17 @@ import uy.kohesive.injekt.api.get
 fun SequelPrequelRow(manga: Manga) {
     val uiPreferences = remember { Injekt.get<UiPreferences>() }
     val enabled by remember { uiPreferences.showSequelPrequel().changes() }.collectAsState(uiPreferences.showSequelPrequel().get())
-    if (!enabled) return
+    AnimatedVisibility(
+        visible = enabled,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        SequelPrequelContent(manga)
+    }
+}
 
+@Composable
+private fun SequelPrequelContent(manga: Manga) {
     val context = LocalContext.current
     val navigator = LocalNavigator.currentOrThrow
     val preferences = remember { Injekt.get<TrackPreferences>() }
@@ -78,11 +92,19 @@ fun SequelPrequelRow(manga: Manga) {
             context.xLogE("Failed to load tracker relations", e)
         }
     }
-    if (entries.isNotEmpty()) {
-        Column(Modifier.padding(horizontal = MaterialTheme.padding.medium)) {
-            Text(stringResource(KMR.strings.pref_sequel_prequel_title), style = MaterialTheme.typography.titleMedium)
+    AnimatedVisibility(
+        visible = entries.isNotEmpty(),
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        Column {
+            Text(
+                text = stringResource(KMR.strings.pref_sequel_prequel_title),
+                modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium),
+                style = MaterialTheme.typography.titleMedium,
+            )
             LazyRow(
-                contentPadding = PaddingValues(vertical = MaterialTheme.padding.small),
+                contentPadding = PaddingValues(MaterialTheme.padding.small),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
             ) {
                 items(entries, key = { "${it.relation}-${it.url}" }) { entry ->
