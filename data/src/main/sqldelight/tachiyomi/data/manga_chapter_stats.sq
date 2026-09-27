@@ -10,6 +10,8 @@ CREATE TABLE manga_chapter_stats(
     latest_upload INTEGER NOT NULL,
     chapter_fetched_at INTEGER NOT NULL,
     last_read INTEGER NOT NULL,
+    fillermark_count INTEGER NOT NULL DEFAULT 0,
+    fillermark_read_count INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(manga_id) REFERENCES mangas (_id)
     ON DELETE CASCADE
 );
@@ -24,11 +26,12 @@ END;
 
 -- Page progress and other columns the aggregates don't read keep the row.
 CREATE TRIGGER manga_chapter_stats_update_chapter
-AFTER UPDATE OF manga_id, scanlator, read, bookmark, date_upload, date_fetch ON chapters
+AFTER UPDATE OF manga_id, scanlator, read, bookmark, fillermark, date_upload, date_fetch ON chapters
 WHEN old.manga_id IS NOT new.manga_id
 OR old.scanlator IS NOT new.scanlator
 OR old.read IS NOT new.read
 OR old.bookmark IS NOT new.bookmark
+OR old.fillermark IS NOT new.fillermark
 OR old.date_upload IS NOT new.date_upload
 OR old.date_fetch IS NOT new.date_fetch
 BEGIN
@@ -94,7 +97,9 @@ SELECT
     coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
     coalesce(max(C.date_upload), 0),
     coalesce(max(C.date_fetch), 0),
-    coalesce(max(H.last_read), 0)
+    coalesce(max(H.last_read), 0),
+    coalesce(sum(C.fillermark), 0),
+    coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0)
 FROM mangas M
 LEFT JOIN chapters C
 ON C.manga_id = M._id

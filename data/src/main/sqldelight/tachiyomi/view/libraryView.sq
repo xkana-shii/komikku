@@ -118,7 +118,9 @@ SELECT
     coalesce(C.fetchedAt, S.chapter_fetched_at, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, S.last_read, 0) AS lastRead,
     coalesce(C.bookmarkCount, S.bookmark_count, 0) AS bookmarkCount,
+    coalesce(C.fillermarkCount, S.fillermark_count, 0) AS fillermarkCount,
     coalesce(C.bookmarkReadCount, S.bookmark_read_count, 0) AS bookmarkedReadCount,
+    coalesce(C.fillermarkReadCount, S.fillermark_read_count, 0) AS fillermarkedReadCount,
     coalesce(MC.categories, '0') AS categories
 FROM mangas M
 LEFT JOIN manga_chapter_stats S
@@ -132,7 +134,9 @@ LEFT JOIN (
         coalesce(max(history.last_read), 0) AS lastRead,
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
+        sum(chapters.fillermark) AS fillermarkCount,
         sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN chapters.fillermark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     LEFT JOIN excluded_scanlators
@@ -169,7 +173,9 @@ SELECT
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    coalesce(C.fillermarkCount, 0) AS fillermarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
     coalesce(MC.categories, '0') AS categories
 FROM mangas M
 LEFT JOIN (
@@ -181,7 +187,9 @@ LEFT JOIN (
         coalesce(max(history.last_read), 0) AS lastRead,
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
+        sum(chapters.fillermark) AS fillermarkCount,
         sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN chapters.fillermark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
         excluded_scanlators.scanlator AS ex_scanlator
     -- Driving from `merged` restricts the scan to merged chapters.
     FROM merged ME
@@ -215,7 +223,9 @@ SELECT
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    coalesce(C.fillermarkCount, 0) AS fillermarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
     coalesce(MC.categories, '0') AS categories
 FROM mangas M
 LEFT JOIN (
@@ -227,7 +237,9 @@ LEFT JOIN (
         coalesce(max(history.last_read), 0) AS lastRead,
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
+        sum(chapters.fillermark) AS fillermarkCount,
         sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN chapters.fillermark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
         excluded_scanlators.scanlator AS ex_scanlator
     FROM chapters
     -- Aggregate only the entries this query returns.
@@ -262,7 +274,9 @@ SELECT
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    coalesce(C.fillermarkCount, 0) AS fillermarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
     coalesce(MC.categories, '0') AS categories
 FROM mangas M
 LEFT JOIN (
@@ -274,7 +288,9 @@ LEFT JOIN (
         coalesce(max(history.last_read), 0) AS lastRead,
         coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
         sum(chapters.bookmark) AS bookmarkCount,
+        sum(chapters.fillermark) AS fillermarkCount,
         sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN chapters.fillermark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
         excluded_scanlators.scanlator AS ex_scanlator
     -- Driving from `merged` restricts the scan to merged chapters.
     FROM merged ME
