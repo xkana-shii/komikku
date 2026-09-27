@@ -106,6 +106,20 @@ class MangaRepositoryImpl(
         }
     }
 
+    // KMK -->
+    override suspend fun updateLibraryChapterFlags(chapterFlags: Long): Boolean {
+        return try {
+            handler.await(inTransaction = true) {
+                mangasQueries.updateLibraryChapterFlags(chapterFlags)
+            }
+            true
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            false
+        }
+    }
+    // KMK <--
+
     override suspend fun setMangaCategories(mangaId: Long, categoryIds: List<Long>) {
         handler.await(inTransaction = true) {
             mangas_categoriesQueries.deleteMangaCategoryByMangaId(mangaId)

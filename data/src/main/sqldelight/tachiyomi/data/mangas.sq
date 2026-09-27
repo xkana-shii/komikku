@@ -176,6 +176,13 @@ UPDATE mangas
 SET is_syncing = 0
 WHERE is_syncing = 1;
 
+-- KMK -->
+updateLibraryChapterFlags:
+UPDATE mangas
+SET chapter_flags = :chapterFlags
+WHERE favorite = 1;
+-- KMK <--
+
 getSourceIdsWithNonLibraryManga:
 SELECT source, COUNT(*) AS manga_count
 FROM mangas

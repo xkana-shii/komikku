@@ -2,14 +2,14 @@ package tachiyomi.domain.chapter.interactor
 
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.repository.MangaRepository
 
 class SetMangaDefaultChapterFlags(
     private val libraryPreferences: LibraryPreferences,
     private val setMangaChapterFlags: SetMangaChapterFlags,
-    private val getFavorites: GetFavorites,
+    private val mangaRepository: MangaRepository,
 ) {
 
     suspend fun await(manga: Manga) {
@@ -29,9 +29,31 @@ class SetMangaDefaultChapterFlags(
         }
     }
 
+    // KMK -->
+    /** Applies one preference snapshot without loading library manga or opening a transaction per entry. */
     suspend fun awaitAll() {
         withNonCancellableContext {
-            getFavorites.await().forEach { await(it) }
+            mangaRepository.updateLibraryChapterFlags(
+                setMangaChapterFlags.buildAllFlags(
+                    unreadFilter = libraryPreferences.filterChapterByRead().get(),
+                    downloadedFilter = libraryPreferences.filterChapterByDownloaded().get(),
+                    bookmarkedFilter = libraryPreferences.filterChapterByBookmarked().get(),
+                    fillermarkedFilter = libraryPreferences.filterChapterByFillermarked().get(),
+                    sortingMode = libraryPreferences.sortChapterBySourceOrNumber().get(),
+                    sortingDirection = libraryPreferences.sortChapterByAscendingOrDescending().get(),
+                    displayMode = libraryPreferences.displayChapterByNameOrNumber().get(),
+                ),
+            )
         }
     }
+
+    suspend fun setAsDefault(manga: Manga, applyToExisting: Boolean) {
+        withNonCancellableContext {
+            libraryPreferences.setChapterSettingsDefault(manga)
+            if (applyToExisting) {
+                awaitAll()
+            }
+        }
+    }
+    // KMK <--
 }

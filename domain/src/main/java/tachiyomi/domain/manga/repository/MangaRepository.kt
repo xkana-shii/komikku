@@ -38,6 +38,11 @@ interface MangaRepository {
 
     suspend fun updateAll(mangaUpdates: List<MangaUpdate>): Boolean
 
+    // KMK -->
+    /** Overwrites chapter flags on library entries in one statement. */
+    suspend fun updateLibraryChapterFlags(chapterFlags: Long): Boolean
+    // KMK <--
+
     suspend fun insertNetworkManga(
         manga: List<Manga>,
         // KMK -->

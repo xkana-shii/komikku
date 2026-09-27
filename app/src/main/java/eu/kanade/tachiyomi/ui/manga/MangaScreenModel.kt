@@ -1736,10 +1736,7 @@ class MangaScreenModel(
     fun setCurrentSettingsAsDefault(applyToExisting: Boolean) {
         val manga = successState?.manga ?: return
         screenModelScope.launchNonCancellable {
-            libraryPreferences.setChapterSettingsDefault(manga)
-            if (applyToExisting) {
-                setMangaDefaultChapterFlags.awaitAll()
-            }
+            setMangaDefaultChapterFlags.setAsDefault(manga, applyToExisting)
             snackbarHostState.showSnackbar(message = context.stringResource(MR.strings.chapter_settings_updated))
         }
     }
