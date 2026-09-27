@@ -18,6 +18,7 @@ import tachiyomi.data.subscribeToOne
 import tachiyomi.data.subscribeToOneOrNull
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.repository.MangaRepository
@@ -197,6 +198,31 @@ class MangaRepositoryImpl(
             }
         }
     }
+
+    // KMK -->
+    override suspend fun updateRemote(update: MangaRemoteUpdate): Boolean {
+        return try {
+            database.mangasQueries.updateRemote(
+                artist = update.artist,
+                author = update.author,
+                description = update.description,
+                genre = update.genre,
+                title = update.title,
+                status = update.status,
+                thumbnailUrl = update.thumbnailUrl,
+                initialized = update.initialized,
+                coverLastModified = update.coverLastModified,
+                updateStrategy = update.updateStrategy,
+                memo = update.memo,
+                mangaId = update.id,
+            )
+            true
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            false
+        }
+    }
+    // KMK <--
 
     private suspend fun partialUpdate(vararg mangaUpdates: MangaUpdate) {
         database.transaction {

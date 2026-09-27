@@ -18,6 +18,7 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.source.service.SourceManager
@@ -174,8 +175,9 @@ class UpdateMangaFromRemote(
 
         val thumbnailUrl = remoteManga.thumbnail_url?.takeIf { it.isNotEmpty() }
 
-        val success = mangaRepository.update(
-            MangaUpdate(
+        // KMK -->
+        val success = mangaRepository.updateRemote(
+            MangaRemoteUpdate(
                 id = localManga.id,
                 title = title,
                 coverLastModified = coverLastModified,
@@ -190,6 +192,7 @@ class UpdateMangaFromRemote(
                 memo = remoteManga.memo,
             ),
         )
+        // KMK <--
         if (success && title != null) {
             downloadManager.renameManga(localManga, title)
         }

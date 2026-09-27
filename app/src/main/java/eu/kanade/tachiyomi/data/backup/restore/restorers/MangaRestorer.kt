@@ -162,7 +162,7 @@ class MangaRestorer(
 
     suspend fun updateManga(manga: Manga): Manga {
         database.transaction {
-            database.mangasQueries.update(
+            database.mangasQueries.updateFromBackup(
                 source = manga.source,
                 url = manga.url,
                 // SY -->
@@ -322,21 +322,13 @@ class MangaRestorer(
     private suspend fun updateExistingChapters(chapters: List<Chapter>) {
         database.transaction {
             chapters.forEach { chapter ->
-                database.chaptersQueries.update(
-                    mangaId = null,
-                    url = null,
-                    name = null,
-                    scanlator = null,
+                database.chaptersQueries.updateFromBackup(
                     read = chapter.read,
                     bookmark = chapter.bookmark,
                     fillermark = chapter.fillermark,
                     lastPageRead = chapter.lastPageRead,
-                    chapterNumber = null,
-                    dateFetch = null,
-                    // KMK -->
                     sourceOrder = chapter.sourceOrder,
                     dateUpload = chapter.dateUpload,
-                    // KMK <--
                     chapterId = chapter.id,
                     version = chapter.version,
                     isSyncing = 1,

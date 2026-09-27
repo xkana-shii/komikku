@@ -139,6 +139,21 @@ AND (
 ORDER BY C.manga_id, C.source_order;
 -- KMK <--
 
+-- KMK -->
+updateFromBackup:
+UPDATE chapters SET
+    read = coalesce(:read, read),
+    bookmark = coalesce(:bookmark, bookmark),
+    fillermark = coalesce(:fillermark, fillermark),
+    last_page_read = coalesce(:lastPageRead, last_page_read),
+    source_order = coalesce(:sourceOrder, source_order),
+    date_upload = coalesce(:dateUpload, date_upload),
+    version = coalesce(:version, version),
+    is_syncing = coalesce(:isSyncing, is_syncing),
+    memo = coalesce(:memo, memo)
+WHERE _id = :chapterId;
+-- KMK <--
+
 getScanlatorsByMergeId:
 SELECT scanlator
 FROM (
@@ -185,4 +200,16 @@ SET manga_id = coalesce(:mangaId, manga_id),
     is_syncing = coalesce(:isSyncing, is_syncing),
     memo = coalesce(:memo, memo)
 WHERE _id = :chapterId;
+
+-- KMK -->
+updateRemote:
+UPDATE chapters
+SET name = :name,
+    scanlator = coalesce(:scanlator, scanlator),
+    chapter_number = :chapterNumber,
+    source_order = :sourceOrder,
+    date_upload = coalesce(:dateUpload, date_upload),
+    memo = :memo
+WHERE _id = :chapterId;
+-- KMK <--
 

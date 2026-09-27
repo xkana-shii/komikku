@@ -10,6 +10,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.manga.model.Manga
@@ -60,7 +61,7 @@ class ChapterRepositoryImpl(
     override suspend fun updateFromRemote(
         removedIds: List<Long>,
         added: List<Chapter>,
-        updated: List<ChapterUpdate>,
+        updated: List<ChapterRemoteUpdate>,
     ): List<Chapter> {
         return database.transactionWithResult {
             if (removedIds.isNotEmpty()) {
@@ -103,22 +104,13 @@ class ChapterRepositoryImpl(
                 chapter.copy(id = chapterId)
             }
             updated.forEach { chapterUpdate ->
-                database.chaptersQueries.update(
-                    mangaId = chapterUpdate.mangaId,
-                    url = chapterUpdate.url,
+                database.chaptersQueries.updateRemote(
                     name = chapterUpdate.name,
                     scanlator = chapterUpdate.scanlator,
-                    read = chapterUpdate.read,
-                    bookmark = chapterUpdate.bookmark,
-                    fillermark = chapterUpdate.fillermark,
-                    lastPageRead = chapterUpdate.lastPageRead,
                     chapterNumber = chapterUpdate.chapterNumber,
                     sourceOrder = chapterUpdate.sourceOrder,
-                    dateFetch = chapterUpdate.dateFetch,
                     dateUpload = chapterUpdate.dateUpload,
                     chapterId = chapterUpdate.id,
-                    version = chapterUpdate.version,
-                    isSyncing = 0,
                     memo = chapterUpdate.memo,
                 )
             }

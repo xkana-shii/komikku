@@ -14,6 +14,7 @@ import exh.source.isEhBasedManga
 import tachiyomi.data.chapter.ChapterSanitizer
 import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.model.toChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
@@ -70,7 +71,9 @@ class SyncChaptersWithSource(
         val dbChaptersByUrl = dbChapters.associateBy { it.url }
 
         val newChapters = mutableListOf<Chapter>()
-        val updatedChapters = mutableListOf<Chapter>()
+        // KMK -->
+        val updatedChapters = mutableListOf<ChapterRemoteUpdate>()
+        // KMK <--
         val sourceUrls = mutableSetOf<String>()
 
         // Used to not set upload date of older chapters
@@ -127,18 +130,19 @@ class SyncChaptersWithSource(
                         downloadManager.renameChapter(source, manga, dbChapter, chapter)
                     }
 
-                    var toChangeChapter = dbChapter.copy(
-                        name = chapter.name,
-                        chapterNumber = chapter.chapterNumber,
-                        scanlator = chapter.scanlator,
-                        sourceOrder = chapter.sourceOrder,
-                        memo = chapter.memo,
+                    // KMK -->
+                    updatedChapters.add(
+                        ChapterRemoteUpdate(
+                            id = dbChapter.id,
+                            name = chapter.name,
+                            chapterNumber = chapter.chapterNumber,
+                            scanlator = chapter.scanlator,
+                            sourceOrder = chapter.sourceOrder,
+                            dateUpload = chapter.dateUpload.takeIf { it != 0L },
+                            memo = chapter.memo,
+                        ),
                     )
-
-                    if (chapter.dateUpload != 0L) {
-                        toChangeChapter = toChangeChapter.copy(dateUpload = chapter.dateUpload)
-                    }
-                    updatedChapters.add(toChangeChapter)
+                    // KMK <--
                 }
             }
         }
@@ -233,7 +237,7 @@ class SyncChaptersWithSource(
         val added = chapterRepository.updateFromRemote(
             removedIds = removedChapters.map { it.id },
             added = toAdd,
-            updated = updatedChapters.map { it.toChapterUpdate() },
+            updated = updatedChapters,
         )
         // KMK <--
         updateManga.awaitUpdateFetchInterval(manga, now, fetchWindow)
