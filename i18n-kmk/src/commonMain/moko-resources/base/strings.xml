@@ -355,6 +355,11 @@
     <string name="pref_webhook_enabled">Enable webhooks</string>
     <string name="webhook_events">Events</string>
     <string name="track_remove_all_trackers">Remove all tracking</string>
+    <string name="track_normalized_score_summary">≈ %1$.1f/10 across %2$d trackers</string>
+    <string name="track_manage_services">Add another service</string>
+    <string name="track_change_entry">Change entry</string>
+    <string name="track_sync_error_a11y">%1$s: failed to sync. Retry or check its entry.</string>
+    <string name="track_unsynced_a11y">%1$s: chapter count differs from the primary tracker</string>
     <string name="track_unsynced_hint">● marks a tracker whose chapter count differs from the primary tracker</string>
     <string name="track_sync_error_hint">⚠ marks a tracker that failed to refresh or update — retry or check its entry</string>
     <string name="webhook_exclusions_help">Events are not sent for manga in these categories</string>

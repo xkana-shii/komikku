@@ -3,13 +3,13 @@ package eu.kanade.presentation.track
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -48,7 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -61,13 +62,10 @@ import eu.kanade.presentation.track.components.TrackLogoIcon
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.ui.manga.track.TrackItem
 import eu.kanade.tachiyomi.util.lang.toLocalDate
-import eu.kanade.tachiyomi.util.system.copyToClipboard
-import tachiyomi.domain.track.service.TrackerProgressSync
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 
 @Composable
 fun TrackInfoDialogHome(
@@ -83,6 +81,7 @@ fun TrackInfoDialogHome(
     onRemoved: (TrackItem) -> Unit,
     onCopyLink: (TrackItem) -> Unit,
     onTogglePrivate: (TrackItem) -> Unit,
+    onManageServices: () -> Unit = {},
     header: @Composable () -> Unit = {},
     preferredId: Long? = null,
     onAdjustProgress: (Int) -> Unit = {},
@@ -101,22 +100,19 @@ fun TrackInfoDialogHome(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         header()
-        val bound = trackItems.filter { it.track != null }
+        val presentation = remember(trackItems, preferredId, dateFormat, errorTrackerIds) {
+            TrackerSheetPresentation(trackItems, preferredId, dateFormat, errorTrackerIds)
+        }
+        val bound = presentation.bound
         if (bound.size >= 2) {
             UnifiedTrackerCard(
-                trackItems = trackItems, preferredId = preferredId, dateFormat = dateFormat,
+                presentation = presentation,
                 onAdjustProgress = onAdjustProgress, busy = busy, onStatusClick = onStatusClick,
                 onChapterClick = onChapterClick, onScoreClick = onScoreClick,
                 onStartDateEdit = onStartDateEdit, onEndDateEdit = onEndDateEdit,
                 onNewSearch = onNewSearch, onRemoved = onRemoved, onOpenInBrowser = onOpenInBrowser,
-                onCopyLink = onCopyLink, onRemoveTracking = onRemoveTracking, errorTrackerIds = errorTrackerIds,
+                onCopyLink = onCopyLink, onRemoveTracking = onRemoveTracking, onTogglePrivate = onTogglePrivate,
             )
-            if (TrackerProgressSync.hasMismatch(bound.mapNotNull { it.track })) {
-                Text(stringResource(KMR.strings.track_unsynced_hint), style = MaterialTheme.typography.bodySmall)
-            }
-            if (errorTrackerIds.isNotEmpty()) {
-                Text(stringResource(KMR.strings.track_sync_error_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
         } else {
             bound.forEach { item ->
                 if (item.track != null) {
@@ -142,7 +138,7 @@ fun TrackInfoDialogHome(
                             .takeIf { supportsScoring && item.track.score != 0.0 },
                         onScoreClick = { onScoreClick(item) }
                             .takeIf { supportsScoring },
-                        startDate = remember(item.track.startDate) { dateFormat.format(item.track.startDate.toLocalDate()) }
+                        startDate = remember(item.track.startDate, dateFormat) { dateFormat.format(item.track.startDate.toLocalDate()) }
                             .takeIf { supportsReadingDates && item.track.startDate != 0L },
                         onStartDateClick = { onStartDateEdit(item) } // TODO
                             .takeIf { supportsReadingDates },
@@ -150,7 +146,7 @@ fun TrackInfoDialogHome(
                             .takeIf { supportsReadingDates && item.track.finishDate != 0L },
                         onEndDateClick = { onEndDateEdit(item) }
                             .takeIf { supportsReadingDates },
-                        onNewSearch = { onNewSearch(item) },
+                        onNewSearch = { onNewSearch(item) }.takeIf { item.canChangeEntry },
                         onOpenInBrowser = { onOpenInBrowser(item) },
                         onRemoved = { onRemoved(item) },
                         onCopyLink = { onCopyLink(item) },
@@ -161,12 +157,27 @@ fun TrackInfoDialogHome(
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                trackItems.filter { it.track == null }.forEach { item ->
+                presentation.visibleItems.filter { it.track == null }.forEach { item ->
                     Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest).padding(4.dp)) {
                         TrackLogoIcon(tracker = item.tracker, onClick = { onNewSearch(item) })
                     }
                 }
             }
+        }
+        val legend = listOfNotNull(
+            presentation.averageScore?.let {
+                stringResource(KMR.strings.track_normalized_score_summary, it, presentation.scoredCount)
+            },
+            stringResource(KMR.strings.track_unsynced_hint).takeIf { presentation.mismatchedIds.isNotEmpty() },
+            stringResource(KMR.strings.track_sync_error_hint).takeIf { presentation.errorIds.isNotEmpty() },
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            legend.forEach {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        TextButton(onClick = onManageServices) {
+            Text(stringResource(KMR.strings.track_manage_services))
         }
     }
 }
@@ -185,14 +196,13 @@ private fun TrackInfoItem(
     onStartDateClick: (() -> Unit)?,
     endDate: String?,
     onEndDateClick: (() -> Unit)?,
-    onNewSearch: () -> Unit,
+    onNewSearch: (() -> Unit)?,
     onOpenInBrowser: () -> Unit,
     onRemoved: () -> Unit,
     onCopyLink: () -> Unit,
     private: Boolean,
     onTogglePrivate: (() -> Unit)?,
 ) {
-    val context = LocalContext.current
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -224,12 +234,6 @@ private fun TrackInfoItem(
                 modifier = Modifier
                     .height(48.dp)
                     .weight(1f)
-                    .combinedClickable(
-                        onClick = onNewSearch,
-                        onLongClick = {
-                            context.copyToClipboard(title, title)
-                        },
-                    )
                     .padding(start = 16.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
@@ -248,6 +252,7 @@ private fun TrackInfoItem(
                 onCopyLink = onCopyLink,
                 private = private,
                 onTogglePrivate = onTogglePrivate,
+                onChangeEntry = onNewSearch,
             )
         }
 
@@ -263,7 +268,7 @@ private fun TrackInfoItem(
                 Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                     TrackDetailsItem(
                         modifier = Modifier.weight(1f),
-                        text = status?.let { stringResource(it) } ?: "",
+                        text = stringResource(status ?: MR.strings.reading),
                         onClick = onStatusClick,
                     )
                     VerticalDivider()
@@ -360,6 +365,8 @@ private fun TrackInfoItemMenu(
     onCopyLink: () -> Unit,
     private: Boolean,
     onTogglePrivate: (() -> Unit)?,
+    onChangeEntry: (() -> Unit)?,
+    busy: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
@@ -387,8 +394,19 @@ private fun TrackInfoItemMenu(
                     expanded = false
                 },
             )
+            if (onChangeEntry != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(KMR.strings.track_change_entry)) },
+                    enabled = !busy,
+                    onClick = {
+                        onChangeEntry()
+                        expanded = false
+                    },
+                )
+            }
             if (onTogglePrivate != null) {
                 DropdownMenuItem(
+                    enabled = !busy,
                     text = {
                         Text(
                             stringResource(
@@ -408,6 +426,7 @@ private fun TrackInfoItemMenu(
             }
             DropdownMenuItem(
                 text = { Text(stringResource(MR.strings.action_remove)) },
+                enabled = !busy,
                 onClick = {
                     onRemoved()
                     expanded = false
@@ -433,9 +452,7 @@ private fun TrackInfoDialogHomePreviews(
 // KMK -->
 @Composable
 private fun UnifiedTrackerCard(
-    trackItems: List<TrackItem>,
-    preferredId: Long?,
-    dateFormat: DateTimeFormatter,
+    presentation: TrackerSheetPresentation,
     onAdjustProgress: (Int) -> Unit,
     busy: Boolean,
     onStatusClick: (TrackItem) -> Unit,
@@ -451,25 +468,14 @@ private fun UnifiedTrackerCard(
     onCopyLink: (TrackItem) -> Unit,
     // KMK --> bulk removal goes through one confirmation; error ids badge failed refreshes
     onRemoveTracking: (List<TrackItem>) -> Unit = {},
-    errorTrackerIds: Set<Long> = emptySet(),
+    onTogglePrivate: (TrackItem) -> Unit,
     // KMK <--
 ) {
-    val domainTracksForSync = remember(trackItems) { trackItems.mapNotNull { it.track } }
-    val resolved = remember(domainTracksForSync, preferredId) {
-        TrackerProgressSync.resolvePreferredTrack(domainTracksForSync, preferredId)
-    }
-    val primary = remember(trackItems, resolved) {
-        resolved?.let { r -> trackItems.find { it.track?.trackerId == r.trackerId } } ?: trackItems.firstOrNull { it.track != null } ?: trackItems.firstOrNull()
-    } ?: return
-    val scoreItem = primary.takeIf { it.tracker.getScoreList().isNotEmpty() } ?: trackItems.firstOrNull { it.track != null && it.tracker.getScoreList().isNotEmpty() }
-    val dateItem = primary.takeIf { it.tracker.supportsReadingDates } ?: trackItems.firstOrNull { it.track != null && it.tracker.supportsReadingDates }
+    val primary = presentation.primary ?: return
     val displayTrack = primary.track
-    val displayTracker = primary.tracker
-    val isMismatched = remember(domainTracksForSync, preferredId) {
-        TrackerProgressSync.mismatchedIds(domainTracksForSync, preferredId).isNotEmpty()
-    }
-    val statusText = displayTrack?.let { displayTracker.getStatus(it.status)?.let { stringResource(it) } } ?: "—"
-    val scoreText = scoreItem?.track?.let { scoreItem.tracker.displayScore(it) }?.takeIf { it.isNotBlank() } ?: "—"
+    val isMismatched = presentation.mismatchedIds.isNotEmpty()
+    val statusText = stringResource(presentation.status)
+    val scoreText = presentation.score
     val chaptersRead = displayTrack?.lastChapterRead?.toInt() ?: 0
     val totalChapters = displayTrack?.totalChapters ?: 0
     val chaptersText = if (totalChapters > 0) {
@@ -479,8 +485,8 @@ private fun UnifiedTrackerCard(
     } else {
         "0"
     }
-    val startDate = dateItem?.track?.startDate?.takeIf { it != 0L }?.let { dateFormat.format(it.toLocalDate()) }
-    val finishDate = dateItem?.track?.finishDate?.takeIf { it != 0L }?.let { dateFormat.format(it.toLocalDate()) }
+    val startDate = presentation.startDate
+    val finishDate = presentation.finishDate
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -491,51 +497,64 @@ private fun UnifiedTrackerCard(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // KMK --> per-tracker unsynced dot (vs preferred) + untracked icons bind via onNewSearch
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            trackItems.forEach { item ->
-                val itemTrack = item.track
-                val isUnsynced = itemTrack != null && resolved != null &&
-                    abs(itemTrack.lastChapterRead - resolved.lastChapterRead) > 0.01
-                // KMK --> refresh failure outranks the unsynced dot; legend explains both
-                val isErrored = item.tracker.id in errorTrackerIds
-                // KMK <--
-                BadgedBox(
-                    badge = {
-                        if (isErrored) {
-                            Badge(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Warning,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                presentation.visibleItems.forEach { item ->
+                    val itemTrack = item.track
+                    val isUnsynced = item.tracker.id in presentation.mismatchedIds
+                    val isErrored = item.tracker.id in presentation.errorIds
+                    val unsyncedDescription = stringResource(KMR.strings.track_unsynced_a11y, item.tracker.name)
+                    BadgedBox(
+                        badge = {
+                            if (isErrored) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Warning,
+                                        contentDescription = stringResource(KMR.strings.track_sync_error_a11y, item.tracker.name),
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                            } else if (isUnsynced) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.semantics { contentDescription = unsyncedDescription },
                                 )
                             }
-                        } else if (isUnsynced) {
-                            Badge(containerColor = MaterialTheme.colorScheme.error)
-                        }
-                    },
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .padding(4.dp),
-                        contentAlignment = Alignment.Center,
+                        },
                     ) {
-                        TrackLogoIcon(
-                            tracker = item.tracker,
-                            onClick = { if (itemTrack != null) onOpenInBrowser(item) else onNewSearch(item) },
-                            onLongClick = if (itemTrack != null) ({ onCopyLink(item) }) else null,
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TrackLogoIcon(
+                                tracker = item.tracker,
+                                onClick = { if (itemTrack != null) onOpenInBrowser(item) else onNewSearch(item) },
+                                onLongClick = if (itemTrack != null) ({ onCopyLink(item) }) else null,
+                            )
+                        }
                     }
                 }
             }
+            TrackInfoItemMenu(
+                onOpenInBrowser = { onOpenInBrowser(primary) },
+                onCopyLink = { onCopyLink(primary) },
+                onRemoved = { onRemoved(primary) },
+                onChangeEntry = { onNewSearch(primary) }.takeIf { primary.canChangeEntry },
+                private = displayTrack?.private == true,
+                onTogglePrivate = { onTogglePrivate(primary) }.takeIf { presentation.supportsPrivate },
+                busy = busy,
+            )
         }
         // KMK <--
         Surface(
@@ -558,17 +577,25 @@ private fun UnifiedTrackerCard(
                     ) {
                         Text(text = statusText, style = MaterialTheme.typography.bodyMedium)
                     }
-                    VerticalDivider()
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(enabled = !busy && scoreItem != null) { scoreItem?.let(onScoreClick) }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(text = scoreText, style = MaterialTheme.typography.bodyMedium)
-                            Text(text = "★", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                    if (presentation.supportsScore) {
+                        VerticalDivider()
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = !busy) { onScoreClick(primary) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = scoreText ?: stringResource(MR.strings.score),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (scoreText == null) UNSET_TEXT_ALPHA else 1f),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                if (presentation.appendScoreStar) {
+                                    Text(text = "★", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
                         }
                     }
                 }
@@ -579,7 +606,7 @@ private fun UnifiedTrackerCard(
                     Box(
                         modifier = Modifier
                             .weight(0.15f)
-                            .clickable(enabled = !busy) { onAdjustProgress(-1) }
+                            .clickable { onAdjustProgress(-1) }
                             .padding(8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -599,7 +626,7 @@ private fun UnifiedTrackerCard(
                     Box(
                         modifier = Modifier
                             .weight(0.15f)
-                            .clickable(enabled = !busy) { onAdjustProgress(1) }
+                            .clickable { onAdjustProgress(1) }
                             .padding(8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -610,36 +637,40 @@ private fun UnifiedTrackerCard(
                 Row(
                     modifier = Modifier.height(IntrinsicSize.Min),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(0.425f)
-                            .clickable(enabled = !busy && dateItem != null) { dateItem?.let(onStartDateEdit) }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = startDate ?: stringResource(MR.strings.track_started_reading_date),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (startDate == null) UNSET_TEXT_ALPHA else 1f),
-                        )
+                    if (presentation.supportsReadingDates) {
+                        Box(
+                            modifier = Modifier
+                                .weight(0.425f)
+                                .clickable(enabled = !busy) { onStartDateEdit(primary) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = startDate ?: stringResource(MR.strings.track_started_reading_date),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (startDate == null) UNSET_TEXT_ALPHA else 1f),
+                            )
+                        }
+                        VerticalDivider()
+                        Box(
+                            modifier = Modifier
+                                .weight(0.425f)
+                                .clickable(enabled = !busy) { onEndDateEdit(primary) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = finishDate ?: stringResource(MR.strings.track_finished_reading_date),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (finishDate == null) UNSET_TEXT_ALPHA else 1f),
+                            )
+                        }
+                        VerticalDivider()
+                    } else {
+                        Spacer(Modifier.weight(0.85f))
                     }
-                    VerticalDivider()
-                    Box(
-                        modifier = Modifier
-                            .weight(0.425f)
-                            .clickable(enabled = !busy && dateItem != null) { dateItem?.let(onEndDateEdit) }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = finishDate ?: stringResource(MR.strings.track_finished_reading_date),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (finishDate == null) UNSET_TEXT_ALPHA else 1f),
-                        )
-                    }
-                    VerticalDivider()
                     Box(Modifier.weight(0.15f), contentAlignment = Alignment.Center) {
-                        IconButton(onClick = { onRemoveTracking(trackItems.filter { it.track != null }) }, enabled = !busy, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { onRemoveTracking(presentation.bound) }, enabled = !busy, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Outlined.Close, contentDescription = stringResource(KMR.strings.track_remove_selection), modifier = Modifier.size(18.dp))
                         }
                     }
