@@ -7,8 +7,6 @@ CREATE TABLE manga_chapter_stats(
     read_count INTEGER NOT NULL DEFAULT 0,
     bookmark_count INTEGER NOT NULL DEFAULT 0,
     bookmark_read_count INTEGER NOT NULL DEFAULT 0,
-    fillermark_count INTEGER NOT NULL DEFAULT 0,
-    fillermark_read_count INTEGER NOT NULL DEFAULT 0,
     latest_upload INTEGER NOT NULL DEFAULT 0,
     chapter_fetched_at INTEGER NOT NULL DEFAULT 0,
     last_read INTEGER NOT NULL DEFAULT 0,
@@ -25,13 +23,12 @@ WHEN NOT EXISTS (
 )
 BEGIN
     INSERT INTO manga_chapter_stats(
-        manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+        manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
         latest_upload, chapter_fetched_at, last_read
     )
     VALUES (
         new.manga_id, 1, new.read, new.bookmark,
         CASE WHEN new.bookmark = 1 AND new.read = 1 THEN 1 ELSE 0 END,
-        new.fillermark, CASE WHEN new.fillermark = 1 AND new.read = 1 THEN 1 ELSE 0 END,
         new.date_upload, new.date_fetch, 0
     )
     ON CONFLICT(manga_id) DO UPDATE SET
@@ -39,8 +36,6 @@ BEGIN
         read_count = read_count + excluded.read_count,
         bookmark_count = bookmark_count + excluded.bookmark_count,
         bookmark_read_count = bookmark_read_count + excluded.bookmark_read_count,
-        fillermark_count = fillermark_count + excluded.fillermark_count,
-        fillermark_read_count = fillermark_read_count + excluded.fillermark_read_count,
         latest_upload = max(latest_upload, excluded.latest_upload),
         chapter_fetched_at = max(chapter_fetched_at, excluded.chapter_fetched_at);
 END;
@@ -50,7 +45,7 @@ CREATE TRIGGER manga_chapter_stats_update_chapter
 AFTER UPDATE ON chapters
 WHEN old.manga_id = new.manga_id
 AND old.scanlator IS new.scanlator
-AND (old.read IS NOT new.read OR old.bookmark IS NOT new.bookmark OR old.fillermark IS NOT new.fillermark)
+AND (old.read IS NOT new.read OR old.bookmark IS NOT new.bookmark)
 AND NOT EXISTS (
     SELECT 1 FROM excluded_scanlators ES
     WHERE ES.manga_id = new.manga_id AND ES.scanlator = new.scanlator
@@ -59,13 +54,9 @@ BEGIN
     UPDATE manga_chapter_stats SET
         read_count = read_count + new.read - old.read,
         bookmark_count = bookmark_count + new.bookmark - old.bookmark,
-        fillermark_count = fillermark_count + new.fillermark - old.fillermark,
         bookmark_read_count = bookmark_read_count
             + (CASE WHEN new.bookmark = 1 AND new.read = 1 THEN 1 ELSE 0 END)
-            - (CASE WHEN old.bookmark = 1 AND old.read = 1 THEN 1 ELSE 0 END),
-        fillermark_read_count = fillermark_read_count
-            + (CASE WHEN new.fillermark = 1 AND new.read = 1 THEN 1 ELSE 0 END)
-            - (CASE WHEN old.fillermark = 1 AND old.read = 1 THEN 1 ELSE 0 END)
+            - (CASE WHEN old.bookmark = 1 AND old.read = 1 THEN 1 ELSE 0 END)
     WHERE manga_id = new.manga_id;
 END;
 
@@ -76,7 +67,7 @@ WHEN old.manga_id IS NOT new.manga_id
 OR old.scanlator IS NOT new.scanlator
 BEGIN
     INSERT INTO manga_chapter_stats(
-        manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+        manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
         latest_upload, chapter_fetched_at, last_read
     )
     SELECT
@@ -85,8 +76,6 @@ BEGIN
         coalesce(sum(C.read), 0),
         coalesce(sum(C.bookmark), 0),
         coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-        coalesce(sum(C.fillermark), 0),
-        coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
         coalesce(max(C.date_upload), 0),
         coalesce(max(C.date_fetch), 0),
         coalesce(max(H.last_read), 0)
@@ -102,8 +91,6 @@ BEGIN
         read_count = excluded.read_count,
         bookmark_count = excluded.bookmark_count,
         bookmark_read_count = excluded.bookmark_read_count,
-        fillermark_count = excluded.fillermark_count,
-        fillermark_read_count = excluded.fillermark_read_count,
         latest_upload = excluded.latest_upload,
         chapter_fetched_at = excluded.chapter_fetched_at,
         last_read = excluded.last_read;
@@ -115,7 +102,7 @@ AFTER UPDATE ON chapters
 WHEN old.manga_id IS NOT new.manga_id
 BEGIN
     INSERT INTO manga_chapter_stats(
-        manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+        manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
         latest_upload, chapter_fetched_at, last_read
     )
     SELECT
@@ -124,8 +111,6 @@ BEGIN
         coalesce(sum(C.read), 0),
         coalesce(sum(C.bookmark), 0),
         coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-        coalesce(sum(C.fillermark), 0),
-        coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
         coalesce(max(C.date_upload), 0),
         coalesce(max(C.date_fetch), 0),
         coalesce(max(H.last_read), 0)
@@ -141,8 +126,6 @@ BEGIN
         read_count = excluded.read_count,
         bookmark_count = excluded.bookmark_count,
         bookmark_read_count = excluded.bookmark_read_count,
-        fillermark_count = excluded.fillermark_count,
-        fillermark_read_count = excluded.fillermark_read_count,
         latest_upload = excluded.latest_upload,
         chapter_fetched_at = excluded.chapter_fetched_at,
         last_read = excluded.last_read;
@@ -202,9 +185,6 @@ BEGIN
         bookmark_count = bookmark_count - old.bookmark,
         bookmark_read_count = bookmark_read_count
             - (CASE WHEN old.bookmark = 1 AND old.read = 1 THEN 1 ELSE 0 END),
-        fillermark_count = fillermark_count - old.fillermark,
-        fillermark_read_count = fillermark_read_count
-            - (CASE WHEN old.fillermark = 1 AND old.read = 1 THEN 1 ELSE 0 END),
         latest_upload = CASE
             WHEN old.date_upload < latest_upload THEN latest_upload
             ELSE coalesce((
@@ -320,7 +300,7 @@ CREATE TRIGGER manga_chapter_stats_insert_excluded_scanlator
 AFTER INSERT ON excluded_scanlators
 BEGIN
     INSERT INTO manga_chapter_stats(
-        manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+        manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
         latest_upload, chapter_fetched_at, last_read
     )
     SELECT
@@ -329,8 +309,6 @@ BEGIN
         coalesce(sum(C.read), 0),
         coalesce(sum(C.bookmark), 0),
         coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-        coalesce(sum(C.fillermark), 0),
-        coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
         coalesce(max(C.date_upload), 0),
         coalesce(max(C.date_fetch), 0),
         coalesce(max(H.last_read), 0)
@@ -346,8 +324,6 @@ BEGIN
         read_count = excluded.read_count,
         bookmark_count = excluded.bookmark_count,
         bookmark_read_count = excluded.bookmark_read_count,
-        fillermark_count = excluded.fillermark_count,
-        fillermark_read_count = excluded.fillermark_read_count,
         latest_upload = excluded.latest_upload,
         chapter_fetched_at = excluded.chapter_fetched_at,
         last_read = excluded.last_read;
@@ -358,7 +334,7 @@ AFTER DELETE ON excluded_scanlators
 WHEN EXISTS (SELECT 1 FROM mangas WHERE _id = old.manga_id)
 BEGIN
     INSERT INTO manga_chapter_stats(
-        manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+        manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
         latest_upload, chapter_fetched_at, last_read
     )
     SELECT
@@ -367,8 +343,6 @@ BEGIN
         coalesce(sum(C.read), 0),
         coalesce(sum(C.bookmark), 0),
         coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-        coalesce(sum(C.fillermark), 0),
-        coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
         coalesce(max(C.date_upload), 0),
         coalesce(max(C.date_fetch), 0),
         coalesce(max(H.last_read), 0)
@@ -384,8 +358,6 @@ BEGIN
         read_count = excluded.read_count,
         bookmark_count = excluded.bookmark_count,
         bookmark_read_count = excluded.bookmark_read_count,
-        fillermark_count = excluded.fillermark_count,
-        fillermark_read_count = excluded.fillermark_read_count,
         latest_upload = excluded.latest_upload,
         chapter_fetched_at = excluded.chapter_fetched_at,
         last_read = excluded.last_read;
@@ -399,7 +371,7 @@ WHERE manga_id IN :mangaIds;
 
 rebuildForMangaIds:
 INSERT INTO manga_chapter_stats(
-    manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+    manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
     latest_upload, chapter_fetched_at, last_read
 )
 SELECT
@@ -408,8 +380,6 @@ SELECT
     coalesce(sum(C.read), 0),
     coalesce(sum(C.bookmark), 0),
     coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-    coalesce(sum(C.fillermark), 0),
-    coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
     coalesce(max(C.date_upload), 0),
     coalesce(max(C.date_fetch), 0),
     coalesce(max(H.last_read), 0)
@@ -429,7 +399,7 @@ DELETE FROM manga_chapter_stats;
 
 rebuild:
 INSERT INTO manga_chapter_stats(
-    manga_id, total_count, read_count, bookmark_count, bookmark_read_count, fillermark_count, fillermark_read_count,
+    manga_id, total_count, read_count, bookmark_count, bookmark_read_count,
     latest_upload, chapter_fetched_at, last_read
 )
 SELECT
@@ -438,8 +408,6 @@ SELECT
     coalesce(sum(C.read), 0),
     coalesce(sum(C.bookmark), 0),
     coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-    coalesce(sum(C.fillermark), 0),
-    coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
     coalesce(max(C.date_upload), 0),
     coalesce(max(C.date_fetch), 0),
     coalesce(max(H.last_read), 0)
