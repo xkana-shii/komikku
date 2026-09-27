@@ -64,6 +64,7 @@ getRecentUpdates:
 SELECT *
 FROM updatesView
 WHERE dateUpload > :after
+ORDER BY datefetch DESC
 LIMIT :limit;
 
 getRecentUpdatesWithFilters:
@@ -82,6 +83,9 @@ AND (:fillermarked IS NULL OR fillermark = :fillermarked)
 AND (
     (excludedScanlator IS NULL OR :hideExcludedScanlators = 0)
 )
+-- KMK -->
+ORDER BY datefetch DESC
+-- KMK <--
 LIMIT :limit;
 
 getUpdatesByReadStatus:
@@ -89,4 +93,5 @@ SELECT *
 FROM updatesView
 WHERE read = :read
 AND dateUpload > :after
+ORDER BY datefetch DESC
 LIMIT :limit;
