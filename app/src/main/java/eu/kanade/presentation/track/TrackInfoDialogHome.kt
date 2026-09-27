@@ -70,6 +70,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun TrackInfoDialogHome(
     trackItems: List<TrackItem>,
+    seriesTitle: String,
     dateFormat: DateTimeFormatter,
     onStatusClick: (TrackItem) -> Unit,
     onChapterClick: (TrackItem) -> Unit,
@@ -107,6 +108,7 @@ fun TrackInfoDialogHome(
         if (bound.size >= 2) {
             UnifiedTrackerCard(
                 presentation = presentation,
+                seriesTitle = seriesTitle,
                 onAdjustProgress = onAdjustProgress, busy = busy, onStatusClick = onStatusClick,
                 onChapterClick = onChapterClick, onScoreClick = onScoreClick,
                 onStartDateEdit = onStartDateEdit, onEndDateEdit = onEndDateEdit,
@@ -453,6 +455,7 @@ private fun TrackInfoDialogHomePreviews(
 @Composable
 private fun UnifiedTrackerCard(
     presentation: TrackerSheetPresentation,
+    seriesTitle: String,
     onAdjustProgress: (Int) -> Unit,
     busy: Boolean,
     onStatusClick: (TrackItem) -> Unit,
@@ -496,6 +499,16 @@ private fun UnifiedTrackerCard(
             .padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        if (seriesTitle.isNotBlank()) {
+            Text(
+                text = seriesTitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp),
+            )
+        }
         // KMK --> per-tracker unsynced dot (vs preferred) + untracked icons bind via onNewSearch
         Row(verticalAlignment = Alignment.CenterVertically) {
             FlowRow(

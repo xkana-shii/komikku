@@ -91,16 +91,38 @@ class SetMangaChapterFlags(
         return mangaRepository.update(
             MangaUpdate(
                 id = mangaId,
-                chapterFlags = 0L.setFlag(unreadFilter, Manga.CHAPTER_UNREAD_MASK)
-                    .setFlag(downloadedFilter, Manga.CHAPTER_DOWNLOADED_MASK)
-                    .setFlag(bookmarkedFilter, Manga.CHAPTER_BOOKMARKED_MASK)
-                    .setFlag(fillermarkedFilter, Manga.CHAPTER_FILLERMARKED_MASK)
-                    .setFlag(sortingMode, Manga.CHAPTER_SORTING_MASK)
-                    .setFlag(sortingDirection, Manga.CHAPTER_SORT_DIR_MASK)
-                    .setFlag(displayMode, Manga.CHAPTER_DISPLAY_MASK),
+                chapterFlags = buildAllFlags(
+                    unreadFilter = unreadFilter,
+                    downloadedFilter = downloadedFilter,
+                    bookmarkedFilter = bookmarkedFilter,
+                    fillermarkedFilter = fillermarkedFilter,
+                    sortingMode = sortingMode,
+                    sortingDirection = sortingDirection,
+                    displayMode = displayMode,
+                ),
             ),
         )
     }
+
+    // KMK -->
+    fun buildAllFlags(
+        unreadFilter: Long,
+        downloadedFilter: Long,
+        bookmarkedFilter: Long,
+        fillermarkedFilter: Long,
+        sortingMode: Long,
+        sortingDirection: Long,
+        displayMode: Long,
+    ): Long {
+        return 0L.setFlag(unreadFilter, Manga.CHAPTER_UNREAD_MASK)
+            .setFlag(downloadedFilter, Manga.CHAPTER_DOWNLOADED_MASK)
+            .setFlag(bookmarkedFilter, Manga.CHAPTER_BOOKMARKED_MASK)
+            .setFlag(fillermarkedFilter, Manga.CHAPTER_FILLERMARKED_MASK)
+            .setFlag(sortingMode, Manga.CHAPTER_SORTING_MASK)
+            .setFlag(sortingDirection, Manga.CHAPTER_SORT_DIR_MASK)
+            .setFlag(displayMode, Manga.CHAPTER_DISPLAY_MASK)
+    }
+    // KMK <--
 
     private fun Long.setFlag(flag: Long, mask: Long): Long {
         return this and mask.inv() or (flag and mask)

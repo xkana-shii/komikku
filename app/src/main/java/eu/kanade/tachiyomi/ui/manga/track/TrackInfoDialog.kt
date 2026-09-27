@@ -192,6 +192,7 @@ data class TrackInfoDialogHomeScreen(
             else {
                 TrackInfoDialogHome(
                     trackItems = state.trackItems,
+                    seriesTitle = mangaTitle,
                     preferredId = preferred,
                     onAdjustProgress = screenModel::adjustProgress,
                     onRemoveTracking = {
