@@ -9,7 +9,7 @@ import tachiyomi.data.Database
 import tachiyomi.data.insertTestManga
 import tachiyomi.data.testDatabase
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.model.toChapterUpdate
+import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import java.util.Properties
 
 // KMK -->
@@ -60,7 +60,17 @@ class ChapterRemoteSyncTest {
             val added = repository.updateFromRemote(
                 removedIds = listOf(old.id),
                 added = listOf(Chapter.create().copy(mangaId = mangaId, url = "/new", name = "New", fillermark = true, version = 7, memo = memo)),
-                updated = listOf(kept.toChapterUpdate().copy(name = "Renamed")),
+                updated = listOf(
+                    ChapterRemoteUpdate(
+                        id = kept.id,
+                        name = "Renamed",
+                        scanlator = kept.scanlator,
+                        chapterNumber = kept.chapterNumber,
+                        dateUpload = null,
+                        sourceOrder = kept.sourceOrder,
+                        memo = kept.memo,
+                    ),
+                ),
             )
 
             check(repository.getChapterById(old.id) == null)
