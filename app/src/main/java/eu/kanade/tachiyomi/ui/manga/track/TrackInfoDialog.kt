@@ -66,6 +66,7 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
+import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.lang.convertEpochMillisZone
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -122,7 +123,9 @@ data class TrackInfoDialogHomeScreen(
         val context = LocalContext.current
         val screenModel = rememberScreenModel { Model(mangaId, sourceId) }
 
-        val dateFormat = remember { UiPreferences.dateFormat(Injekt.get<UiPreferences>().dateFormat().get()) }
+        val datePreference = remember { Injekt.get<UiPreferences>().dateFormat() }
+        val datePattern by remember { datePreference.changes() }.collectAsState(datePreference.get())
+        val dateFormat = remember(datePattern) { UiPreferences.dateFormat(datePattern) }
         val state by screenModel.state.collectAsState()
 
         val preferences = remember { Injekt.get<TrackPreferences>() }
@@ -279,11 +282,14 @@ data class TrackInfoDialogHomeScreen(
                     },
                     onOpenInBrowser = { openTrackerInBrowser(context, it) },
                     onRemoved = {
-                        removalSelection = emptySet()
+                        removalSelection = setOf(it.tracker.id)
                         removeRemotely = false
                     },
                     onCopyLink = { context.copyTrackerLink(it) },
                     onTogglePrivate = screenModel::togglePrivate,
+                    onManageServices = {
+                        navigator.parent?.push(SettingsScreen(SettingsScreen.Destination.Tracking))
+                    },
                 )
             }
         }
@@ -319,6 +325,7 @@ data class TrackInfoDialogHomeScreen(
         // KMK <--
     ) : StateScreenModel<Model.State>(State()) {
         // KMK -->
+        private val operations = TrackerOperationQueue()
         private val getFlatMetadataById: GetFlatMetadataById by injectLazy()
         private val getMangaById: GetManga by injectLazy()
         private val getMergedReferencesById: GetMergedReferencesById by injectLazy()
@@ -369,7 +376,7 @@ data class TrackInfoDialogHomeScreen(
         // SY -->
         fun newSearch(navigator: Navigator, item: TrackItem, mangaTitle: String) {
             screenModelScope.launchNonCancellable {
-                if (trackPreferences.resolveUsingSourceMetadata().get()) {
+                if (item.track == null && trackPreferences.resolveUsingSourceMetadata().get()) {
                     // Check if the tracker id is contained in the metadata
                     val result = getTrackerIdFromMetadata(item.tracker.id)
                     if (result != null) {
@@ -447,7 +454,6 @@ data class TrackInfoDialogHomeScreen(
         }
 
         fun adjustProgress(delta: Int) {
-            if (state.value.synchronizing) return
             screenModelScope.launch {
                 runTrackerOperation { Injekt.get<RefreshTracks>().adjustProgress(mangaId, delta) }
             }
@@ -463,12 +469,14 @@ data class TrackInfoDialogHomeScreen(
             screenModelScope.launch { runTrackerOperation { Injekt.get<UpdateTracks>().remove(mangaId, selected, remotely) } }
         }
 
-        private suspend fun runTrackerOperation(operation: suspend () -> List<Pair<Tracker?, Throwable>>) {
-            if (state.value.synchronizing) return
+        private suspend fun runTrackerOperation(operation: suspend () -> List<Pair<Tracker?, Throwable>>) = operations.run {
             mutableState.update { it.copy(synchronizing = true) }
             val context = Injekt.get<Application>()
             try {
                 val failures = withIOContext { operation() }
+                failures.forEach { (tracker, error) ->
+                    logcat(LogPriority.ERROR, error) { "Tracker operation failed: ${tracker?.name.orEmpty()}" }
+                }
                 val updatedItems = withIOContext { getTracks.await(mangaId).mapToTrackItem() }
                 mutableState.update {
                     it.copy(

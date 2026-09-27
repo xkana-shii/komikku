@@ -5,6 +5,7 @@ import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.mdlist.MdList
+import eu.kanade.tachiyomi.ui.manga.track.TrackerOperationQueue
 import exh.md.utils.FollowStatus
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -46,6 +47,60 @@ class RefreshTracksTest {
         every { preferences.resolvePreferredTracker(any(), any()) } returns null
         coEvery { local.await(any(), any(), any(), any()) } returns null
         coEvery { local.sync(any(), any(), any(), any()) } returns null
+    }
+
+    @Test
+    fun `queued rapid taps read persisted progress while sibling step writes remain concurrent`() = runTest {
+        val queue = TrackerOperationQueue()
+        val persisted = mutableMapOf(1L to track(1, 8.0), 2L to track(2, 8.0))
+        coEvery { getTracks.await(10) } answers { persisted.values.toList() }
+        coEvery { insert.awaitOrThrow(any()) } answers {
+            val returned = firstArg<Track>()
+            persisted[returned.trackerId] = returned
+        }
+        val release = CompletableDeferred<Unit>()
+        val started = mutableListOf<Pair<Long, Double>>()
+        listOf(one, two).forEach { service ->
+            coEvery { service.update(any(), true) } coAnswers {
+                val binding = firstArg<DbTrack>()
+                started += service.id to binding.last_chapter_read
+                if (service.id == 1L) release.await()
+                binding.apply { finished_reading_date = 99 }
+            }
+        }
+        val operations = listOf(1, 1, -1).map { delta ->
+            async { queue.run { subject.adjustProgress(10, delta) shouldBe emptyList() } }
+        }
+        try {
+            testScheduler.runCurrent()
+            // First tap starts both services, but subsequent taps wait for its persistence.
+            started shouldBe listOf(1L to 9.0, 2L to 9.0)
+            operations.all { !it.isCompleted } shouldBe true
+        } finally {
+            release.complete(Unit)
+        }
+        operations.forEach { it.await() }
+        started shouldBe listOf(1L to 9.0, 2L to 9.0, 1L to 10.0, 2L to 10.0, 1L to 9.0, 2L to 9.0)
+        persisted.values.map { it.lastChapterRead } shouldBe listOf(9.0, 9.0)
+        persisted.values.map { it.finishDate } shouldBe listOf(99L, 99L)
+    }
+
+    @Test
+    fun `failed service does not discard queued steps or successful sibling persistence`() = runTest {
+        val queue = TrackerOperationQueue()
+        val persisted = mutableMapOf(1L to track(1, 8.0), 2L to track(2, 8.0))
+        coEvery { getTracks.await(10) } answers { persisted.values.toList() }
+        coEvery { insert.awaitOrThrow(any()) } answers {
+            val returned = firstArg<Track>()
+            persisted[returned.trackerId] = returned
+        }
+        coEvery { one.update(any(), true) } throws IllegalStateException("offline")
+        val operations = List(3) {
+            async { queue.run { subject.adjustProgress(10, 1).single().first shouldBe one } }
+        }
+        operations.forEach { it.await() }
+        persisted[1L]!!.lastChapterRead shouldBe 8.0
+        persisted[2L]!!.lastChapterRead shouldBe 11.0
     }
 
     @Test
