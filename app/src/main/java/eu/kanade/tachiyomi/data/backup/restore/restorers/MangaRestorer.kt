@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
 import eu.kanade.tachiyomi.data.backup.models.BackupTracking
 import exh.EXHMigrations
 import exh.source.MERGED_SOURCE_ID
+import kotlinx.serialization.json.JsonObject
 import tachiyomi.data.Database
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
@@ -207,9 +208,27 @@ class MangaRestorer(
         val dbChaptersByUrl = getChaptersByMangaId.await(manga.id)
             .associateBy { it.url }
 
-        val (existingChapters, newChapters) = backupChapters
-            .mapNotNull { backupChapter ->
-                val chapter = backupChapter.toChapterImpl().copy(mangaId = manga.id)
+        // KMK -->
+        val restoredChapters = backupChapters.map(BackupChapter::toChapterImpl)
+            .groupBy(Chapter::url)
+            .values
+            .map { copies ->
+                copies.reduce { kept, other ->
+                    kept.copy(
+                        read = kept.read || other.read,
+                        bookmark = kept.bookmark || other.bookmark,
+                        fillermark = kept.fillermark || other.fillermark,
+                        lastPageRead = max(kept.lastPageRead, other.lastPageRead),
+                        version = max(kept.version, other.version),
+                        memo = JsonObject(kept.memo + other.memo),
+                    )
+                }
+            }
+        // KMK <--
+
+        val (existingChapters, newChapters) = restoredChapters
+            .mapNotNull { restoredChapter ->
+                val chapter = restoredChapter.copy(mangaId = manga.id)
                 val dbChapter = dbChaptersByUrl[chapter.url]
 
                 when {
