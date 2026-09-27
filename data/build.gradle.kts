@@ -39,10 +39,4 @@ dependencies {
     implementation(kotlinx.serialization.protobuf)
 
     api(libs.bundles.sqldelight)
-
-    // KMK -->
-    testImplementation(libs.bundles.test)
-    testImplementation(libs.sqldelight.sqlite.driver)
-    testRuntimeOnly(libs.junit.platform.launcher)
-    // KMK <--
 }

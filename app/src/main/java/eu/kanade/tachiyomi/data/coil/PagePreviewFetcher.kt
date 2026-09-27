@@ -88,30 +88,18 @@ class PagePreviewFetcher(
             }
 
             // Fetch from network
-            // KMK -->
-            val (response, permit) = executeNetworkRequest()
-            // KMK <--
+            val response = executeNetworkRequest()
             val responseBody = checkNotNull(response.body) { "Null response source" }
             try {
                 // Read from page preview cache after page preview updated
                 val responsePagePreviewCache = writeResponseToPagePreviewCache(response)
                 if (responsePagePreviewCache != null) {
-                    // KMK -->
-                    // The cache owns the copied body.
-                    response.close()
-                    permit.release()
-                    // KMK <--
                     return fileLoader(responsePagePreviewCache)
                 }
 
                 // Read from disk cache
                 snapshot = writeToDiskCache(response)
                 if (snapshot != null) {
-                    // KMK -->
-                    // The disk cache consumed the body.
-                    response.close()
-                    permit.release()
-                    // KMK <--
                     return SourceFetchResult(
                         source = snapshot.toImageSource(),
                         mimeType = "image/*",
@@ -121,21 +109,12 @@ class PagePreviewFetcher(
 
                 // Read from response if cache is unused or unusable
                 return SourceFetchResult(
-                    // KMK -->
-                    // The permit lasts until the body is drained or closed.
-                    source = ImageSource(
-                        source = permit.releaseWhenConsumed(responseBody.source()),
-                        fileSystem = FileSystem.SYSTEM,
-                    ),
-                    // KMK <--
+                    source = ImageSource(source = responseBody.source(), fileSystem = FileSystem.SYSTEM),
                     mimeType = "image/*",
                     dataSource = if (response.cacheResponse != null) DataSource.DISK else DataSource.NETWORK,
                 )
             } catch (e: Exception) {
                 responseBody.close()
-                // KMK -->
-                permit.release()
-                // KMK <--
                 throw e
             }
         } catch (e: Exception) {
@@ -144,27 +123,17 @@ class PagePreviewFetcher(
         }
     }
 
-    // KMK -->
-    /** The caller owns the returned permit and must release it once the body is done with. */
-    private suspend fun executeNetworkRequest(): Pair<Response, SourceImageCallLimiter.Permit> {
-        val permit = SourceImageCallLimiter.acquire(page.source)
-        try {
-            val response = sourceLazy.value?.fetchPreviewImage(
-                page.getPagePreviewInfo(),
-                getCacheControl(),
-            ) ?: callFactoryLazy.value.newCall(newRequest()).await()
-            if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
-                response.close()
-                throw IOException(response.message)
-            }
-            return response to permit
-        } catch (e: Throwable) {
-            // Covers cancellation as well, so a dropped request cannot leak its permit.
-            permit.release()
-            throw e
+    private suspend fun executeNetworkRequest(): Response {
+        val response = sourceLazy.value?.fetchPreviewImage(
+            page.getPagePreviewInfo(),
+            getCacheControl(),
+        ) ?: callFactoryLazy.value.newCall(newRequest()).await()
+        if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
+            response.close()
+            throw IOException(response.message)
         }
+        return response
     }
-    // KMK <--
 
     private fun getCacheControl(): CacheControl {
         return when {

@@ -230,23 +230,12 @@ open class BrowseSourceScreenModel(
                 // SY <--
             }.flow.map { pagingData ->
                 pagingData.map { (manga, metadata) ->
-                    // KMK -->
-                    // Load the initial favorite state for the synchronous filter below.
-                    val initialManga = getManga.await(manga.url, manga.source) ?: manga
-                    // KMK <--
                     getManga.subscribe(manga.url, manga.source)
                         .map { it ?: manga }
                         // SY -->
                         .combineMetadata(metadata)
                         // SY <--
-                        // KMK -->
-                        // Release the database subscription when the item leaves composition.
-                        .stateIn(
-                            ioCoroutineScope,
-                            SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                            initialManga to metadata,
-                        )
-                    // KMK <--
+                        .stateIn(ioCoroutineScope)
                 }
                     .filter { !hideInLibraryItems || !it.value.first.favorite }
             }

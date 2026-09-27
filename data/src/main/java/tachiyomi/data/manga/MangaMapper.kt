@@ -100,16 +100,13 @@ object MangaMapper {
         notes: String,
         memo: JsonObject,
         totalCount: Long,
-        // KMK -->
-        // Aggregates are stored integers now, not `SUM()` results.
-        readCount: Long,
-        // KMK <--
+        readCount: Double,
         latestUpload: Long,
         chapterFetchedAt: Long,
         lastRead: Long,
+        bookmarkCount: Double,
+        fillermarkCount: Double,
         // KMK -->
-        bookmarkCount: Long,
-        fillermarkCount: Long,
         bookmarkedReadCount: Long,
         fillermarkedReadCount: Long,
         // KMK <--
@@ -148,10 +145,10 @@ object MangaMapper {
         ),
         categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
+        readCount = readCount.toLong(),
+        bookmarkCount = bookmarkCount.toLong(),
+        fillermarkCount = fillermarkCount.toLong(),
         // KMK -->
-        readCount = readCount,
-        bookmarkCount = bookmarkCount,
-        fillermarkCount = fillermarkCount,
         bookmarkReadCount = bookmarkedReadCount,
         fillermarkReadCount = fillermarkedReadCount,
         chapterFlags = chapterFlags,

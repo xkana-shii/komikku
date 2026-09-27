@@ -48,7 +48,6 @@ import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.data.Database
-import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.source.interactor.GetSourcesWithNonLibraryManga
 import tachiyomi.domain.source.model.Source
 import tachiyomi.domain.source.model.SourceWithCount
@@ -226,11 +225,6 @@ private class ClearDatabaseScreenModel : StateScreenModel<ClearDatabaseScreenMod
     private val getSourcesWithNonLibraryManga: GetSourcesWithNonLibraryManga = Injekt.get()
     private val database: Database = Injekt.get()
 
-    // KMK -->
-    // Goes through the repository so the cached chapter aggregates are rebuilt in bulk.
-    private val historyRepository: HistoryRepository = Injekt.get()
-    // KMK <--
-
     init {
         screenModelScope.launchIO {
             getSourcesWithNonLibraryManga.subscribe()
@@ -249,7 +243,7 @@ private class ClearDatabaseScreenModel : StateScreenModel<ClearDatabaseScreenMod
     suspend fun removeMangaBySourceId(keepReadManga: Boolean) = withNonCancellableContext {
         val state = state.value as? State.Ready ?: return@withNonCancellableContext
         database.mangasQueries.deleteNonLibraryManga(state.selection, keepReadManga.toLong())
-        historyRepository.removeResettedHistory()
+        database.historyQueries.removeResettedHistory()
     }
 
     fun toggleSelection(source: Source) = mutableState.update { state ->

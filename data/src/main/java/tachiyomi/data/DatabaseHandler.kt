@@ -41,13 +41,7 @@ interface DatabaseHandler {
         block: suspend Database.() -> ExecutableQuery<T>,
     ): T?
 
-    // KMK -->
-    /** Use [throttleMillis] to collapse invalidations from write bursts. */
-    fun <T : Any> subscribeToList(
-        throttleMillis: Long = 0,
-        block: Database.() -> Query<T>,
-    ): Flow<List<T>>
-    // KMK <--
+    fun <T : Any> subscribeToList(block: Database.() -> Query<T>): Flow<List<T>>
 
     fun <T : Any> subscribeToOne(block: Database.() -> Query<T>): Flow<T>
 

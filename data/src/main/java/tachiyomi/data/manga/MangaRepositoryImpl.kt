@@ -60,12 +60,7 @@ class MangaRepositoryImpl(
     }
 
     override fun getLibraryMangaAsFlow(): Flow<List<LibraryManga>> {
-        // KMK -->
-        // Avoid repeated aggregate queries during write bursts.
-        return handler.subscribeToList(throttleMillis = LIBRARY_THROTTLE_MS) {
-            libraryViewQueries.library(MangaMapper::mapLibraryManga)
-        }
-        // KMK <--
+        return handler.subscribeToList { libraryViewQueries.library(MangaMapper::mapLibraryManga) }
     }
 
     override fun getFavoritesBySourceId(sourceId: Long): Flow<List<Manga>> {
@@ -221,10 +216,4 @@ class MangaRepositoryImpl(
         return handler.awaitList { libraryViewQueries.readMangaNonLibrary(MangaMapper::mapLibraryManga) }
     }
     // SY <--
-
-    // KMK -->
-    companion object {
-        private const val LIBRARY_THROTTLE_MS = 250L
-    }
-    // KMK <--
 }
