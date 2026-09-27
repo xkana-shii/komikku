@@ -227,7 +227,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private val chapterList by lazy {
         val manga = manga!!
         // SY -->
-        val (chapters, mangaMap) = runBlocking {
+        val (filteredChapters, mangaMap) = runBlocking {
             if (manga.source == MERGED_SOURCE_ID) {
                 getMergedChaptersByMangaId.await(manga.id, applyFilter = true) to
                     state.value.mergedManga
@@ -235,6 +235,13 @@ class ReaderViewModel @JvmOverloads constructor(
                 getChaptersByMangaId.await(manga.id, applyFilter = true) to null
             }
         }
+        // KMK -->
+        val chapters = if (filteredChapters.any { it.id == chapterId }) {
+            filteredChapters
+        } else {
+            filteredChapters + unfilteredChapterList.filter { it.id == chapterId }
+        }
+        // KMK <--
         fun isChapterDownloaded(chapter: Chapter): Boolean {
             val chapterManga = mangaMap?.get(chapter.mangaId) ?: manga
             return downloadManager.isChapterDownloaded(
