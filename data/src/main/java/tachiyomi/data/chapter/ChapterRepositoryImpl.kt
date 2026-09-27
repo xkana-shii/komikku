@@ -49,7 +49,6 @@ class ChapterRepositoryImpl(
             emptyList()
         }
     }
-
     override suspend fun update(chapterUpdate: ChapterUpdate) {
         partialUpdate(chapterUpdate)
     }
@@ -58,6 +57,76 @@ class ChapterRepositoryImpl(
         partialUpdate(*chapterUpdates.toTypedArray())
     }
 
+    // KMK -->
+    override suspend fun updateFromRemote(
+        removedIds: List<Long>,
+        added: List<Chapter>,
+        updated: List<ChapterUpdate>,
+    ): List<Chapter> {
+        return database.transactionWithResult {
+            if (removedIds.isNotEmpty()) {
+                database.chaptersQueries.removeChaptersWithIds(removedIds)
+            }
+            val existing = added.map { it.mangaId }
+                .distinct()
+                .flatMap { mangaId ->
+                    database.chaptersQueries
+                        .getChaptersByMangaId(
+                            mangaId,
+                            false.toLong(),
+                            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+                            Manga.CHAPTER_SHOW_BOOKMARKED,
+                            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                            Manga.CHAPTER_SHOW_FILLERMARKED,
+                            ChapterMapper::mapChapter,
+                        )
+                        .awaitAsList()
+                        .map { mangaId to it.url }
+                }
+                .toMutableSet()
+            val stored = added.filter { existing.add(it.mangaId to it.url) }.map { chapter ->
+                val chapterId = database.chaptersQueries.insertReturningId(
+                    chapter.mangaId,
+                    chapter.url,
+                    chapter.name,
+                    chapter.scanlator,
+                    chapter.read,
+                    chapter.bookmark,
+                    chapter.fillermark,
+                    chapter.lastPageRead,
+                    chapter.chapterNumber,
+                    chapter.sourceOrder,
+                    chapter.dateFetch,
+                    chapter.dateUpload,
+                    chapter.version,
+                    chapter.memo,
+                ).awaitAsOne()
+                chapter.copy(id = chapterId)
+            }
+            updated.forEach { chapterUpdate ->
+                database.chaptersQueries.update(
+                    mangaId = chapterUpdate.mangaId,
+                    url = chapterUpdate.url,
+                    name = chapterUpdate.name,
+                    scanlator = chapterUpdate.scanlator,
+                    read = chapterUpdate.read,
+                    bookmark = chapterUpdate.bookmark,
+                    fillermark = chapterUpdate.fillermark,
+                    lastPageRead = chapterUpdate.lastPageRead,
+                    chapterNumber = chapterUpdate.chapterNumber,
+                    sourceOrder = chapterUpdate.sourceOrder,
+                    dateFetch = chapterUpdate.dateFetch,
+                    dateUpload = chapterUpdate.dateUpload,
+                    chapterId = chapterUpdate.id,
+                    version = chapterUpdate.version,
+                    isSyncing = 0,
+                    memo = chapterUpdate.memo?.let(MemoColumnAdapter::encode),
+                )
+            }
+            stored
+        }
+    }
+    // KMK <--
     private suspend fun partialUpdate(vararg chapterUpdates: ChapterUpdate) {
         database.transaction {
             chapterUpdates.forEach { chapterUpdate ->
