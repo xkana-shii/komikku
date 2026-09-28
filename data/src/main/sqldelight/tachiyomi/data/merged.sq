@@ -12,9 +12,9 @@ CREATE TABLE merged(
     manga_id INTEGER, -- Point to actual children manga entry which is a part of this merge entry
     manga_url TEXT NOT NULL, -- URL of the actual children manga entry which is a part of this merge entry
     manga_source INTEGER NOT NULL,
-    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
     ON DELETE SET NULL,
-    FOREIGN KEY(merge_id) REFERENCES mangas (_id)
+    FOREIGN KEY(merge_id) REFERENCES manga (id)
     ON DELETE CASCADE
 );
 
@@ -30,36 +30,36 @@ deleteByMergeId:
 DELETE FROM merged WHERE merge_id = ?;
 
 selectMergedMangasById:
-SELECT mangas.*
+SELECT manga.*
 FROM (
     SELECT manga_id FROM merged WHERE merge_id = ?
 ) AS M
-JOIN mangas
-ON mangas._id = M.manga_id;
+JOIN manga
+ON manga.id = M.manga_id;
 
 selectMergedMangasForDownloadingById:
-SELECT mangas.*
+SELECT manga.*
 FROM (
     SELECT manga_id FROM merged WHERE merge_id = ? AND download_chapters = 1
 ) AS M
-JOIN mangas
-ON mangas._id = M.manga_id;
+JOIN manga
+ON manga.id = M.manga_id;
 
 selectMergedMangasByUrl:
-SELECT mangas.*
+SELECT manga.*
 FROM (
     SELECT manga_id FROM merged WHERE merge_url = ?
 ) AS M
-JOIN mangas
-ON mangas._id = M.manga_id;
+JOIN manga
+ON manga.id = M.manga_id;
 
 selectAllMergedMangas:
-SELECT mangas.*
+SELECT manga.*
 FROM (
     SELECT manga_id FROM merged
 ) AS M
-JOIN mangas
-ON mangas._id = M.manga_id;
+JOIN manga
+ON manga.id = M.manga_id;
 
 deleteByMergeUrl:
 DELETE FROM merged WHERE merge_url = ?;
@@ -68,12 +68,12 @@ selectAll:
 SELECT * FROM merged;
 
 selectChaptersByMergedId:
-SELECT chapters.*
+SELECT chapter.*
 FROM (
     SELECT manga_id FROM merged WHERE merge_id = ?
 ) AS M
-JOIN chapters
-ON chapters.manga_id = M.manga_id;
+JOIN chapter
+ON chapter.manga_id = M.manga_id;
 
 insert:
 INSERT INTO merged(

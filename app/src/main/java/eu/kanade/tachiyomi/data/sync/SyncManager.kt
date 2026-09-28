@@ -21,10 +21,11 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import logcat.logcat
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.data.Chapters
 import tachiyomi.data.Database
+import tachiyomi.data.chapter.ChapterMapper
 import tachiyomi.data.manga.MangaMapper.mapManga
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -78,8 +79,8 @@ class SyncManager(
     suspend fun syncData() {
         // Reset isSyncing in case it was left over or failed syncing during restore.
         database.transaction {
-            database.mangasQueries.resetIsSyncing()
-            database.chaptersQueries.resetIsSyncing()
+            database.mangaQueries.resetIsSyncing()
+            database.chapterQueries.resetIsSyncing()
         }
 
         val syncOptions = syncPreferences.getSyncSettings()
@@ -255,15 +256,15 @@ class SyncManager(
      * @return a list of all manga stored in the database
      */
     private suspend fun getAllMangaFromDB(): List<Manga> {
-        return database.mangasQueries.getAllManga(::mapManga).awaitAsList()
+        return database.mangaQueries.getAllManga(::mapManga).awaitAsList()
     }
 
     private suspend fun getAllMangaThatNeedsSync(): List<Manga> {
-        return database.mangasQueries.getMangasWithFavoriteTimestamp(::mapManga).awaitAsList()
+        return database.mangaQueries.getMangasWithFavoriteTimestamp(::mapManga).awaitAsList()
     }
 
     private suspend fun isMangaDifferent(localManga: Manga, remoteManga: BackupManga): Boolean {
-        val localChapters = database.chaptersQueries.getChaptersByMangaId(
+        val localChapters = database.chapterQueries.getChaptersByMangaId(
             localManga.id,
             0,
             // KMK -->
@@ -272,6 +273,7 @@ class SyncManager(
             Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
             Manga.CHAPTER_SHOW_FILLERMARKED,
             // KMK <--
+            ChapterMapper::mapChapter,
         ).awaitAsList()
         val localCategories = getCategories.await(localManga.id).map { it.order }
 
@@ -290,7 +292,7 @@ class SyncManager(
         return false
     }
 
-    private fun areChaptersDifferent(localChapters: List<Chapters>, remoteChapters: List<BackupChapter>): Boolean {
+    private fun areChaptersDifferent(localChapters: List<Chapter>, remoteChapters: List<BackupChapter>): Boolean {
         val localChapterMap = localChapters.associateBy { it.url }
         val remoteChapterMap = remoteChapters.associateBy { it.url }
 

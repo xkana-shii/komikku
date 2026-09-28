@@ -29,7 +29,7 @@ class CategoriesRestorer(
                         val dbCategory = dbCategoriesByName[it.name]
                         if (dbCategory != null) return@map dbCategory
                         val order = nextOrder++
-                        database.categoriesQueries.insertReturningId(
+                        database.categoryQueries.insertReturningId(
                             it.name,
                             order,
                             it.flags,

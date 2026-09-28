@@ -1,0 +1,40 @@
+CREATE TABLE manga_category(
+    manga_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
+    -- KMK -->
+    state_last_modified_at INTEGER NOT NULL DEFAULT 0,
+    -- KMK <--
+    UNIQUE(manga_id, category_id),
+    FOREIGN KEY(category_id) REFERENCES category (id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX manga_category_category_id_index ON manga_category(category_id);
+
+-- KMK -->
+-- Match the metadata and trigger already installed by migration 28.
+CREATE TRIGGER update_last_modified_at_mangas_categories
+AFTER UPDATE ON manga_category
+FOR EACH ROW
+BEGIN
+  UPDATE manga_category
+  SET state_last_modified_at = strftime('%s', 'now')
+  WHERE manga_id = new.manga_id AND category_id = new.category_id;
+END;
+CREATE TRIGGER insert_manga_category_update_version AFTER INSERT ON manga_category
+BEGIN
+    UPDATE manga
+    SET state_version = state_version + 1
+    WHERE id = new.manga_id AND (SELECT state_is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+-- KMK <--
+
+insert:
+INSERT INTO manga_category(manga_id, category_id)
+VALUES (:mangaId, :categoryId);
+
+deleteMangaCategoryByMangaId:
+DELETE FROM manga_category
+WHERE manga_id = :mangaId;

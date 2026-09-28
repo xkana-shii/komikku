@@ -37,7 +37,7 @@ cleanUnrelevantMangaErrors:
 DELETE FROM libraryUpdateError
 WHERE NOT EXISTS (
     SELECT 1
-    FROM mangas
-    WHERE libraryUpdateError.manga_id = mangas._id
-    AND mangas.favorite == 1
+    FROM manga
+    WHERE libraryUpdateError.manga_id = manga.id
+    AND manga.user_favorite_at IS NOT NULL
 );

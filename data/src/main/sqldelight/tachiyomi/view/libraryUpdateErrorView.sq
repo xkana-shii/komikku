@@ -1,17 +1,17 @@
 CREATE VIEW libraryUpdateErrorView AS
 SELECT
-    mangas._id AS mangaId,
-    mangas.title AS mangaTitle,
-    mangas.source,
-    mangas.favorite,
-    mangas.thumbnail_url AS thumbnailUrl,
-    mangas.cover_last_modified AS coverLastModified,
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    manga.source_id AS source,
+    (manga.user_favorite_at IS NOT NULL) AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
     libraryUpdateError._id AS errorId,
     libraryUpdateError.message_id AS messageId,
     libraryUpdateError.last_update AS lastUpdate
-FROM mangas JOIN libraryUpdateError
-ON mangas._id = libraryUpdateError.manga_id
-WHERE favorite = 1
+FROM manga JOIN libraryUpdateError
+ON manga.id = libraryUpdateError.manga_id
+WHERE manga.user_favorite_at IS NOT NULL
 ORDER BY lastUpdate DESC;
 
 errors:

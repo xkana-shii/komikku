@@ -47,7 +47,7 @@ class DatabaseDriverTest {
         }
         val newDriver = bundled(name)
         try {
-            check(testDatabase(newDriver).mangasQueries.getMangaById(id).awaitAsOne().url == "/existing")
+            check(testDatabase(newDriver).mangaQueries.getMangaById(id).awaitAsOne().url == "/existing")
         } finally {
             newDriver.close()
             context.deleteDatabase(name)
@@ -65,7 +65,7 @@ class DatabaseDriverTest {
             val id = insertTestManga(testDatabase(driver), "/encrypted")
             driver.close()
             driver = encrypted(name)
-            check(testDatabase(driver).mangasQueries.getMangaById(id).awaitAsOne().url == "/encrypted")
+            check(testDatabase(driver).mangaQueries.getMangaById(id).awaitAsOne().url == "/encrypted")
         } finally {
             driver.close()
             context.deleteDatabase(name)
