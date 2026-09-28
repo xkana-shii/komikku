@@ -38,14 +38,11 @@ class TrackPreferencesTest {
     }
 
     @Test
-    fun `settings priority replaces legacy manga overrides dynamically`() {
+    fun `manga preference overrides the global priority when its tracker is bound`() {
         subject.setPriorityTrackerId(2)
         subject.setPreferredTrackerForManga(10, 1)
-        subject.resolvePreferredTracker(10, setOf(1, 2)) shouldBe 2L
-        subject.resolvePreferredTracker(10, setOf(2)) shouldBe 2L
-        subject.setPriorityTrackerId(1)
         subject.resolvePreferredTracker(10, setOf(1, 2)) shouldBe 1L
-        subject.setPriorityTrackerId(2)
+        subject.resolvePreferredTracker(10, setOf(2)) shouldBe 2L
         subject.setPreferredTrackerForManga(10, null)
         subject.resolvePreferredTracker(10, setOf(1, 2)) shouldBe 2L
     }

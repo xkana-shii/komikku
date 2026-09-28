@@ -10,6 +10,27 @@ import java.time.format.DateTimeFormatter
 // KMK --> Presentation decisions shared by the sheet and its unified card.
 internal val TrackItem.canChangeEntry: Boolean get() = tracker !is EnhancedTracker
 
+internal enum class UnifiedTrackerIconAction {
+    OPEN,
+    SEARCH,
+    COPY_LINK,
+    SET_PREFERRED,
+    NONE,
+}
+
+internal fun TrackItem.unifiedIconClickAction(editMode: Boolean): UnifiedTrackerIconAction = when {
+    track == null -> UnifiedTrackerIconAction.SEARCH
+    !editMode -> UnifiedTrackerIconAction.OPEN
+    canChangeEntry -> UnifiedTrackerIconAction.SEARCH
+    else -> UnifiedTrackerIconAction.NONE
+}
+
+internal fun TrackItem.unifiedIconLongPressAction(editMode: Boolean): UnifiedTrackerIconAction = when {
+    track == null -> UnifiedTrackerIconAction.NONE
+    editMode -> UnifiedTrackerIconAction.SET_PREFERRED
+    else -> UnifiedTrackerIconAction.COPY_LINK
+}
+
 internal class TrackerSheetPresentation(
     items: List<TrackItem>,
     preferredId: Long?,

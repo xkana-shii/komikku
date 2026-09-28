@@ -267,6 +267,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
 
     companion object {
         const val TAG = "AppUpdateDownload"
+        const val SCHEDULED_TAG = "$TAG:scheduled"
         const val PROGRESS = "progress"
         const val ERROR = "error"
         private const val INLINE_INSTALL = "inline_install"
@@ -305,6 +306,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 .apply {
                     // KMK -->
                     if (scheduled) {
+                        addTag(SCHEDULED_TAG)
                         data.putBoolean(SCHEDULED_RUN, true)
                         val restrictions = Injekt.get<ExhPreferences>().appShouldAutoUpdate().get()
                         val networkType = if (AppUpdatePolicy.DEVICE_NETWORK_NOT_METERED in restrictions) {

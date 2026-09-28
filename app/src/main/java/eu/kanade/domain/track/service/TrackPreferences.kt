@@ -84,6 +84,7 @@ class TrackPreferences(
     fun setPriorityTrackerId(trackerId: Long?) = priorityTrackerId().set(trackerId?.takeIf { it > 0 } ?: 0L)
 
     fun resolvePreferredTracker(mangaId: Long, applicable: Set<Long>): Long? =
-        getPriorityTrackerId()?.takeIf { it in applicable }
+        getPreferredTrackerForManga(mangaId)?.takeIf { it in applicable }
+            ?: getPriorityTrackerId()?.takeIf { it in applicable }
     // KMK <--
 }

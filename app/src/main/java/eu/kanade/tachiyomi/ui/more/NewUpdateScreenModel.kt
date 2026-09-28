@@ -24,15 +24,32 @@ class NewUpdateScreenModel(
     private val work: Flow<List<WorkInfo>> = context.workManager.getWorkInfosForUniqueWorkFlow(AppUpdateDownloadJob.TAG),
     private val startDownload: () -> Unit = { AppUpdateDownloadJob.start(context, downloadLink, versionName, inlineInstall = true) },
     private val install: (String) -> Unit = { installDownloadedUpdate(context, it) },
-) : StateScreenModel<NewUpdateScreenModel.State>(State(stage = Stage.Downloading)) {
+) : StateScreenModel<NewUpdateScreenModel.State>(State()) {
+    private var hasObservedWork = false
+    private var manualDownloadRequested = false
+
     init {
         screenModelScope.launch {
             work.collect { work ->
+                hasObservedWork = true
                 val matching = work.filter { AppUpdateDownloadJob.urlTag(downloadLink) in it.tags }
-                val info = matching.firstOrNull { !it.state.isFinished } ?: matching.firstOrNull { it.state == WorkInfo.State.SUCCEEDED } ?: matching.firstOrNull()
+                val manual = matching.filterNot { AppUpdateDownloadJob.SCHEDULED_TAG in it.tags }
+                val activeManual = manual.firstOrNull { !it.state.isFinished }
+                val runningScheduled = matching.firstOrNull {
+                    AppUpdateDownloadJob.SCHEDULED_TAG in it.tags && it.state == WorkInfo.State.RUNNING
+                }
+                val info = activeManual
+                    ?: runningScheduled
+                    ?: matching.firstOrNull { it.state == WorkInfo.State.SUCCEEDED }
+                    ?: manual.firstOrNull()
                 if (info == null) {
-                    mutableState.value = State()
+                    if (!manualDownloadRequested) {
+                        mutableState.value = State()
+                    }
                     return@collect
+                }
+                if (activeManual != null) {
+                    manualDownloadRequested = false
                 }
                 mutableState.update {
                     when (info.state) {
@@ -53,6 +70,7 @@ class NewUpdateScreenModel(
     }
 
     fun accept() {
+        if (!hasObservedWork) return
         when (state.value.stage) {
             Stage.Downloading -> Unit
             Stage.Downloaded -> try {
@@ -61,9 +79,11 @@ class NewUpdateScreenModel(
                 mutableState.update { it.copy(stage = Stage.Failed, error = with(context) { e.formattedMessage }) }
             }
             else -> try {
+                manualDownloadRequested = true
                 mutableState.value = State(stage = Stage.Downloading)
                 startDownload()
             } catch (e: Exception) {
+                manualDownloadRequested = false
                 mutableState.update { it.copy(stage = Stage.Failed, error = with(context) { e.formattedMessage }) }
             }
         }

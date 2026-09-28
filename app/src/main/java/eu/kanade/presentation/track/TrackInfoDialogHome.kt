@@ -29,12 +29,14 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -82,11 +84,11 @@ fun TrackInfoDialogHome(
     onRemoved: (TrackItem) -> Unit,
     onCopyLink: (TrackItem) -> Unit,
     onTogglePrivate: (TrackItem) -> Unit,
-    onManageServices: () -> Unit = {},
     header: @Composable () -> Unit = {},
     preferredId: Long? = null,
     onAdjustProgress: (Int) -> Unit = {},
     onRemoveTracking: (List<TrackItem>) -> Unit = {},
+    onSetPreferredTracker: (TrackItem) -> Unit = {},
     errorTrackerIds: Set<Long> = emptySet(),
     busy: Boolean = false,
 ) {
@@ -112,8 +114,9 @@ fun TrackInfoDialogHome(
                 onAdjustProgress = onAdjustProgress, busy = busy, onStatusClick = onStatusClick,
                 onChapterClick = onChapterClick, onScoreClick = onScoreClick,
                 onStartDateEdit = onStartDateEdit, onEndDateEdit = onEndDateEdit,
-                onNewSearch = onNewSearch, onRemoved = onRemoved, onOpenInBrowser = onOpenInBrowser,
-                onCopyLink = onCopyLink, onRemoveTracking = onRemoveTracking, onTogglePrivate = onTogglePrivate,
+                onNewSearch = onNewSearch, onOpenInBrowser = onOpenInBrowser,
+                onCopyLink = onCopyLink, onRemoveTracking = onRemoveTracking,
+                onSetPreferredTracker = onSetPreferredTracker,
             )
         } else {
             bound.forEach { item ->
@@ -177,9 +180,6 @@ fun TrackInfoDialogHome(
             legend.forEach {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-        TextButton(onClick = onManageServices) {
-            Text(stringResource(KMR.strings.track_manage_services))
         }
     }
 }
@@ -466,17 +466,15 @@ private fun UnifiedTrackerCard(
     // KMK --> needed so untracked icons in the card can bind a 3rd+ tracker
     onNewSearch: (TrackItem) -> Unit,
     // KMK <--
-    onRemoved: (TrackItem) -> Unit,
     onOpenInBrowser: (TrackItem) -> Unit,
     onCopyLink: (TrackItem) -> Unit,
     // KMK --> bulk removal goes through one confirmation; error ids badge failed refreshes
     onRemoveTracking: (List<TrackItem>) -> Unit = {},
-    onTogglePrivate: (TrackItem) -> Unit,
+    onSetPreferredTracker: (TrackItem) -> Unit,
     // KMK <--
 ) {
     val primary = presentation.primary ?: return
     val displayTrack = primary.track
-    val isMismatched = presentation.mismatchedIds.isNotEmpty()
     val statusText = stringResource(presentation.status)
     val scoreText = presentation.score
     val chaptersRead = displayTrack?.lastChapterRead?.toInt() ?: 0
@@ -490,25 +488,13 @@ private fun UnifiedTrackerCard(
     }
     val startDate = presentation.startDate
     val finishDate = presentation.finishDate
+    var editMode by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            // KMK --> denser card to shorten the tracker menu
-            .padding(6.dp),
+            .padding(vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (seriesTitle.isNotBlank()) {
-            Text(
-                text = seriesTitle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp),
-            )
-        }
         // KMK --> per-tracker unsynced dot (vs preferred) + untracked icons bind via onNewSearch
         Row(verticalAlignment = Alignment.CenterVertically) {
             FlowRow(
@@ -517,7 +503,6 @@ private fun UnifiedTrackerCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 presentation.visibleItems.forEach { item ->
-                    val itemTrack = item.track
                     val isUnsynced = item.tracker.id in presentation.mismatchedIds
                     val isErrored = item.tracker.id in presentation.errorIds
                     val unsyncedDescription = stringResource(KMR.strings.track_unsynced_a11y, item.tracker.name)
@@ -546,38 +531,65 @@ private fun UnifiedTrackerCard(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.surface)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                                 .padding(4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             TrackLogoIcon(
                                 tracker = item.tracker,
-                                onClick = { if (itemTrack != null) onOpenInBrowser(item) else onNewSearch(item) },
-                                onLongClick = if (itemTrack != null) ({ onCopyLink(item) }) else null,
+                                onClick = {
+                                    when (item.unifiedIconClickAction(editMode)) {
+                                        UnifiedTrackerIconAction.OPEN -> onOpenInBrowser(item)
+                                        UnifiedTrackerIconAction.SEARCH -> onNewSearch(item)
+                                        else -> Unit
+                                    }
+                                },
+                                onLongClick = when (item.unifiedIconLongPressAction(editMode)) {
+                                    UnifiedTrackerIconAction.COPY_LINK -> ({ onCopyLink(item) })
+                                    UnifiedTrackerIconAction.SET_PREFERRED -> ({ onSetPreferredTracker(item) })
+                                    else -> null
+                                },
                             )
                         }
                     }
                 }
             }
-            TrackInfoItemMenu(
-                onOpenInBrowser = { onOpenInBrowser(primary) },
-                onCopyLink = { onCopyLink(primary) },
-                onRemoved = { onRemoved(primary) },
-                onChangeEntry = { onNewSearch(primary) }.takeIf { primary.canChangeEntry },
-                private = displayTrack?.private == true,
-                onTogglePrivate = { onTogglePrivate(primary) }.takeIf { presentation.supportsPrivate },
-                busy = busy,
-            )
+            IconButton(
+                onClick = { editMode = !editMode },
+                enabled = !busy,
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = if (editMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = stringResource(MR.strings.action_edit),
+                )
+            }
         }
         // KMK <--
-        Surface(
+        if (seriesTitle.isNotBlank()) {
+            Text(
+                text = seriesTitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 6.dp),
+            )
+        }
+        Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .padding(top = 6.dp)
+                .clip(MaterialTheme.shapes.medium)
                 .fillMaxWidth(),
-            color = if (isMismatched) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(12.dp),
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+            ) {
                 Row(
                     modifier = Modifier.height(IntrinsicSize.Min),
                 ) {

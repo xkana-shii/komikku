@@ -98,6 +98,22 @@ class TrackerSheetPresentationTest {
     }
 
     @Test
+    fun `unified icon edit mode changes bound entries and makes them preferred`() {
+        val bound = item(1)
+        val unbound = item(2).copy(track = null)
+        val enhanced = TrackItem(bound.track, mockk<Suwayomi> { every { id } returns 3L })
+
+        bound.unifiedIconClickAction(editMode = false) shouldBe UnifiedTrackerIconAction.OPEN
+        bound.unifiedIconLongPressAction(editMode = false) shouldBe UnifiedTrackerIconAction.COPY_LINK
+        bound.unifiedIconClickAction(editMode = true) shouldBe UnifiedTrackerIconAction.SEARCH
+        bound.unifiedIconLongPressAction(editMode = true) shouldBe UnifiedTrackerIconAction.SET_PREFERRED
+        unbound.unifiedIconClickAction(editMode = false) shouldBe UnifiedTrackerIconAction.SEARCH
+        unbound.unifiedIconClickAction(editMode = true) shouldBe UnifiedTrackerIconAction.SEARCH
+        enhanced.unifiedIconClickAction(editMode = true) shouldBe UnifiedTrackerIconAction.NONE
+        enhanced.unifiedIconLongPressAction(editMode = true) shouldBe UnifiedTrackerIconAction.SET_PREFERRED
+    }
+
+    @Test
     fun `summary uses native score normalization and excludes unset scores`() {
         val one = item(1, score = 80.0)
         val two = item(2, score = 3.0)

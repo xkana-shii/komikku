@@ -66,7 +66,6 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
-import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.lang.convertEpochMillisZone
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -130,7 +129,8 @@ data class TrackInfoDialogHomeScreen(
 
         val preferences = remember { Injekt.get<TrackPreferences>() }
         val priority by remember { preferences.priorityTrackerId().changes() }.collectAsState(preferences.priorityTrackerId().get())
-        val preferred = remember(priority, state.trackItems) {
+        val mangaPreferred by remember { preferences.preferredTrackerForManga().changes() }.collectAsState(preferences.preferredTrackerForManga().get())
+        val preferred = remember(priority, mangaPreferred, state.trackItems) {
             preferences.resolvePreferredTracker(mangaId, state.trackItems.filter { it.track != null }.map { it.tracker.id }.toSet())
         }
         var removalSelection by remember { mutableStateOf<Set<Long>?>(null) }
@@ -288,9 +288,7 @@ data class TrackInfoDialogHomeScreen(
                     },
                     onCopyLink = { context.copyTrackerLink(it) },
                     onTogglePrivate = screenModel::togglePrivate,
-                    onManageServices = {
-                        navigator.parent?.push(SettingsScreen(SettingsScreen.Destination.Tracking))
-                    },
+                    onSetPreferredTracker = screenModel::setPreferredTracker,
                 )
             }
         }
@@ -498,6 +496,12 @@ data class TrackInfoDialogHomeScreen(
         fun togglePrivate(item: TrackItem) {
             screenModelScope.launchNonCancellable {
                 item.tracker.setRemotePrivate(item.track!!.toDbTrack(), !item.track.private)
+            }
+        }
+
+        fun setPreferredTracker(item: TrackItem) {
+            if (item.track != null) {
+                trackPreferences.setPreferredTrackerForManga(mangaId, item.tracker.id)
             }
         }
 
