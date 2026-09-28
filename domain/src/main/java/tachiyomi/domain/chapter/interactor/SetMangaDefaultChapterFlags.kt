@@ -16,7 +16,7 @@ class SetMangaDefaultChapterFlags(
         withNonCancellableContext {
             with(libraryPreferences) {
                 setMangaChapterFlags.awaitSetAllFlags(
-                    mangaId = manga.id,
+                    mangaIds = listOf(manga.id),
                     unreadFilter = filterChapterByRead().get(),
                     downloadedFilter = filterChapterByDownloaded().get(),
                     bookmarkedFilter = filterChapterByBookmarked().get(),

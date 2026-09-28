@@ -63,12 +63,20 @@ END;
 -- KMK <--
 
 getChapterById:
-SELECT *
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
 FROM chapter
 WHERE id = :id;
 
 getChaptersByMangaId:
-SELECT C.*
+SELECT
+    C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
+    C.user_bookmark, C.user_fillermark, C.user_last_page_read, C.remote_chapter_number,
+    C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
+    C.state_version, C.state_is_syncing, C.remote_memo
 FROM chapter C
 -- KMK -->
 JOIN manga M ON C.manga_id = M.id
@@ -91,37 +99,57 @@ AND (
 );
 
 getScanlatorsByMangaId:
-SELECT remote_scanlator
+SELECT DISTINCT remote_scanlator
 FROM chapter
 WHERE manga_id = :mangaId;
 
 getBookmarkedChaptersByMangaId:
-SELECT *
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
 FROM chapter
 WHERE user_bookmark
 AND manga_id = :mangaId;
 
 -- KMK -->
 getFillermarkedChaptersByMangaId:
-SELECT *
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
 FROM chapter
 WHERE user_fillermark
 AND manga_id = :mangaId;
 -- KMK <--
 
 getChapterByUrl:
-SELECT *
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
 FROM chapter
 WHERE remote_url = :chapterUrl;
 
 getChapterByUrlAndMangaId:
-SELECT *
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
 FROM chapter
-WHERE remote_url = :chapterUrl
-AND manga_id = :mangaId;
+WHERE manga_id = :mangaId
+AND remote_url = :remoteUrl;
 
 getMergedChaptersByMangaId:
-SELECT C.*
+SELECT
+    C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
+    C.user_bookmark, C.user_fillermark, C.user_last_page_read, C.remote_chapter_number,
+    C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
+    C.state_version, C.state_is_syncing, C.remote_memo
 FROM (
     SELECT manga_id,merge_id FROM merged WHERE merge_id = :mangaId
 ) AS M
@@ -153,16 +181,16 @@ ORDER BY C.manga_id, C.remote_order;
 -- KMK -->
 updateFromBackup:
 UPDATE chapter SET
-    user_read = coalesce(:read, user_read),
-    user_bookmark = coalesce(:bookmark, user_bookmark),
-    user_fillermark = coalesce(:fillermark, user_fillermark),
-    user_last_page_read = coalesce(:lastPageRead, user_last_page_read),
-    remote_order = coalesce(:sourceOrder, remote_order),
-    remote_date_upload = coalesce(:dateUpload, remote_date_upload),
-    state_version = coalesce(:version, state_version),
-    state_is_syncing = coalesce(:isSyncing, state_is_syncing),
-    remote_memo = coalesce(:memo, remote_memo)
-WHERE id = :chapterId;
+    user_read = coalesce(:userRead, user_read),
+    user_bookmark = coalesce(:userBookmark, user_bookmark),
+    user_fillermark = coalesce(:userFillermark, user_fillermark),
+    user_last_page_read = coalesce(:userLastPageRead, user_last_page_read),
+    remote_order = coalesce(:remoteOrder, remote_order),
+    remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
+    state_version = coalesce(:stateVersion, state_version),
+    state_is_syncing = coalesce(:stateIsSyncing, state_is_syncing),
+    remote_memo = coalesce(:remoteMemo, remote_memo)
+WHERE id = :id;
 -- KMK <--
 getScanlatorsByMergeId:
 SELECT remote_scanlator
@@ -181,44 +209,52 @@ UPDATE chapter
 SET state_is_syncing = 0
 WHERE state_is_syncing = 1;
 
-insert:
-INSERT INTO chapter(manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_fillermark, user_last_page_read, remote_chapter_number, remote_order, state_date_fetch, remote_date_upload, state_last_modified_at, state_version, state_is_syncing, remote_memo)
-VALUES (:mangaId, :url, :name, :scanlator, :read, :bookmark, :fillermark, :lastPageRead, :chapterNumber, :sourceOrder, :dateFetch, :dateUpload, 0, :version, 0, :memo);
-
 -- KMK -->
 insertReturningId:
-INSERT INTO chapter(manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_fillermark, user_last_page_read, remote_chapter_number, remote_order, state_date_fetch, remote_date_upload, state_last_modified_at, state_version, state_is_syncing, remote_memo)
-VALUES (:mangaId, :url, :name, :scanlator, :read, :bookmark, :fillermark, :lastPageRead, :chapterNumber, :sourceOrder, :dateFetch, :dateUpload, 0, :version, 0, :memo)
+INSERT INTO chapter(
+    manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+)
+VALUES (
+    :mangaId, :remoteUrl, :remoteName, :remoteScanlator, :userRead, :userBookmark,
+    :userFillermark, :userLastPageRead, :remoteChapterNumber, :remoteOrder,
+    :stateDateFetch, :remoteDateUpload, 0, :stateVersion, 0, :remoteMemo
+)
+-- Two syncs of the same entry can race; the chapter the other one already stored is skipped rather
+-- than failing the whole batch
+ON CONFLICT(manga_id, remote_url) DO NOTHING
 RETURNING id;
 -- KMK <--
 
 update:
 UPDATE chapter
 SET manga_id = coalesce(:mangaId, manga_id),
-    remote_url = coalesce(:url, remote_url),
-    remote_name = coalesce(:name, remote_name),
-    remote_scanlator = coalesce(:scanlator, remote_scanlator),
-    user_read = coalesce(:read, user_read),
-    user_bookmark = coalesce(:bookmark, user_bookmark),
-    user_fillermark = coalesce(:fillermark, user_fillermark),
-    user_last_page_read = coalesce(:lastPageRead, user_last_page_read),
-    remote_chapter_number = coalesce(:chapterNumber, remote_chapter_number),
-    remote_order = coalesce(:sourceOrder, remote_order),
-    state_date_fetch = coalesce(:dateFetch, state_date_fetch),
-    remote_date_upload = coalesce(:dateUpload, remote_date_upload),
-    state_version = coalesce(:version, state_version),
-    state_is_syncing = coalesce(:isSyncing, state_is_syncing),
-    remote_memo = coalesce(:memo, remote_memo)
-WHERE id = :chapterId;
+    remote_url = coalesce(:remoteUrl, remote_url),
+    remote_name = coalesce(:remoteName, remote_name),
+    remote_scanlator = coalesce(:remoteScanlator, remote_scanlator),
+    user_read = coalesce(:userRead, user_read),
+    user_bookmark = coalesce(:userBookmark, user_bookmark),
+    user_fillermark = coalesce(:userFillermark, user_fillermark),
+    user_last_page_read = coalesce(:userLastPageRead, user_last_page_read),
+    remote_chapter_number = coalesce(:remoteChapterNumber, remote_chapter_number),
+    remote_order = coalesce(:remoteOrder, remote_order),
+    state_date_fetch = coalesce(:stateDateFetch, state_date_fetch),
+    remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
+    state_version = coalesce(:stateVersion, state_version),
+    state_is_syncing = coalesce(:stateIsSyncing, state_is_syncing),
+    remote_memo = coalesce(:remoteMemo, remote_memo)
+WHERE id = :id;
 
 -- KMK -->
 updateRemote:
 UPDATE chapter
-SET remote_name = :name,
-    remote_scanlator = coalesce(:scanlator, remote_scanlator),
-    remote_chapter_number = :chapterNumber,
-    remote_order = :sourceOrder,
-    remote_date_upload = coalesce(:dateUpload, remote_date_upload),
-    remote_memo = :memo
-WHERE id = :chapterId;
+SET remote_name = :remoteName,
+    remote_scanlator = coalesce(:remoteScanlator, remote_scanlator),
+    remote_chapter_number = :remoteChapterNumber,
+    remote_order = :remoteOrder,
+    remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
+    remote_memo = :remoteMemo
+WHERE id = :id;
 -- KMK <--

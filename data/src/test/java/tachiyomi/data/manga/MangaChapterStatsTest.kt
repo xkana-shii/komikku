@@ -111,17 +111,17 @@ class MangaChapterStatsTest {
 
         // Reader page progress.
         db.chapterQueries.update(
-            mangaId = null, url = null, name = null, scanlator = null,
-            read = null, bookmark = null, fillermark = null, lastPageRead = 7, chapterNumber = null,
-            sourceOrder = null, dateFetch = null, dateUpload = null,
-            chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+            mangaId = null, remoteUrl = null, remoteName = null, remoteScanlator = null,
+            userRead = null, userBookmark = null, userFillermark = null, userLastPageRead = 7,
+            remoteChapterNumber = null, remoteOrder = null, stateDateFetch = null, remoteDateUpload = null,
+            id = chapter.id, stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
         )
         // Rewriting a value it already has.
         db.chapterQueries.update(
-            mangaId = null, url = null, name = null, scanlator = null,
-            read = false, bookmark = false, fillermark = null, lastPageRead = null, chapterNumber = null,
-            sourceOrder = null, dateFetch = null, dateUpload = null,
-            chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+            mangaId = null, remoteUrl = null, remoteName = null, remoteScanlator = null,
+            userRead = false, userBookmark = false, userFillermark = null, userLastPageRead = null,
+            remoteChapterNumber = null, remoteOrder = null, stateDateFetch = null, remoteDateUpload = null,
+            id = chapter.id, stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
         )
 
         hasMissing() shouldBe false
@@ -357,43 +357,49 @@ class MangaChapterStatsTest {
                 // Match ChapterRepositoryImpl.partialUpdate.
                 db.chapterQueries.update(
                     mangaId = null,
-                    url = null,
-                    name = null,
-                    scanlator = null,
-                    read = rng.nextBoolean(),
-                    bookmark = rng.nextBoolean(),
-                    fillermark = rng.nextBoolean(),
-                    lastPageRead = rng.nextLong(50),
-                    chapterNumber = null,
-                    sourceOrder = null,
-                    dateFetch = null,
-                    dateUpload = null,
-                    chapterId = chapter.id,
-                    version = null,
-                    isSyncing = 0,
-                    memo = null,
+                    remoteUrl = null,
+                    remoteName = null,
+                    remoteScanlator = null,
+                    userRead = rng.nextBoolean(),
+                    userBookmark = rng.nextBoolean(),
+                    userFillermark = rng.nextBoolean(),
+                    userLastPageRead = rng.nextLong(50),
+                    remoteChapterNumber = null,
+                    remoteOrder = null,
+                    stateDateFetch = null,
+                    remoteDateUpload = null,
+                    id = chapter.id,
+                    stateVersion = null,
+                    stateIsSyncing = 0,
+                    remoteMemo = null,
                 )
             }
             5 -> chapters.randomOrNull(rng)?.let { chapter ->
                 // Simulate the reader page update.
                 db.chapterQueries.update(
-                    mangaId = null, url = null, name = null, scanlator = null,
-                    read = null, bookmark = null, fillermark = null, lastPageRead = rng.nextLong(50),
-                    chapterNumber = null, sourceOrder = null, dateFetch = null, dateUpload = null,
-                    chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+                    mangaId = null, remoteUrl = null, remoteName = null, remoteScanlator = null,
+                    userRead = null, userBookmark = null, userFillermark = null,
+                    userLastPageRead = rng.nextLong(50), remoteChapterNumber = null, remoteOrder = null,
+                    stateDateFetch = null, remoteDateUpload = null, id = chapter.id,
+                    stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
                 )
             }
             6 -> chapters.randomOrNull(rng)?.let { chapter ->
                 db.chapterQueries.update(
-                    mangaId = null, url = null, name = null, scanlator = scanlators.random(rng),
-                    read = null, bookmark = null, fillermark = null, lastPageRead = null, chapterNumber = null,
-                    sourceOrder = null, dateFetch = rng.nextLong(1, 5_000),
-                    dateUpload = rng.nextLong(1, 5_000),
-                    chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+                    mangaId = null, remoteUrl = null, remoteName = null,
+                    remoteScanlator = scanlators.random(rng), userRead = null, userBookmark = null,
+                    userFillermark = null, userLastPageRead = null, remoteChapterNumber = null,
+                    remoteOrder = null, stateDateFetch = rng.nextLong(1, 5_000),
+                    remoteDateUpload = rng.nextLong(1, 5_000), id = chapter.id,
+                    stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
                 )
             }
             7 -> chapters.randomOrNull(rng)?.let { chapter ->
-                db.historyQueries.upsert(chapter.id, Date(rng.nextLong(1, 9_000)), rng.nextLong(1, 60))
+                db.historyQueries.upsert(
+                    chapterId = chapter.id,
+                    readAt = Date(rng.nextLong(1, 9_000)),
+                    readDuration = rng.nextLong(1, 60),
+                )
             }
             8 -> when (rng.nextInt(5)) {
                 0 -> db.historyQueries.resetHistoryByMangaIds(listOf(mangaIds.random(rng)))
@@ -483,31 +489,31 @@ class MangaChapterStatsTest {
         rng: Random = Random(0),
         dates: Long? = null,
     ) {
-        db.chapterQueries.insert(
+        db.chapterQueries.insertReturningId(
             mangaId = mangaId,
-            url = "/chapter/${rng.nextLong()}",
-            name = "Chapter",
-            scanlator = scanlator,
-            read = read,
-            bookmark = bookmark,
-            fillermark = rng.nextBoolean(),
-            lastPageRead = 0,
-            chapterNumber = 1.0,
-            sourceOrder = 0,
-            dateFetch = dates ?: rng.nextLong(1, 5_000),
-            dateUpload = dates ?: rng.nextLong(1, 5_000),
-            version = 0,
-            memo = JsonObject(emptyMap()),
-        )
+            remoteUrl = "/chapter/${rng.nextLong()}",
+            remoteName = "Chapter",
+            remoteScanlator = scanlator,
+            userRead = read,
+            userBookmark = bookmark,
+            userFillermark = rng.nextBoolean(),
+            userLastPageRead = 0,
+            remoteChapterNumber = 1.0,
+            remoteOrder = 0,
+            stateDateFetch = dates ?: rng.nextLong(1, 5_000),
+            remoteDateUpload = dates ?: rng.nextLong(1, 5_000),
+            stateVersion = 0,
+            remoteMemo = JsonObject(emptyMap()),
+        ).awaitAsOne()
     }
 
     /** Matches ChapterRepositoryImpl.partialUpdate with a manga id set. */
     private suspend fun moveChapter(chapterId: Long, mangaId: Long) {
         db.chapterQueries.update(
-            mangaId = mangaId, url = null, name = null, scanlator = null,
-            read = null, bookmark = null, fillermark = null, lastPageRead = null, chapterNumber = null,
-            sourceOrder = null, dateFetch = null, dateUpload = null,
-            chapterId = chapterId, version = null, isSyncing = 0, memo = null,
+            mangaId = mangaId, remoteUrl = null, remoteName = null, remoteScanlator = null,
+            userRead = null, userBookmark = null, userFillermark = null, userLastPageRead = null,
+            remoteChapterNumber = null, remoteOrder = null, stateDateFetch = null, remoteDateUpload = null,
+            id = chapterId, stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
         )
     }
 

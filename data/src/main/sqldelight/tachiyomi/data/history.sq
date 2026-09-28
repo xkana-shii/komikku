@@ -25,13 +25,9 @@ END;
 -- KMK <--
 
 getHistoryByMangaId:
-SELECT
-H.id,
-H.chapter_id,
-H.read_at,
-H.read_duration
-FROM history H
-WHERE H.manga_id = :mangaId;
+SELECT id, chapter_id, read_at, read_duration
+FROM history
+WHERE manga_id = :mangaId;
 
 getHistoryByChapterUrl:
 SELECT
@@ -67,15 +63,12 @@ WHERE read_at = 0;
 
 upsert:
 INSERT INTO history(manga_id, chapter_id, read_at, read_duration)
-SELECT C.manga_id, :chapterId, :readAt, :readDuration
-FROM chapter C
-WHERE C.id = :chapterId
-ON CONFLICT(chapter_id)
-DO UPDATE
-SET
-    read_at = :readAt,
-    read_duration = read_duration + :readDuration
-WHERE chapter_id = :chapterId;
+SELECT manga_id, id, :readAt, :readDuration
+FROM chapter
+WHERE id = :chapterId
+ON CONFLICT(chapter_id) DO UPDATE SET
+    read_at = excluded.read_at,
+    read_duration = read_duration + excluded.read_duration;
 
 getReadDuration:
 SELECT coalesce(sum(read_duration), 0)

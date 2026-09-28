@@ -10,7 +10,8 @@ CREATE INDEX idx_excluded_scanlators_manga_id_scanlator ON excluded_scanlator(ma
 
 insert:
 INSERT INTO excluded_scanlator(manga_id, scanlator)
-VALUES (:mangaId, :scanlator);
+VALUES (:mangaId, :scanlator)
+ON CONFLICT(manga_id, scanlator) DO NOTHING;
 
 remove:
 DELETE FROM excluded_scanlator

@@ -40,7 +40,7 @@ class MoveSortingModeSettingsMigration : Migration {
                 .forEach {
                     // KMK -->
                     database.categoryQueries.updateFlags(
-                        categoryId = it.id,
+                        id = it.id,
                         flags = it.flags and 0b00111100L.inv(),
                     )
                     // KMK <--

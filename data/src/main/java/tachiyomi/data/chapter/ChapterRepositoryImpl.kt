@@ -26,20 +26,20 @@ class ChapterRepositoryImpl(
             database.transactionWithResult {
                 chapters.map { chapter ->
                     val lastInsertId = database.chapterQueries.insertReturningId(
-                        chapter.mangaId,
-                        chapter.url,
-                        chapter.name,
-                        chapter.scanlator,
-                        chapter.read,
-                        chapter.bookmark,
-                        chapter.fillermark,
-                        chapter.lastPageRead,
-                        chapter.chapterNumber,
-                        chapter.sourceOrder,
-                        chapter.dateFetch,
-                        chapter.dateUpload,
-                        chapter.version,
-                        chapter.memo,
+                        mangaId = chapter.mangaId,
+                        remoteUrl = chapter.url,
+                        remoteName = chapter.name,
+                        remoteScanlator = chapter.scanlator,
+                        userRead = chapter.read,
+                        userBookmark = chapter.bookmark,
+                        userFillermark = chapter.fillermark,
+                        userLastPageRead = chapter.lastPageRead,
+                        remoteChapterNumber = chapter.chapterNumber,
+                        remoteOrder = chapter.sourceOrder,
+                        stateDateFetch = chapter.dateFetch,
+                        remoteDateUpload = chapter.dateUpload,
+                        stateVersion = chapter.version,
+                        remoteMemo = chapter.memo,
                     ).awaitAsOne()
                     chapter.copy(id = lastInsertId)
                 }
@@ -86,32 +86,33 @@ class ChapterRepositoryImpl(
                 .toMutableSet()
             val stored = added.filter { existing.add(it.mangaId to it.url) }.map { chapter ->
                 val chapterId = database.chapterQueries.insertReturningId(
-                    chapter.mangaId,
-                    chapter.url,
-                    chapter.name,
-                    chapter.scanlator,
-                    chapter.read,
-                    chapter.bookmark,
-                    chapter.fillermark,
-                    chapter.lastPageRead,
-                    chapter.chapterNumber,
-                    chapter.sourceOrder,
-                    chapter.dateFetch,
-                    chapter.dateUpload,
-                    chapter.version,
-                    chapter.memo,
-                ).awaitAsOne()
+                    mangaId = chapter.mangaId,
+                    remoteUrl = chapter.url,
+                    remoteName = chapter.name,
+                    remoteScanlator = chapter.scanlator,
+                    userRead = chapter.read,
+                    userBookmark = chapter.bookmark,
+                    userFillermark = chapter.fillermark,
+                    userLastPageRead = chapter.lastPageRead,
+                    remoteChapterNumber = chapter.chapterNumber,
+                    remoteOrder = chapter.sourceOrder,
+                    stateDateFetch = chapter.dateFetch,
+                    remoteDateUpload = chapter.dateUpload,
+                    stateVersion = chapter.version,
+                    remoteMemo = chapter.memo,
+                )
+                    .awaitAsOne()
                 chapter.copy(id = chapterId)
             }
             updated.forEach { chapterUpdate ->
                 database.chapterQueries.updateRemote(
-                    name = chapterUpdate.name,
-                    scanlator = chapterUpdate.scanlator,
-                    chapterNumber = chapterUpdate.chapterNumber,
-                    sourceOrder = chapterUpdate.sourceOrder,
-                    dateUpload = chapterUpdate.dateUpload,
-                    chapterId = chapterUpdate.id,
-                    memo = chapterUpdate.memo,
+                    remoteName = chapterUpdate.name,
+                    remoteScanlator = chapterUpdate.scanlator,
+                    remoteChapterNumber = chapterUpdate.chapterNumber,
+                    remoteOrder = chapterUpdate.sourceOrder,
+                    remoteDateUpload = chapterUpdate.dateUpload,
+                    id = chapterUpdate.id,
+                    remoteMemo = chapterUpdate.memo,
                 )
             }
             stored
@@ -123,21 +124,21 @@ class ChapterRepositoryImpl(
             chapterUpdates.forEach { chapterUpdate ->
                 database.chapterQueries.update(
                     mangaId = chapterUpdate.mangaId,
-                    url = chapterUpdate.url,
-                    name = chapterUpdate.name,
-                    scanlator = chapterUpdate.scanlator,
-                    read = chapterUpdate.read,
-                    bookmark = chapterUpdate.bookmark,
-                    fillermark = chapterUpdate.fillermark,
-                    lastPageRead = chapterUpdate.lastPageRead,
-                    chapterNumber = chapterUpdate.chapterNumber,
-                    sourceOrder = chapterUpdate.sourceOrder,
-                    dateFetch = chapterUpdate.dateFetch,
-                    dateUpload = chapterUpdate.dateUpload,
-                    chapterId = chapterUpdate.id,
-                    version = chapterUpdate.version,
-                    isSyncing = 0,
-                    memo = chapterUpdate.memo,
+                    remoteUrl = chapterUpdate.url,
+                    remoteName = chapterUpdate.name,
+                    remoteScanlator = chapterUpdate.scanlator,
+                    userRead = chapterUpdate.read,
+                    userBookmark = chapterUpdate.bookmark,
+                    userFillermark = chapterUpdate.fillermark,
+                    userLastPageRead = chapterUpdate.lastPageRead,
+                    remoteChapterNumber = chapterUpdate.chapterNumber,
+                    remoteOrder = chapterUpdate.sourceOrder,
+                    stateDateFetch = chapterUpdate.dateFetch,
+                    remoteDateUpload = chapterUpdate.dateUpload,
+                    stateVersion = chapterUpdate.version,
+                    stateIsSyncing = 0,
+                    remoteMemo = chapterUpdate.memo,
+                    id = chapterUpdate.id,
                 )
             }
         }
@@ -207,9 +208,9 @@ class ChapterRepositoryImpl(
 
     override suspend fun getChapterByUrlAndMangaId(url: String, mangaId: Long): Chapter? {
         return database.chapterQueries.getChapterByUrlAndMangaId(
-            url,
-            mangaId,
-            ChapterMapper::mapChapter,
+            remoteUrl = url,
+            mangaId = mangaId,
+            mapper = ChapterMapper::mapChapter,
         ).awaitAsOneOrNull()
     }
 

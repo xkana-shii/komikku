@@ -41,6 +41,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -89,6 +90,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import xyz.nulldev.ts.api.http.serializer.FilterSerializer
 import java.time.Instant
+import kotlin.time.Duration.Companion.seconds
 import eu.kanade.tachiyomi.source.model.Filter as SourceModelFilter
 
 open class BrowseSourceScreenModel(
@@ -235,7 +237,13 @@ open class BrowseSourceScreenModel(
                         // SY -->
                         .combineMetadata(metadata)
                         // SY <--
-                        .stateIn(ioCoroutineScope)
+                        // KMK -->
+                        .stateIn(
+                            ioCoroutineScope,
+                            SharingStarted.WhileSubscribed(5.seconds),
+                            manga to metadata,
+                        )
+                    // KMK <--
                 }
                     .filter { !hideInLibraryItems || !it.value.first.favorite }
             }

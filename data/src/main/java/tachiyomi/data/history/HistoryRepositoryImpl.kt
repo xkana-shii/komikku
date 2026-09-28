@@ -110,9 +110,9 @@ class HistoryRepositoryImpl(
             database.transaction {
                 historyUpdates.forEach { historyUpdate ->
                     database.historyQueries.upsert(
-                        historyUpdate.chapterId,
-                        historyUpdate.readAt,
-                        historyUpdate.sessionReadDuration,
+                        chapterId = historyUpdate.chapterId,
+                        readAt = historyUpdate.readAt,
+                        readDuration = historyUpdate.sessionReadDuration,
                     )
                 }
             }

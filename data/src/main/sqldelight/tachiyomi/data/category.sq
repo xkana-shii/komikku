@@ -26,8 +26,7 @@ END;
 getCategory:
 SELECT id,name,`order`,flags,hidden
 FROM category
-WHERE id = :id
-LIMIT 1;
+WHERE id = :id;
 
 getCategories:
 SELECT
@@ -69,12 +68,12 @@ RETURNING id;
 
 delete:
 DELETE FROM category
-WHERE id = :categoryId;
+WHERE id = :id;
 
 updateName:
 UPDATE category
 SET name = :name
-WHERE id = :categoryId;
+WHERE id = :id;
 
 getUserCategoryIds:
 SELECT id
@@ -85,12 +84,12 @@ ORDER BY `order`;
 updateOrder:
 UPDATE category
 SET `order` = :order
-WHERE id = :categoryId;
+WHERE id = :id;
 
 updateFlags:
 UPDATE category
 SET flags = :flags
-WHERE id = :categoryId;
+WHERE id = :id;
 
 -- KMK -->
 updateNameAndOrder:
@@ -105,5 +104,5 @@ WHERE id = :categoryId;
 -- KMK <--
 
 updateAllFlags:
-UPDATE category SET
-flags = coalesce(:flags, flags);
+UPDATE category
+SET flags = :flags;

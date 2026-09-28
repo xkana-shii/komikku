@@ -110,7 +110,13 @@ library:
 -- database before filtering. `libraryView` above is left as upstream has it, unused, to keep
 -- merges simple.
 SELECT
-    M.*,
+    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
+    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
+    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
+    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
+    M.state_last_modified_at, M.state_version, M.state_is_syncing,
     -- `C` only aggregates entries without a cached `manga_chapter_stats` row, so one side is null.
     coalesce(C.total, S.total_count, 0) AS totalCount,
     coalesce(C.readCount, S.read_count, 0) AS readCount,
@@ -166,7 +172,13 @@ UNION ALL
 
 -- Merged entries aggregate their children's chapter live.
 SELECT
-    M.*,
+    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
+    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
+    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
+    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
+    M.state_last_modified_at, M.state_version, M.state_is_syncing,
     coalesce(C.total, 0) AS totalCount,
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.latestUpload, 0) AS latestUpload,
@@ -216,7 +228,13 @@ WHERE M.user_favorite_at IS NOT NULL AND M.source_id = 6969;
 readMangaNonLibrary:
 -- KMK -->
 SELECT
-    M.*,
+    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
+    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
+    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
+    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
+    M.state_last_modified_at, M.state_version, M.state_is_syncing,
     coalesce(C.total, 0) AS totalCount,
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.latestUpload, 0) AS latestUpload,
@@ -267,7 +285,13 @@ UNION ALL
 
 -- Merged entries aggregate their children's chapter live.
 SELECT
-    M.*,
+    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
+    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
+    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
+    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
+    M.state_last_modified_at, M.state_version, M.state_is_syncing,
     coalesce(C.total, 0) AS totalCount,
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.latestUpload, 0) AS latestUpload,

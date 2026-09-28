@@ -83,7 +83,22 @@ internal suspend fun verifyInsertIds(db: Database) {
     searches.insertAll(listOf(search.copy(name = "Bulk")))
     feeds.insertAll(listOf(feed.copy(global = false)))
     merged.insertAll(listOf(reference.copy(isInfoManga = false)))
-    db.chapterQueries.insert(mangaId, "/bulk", "Bulk", null, false, false, false, 0, 2.0, 1, 0, 0, 0, JsonObject(emptyMap()))
+    db.chapterQueries.insertReturningId(
+        mangaId = mangaId,
+        remoteUrl = "/bulk",
+        remoteName = "Bulk",
+        remoteScanlator = null,
+        userRead = false,
+        userBookmark = false,
+        userFillermark = false,
+        userLastPageRead = 0,
+        remoteChapterNumber = 2.0,
+        remoteOrder = 1,
+        stateDateFetch = 0,
+        remoteDateUpload = 0,
+        stateVersion = 0,
+        remoteMemo = JsonObject(emptyMap()),
+    ).awaitAsOne()
     db.categoryQueries.insert("Bulk", 2, 0, 0)
     check(searches.getBySourceId(1).size == 2)
     check(feeds.getBySourceId(1).single().savedSearch == searchId)

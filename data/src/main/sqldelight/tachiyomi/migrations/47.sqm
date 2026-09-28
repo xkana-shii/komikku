@@ -973,13 +973,17 @@ SELECT
     chapter.user_read AS read,
     chapter.user_bookmark AS bookmark,
     chapter.user_fillermark AS fillermark,
-    chapter.user_last_page_read AS last_page_read,
-    manga.source_id AS source,
+    -- KMK -->
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    -- KMK <--
     (manga.user_favorite_at IS NOT NULL) AS favorite,
     manga.remote_cover AS thumbnailUrl,
     manga.state_cover_last_modified AS coverLastModified,
     chapter.remote_date_upload AS dateUpload,
-    chapter.state_date_fetch AS datefetch,
+    -- KMK -->
+    chapter.state_date_fetch AS dateFetch,
+    -- KMK <--
     excluded_scanlator.scanlator AS excludedScanlator
 FROM manga JOIN chapter
 ON manga.id = chapter.manga_id
@@ -999,13 +1003,17 @@ SELECT
     chapter.user_read AS read,
     chapter.user_bookmark AS bookmark,
     chapter.user_fillermark AS fillermark,
-    chapter.user_last_page_read AS last_page_read,
-    manga.source_id AS source,
+    -- KMK -->
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    -- KMK <--
     (manga.user_favorite_at IS NOT NULL) AS favorite,
     manga.remote_cover AS thumbnailUrl,
     manga.state_cover_last_modified AS coverLastModified,
     chapter.remote_date_upload AS dateUpload,
-    chapter.state_date_fetch AS datefetch,
+    -- KMK -->
+    chapter.state_date_fetch AS dateFetch,
+    -- KMK <--
     excluded_scanlator.scanlator AS excludedScanlator
 FROM manga
 LEFT JOIN (
@@ -1021,7 +1029,9 @@ ON manga.id = excluded_scanlator.manga_id
 AND chapter.remote_scanlator = excluded_scanlator.scanlator
 WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id = 6969
 AND chapter.state_date_fetch > manga.state_date_added
-ORDER BY datefetch DESC;
+-- KMK -->
+ORDER BY dateFetch DESC;
+-- KMK <--
 
 CREATE VIEW libraryUpdateErrorView AS
 SELECT

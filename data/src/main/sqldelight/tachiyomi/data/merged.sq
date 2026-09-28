@@ -30,7 +30,16 @@ deleteByMergeId:
 DELETE FROM merged WHERE merge_id = ?;
 
 selectMergedMangasById:
-SELECT manga.*
+SELECT
+    manga.id, manga.source_id, manga.remote_url, manga.remote_title, manga.remote_author,
+    manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
+    manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
+    manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    manga.state_chapter_last_update, manga.state_chapter_next_update,
+    manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
+    manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
+    manga.state_version, manga.state_is_syncing
 FROM (
     SELECT manga_id FROM merged WHERE merge_id = ?
 ) AS M
@@ -38,7 +47,16 @@ JOIN manga
 ON manga.id = M.manga_id;
 
 selectMergedMangasForDownloadingById:
-SELECT manga.*
+SELECT
+    manga.id, manga.source_id, manga.remote_url, manga.remote_title, manga.remote_author,
+    manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
+    manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
+    manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    manga.state_chapter_last_update, manga.state_chapter_next_update,
+    manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
+    manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
+    manga.state_version, manga.state_is_syncing
 FROM (
     SELECT manga_id FROM merged WHERE merge_id = ? AND download_chapters = 1
 ) AS M
@@ -46,7 +64,16 @@ JOIN manga
 ON manga.id = M.manga_id;
 
 selectMergedMangasByUrl:
-SELECT manga.*
+SELECT
+    manga.id, manga.source_id, manga.remote_url, manga.remote_title, manga.remote_author,
+    manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
+    manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
+    manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    manga.state_chapter_last_update, manga.state_chapter_next_update,
+    manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
+    manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
+    manga.state_version, manga.state_is_syncing
 FROM (
     SELECT manga_id FROM merged WHERE merge_url = ?
 ) AS M
@@ -54,7 +81,16 @@ JOIN manga
 ON manga.id = M.manga_id;
 
 selectAllMergedMangas:
-SELECT manga.*
+SELECT
+    manga.id, manga.source_id, manga.remote_url, manga.remote_title, manga.remote_author,
+    manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
+    manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
+    manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    manga.state_chapter_last_update, manga.state_chapter_next_update,
+    manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
+    manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
+    manga.state_version, manga.state_is_syncing
 FROM (
     SELECT manga_id FROM merged
 ) AS M

@@ -1,5 +1,6 @@
 package tachiyomi.data.updates
 
+import app.cash.sqldelight.Query
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.core.common.util.lang.toLong
@@ -20,12 +21,7 @@ class UpdatesRepositoryImpl(
         after: Long,
         limit: Long,
     ): List<UpdatesWithRelations> {
-        return database.updatesViewQueries.getUpdatesByReadStatus(
-            read = read,
-            after = after,
-            limit = limit,
-            mapper = ::mapUpdatesWithRelations,
-        ).awaitAsList()
+        return getUpdatesByReadStatus(read = read, after = after, limit = limit).awaitAsList()
     }
 
     override fun subscribeAll(
@@ -55,12 +51,23 @@ class UpdatesRepositoryImpl(
         after: Long,
         limit: Long,
     ): Flow<List<UpdatesWithRelations>> {
-        return database.updatesViewQueries.getUpdatesByReadStatus(
-            read = read,
-            after = after,
-            limit = limit,
-            mapper = ::mapUpdatesWithRelations,
-        ).subscribeToList()
+        return getUpdatesByReadStatus(read = read, after = after, limit = limit).subscribeToList()
+    }
+
+    private fun getUpdatesByReadStatus(read: Boolean, after: Long, limit: Long): Query<UpdatesWithRelations> {
+        return if (read) {
+            database.updatesViewQueries.getReadUpdates(
+                after = after,
+                limit = limit,
+                mapper = ::mapUpdatesWithRelations,
+            )
+        } else {
+            database.updatesViewQueries.getUnreadUpdates(
+                after = after,
+                limit = limit,
+                mapper = ::mapUpdatesWithRelations,
+            )
+        }
     }
 
     private fun mapUpdatesWithRelations(

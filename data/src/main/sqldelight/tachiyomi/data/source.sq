@@ -5,20 +5,17 @@ CREATE TABLE source(
 );
 
 findAll:
-SELECT id, language, name
+SELECT id, name, language
 FROM source;
 
 findOne:
-SELECT id, language, name
+SELECT id, name, language
 FROM source
 WHERE id = :id;
 
 upsert:
 INSERT INTO source(id, name, language)
-VALUES (:id, :name, :lang)
-ON CONFLICT(id)
-DO UPDATE
-SET
-    name = :name,
-    language = :lang
-WHERE id = :id;
+VALUES (:id, :name, :language)
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    language = excluded.language;

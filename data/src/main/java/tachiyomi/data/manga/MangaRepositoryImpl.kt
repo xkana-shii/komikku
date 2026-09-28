@@ -41,19 +41,15 @@ class MangaRepositoryImpl(
     }
 
     override suspend fun getMangaByUrlAndSourceId(url: String, sourceId: Long): Manga? {
-        return database.mangaQueries.getMangaByUrlAndSource(
-            url,
-            sourceId,
-            MangaMapper::mapManga,
-        ).awaitAsOneOrNull()
+        return database.mangaQueries
+            .getMangaByUrlAndSource(sourceId = sourceId, remoteUrl = url, mapper = MangaMapper::mapManga)
+            .awaitAsOneOrNull()
     }
 
     override fun getMangaByUrlAndSourceIdAsFlow(url: String, sourceId: Long): Flow<Manga?> {
-        return database.mangaQueries.getMangaByUrlAndSource(
-            url,
-            sourceId,
-            MangaMapper::mapManga,
-        ).subscribeToOneOrNull()
+        return database.mangaQueries
+            .getMangaByUrlAndSource(sourceId = sourceId, remoteUrl = url, mapper = MangaMapper::mapManga)
+            .subscribeToOneOrNull()
     }
 
     override suspend fun getFavorites(): List<Manga> {
@@ -161,33 +157,31 @@ class MangaRepositoryImpl(
         return database.transactionWithResult {
             manga.map {
                 database.mangaQueries.insertNetworkManga(
-                    source = it.source,
-                    url = it.url,
-                    // SY -->
-                    title = it.ogTitle,
-                    artist = it.ogArtist,
-                    author = it.ogAuthor,
-                    thumbnailUrl = it.ogThumbnailUrl,
-                    description = it.ogDescription,
-                    genre = it.ogGenre,
-                    status = it.ogStatus,
-                    // SY <--
+                    sourceId = it.source,
+                    remoteUrl = it.url,
+                    remoteArtist = it.ogArtist,
+                    remoteAuthor = it.ogAuthor,
+                    remoteDescription = it.ogDescription,
+                    remoteGenre = it.ogGenre,
+                    remoteTitle = it.ogTitle,
+                    remoteStatus = it.ogStatus,
+                    remoteCover = it.ogThumbnailUrl,
                     favorite = it.favorite,
-                    lastUpdate = it.lastUpdate,
-                    nextUpdate = it.nextUpdate,
-                    calculateInterval = it.fetchInterval.toLong(),
-                    initialized = it.initialized,
-                    viewerFlags = it.viewerFlags,
-                    chapterFlags = it.chapterFlags,
-                    coverLastModified = it.coverLastModified,
-                    dateAdded = it.dateAdded,
-                    updateStrategy = it.updateStrategy,
-                    version = it.version,
-                    memo = it.memo,
-                    // SY -->
+                    userNotes = it.notes,
+                    userFilteredScanlators = null,
+                    stateChapterLastUpdate = it.lastUpdate,
+                    stateChapterNextUpdate = it.nextUpdate,
+                    stateChapterFetchInterval = it.fetchInterval.toLong(),
+                    stateInitialized = it.initialized,
+                    userReaderFlags = it.viewerFlags,
+                    userChapterFlags = it.chapterFlags,
+                    stateCoverLastModified = it.coverLastModified,
+                    stateDateAdded = it.dateAdded,
+                    stateVersion = it.version,
+                    remoteUpdateStrategy = it.updateStrategy,
+                    remoteMemo = it.memo,
                     updateTitle = it.ogTitle.isNotBlank(),
                     updateCover = !it.ogThumbnailUrl.isNullOrBlank(),
-                    // SY <--
                     updateDetails = it.initialized,
                     // KMK -->
                     updateInfo = updateInfo,
@@ -203,18 +197,18 @@ class MangaRepositoryImpl(
     override suspend fun updateRemote(update: MangaRemoteUpdate): Boolean {
         return try {
             database.mangaQueries.updateRemote(
-                artist = update.artist,
-                author = update.author,
-                description = update.description,
-                genre = update.genre,
-                title = update.title,
-                status = update.status,
-                thumbnailUrl = update.thumbnailUrl,
-                initialized = update.initialized,
-                coverLastModified = update.coverLastModified,
-                updateStrategy = update.updateStrategy,
-                memo = update.memo,
-                mangaId = update.id,
+                remoteArtist = update.artist,
+                remoteAuthor = update.author,
+                remoteDescription = update.description,
+                remoteGenre = update.genre,
+                remoteTitle = update.title,
+                remoteStatus = update.status,
+                remoteCover = update.thumbnailUrl,
+                stateInitialized = update.initialized,
+                stateCoverLastModified = update.coverLastModified,
+                remoteUpdateStrategy = update.updateStrategy,
+                remoteMemo = update.memo,
+                id = update.id,
             )
             true
         } catch (e: Exception) {

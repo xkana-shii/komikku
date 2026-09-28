@@ -17,7 +17,9 @@ class SetExcludedScanlators(
                 database.excluded_scanlatorQueries.insert(mangaId, scanlator)
             }
             val toRemove = currentExcluded.minus(excludedScanlators)
-            database.excluded_scanlatorQueries.remove(mangaId, toRemove)
+            if (toRemove.isNotEmpty()) {
+                database.excluded_scanlatorQueries.remove(mangaId, toRemove)
+            }
         }
     }
 }

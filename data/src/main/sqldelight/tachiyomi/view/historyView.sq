@@ -104,37 +104,63 @@ AND lower(historyView.title) LIKE ('%' || :query || '%')
 ORDER BY readAt DESC;
 
 getLatestHistory:
+WITH latest_history AS (
+    SELECT id, manga_id, chapter_id, read_at, read_duration
+    FROM history
+    WHERE read_at > 0
+    ORDER BY read_at DESC
+    LIMIT 1
+),
+chapter_counts AS (
+    SELECT
+        C.manga_id,
+        count(C.id) AS totalCount,
+        coalesce(sum(C.user_read), 0) AS readCount,
+        coalesce(sum(C.user_bookmark), 0) AS bookmarkCount,
+        coalesce(sum(CASE WHEN C.user_bookmark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0) AS bookmarkReadCount,
+        coalesce(sum(C.user_fillermark), 0) AS fillermarkCount,
+        coalesce(sum(CASE WHEN C.user_fillermark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0) AS fillermarkReadCount
+    FROM chapter C
+    LEFT JOIN excluded_scanlator ES
+    ON C.manga_id = ES.manga_id
+    AND C.remote_scanlator = ES.scanlator
+    WHERE C.manga_id = (SELECT manga_id FROM latest_history)
+    AND ES.scanlator IS NULL
+)
 SELECT
-id,
-mangaId,
-chapterId,
-title,
-thumbnailUrl,
-source,
-favorite,
-cover_last_modified,
-chapterNumber,
--- KMK -->
-read,
-lastPageRead,
+history.id AS id,
+manga.id AS mangaId,
+chapter.id AS chapterId,
+manga.remote_title AS title,
+manga.remote_cover AS thumbnailUrl,
+manga.source_id AS sourceId,
+manga.user_favorite_at IS NOT NULL AS favorite,
+manga.state_cover_last_modified AS coverLastModified,
+chapter.remote_chapter_number AS chapterNumber,
+chapter.user_read AS read,
+chapter.user_last_page_read AS lastPageRead,
+CAST(
 CASE
-    WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
-    WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
-    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN totalCount - fillermarkCount
-    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkCount
-    ELSE totalCount
-END AS totalCount,
+    WHEN (manga.user_chapter_flags & :bookmarkUnmask) != 0 THEN C.totalCount - C.bookmarkCount
+    WHEN (manga.user_chapter_flags & :bookmarkMask) != 0 THEN C.bookmarkCount
+    WHEN (manga.user_chapter_flags & :fillermarkUnmask) != 0 THEN C.totalCount - C.fillermarkCount
+    WHEN (manga.user_chapter_flags & :fillermarkMask) != 0 THEN C.fillermarkCount
+    ELSE C.totalCount
+END AS REAL) AS totalCount,
+CAST(
 CASE
-    WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
-    WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
-    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN readCount - fillermarkReadCount
-    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkReadCount
-    ELSE readCount
-END AS readCount,
--- KMK <--
-readAt,
-readDuration
-FROM historyView
-WHERE historyView.readAt > 0
-ORDER BY readAt DESC
-LIMIT 1;
+    WHEN (manga.user_chapter_flags & :bookmarkUnmask) != 0 THEN C.readCount - C.bookmarkReadCount
+    WHEN (manga.user_chapter_flags & :bookmarkMask) != 0 THEN C.bookmarkReadCount
+    WHEN (manga.user_chapter_flags & :fillermarkUnmask) != 0 THEN C.readCount - C.fillermarkReadCount
+    WHEN (manga.user_chapter_flags & :fillermarkMask) != 0 THEN C.fillermarkReadCount
+    ELSE C.readCount
+END AS REAL) AS readCount,
+history.read_at AS readAt,
+history.read_duration AS readDuration
+FROM latest_history history
+JOIN manga
+ON manga.id = history.manga_id
+JOIN chapter
+ON chapter.id = history.chapter_id
+JOIN chapter_counts C
+ON C.manga_id = manga.id;
