@@ -250,7 +250,7 @@ class MangaBakaApi(
             total_chapters = item.totalChapters?.toLongOrNull() ?: 0
             start_date = item.published.startDate.orEmpty()
             publishing_status = item.status.orEmpty()
-            publishing_type = item.type.replaceFirstChar { c ->
+            publishing_type = item.type.orEmpty().replaceFirstChar { c ->
                 if (c.isLowerCase()) c.titlecase(Locale.getDefault()) else c.toString()
             }
             authors = item.authors.orEmpty()

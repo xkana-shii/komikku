@@ -26,7 +26,7 @@ data class MangaBakaItem(
     val description: String?,
     val published: MangaBakaPublishData,
     val status: String? = null,
-    val type: String,
+    val type: String? = null,
     val rating: Double?,
     @SerialName("total_chapters")
     val totalChapters: String?,

@@ -3,6 +3,7 @@ package eu.kanade.domain.manga.interactor
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.network.NetworkHelper
+import exh.md.dto.isNovelRelation
 import exh.md.service.MangaDexService
 import exh.md.utils.MdConstants
 import exh.md.utils.MdUtil
@@ -14,6 +15,7 @@ import okhttp3.Headers
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.SequelPrequelRelation
+import tachiyomi.domain.manga.model.isNovelFormat
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.model.Track
@@ -67,6 +69,7 @@ class GetSequelPrequel(
         for (track in tracks) {
             try {
                 val entries = manager.get(track.trackerId)?.getRelatedEntries(track.remoteId).orEmpty()
+                    .filterNot { isNovelFormat(it.mediaFormat) }
                 if (entries.isNotEmpty()) return entries
             } catch (e: CancellationException) {
                 throw e
@@ -84,7 +87,7 @@ class GetSequelPrequel(
                 if (pairs.isNotEmpty()) {
                     val titles = service.viewMangas(pairs.map { it.first }).data.associateBy { it.id }
                     return pairs.mapNotNull { (id, relation) ->
-                        val dto = titles[id] ?: return@mapNotNull null
+                        val dto = titles[id]?.takeUnless { it.isNovelRelation() } ?: return@mapNotNull null
                         SequelPrequelEntry(
                             title = MdUtil.getTitleFromManga(dto.attributes, "en", true),
                             url = "https://mangadex.org/title/$id",

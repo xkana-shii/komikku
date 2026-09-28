@@ -47,6 +47,7 @@ import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The manager of extensions installed as another apk which extend the available sources. It handles
@@ -76,7 +77,7 @@ class ExtensionManager(
      */
     private val installer by lazy { ExtensionInstaller(context) }
 
-    private val iconMap = mutableMapOf<String, Drawable>()
+    private val iconMap = ConcurrentHashMap<String, Drawable>()
 
     private val installedExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Installed>())
     val installedExtensionsFlow = installedExtensionMapFlow.mapExtensions(scope)
@@ -110,27 +111,25 @@ class ExtensionManager(
     private var subLanguagesEnabledOnFirstRun = preferences.enabledLanguages().isSet()
 
     fun getExtensionPackage(sourceId: Long): String? {
-        return installedExtensionsFlow.value.find { extension ->
-            extension.sources.any { it.id == sourceId }
-        }
-            ?.pkgName
+        return installedExtensionMapFlow.value.sourcePackage(sourceId)
     }
 
     fun getExtensionPackageAsFlow(sourceId: Long): Flow<String?> {
-        return installedExtensionsFlow.map { extensions ->
-            extensions.find { extension ->
-                extension.sources.any { it.id == sourceId }
-            }
-                ?.pkgName
-        }
+        return installedExtensionMapFlow.map { it.sourcePackage(sourceId) }
     }
+
+    fun getAppIconForSourceAsFlow(sourceId: Long): Flow<Drawable?> =
+        observeSourceIcon(installedExtensionMapFlow) { getAppIconForSource(sourceId) }
 
     fun getAppIconForSource(sourceId: Long): Drawable? {
         val pkgName = getExtensionPackage(sourceId)
         if (pkgName != null) {
-            return iconMap[pkgName] ?: iconMap.getOrPut(pkgName) {
-                ExtensionLoader.getExtensionPackageInfoFromPkgName(context, pkgName)!!.applicationInfo!!
-                    .loadIcon(context.packageManager)
+            return iconMap[pkgName] ?: try {
+                ExtensionLoader.getExtensionPackageInfoFromPkgName(context, pkgName)?.applicationInfo
+                    ?.loadIcon(context.packageManager)?.also { iconMap[pkgName] = it }
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Unable to load source icon for $pkgName" }
+                null
             }
         }
 

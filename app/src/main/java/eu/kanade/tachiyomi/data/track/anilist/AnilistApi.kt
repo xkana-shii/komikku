@@ -28,7 +28,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import okhttp3.Call
@@ -37,7 +36,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.model.SequelPrequelEntry
-import tachiyomi.domain.manga.model.SequelPrequelRelation
 import uy.kohesive.injekt.injectLazy
 import java.time.Instant
 import java.time.ZoneId
@@ -508,31 +506,13 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
     // KMK --> Only public relation metadata; existing AniList API/error handling.
     suspend fun getRelatedEntries(mediaId: Long): List<SequelPrequelEntry> = withIOContext {
         val payload = buildJsonObject {
-            put("query", "query { Media(id: $mediaId, type: MANGA) { relations { edges { relationType(version: 2) node { id type title { userPreferred romaji english } siteUrl coverImage { large } } } } } }")
+            put("query", "query { Media(id: $mediaId, type: MANGA) { relations { edges { relationType(version: 2) node { id type format title { userPreferred romaji english } siteUrl coverImage { large } } } } } }")
         }
         val result = with(json) {
             client.newCall(POST(API_URL, body = payload.toString().toRequestBody(jsonMime)))
                 .awaitALSuccess().parseAs<JsonObject>()
         }
-        ((result["data"] as? JsonObject)?.get("Media") as? JsonObject)?.get("relations")?.let { it as? JsonObject }
-            ?.get("edges")?.jsonArray.orEmpty().mapNotNull { element ->
-                val edge = element.jsonObject
-                val node = edge["node"] as? JsonObject ?: return@mapNotNull null
-                if (node["type"]?.jsonPrimitive?.contentOrNull != "MANGA") return@mapNotNull null
-                val remoteId = node["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
-                val titles = node["title"] as? JsonObject ?: return@mapNotNull null
-                val title = listOf("userPreferred", "english", "romaji").firstNotNullOfOrNull {
-                    titles[it]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
-                } ?: return@mapNotNull null
-                SequelPrequelEntry(
-                    title = title,
-                    url = node["siteUrl"]?.jsonPrimitive?.contentOrNull ?: mangaUrl(remoteId),
-                    relation = SequelPrequelRelation.from(edge["relationType"]?.jsonPrimitive?.contentOrNull.orEmpty()),
-                    trackerId = TrackerManager.ANILIST,
-                    remoteId = remoteId,
-                    coverUrl = (node["coverImage"] as? JsonObject)?.get("large")?.jsonPrimitive?.contentOrNull,
-                )
-            }
+        result.toRelatedEntries()
     }
     // KMK <--
 

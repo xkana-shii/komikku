@@ -39,6 +39,35 @@ class GetSequelPrequelTest {
     }
 
     @Test
+    fun `preferred novels only result falls through to the next tracker`() = runTest {
+        val fallback = mockk<BaseTracker> {
+            every { isLoggedIn } returns true
+            coEvery { getRelatedEntries(200) } returns listOf(relation.copy(trackerId = 2, mediaFormat = "manhwa"))
+        }
+        every { manager.get(2) } returns fallback
+        every { preferences.resolvePreferredTracker(any(), any()) } returns 1
+        coEvery { service.getRelatedEntries(100) } returns listOf(relation.copy(mediaFormat = "LIGHT_NOVEL"))
+        val result = subject.await(manga, listOf(binding, binding.copy(trackerId = 2, remoteId = 200)))
+        result.single().trackerId shouldBe 2L
+        coVerify(exactly = 1) { fallback.getRelatedEntries(200) }
+    }
+
+    @Test
+    fun `normalized provider results remove novels before cache and preserve comic relation order`() = runTest {
+        coEvery { service.getRelatedEntries(100) } returns listOf(
+            relation.copy(url = "sequel", mediaFormat = "MANGA"),
+            relation.copy(url = "novel", mediaFormat = "Novel"),
+            relation.copy(url = "prequel", mediaFormat = "manhua", relation = SequelPrequelRelation.PREQUEL),
+            relation.copy(url = "light-novel", mediaFormat = "Light Novel"),
+            relation.copy(url = "related", mediaFormat = null, relation = SequelPrequelRelation.SIDE_STORY),
+        )
+        repeat(2) {
+            subject.await(manga, listOf(binding)).map { it.url } shouldBe listOf("sequel", "prequel", "related")
+        }
+        coVerify(exactly = 1) { service.getRelatedEntries(100) }
+    }
+
+    @Test
     fun `tracker binding resolves local entry without inserting a stub`() = runTest {
         coEvery { tracks.await() } returns listOf(binding.copy(mangaId = 20, remoteId = 101))
         val found = subject.await(manga, listOf(binding)).single()

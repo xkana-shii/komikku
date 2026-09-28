@@ -12,7 +12,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import tachiyomi.domain.manga.model.SequelPrequelEntry
-import tachiyomi.domain.manga.model.SequelPrequelRelation
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.injectLazy
 import tachiyomi.domain.track.model.Track as DomainTrack
@@ -181,16 +180,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
     // KMK --> Reuse KNS's cached series resolver, including merged MangaBaka IDs.
     override suspend fun getRelatedEntries(remoteId: Long): List<SequelPrequelEntry> {
         val item = api.fetchSeriesData(api.resolveId(remoteId))
-        return item.relationships.orEmpty().distinctBy { it.seriesId }.take(50).map { relation ->
+        return item.relationships.orEmpty().distinctBy { it.seriesId }.take(50).mapNotNull { relation ->
             val related = api.fetchSeriesData(api.resolveId(relation.seriesId))
-            SequelPrequelEntry(
-                title = related.chooseBestTitle(),
-                url = "https://mangabaka.org/${related.id}",
-                relation = SequelPrequelRelation.from(relation.relationType),
-                trackerId = id,
-                remoteId = related.id,
-                coverUrl = related.cover.raw.url ?: related.cover.x350.x1,
-            )
+            related.toRelatedEntry(relation.relationType, id)
         }
     }
     // KMK <--

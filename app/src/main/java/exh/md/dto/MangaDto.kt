@@ -50,6 +50,7 @@ data class TagDto(
 @Serializable
 data class TagAttributesDto(
     val name: Map<String, String>,
+    val group: String? = null,
 )
 
 @Serializable

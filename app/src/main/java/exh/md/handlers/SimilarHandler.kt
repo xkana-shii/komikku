@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import eu.kanade.tachiyomi.source.model.SManga
 import exh.md.dto.RelationListDto
 import exh.md.dto.SimilarMangaDto
+import exh.md.dto.isNovelRelation
 import exh.md.service.MangaDexService
 import exh.md.service.SimilarService
 import exh.md.utils.MangaDexRelation
@@ -29,7 +30,7 @@ class SimilarHandler(
             it.id
         }
 
-        val mangaList = service.viewMangas(ids).data.map {
+        val mangaList = service.viewMangas(ids).data.filterNot { it.isNovelRelation() }.map {
             MdUtil.createMangaEntry(it, lang)
         }
 
@@ -54,7 +55,7 @@ class SimilarHandler(
             .mapNotNull { it.relationships.firstOrNull() }
             .map { it.id }
 
-        val mangaList = service.viewMangas(ids).data.map {
+        val mangaList = service.viewMangas(ids).data.filterNot { it.isNovelRelation() }.map {
             MdUtil.createMangaEntry(it, lang)
         }
 

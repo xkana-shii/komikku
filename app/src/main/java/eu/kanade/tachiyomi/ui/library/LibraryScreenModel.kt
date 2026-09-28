@@ -787,7 +787,7 @@ class LibraryScreenModel(
 
     private fun getFavoritesFlow(): Flow<List<LibraryItem>> {
         return combine(
-            getLibraryManga.subscribe(),
+            getLibraryManga.subscribe().withSourceUpdates(sourceManager),
             getLibraryItemPreferencesFlow(),
             downloadCache.changes,
         ) { libraryManga, preferences, _ ->
