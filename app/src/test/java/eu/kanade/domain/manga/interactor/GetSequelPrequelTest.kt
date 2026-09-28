@@ -3,6 +3,8 @@ package eu.kanade.domain.manga.interactor
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.mangabaka.mangaBakaRelationItem
+import eu.kanade.tachiyomi.data.track.mangabaka.toRelatedEntry
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -42,27 +44,27 @@ class GetSequelPrequelTest {
     fun `preferred novels only result falls through to the next tracker`() = runTest {
         val fallback = mockk<BaseTracker> {
             every { isLoggedIn } returns true
-            coEvery { getRelatedEntries(200) } returns listOf(relation.copy(trackerId = 2, mediaFormat = "manhwa"))
+            coEvery { getRelatedEntries(200) } returns listOfNotNull(mangaBakaRelationItem("manhwa").toRelatedEntry("sequel", 2))
         }
         every { manager.get(2) } returns fallback
         every { preferences.resolvePreferredTracker(any(), any()) } returns 1
-        coEvery { service.getRelatedEntries(100) } returns listOf(relation.copy(mediaFormat = "LIGHT_NOVEL"))
+        coEvery { service.getRelatedEntries(100) } returns listOfNotNull(mangaBakaRelationItem("novel").toRelatedEntry("prequel", 1))
         val result = subject.await(manga, listOf(binding, binding.copy(trackerId = 2, remoteId = 200)))
         result.single().trackerId shouldBe 2L
         coVerify(exactly = 1) { fallback.getRelatedEntries(200) }
     }
 
     @Test
-    fun `normalized provider results remove novels before cache and preserve comic relation order`() = runTest {
-        coEvery { service.getRelatedEntries(100) } returns listOf(
-            relation.copy(url = "sequel", mediaFormat = "MANGA"),
-            relation.copy(url = "novel", mediaFormat = "Novel"),
-            relation.copy(url = "prequel", mediaFormat = "manhua", relation = SequelPrequelRelation.PREQUEL),
-            relation.copy(url = "light-novel", mediaFormat = "Light Novel"),
-            relation.copy(url = "related", mediaFormat = null, relation = SequelPrequelRelation.SIDE_STORY),
+    fun `MangaBaka filters novels before cache and preserves comic relation order`() = runTest {
+        coEvery { service.getRelatedEntries(100) } returns listOfNotNull(
+            mangaBakaRelationItem("manga", 1).toRelatedEntry("sequel", 1),
+            mangaBakaRelationItem("novel", 2).toRelatedEntry("prequel", 1),
+            mangaBakaRelationItem("manhua", 3).toRelatedEntry("prequel", 1),
+            mangaBakaRelationItem("novel", 4).toRelatedEntry("spin_off", 1),
+            mangaBakaRelationItem("oel", 5).toRelatedEntry("side_story", 1),
         )
         repeat(2) {
-            subject.await(manga, listOf(binding)).map { it.url } shouldBe listOf("sequel", "prequel", "related")
+            subject.await(manga, listOf(binding)).map { it.remoteId } shouldBe listOf(1L, 3L, 5L)
         }
         coVerify(exactly = 1) { service.getRelatedEntries(100) }
     }

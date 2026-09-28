@@ -36,7 +36,6 @@ import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.PagePreview
 import eu.kanade.domain.manga.model.chaptersFiltered
 import eu.kanade.domain.manga.model.downloadedFilter
-import eu.kanade.domain.manga.model.isNovelRelation
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.track.interactor.AddTracks
@@ -1203,7 +1202,6 @@ class MangaScreenModel(
                     /* Push found related mangas into collection */
                     val relatedManga = RelatedManga.Success.fromPair(pair) { mangaList ->
                         mangaList
-                            .filterNot { it.isNovelRelation() }
                             .map { it.toDomainManga(state.source.id) }
                             .distinctBy { it.url }
                             .let { networkToLocalManga(manga = it, updateInfo = false) }

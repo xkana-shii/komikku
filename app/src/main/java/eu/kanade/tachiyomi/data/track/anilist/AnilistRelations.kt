@@ -9,7 +9,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.SequelPrequelRelation
-import tachiyomi.domain.manga.model.isNovelFormat
 
 // KMK --> AniList's MANGA media type includes novels; its format distinguishes them.
 internal fun JsonObject.toRelatedEntries(): List<SequelPrequelEntry> =
@@ -19,7 +18,7 @@ internal fun JsonObject.toRelatedEntries(): List<SequelPrequelEntry> =
             val node = edge["node"] as? JsonObject ?: return@mapNotNull null
             if (node["type"]?.jsonPrimitive?.contentOrNull != "MANGA") return@mapNotNull null
             val format = node["format"]?.jsonPrimitive?.contentOrNull
-            if (isNovelFormat(format)) return@mapNotNull null
+            if (format == "NOVEL") return@mapNotNull null
             val remoteId = node["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
             val titles = node["title"] as? JsonObject ?: return@mapNotNull null
             val title = listOf("userPreferred", "english", "romaji").firstNotNullOfOrNull {
@@ -32,7 +31,6 @@ internal fun JsonObject.toRelatedEntries(): List<SequelPrequelEntry> =
                 trackerId = TrackerManager.ANILIST,
                 remoteId = remoteId,
                 coverUrl = (node["coverImage"] as? JsonObject)?.get("large")?.jsonPrimitive?.contentOrNull,
-                mediaFormat = format,
             )
         }
 // KMK <--

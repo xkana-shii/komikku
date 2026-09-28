@@ -10,7 +10,6 @@ data class SequelPrequelEntry(
     val coverUrl: String? = null,
     val sourceUrl: String? = null,
     val localMangaId: Long? = null,
-    val mediaFormat: String? = null,
 )
 
 enum class SequelPrequelRelation {
