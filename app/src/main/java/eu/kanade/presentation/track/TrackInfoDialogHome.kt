@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenuItem
@@ -89,6 +90,9 @@ fun TrackInfoDialogHome(
     onAdjustProgress: (Int) -> Unit = {},
     onRemoveTracking: (List<TrackItem>) -> Unit = {},
     onSetPreferredTracker: (TrackItem) -> Unit = {},
+    editMode: Boolean = false,
+    onToggleEditMode: () -> Unit = {},
+    skippedTrackerIds: Set<Long> = emptySet(),
     errorTrackerIds: Set<Long> = emptySet(),
     busy: Boolean = false,
 ) {
@@ -117,6 +121,7 @@ fun TrackInfoDialogHome(
                 onNewSearch = onNewSearch, onOpenInBrowser = onOpenInBrowser,
                 onCopyLink = onCopyLink, onRemoveTracking = onRemoveTracking,
                 onSetPreferredTracker = onSetPreferredTracker,
+                editMode = editMode, onToggleEditMode = onToggleEditMode, skippedTrackerIds = skippedTrackerIds,
             )
         } else {
             bound.forEach { item ->
@@ -167,18 +172,6 @@ fun TrackInfoDialogHome(
                         TrackLogoIcon(tracker = item.tracker, onClick = { onNewSearch(item) })
                     }
                 }
-            }
-        }
-        val legend = listOfNotNull(
-            presentation.averageScore?.let {
-                stringResource(KMR.strings.track_normalized_score_summary, it, presentation.scoredCount)
-            },
-            stringResource(KMR.strings.track_unsynced_hint).takeIf { presentation.mismatchedIds.isNotEmpty() },
-            stringResource(KMR.strings.track_sync_error_hint).takeIf { presentation.errorIds.isNotEmpty() },
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            legend.forEach {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -471,6 +464,9 @@ private fun UnifiedTrackerCard(
     // KMK --> bulk removal goes through one confirmation; error ids badge failed refreshes
     onRemoveTracking: (List<TrackItem>) -> Unit = {},
     onSetPreferredTracker: (TrackItem) -> Unit,
+    editMode: Boolean,
+    onToggleEditMode: () -> Unit,
+    skippedTrackerIds: Set<Long>,
     // KMK <--
 ) {
     val primary = presentation.primary ?: return
@@ -488,7 +484,6 @@ private fun UnifiedTrackerCard(
     }
     val startDate = presentation.startDate
     val finishDate = presentation.finishDate
-    var editMode by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -505,6 +500,7 @@ private fun UnifiedTrackerCard(
                 presentation.visibleItems.forEach { item ->
                     val isUnsynced = item.tracker.id in presentation.mismatchedIds
                     val isErrored = item.tracker.id in presentation.errorIds
+                    val isSkipped = item.tracker.id in skippedTrackerIds
                     val unsyncedDescription = stringResource(KMR.strings.track_unsynced_a11y, item.tracker.name)
                     BadgedBox(
                         badge = {
@@ -516,6 +512,17 @@ private fun UnifiedTrackerCard(
                                     Icon(
                                         imageVector = Icons.Filled.Warning,
                                         contentDescription = stringResource(KMR.strings.track_sync_error_a11y, item.tracker.name),
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                            } else if (isSkipped) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.LinkOff,
+                                        contentDescription = stringResource(KMR.strings.track_skipped_a11y, item.tracker.name),
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -555,7 +562,7 @@ private fun UnifiedTrackerCard(
                 }
             }
             IconButton(
-                onClick = { editMode = !editMode },
+                onClick = onToggleEditMode,
                 enabled = !busy,
                 colors = IconButtonDefaults.iconButtonColors(
                     contentColor = if (editMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,

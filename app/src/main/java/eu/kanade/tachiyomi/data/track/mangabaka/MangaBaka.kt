@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
+import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
@@ -186,6 +187,15 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         }
     }
     // KMK <--
+
+    suspend fun getExternalSourceId(seriesId: Long, trackerId: Long): String? {
+        val source = api.resolveSeriesDataForExternalSources(seriesId).source
+        return when (trackerId) {
+            TrackerManager.MANGA_UPDATES -> source?.mangaUpdates?.id
+            TrackerManager.MY_ANIME_LIST -> source?.myAnimeList?.id?.toString()
+            else -> null
+        }
+    }
 
     override suspend fun login(username: String, password: String) = login(password)
 

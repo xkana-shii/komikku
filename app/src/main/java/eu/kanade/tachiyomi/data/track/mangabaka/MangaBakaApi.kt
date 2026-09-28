@@ -307,7 +307,7 @@ class MangaBakaApi(
         return withIOContext {
             seriesCache[seriesId]?.takeUnless { it.isExpired() }?.value ?: run {
                 val data = with(json) {
-                    authClient.newCall(GET("$API_BASE_URL/v1/series/$seriesId"))
+                    client.newCall(GET("$API_BASE_URL/v1/series/$seriesId"))
                         .awaitSuccess()
                         .parseAs<MangaBakaItemResult>()
                         .data
@@ -366,6 +366,9 @@ class MangaBakaApi(
     suspend fun resolveId(seriesId: Long): Long {
         return resolveSeriesData(seriesId).id
     }
+
+    suspend fun resolveSeriesDataForExternalSources(seriesId: Long): MangaBakaItem =
+        resolveSeriesData(seriesId)
 
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         return withIOContext {

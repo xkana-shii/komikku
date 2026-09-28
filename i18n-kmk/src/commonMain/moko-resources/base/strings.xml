@@ -359,6 +359,7 @@
     <string name="track_manage_services">Add another service</string>
     <string name="track_change_entry">Change entry</string>
     <string name="track_sync_error_a11y">%1$s: failed to sync. Retry or check its entry.</string>
+    <string name="track_skipped_a11y">%1$s was not used for this change</string>
     <string name="track_unsynced_a11y">%1$s: chapter count differs from the primary tracker</string>
     <string name="track_unsynced_hint">● marks a tracker whose chapter count differs from the primary tracker</string>
     <string name="track_sync_error_hint">⚠ marks a tracker that failed to refresh or update — retry or check its entry</string>

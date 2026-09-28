@@ -14,6 +14,12 @@ import tachiyomi.domain.track.model.Track
 internal class TrackerBatchItem(val service: Tracker, val binding: Track) {
     var returned: Track? = null
         private set
+    var skipped = false
+        private set
+
+    fun skip() {
+        skipped = true
+    }
 
     suspend fun refresh(): Track = service.refresh(binding.toDbTrack()).toDomainTrack()!!.also { returned = it }
 
@@ -21,7 +27,13 @@ internal class TrackerBatchItem(val service: Tracker, val binding: Track) {
         service.update(track.toDbTrack(), didReadChapter).toDomainTrack()!!.also { returned = it }
 }
 
-internal data class TrackerBatchResult(val service: Tracker, val track: Track?, val error: Throwable?, val persistenceError: Throwable? = null) {
+internal data class TrackerBatchResult(
+    val service: Tracker,
+    val track: Track?,
+    val error: Throwable?,
+    val persistenceError: Throwable? = null,
+    val skipped: Boolean = false,
+) {
     val failures get() = listOfNotNull(error, persistenceError)
 }
 
@@ -41,7 +53,7 @@ internal suspend fun trackerBatch(
             } catch (e: Exception) {
                 e
             }
-            TrackerBatchResult(service, item.returned, error)
+            TrackerBatchResult(service, item.returned, error, skipped = item.skipped)
         }
     }.awaitAll()
     results.map { result ->

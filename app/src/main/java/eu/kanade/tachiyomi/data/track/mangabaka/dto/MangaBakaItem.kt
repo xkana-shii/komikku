@@ -33,6 +33,7 @@ data class MangaBakaItem(
     val state: String? = null,
     @SerialName("merged_with")
     val mergedWith: Long? = null,
+    val source: MangaBakaSources? = null,
     val titles: List<MangaBakaItemTitle>?,
     @SerialName("relationships_v2")
     val relationships: List<MangaBakaRelationship>? = null,
@@ -63,6 +64,24 @@ data class MangaBakaItem(
 data class MangaBakaRelationship(
     @SerialName("to_series_id") val seriesId: Long,
     @SerialName("relation_type") val relationType: String,
+)
+
+@Serializable
+data class MangaBakaSources(
+    @SerialName("manga_updates")
+    val mangaUpdates: MangaBakaStringSource? = null,
+    @SerialName("my_anime_list")
+    val myAnimeList: MangaBakaLongSource? = null,
+)
+
+@Serializable
+data class MangaBakaStringSource(
+    val id: String? = null,
+)
+
+@Serializable
+data class MangaBakaLongSource(
+    val id: Long? = null,
 )
 
 @Serializable

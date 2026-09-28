@@ -30,20 +30,40 @@ class UpdateTracks(
         data class Date(val start: Boolean, val millis: Long) : Change
     }
 
+    data class Result(
+        val updatedTrackerIds: Set<Long>,
+        val failedTrackerIds: Set<Long>,
+        val skippedTrackerIds: Set<Long>,
+        val failures: List<Pair<Tracker?, Throwable>>,
+    )
+
     suspend fun await(mangaId: Long, change: Change): List<Pair<Tracker?, Throwable>> {
+        return awaitDetailed(mangaId, change).failures
+    }
+
+    suspend fun awaitDetailed(mangaId: Long, change: Change): Result {
         val bindings = getTracks.await(mangaId)
         val entries = bindings.mapNotNull { binding ->
             manager.get(binding.trackerId)?.takeIf { it.isLoggedIn }?.let { it to binding }
         }
         return trackerBatch(entries, insert) {
             // Check support before networking; unsupported services retain their binding unchanged.
-            if (change is Change.Score && service.getScoreList().isEmpty()) return@trackerBatch
-            if (change is Change.Date && !service.supportsReadingDates) return@trackerBatch
+            if (change is Change.Score && service.getScoreList().isEmpty()) {
+                skip()
+                return@trackerBatch
+            }
+            if (change is Change.Date && !service.supportsReadingDates) {
+                skip()
+                return@trackerBatch
+            }
             val current = refresh()
             val edited = when (change) {
                 is Change.Progress -> {
                     require(change.chapter >= 0)
-                    if (service is MdList && current.status == FollowStatus.UNFOLLOWED.long) return@trackerBatch
+                    if (service is MdList && current.status == FollowStatus.UNFOLLOWED.long) {
+                        skip()
+                        return@trackerBatch
+                    }
                     current.copy(lastChapterRead = change.chapter.toDouble())
                 }
                 is Change.Score -> {
@@ -60,7 +80,11 @@ class UpdateTracks(
                 }
                 is Change.Status -> {
                     val source = requireNotNull(manager.get(change.sourceId))
-                    val status = equivalentStatus(source, change.status, service) ?: return@trackerBatch
+                    val status = equivalentStatus(source, change.status, service)
+                    if (status == null) {
+                        skip()
+                        return@trackerBatch
+                    }
                     current.copy(status = status, lastChapterRead = if (status == service.getCompletionStatus() && current.totalChapters > 0) current.totalChapters.toDouble() else current.lastChapterRead)
                 }
                 is Change.Date -> {
@@ -75,7 +99,14 @@ class UpdateTracks(
                 }
             }
             update(edited, change is Change.Progress)
-        }.flatMap { result -> result.failures.map { result.service to it } }
+        }.let { results ->
+            Result(
+                updatedTrackerIds = results.filter { it.failures.isEmpty() && !it.skipped }.map { it.service.id }.toSet(),
+                failedTrackerIds = results.filter { it.failures.isNotEmpty() }.map { it.service.id }.toSet(),
+                skippedTrackerIds = results.filter { it.failures.isEmpty() && it.skipped }.map { it.service.id }.toSet(),
+                failures = results.flatMap { result -> result.failures.map { result.service to it } },
+            )
+        }
     }
 
     suspend fun remove(mangaId: Long, selected: Set<Long>, remotely: Boolean): List<Pair<Tracker?, Throwable>> {

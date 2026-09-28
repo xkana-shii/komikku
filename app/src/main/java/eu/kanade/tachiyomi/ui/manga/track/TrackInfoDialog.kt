@@ -63,6 +63,7 @@ import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.mangabaka.MangaBakaUrlResolver
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -199,10 +200,12 @@ data class TrackInfoDialogHomeScreen(
                         removalSelection = emptySet()
                         removeRemotely = false
                     },
+                    editMode = state.unifiedEditMode,
+                    onToggleEditMode = screenModel::toggleUnifiedEditMode,
+                    skippedTrackerIds = state.skippedTrackerIds,
                     errorTrackerIds = state.errorTrackerIds,
                     busy = state.synchronizing,
                     header = {
-                        state.errors.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
                         if (state.errors.isNotEmpty()) {
                             TextButton(onClick = { screenModel.retryRefresh() }, enabled = !state.synchronizing) {
                                 Text(stringResource(MR.strings.action_retry))
@@ -460,7 +463,39 @@ data class TrackInfoDialogHomeScreen(
 
         fun updateUnified(change: UpdateTracks.Change) {
             if (state.value.synchronizing) return
-            screenModelScope.launch { runTrackerOperation { Injekt.get<UpdateTracks>().await(mangaId, change) } }
+            screenModelScope.launch { runUnifiedTrackerOperation(change) }
+        }
+
+        fun toggleUnifiedEditMode() {
+            mutableState.update { it.copy(unifiedEditMode = !it.unifiedEditMode) }
+        }
+
+        private suspend fun runUnifiedTrackerOperation(change: UpdateTracks.Change) = operations.run {
+            mutableState.update { it.copy(synchronizing = true, skippedTrackerIds = emptySet()) }
+            val context = Injekt.get<Application>()
+            try {
+                val result = withIOContext { Injekt.get<UpdateTracks>().awaitDetailed(mangaId, change) }
+                result.failures.forEach { (tracker, error) ->
+                    logcat(LogPriority.ERROR, error) { "Tracker operation failed: ${tracker?.name.orEmpty()}" }
+                }
+                val updatedItems = withIOContext { getTracks.await(mangaId).mapToTrackItem() }
+                mutableState.update {
+                    it.copy(
+                        trackItems = updatedItems,
+                        skippedTrackerIds = result.skippedTrackerIds,
+                        errorTrackerIds = result.failedTrackerIds,
+                        errors = result.failures.map { (tracker, error) ->
+                            "${tracker?.name.orEmpty()}: ${if (error is UpdateTracks.InvalidDate) context.stringResource(KMR.strings.track_date_conflict) else with(context) { error.formattedMessage }}"
+                        },
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                mutableState.update { it.copy(errors = listOf(with(context) { e.formattedMessage }), skippedTrackerIds = emptySet()) }
+            } finally {
+                mutableState.update { it.copy(synchronizing = false) }
+            }
         }
 
         fun removeSelected(selected: Set<Long>, remotely: Boolean) {
@@ -529,7 +564,9 @@ data class TrackInfoDialogHomeScreen(
             val trackItems: List<TrackItem> = emptyList(),
             val errors: List<String> = emptyList(),
             val errorTrackerIds: Set<Long> = emptySet(),
+            val skippedTrackerIds: Set<Long> = emptySet(),
             val synchronizing: Boolean = false,
+            val unifiedEditMode: Boolean = false,
             // SY -->
             val isLoading: Boolean = false,
             // SY <--
@@ -918,12 +955,14 @@ data class TrackerSearchScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val trackerManager = remember { Injekt.get<TrackerManager>() }
         val screenModel = rememberScreenModel {
             Model(
                 mangaId = mangaId,
                 currentUrl = currentUrl,
                 initialQuery = initialQuery,
-                tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
+                tracker = trackerManager.get(serviceId)!!,
+                searchResolver = TrackerSearchResolver(MangaBakaUrlResolver(trackerManager.mangaBaka)::resolve),
             )
         }
 
@@ -952,6 +991,7 @@ data class TrackerSearchScreen(
         private val currentUrl: String? = null,
         initialQuery: String,
         private val tracker: Tracker,
+        private val searchResolver: TrackerSearchResolver,
     ) : StateScreenModel<Model.State>(State()) {
 
         val supportsPrivateTracking = tracker.supportsPrivateTracking
@@ -970,7 +1010,7 @@ data class TrackerSearchScreen(
 
                 val result = withIOContext {
                     try {
-                        val results = tracker.search(query.sanitize())
+                        val results = searchResolver.search(tracker, query)
                         Result.success(results)
                     } catch (e: Throwable) {
                         Result.failure(e)

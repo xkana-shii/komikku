@@ -118,6 +118,19 @@ class UpdateTracksTest {
     }
 
     @Test
+    fun `detailed unified result distinguishes updated failed and intentionally skipped trackers`() = runTest {
+        every { services[2].getScoreList() } returns emptyList<String>().toImmutableList()
+        coEvery { services[1].update(any(), any()) } throws IllegalStateException("offline")
+
+        val result = subject.awaitDetailed(10, UpdateTracks.Change.Score(1, "6"))
+
+        result.updatedTrackerIds shouldBe setOf(1L)
+        result.failedTrackerIds shouldBe setOf(2L)
+        result.skippedTrackerIds shouldBe setOf(3L)
+        result.failures.single().first shouldBe services[1]
+    }
+
+    @Test
     fun `score failure on first service does not stop the other bound services`() = runTest {
         coEvery { services[0].update(any(), any()) } throws IllegalStateException("offline")
         subject.await(10, UpdateTracks.Change.Score(1, "6")).single().first shouldBe services[0]
