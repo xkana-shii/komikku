@@ -55,15 +55,16 @@ object ImageUtil {
 
     fun findImageType(stream: InputStream): ImageType? {
         return try {
-            val format = ImageDecoder.new(stream).use { dec -> dec.format }
+            val format = ImageDecoder.open(stream).use { dec -> dec.format }
             when (format) {
-                "jpeg" -> ImageType.JPEG
-                "png" -> ImageType.PNG
-                "webp" -> ImageType.WEBP
-                "gif" -> ImageType.GIF
-                "heif" -> ImageType.HEIF
-                "jxl" -> ImageType.JXL
-                "jp2" -> ImageType.JP2
+                ImageDecoder.Format.JPEG -> ImageType.JPEG
+                ImageDecoder.Format.PNG -> ImageType.PNG
+                ImageDecoder.Format.WEBP -> ImageType.WEBP
+                ImageDecoder.Format.GIF -> ImageType.GIF
+                ImageDecoder.Format.AVIF -> ImageType.AVIF
+                ImageDecoder.Format.HEIF -> ImageType.HEIF
+                ImageDecoder.Format.JXL -> ImageType.JXL
+                ImageDecoder.Format.JP2 -> ImageType.JP2
                 else -> null
             }
         } catch (e: Exception) {
@@ -74,10 +75,17 @@ object ImageUtil {
 
     fun decodeBitmap(stream: InputStream): Bitmap? {
         return try {
-            val result = ImageDecoder.new(stream).use { decoder -> decoder.decode() }
-            createBitmap(result.width, result.height).also { bitmap ->
-                result.image.rewind()
-                bitmap.copyPixelsFromBuffer(result.image)
+            ImageDecoder.open(stream).use { decoder ->
+                val frame = decoder.decodeNext()
+                try {
+                    val config = if (decoder.isHdr) Bitmap.Config.RGBA_F16 else Bitmap.Config.ARGB_8888
+                    createBitmap(frame.width, frame.height, config).also { bitmap ->
+                        frame.image.rewind()
+                        bitmap.copyPixelsFromBuffer(frame.image)
+                    }
+                } finally {
+                    frame.close()
+                }
             }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "decodeBitmap failed" }
@@ -97,7 +105,7 @@ object ImageUtil {
                 ImageType.GIF -> true
                 ImageType.WEBP, ImageType.HEIF -> {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
-                    ImageDecoder.new(source.peek().inputStream()).use { dec -> dec.pages > 1 }
+                    ImageDecoder.open(source.peek().inputStream()).use { dec -> dec.pages > 1 }
                 }
 
                 else -> false
@@ -217,7 +225,7 @@ object ImageUtil {
         viewHeight: Int,
         backgroundContext: Context,
     ): BufferedSource {
-        val imageBitmap = ImageDecoder.newInstance(imageSource.inputStream())?.decode()!!
+        val imageBitmap = decodeBitmap(imageSource.inputStream()) ?: return imageSource
         val height = imageBitmap.height
         val width = imageBitmap.width
 
