@@ -1,16 +1,24 @@
 package eu.kanade.tachiyomi.di
 
+import android.app.ActivityManager
 import android.app.Application
 import androidx.core.content.ContextCompat
+import androidx.core.content.getSystemService
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
 import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConcurrencyModel.MultipleReadersSingleWriter
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConfiguration
+import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConnectionFactory
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDatabaseType
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDriver
 import com.eygraber.sqldelight.androidx.driver.FileProvider
+import com.eygraber.sqldelight.androidx.driver.SqliteJournalMode
 import eu.kanade.domain.track.store.DelayedTrackingStore
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.BackupRestoreStatus
@@ -96,6 +104,9 @@ class AppModule(val app: Application) : InjektModule {
                                 setPragma(db, "foreign_keys = ON")
                                 setPragma(db, "journal_mode = WAL")
                                 setPragma(db, "synchronous = NORMAL")
+                                // KMK -->
+                                setPragma(db, "busy_timeout = 3000")
+                                // KMK <--
                             }
 
                             private fun setPragma(db: SupportSQLiteDatabase, pragma: String) {
@@ -104,12 +115,27 @@ class AppModule(val app: Application) : InjektModule {
                         },
                     )
                 } else {
+                    // KMK -->
+                    val isWal = app.getSystemService<ActivityManager>()?.isLowRamDevice != true
                     AndroidxSqliteDriver(
-                        driver = BundledSQLiteDriver(),
+                        connectionFactory = object : AndroidxSqliteConnectionFactory {
+                            override val driver: SQLiteDriver = BundledSQLiteDriver()
+
+                            override fun createConnection(name: String): SQLiteConnection {
+                                return driver.open(name).apply {
+                                    execSQL("PRAGMA busy_timeout = 3000")
+                                }
+                            }
+                        },
                         databaseType = AndroidxSqliteDatabaseType.FileProvider(app, LEGACY_DATABASE_NAME),
                         schema = Database.Schema,
-                        configuration = AndroidxSqliteConfiguration(isForeignKeyConstraintsEnabled = true),
+                        configuration = AndroidxSqliteConfiguration(
+                            isForeignKeyConstraintsEnabled = true,
+                            journalMode = if (isWal) SqliteJournalMode.WAL else SqliteJournalMode.Truncate,
+                            concurrencyModel = MultipleReadersSingleWriter(isWal = isWal, nonWalCount = 1, walCount = 4),
+                        ),
                     )
+                    // KMK <--
                 }
                 driver.also { sqlDriverRef = WeakReference(it) }
             }
