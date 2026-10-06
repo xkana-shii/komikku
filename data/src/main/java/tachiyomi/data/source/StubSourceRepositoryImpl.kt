@@ -7,20 +7,18 @@ import tachiyomi.data.subscribeToList
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.repository.StubSourceRepository
 
+// KMK -->
+
 class StubSourceRepositoryImpl(
     private val database: Database,
 ) : StubSourceRepository {
 
     override fun subscribeAll(): Flow<List<StubSource>> {
-        return database.sourcesQueries
-            .findAll(::mapStubSource)
-            .subscribeToList()
+        return database.sourcesQueries.findAll(::mapStubSource).subscribeToList()
     }
 
     override suspend fun getStubSource(id: Long): StubSource? {
-        return database.sourcesQueries
-            .findOne(id, ::mapStubSource)
-            .awaitAsOneOrNull()
+        return database.sourcesQueries.findOne(id, ::mapStubSource).awaitAsOneOrNull()
     }
 
     override suspend fun upsertStubSource(id: Long, lang: String, name: String) {
@@ -33,3 +31,4 @@ class StubSourceRepositoryImpl(
         name: String,
     ): StubSource = StubSource(id = id, lang = lang, name = name)
 }
+// KMK <--

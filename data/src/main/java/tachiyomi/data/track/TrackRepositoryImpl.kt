@@ -8,46 +8,36 @@ import tachiyomi.data.subscribeToList
 import tachiyomi.domain.track.model.Track
 import tachiyomi.domain.track.repository.TrackRepository
 
+// KMK -->
+
 class TrackRepositoryImpl(
     private val database: Database,
 ) : TrackRepository {
 
     override suspend fun getTrackById(id: Long): Track? {
-        return database.manga_syncQueries
-            .getTrackById(id, TrackMapper::mapTrack)
-            .awaitAsOneOrNull()
+        return database.manga_syncQueries.getTrackById(id, TrackMapper::mapTrack).awaitAsOneOrNull()
     }
 
     // SY -->
     override suspend fun getTracks(): List<Track> {
-        return database.manga_syncQueries
-            .getTracks(TrackMapper::mapTrack)
-            .awaitAsList()
+        return database.manga_syncQueries.getTracks(TrackMapper::mapTrack).awaitAsList()
     }
 
     override suspend fun getTracksByMangaIds(mangaIds: List<Long>): List<Track> {
-        return database.manga_syncQueries
-            .getTracksByMangaIds(mangaIds, TrackMapper::mapTrack)
-            .awaitAsList()
+        return database.manga_syncQueries.getTracksByMangaIds(mangaIds, TrackMapper::mapTrack).awaitAsList()
     }
     // SY <--
 
     override suspend fun getTracksByMangaId(mangaId: Long): List<Track> {
-        return database.manga_syncQueries
-            .getTracksByMangaId(mangaId, TrackMapper::mapTrack)
-            .awaitAsList()
+        return database.manga_syncQueries.getTracksByMangaId(mangaId, TrackMapper::mapTrack).awaitAsList()
     }
 
     override fun getTracksAsFlow(): Flow<List<Track>> {
-        return database.manga_syncQueries
-            .getTracks(TrackMapper::mapTrack)
-            .subscribeToList()
+        return database.manga_syncQueries.getTracks(TrackMapper::mapTrack).subscribeToList()
     }
 
     override fun getTracksByMangaIdAsFlow(mangaId: Long): Flow<List<Track>> {
-        return database.manga_syncQueries
-            .getTracksByMangaId(mangaId, TrackMapper::mapTrack)
-            .subscribeToList()
+        return database.manga_syncQueries.getTracksByMangaId(mangaId, TrackMapper::mapTrack).subscribeToList()
     }
 
     override suspend fun delete(mangaId: Long, trackerId: Long) {
@@ -87,3 +77,4 @@ class TrackRepositoryImpl(
         }
     }
 }
+// KMK <--

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
+// KMK -->
 fun <T : Any> Query<T>.subscribeToList(
     context: CoroutineContext = EmptyCoroutineContext,
 ): Flow<List<T>> = asFlow().mapToList(context)
@@ -20,3 +21,4 @@ fun <T : Any> Query<T>.subscribeToOne(
 fun <T : Any> Query<T>.subscribeToOneOrNull(
     context: CoroutineContext = EmptyCoroutineContext,
 ): Flow<T?> = asFlow().mapToOneOrNull(context)
+// KMK <--

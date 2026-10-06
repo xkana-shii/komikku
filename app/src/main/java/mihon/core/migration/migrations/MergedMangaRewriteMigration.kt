@@ -23,6 +23,8 @@ import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.service.SourceManager
 
+// KMK -->
+
 class MergedMangaRewriteMigration : Migration {
     override val version: Float = 7f
 
@@ -90,20 +92,16 @@ class MergedMangaRewriteMigration : Migration {
                     .mapNotNull { it.load(getManga, sourceManager) }
                     .distinct()
                 val chapters =
-                    database.ehQueries
-                        .getChaptersByMangaIds(
-                            mergedMangas.map { it.id },
-                            ChapterMapper::mapChapter,
-                        )
-                        .awaitAsList()
+                    database.ehQueries.getChaptersByMangaIds(
+                        mergedMangas.map { it.id },
+                        ChapterMapper::mapChapter,
+                    ).awaitAsList()
 
                 val mergedMangaChapters =
-                    database.ehQueries
-                        .getChaptersByMangaIds(
-                            loadedMangaList.map { it.manga.id },
-                            ChapterMapper::mapChapter,
-                        )
-                        .awaitAsList()
+                    database.ehQueries.getChaptersByMangaIds(
+                        loadedMangaList.map { it.manga.id },
+                        ChapterMapper::mapChapter,
+                    ).awaitAsList()
 
                 val mergedMangaChaptersMatched = mergedMangaChapters.mapNotNull { chapter ->
                     loadedMangaList.firstOrNull {
@@ -189,3 +187,4 @@ class MergedMangaRewriteMigration : Migration {
 
     private data class LoadedMangaSource(val source: Source, val manga: Manga)
 }
+// KMK <--

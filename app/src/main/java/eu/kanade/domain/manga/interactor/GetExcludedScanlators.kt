@@ -6,21 +6,20 @@ import kotlinx.coroutines.flow.map
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
 
+// KMK -->
+
 class GetExcludedScanlators(
     private val database: Database,
 ) {
 
     suspend fun await(mangaId: Long): Set<String> {
-        return database.excluded_scanlatorsQueries
-            .getExcludedScanlatorsByMangaId(mangaId)
-            .awaitAsList()
+        return database.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(mangaId).awaitAsList()
             .toSet()
     }
 
     fun subscribe(mangaId: Long): Flow<Set<String>> {
-        return database.excluded_scanlatorsQueries
-            .getExcludedScanlatorsByMangaId(mangaId)
-            .subscribeToList()
+        return database.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(mangaId).subscribeToList()
             .map { it.toSet() }
     }
 }
+// KMK <--

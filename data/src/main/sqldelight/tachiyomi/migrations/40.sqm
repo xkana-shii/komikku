@@ -117,7 +117,9 @@ SELECT
     coalesce(C.fillermarkCount, 0) AS fillermarkCount,
     -- KMK -->
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    oalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
+    -- KMK -->
+    coalesce(C.fillermarkReadCount, 0) AS fillermarkedReadCount,
+    -- KMK <--
     -- KMK <--
     coalesce(MC.category_id, 0) AS category
 FROM mangas M

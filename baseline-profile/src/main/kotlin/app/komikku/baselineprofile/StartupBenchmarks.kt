@@ -1,17 +1,16 @@
-package mihon.baselineprofile
+package app.komikku.baselineprofile
 
 import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.StartupTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.LargeTest
 import androidx.test.internal.runner.junit4.AndroidJUnit4ClassRunner
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+
+// KMK -->
 
 /**
  * Run this benchmark from Studio to see startup measurements, and captured system traces
@@ -95,7 +94,9 @@ abstract class AbstractStartupBenchmark(private val startupMode: StartupMode) {
                 // Check the UiAutomator documentation for more information on how to
                 // interact with the app.
                 // https://d.android.com/training/testing/other-components/ui-automator
-            }
+            },
         )
     }
 }
+
+// KMK <--

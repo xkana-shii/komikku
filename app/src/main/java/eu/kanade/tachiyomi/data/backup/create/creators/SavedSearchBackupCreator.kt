@@ -7,13 +7,14 @@ import tachiyomi.data.Database
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
+// KMK -->
+
 class SavedSearchBackupCreator(
     private val database: Database = Injekt.get(),
 ) {
 
     suspend operator fun invoke(): List<BackupSavedSearch> {
-        return database.saved_searchQueries
-            .selectAll(backupSavedSearchMapper)
-            .awaitAsList()
+        return database.saved_searchQueries.selectAll(backupSavedSearchMapper).awaitAsList()
     }
 }
+// KMK <--

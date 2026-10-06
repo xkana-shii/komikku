@@ -1,51 +1,45 @@
 package tachiyomi.data.libraryUpdateError
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import kotlinx.coroutines.flow.Flow
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
 import tachiyomi.domain.libraryUpdateError.repository.LibraryUpdateErrorRepository
 
+// KMK -->
+
 class LibraryUpdateErrorRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : LibraryUpdateErrorRepository {
 
     override suspend fun getAll(): List<LibraryUpdateError> {
-        return handler.awaitList {
-            libraryUpdateErrorQueries.getAllErrors(libraryUpdateErrorMapper)
-        }
+        return database.libraryUpdateErrorQueries.getAllErrors(libraryUpdateErrorMapper).awaitAsList()
     }
 
     override fun getAllAsFlow(): Flow<List<LibraryUpdateError>> {
-        return handler.subscribeToList {
-            libraryUpdateErrorQueries.getAllErrors(libraryUpdateErrorMapper)
-        }
+        return database.libraryUpdateErrorQueries.getAllErrors(libraryUpdateErrorMapper).subscribeToList()
     }
 
     override suspend fun deleteAll() {
-        return handler.await { libraryUpdateErrorQueries.deleteAllErrors() }
+        database.libraryUpdateErrorQueries.deleteAllErrors()
     }
 
     override suspend fun delete(errorIds: List<Long>) {
-        return handler.await {
-            libraryUpdateErrorQueries.deleteErrors(_ids = errorIds)
-        }
+        database.libraryUpdateErrorQueries.deleteErrors(_ids = errorIds)
     }
 
     override suspend fun deleteMangaError(mangaIds: List<Long>) {
-        return handler.await {
-            libraryUpdateErrorQueries.deleteMangaErrors(mangaIds = mangaIds)
-        }
+        database.libraryUpdateErrorQueries.deleteMangaErrors(mangaIds = mangaIds)
     }
 
     override suspend fun cleanUnrelevantMangaErrors() {
-        return handler.await {
-            libraryUpdateErrorQueries.cleanUnrelevantMangaErrors()
-        }
+        database.libraryUpdateErrorQueries.cleanUnrelevantMangaErrors()
     }
 
     override suspend fun upsert(libraryUpdateError: LibraryUpdateError) {
-        return handler.await(inTransaction = true) {
-            libraryUpdateErrorQueries.upsert(
+        database.transaction {
+            database.libraryUpdateErrorQueries.upsert(
                 mangaId = libraryUpdateError.mangaId,
                 messageId = libraryUpdateError.messageId,
             )
@@ -53,8 +47,8 @@ class LibraryUpdateErrorRepositoryImpl(
     }
 
     override suspend fun insert(libraryUpdateError: LibraryUpdateError) {
-        return handler.await(inTransaction = true) {
-            libraryUpdateErrorQueries.insert(
+        database.transaction {
+            database.libraryUpdateErrorQueries.insert(
                 mangaId = libraryUpdateError.mangaId,
                 messageId = libraryUpdateError.messageId,
             )
@@ -62,9 +56,9 @@ class LibraryUpdateErrorRepositoryImpl(
     }
 
     override suspend fun insertAll(libraryUpdateErrors: List<LibraryUpdateError>) {
-        return handler.await(inTransaction = true) {
+        database.transaction {
             libraryUpdateErrors.forEach {
-                libraryUpdateErrorQueries.insert(
+                database.libraryUpdateErrorQueries.insert(
                     mangaId = it.mangaId,
                     messageId = it.messageId,
                 )
@@ -72,3 +66,4 @@ class LibraryUpdateErrorRepositoryImpl(
         }
     }
 }
+// KMK <--

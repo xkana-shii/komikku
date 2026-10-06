@@ -34,6 +34,7 @@ sealed class Preference {
             // KMK --> Optional leading icon, rendered by the existing preference widget.
             override val icon: ImageVector? = null,
             // KMK <--
+            val widget: @Composable (() -> Unit)? = null,
             val onClick: (() -> Unit)? = null,
         ) : PreferenceItem<String, Unit>() {
             override val onValueChanged: suspend (value: String) -> Unit = {}

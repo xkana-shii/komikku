@@ -24,7 +24,7 @@ import tachiyomi.presentation.core.components.BadgeGroup
 import tachiyomi.source.local.isLocal
 
 @Composable
-internal fun DownloadsBadge(count: Int) {
+internal fun DownloadsBadge(count: Long) {
     if (count > 0) {
         Badge(
             text = "$count",

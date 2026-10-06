@@ -7,7 +7,7 @@ import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import kotlin.properties.Delegates
 
-@Suppress("unused")
+// KMK -->
 class QueryPagingSource<RowType : Any>(
     val countQuery: () -> Query<Long>,
     val queryProvider: (Long, Long) -> Query<RowType>,
@@ -38,9 +38,7 @@ class QueryPagingSource<RowType : Any>(
                 else -> key to loadSize.toLong()
             }
 
-            val data = queryProvider(limit, offset)
-                .also { currentQuery = it }
-                .awaitAsList()
+            val data = queryProvider(limit, offset).also { currentQuery = it }.awaitAsList()
 
             val (prevKey, nextKey) = when (params) {
                 is LoadParams.Append -> (offset - loadSize to offset + loadSize)
@@ -70,3 +68,4 @@ class QueryPagingSource<RowType : Any>(
         invalidate()
     }
 }
+// KMK <--

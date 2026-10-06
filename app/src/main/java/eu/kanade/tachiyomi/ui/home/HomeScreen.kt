@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRailItem
@@ -66,14 +65,18 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 object HomeScreen : Screen() {
+    @Suppress("unused")
     private fun readResolve(): Any = HomeScreen
 
     private val librarySearchEvent = Channel<String>()
     private val openTabEvent = Channel<Tab>()
     private val showBottomNavEvent = Channel<Boolean>()
 
-    private const val TAB_FADE_DURATION = 200
-    private const val TAB_NAVIGATOR_KEY = "HomeTabs"
+    @Suppress("ConstPropertyName")
+    private const val TabFadeDuration = 200
+
+    @Suppress("ConstPropertyName")
+    private const val TabNavigatorKey = "HomeTabs"
 
     private val TABS = listOf(
         LibraryTab,
@@ -96,7 +99,7 @@ object HomeScreen : Screen() {
 
         TabNavigator(
             tab = LibraryTab,
-            key = TAB_NAVIGATOR_KEY,
+            key = TabNavigatorKey,
         ) { tabNavigator ->
             // Provide usable navigator to content screen
             CompositionLocalProvider(LocalNavigator provides navigator) {
@@ -146,11 +149,8 @@ object HomeScreen : Screen() {
                         AnimatedContent(
                             targetState = tabNavigator.current,
                             transitionSpec = {
-                                materialFadeThroughIn(
-                                    initialScale = 1f,
-                                    durationMillis = TAB_FADE_DURATION,
-                                ) togetherWith
-                                    materialFadeThroughOut(durationMillis = TAB_FADE_DURATION)
+                                materialFadeThroughIn(initialScale = 1f, durationMillis = TabFadeDuration) togetherWith
+                                    materialFadeThroughOut(durationMillis = TabFadeDuration)
                             },
                             label = "tabContent",
                             contentKey = { it.key },
@@ -164,10 +164,8 @@ object HomeScreen : Screen() {
             }
 
             val goToLibraryTab = { tabNavigator.current = LibraryTab }
-            BackHandler(
-                enabled = tabNavigator.current != LibraryTab,
-                onBack = goToLibraryTab,
-            )
+
+            BackHandler(enabled = tabNavigator.current != LibraryTab, onBack = goToLibraryTab)
 
             LaunchedEffect(Unit) {
                 launch {
@@ -328,8 +326,6 @@ object HomeScreen : Screen() {
             Icon(
                 painter = tab.options.icon!!,
                 contentDescription = tab.options.title,
-                // TODO: https://issuetracker.google.com/u/0/issues/316327367
-                tint = LocalContentColor.current,
             )
         }
     }

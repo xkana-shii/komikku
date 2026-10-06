@@ -1,59 +1,37 @@
 import com.android.build.api.dsl.ManagedVirtualDevice
 
+// KMK -->
 plugins {
-    alias(mihonx.plugins.android.test)
+    id("mihon.benchmark")
     alias(libs.plugins.androidx.baselineProfile)
 }
 
 android {
-    namespace = "mihon.baselineprofile"
-
+    namespace = "app.komikku.baselineprofile"
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-
     targetProjectPath = ":app"
-
-    // This code creates the gradle managed device used to generate baseline profiles.
-    // To use GMD please invoke generation through the command line:
-    // ./gradlew :app:generateBaselineProfile
     testOptions.managedDevices.allDevices {
-        @Suppress("UnstableApiUsage")
         create<ManagedVirtualDevice>("pixel6Api34") {
             device = "Pixel 6"
             apiLevel = 34
             systemImageSource = "google"
         }
     }
-
-    // SY -->
-    flavorDimensions += "default"
-    productFlavors {
-        create("standard") {
-            dimension = "default"
-        }
-        create("fdroid") {
-            dimension = "default"
-        }
-        create("dev") {
-            dimension = "default"
-        }
-    }
-    // SY <--
 }
 
-// This is the configuration block for the Baseline Profile plugin.
-// You can specify to run the generators on a managed devices or connected devices.
 baselineProfile {
-    managedDevices += "pixel6Api34"
-    useConnectedDevices = false
+    useConnectedDevices = providers.gradleProperty("baselineProfile.useConnectedDevices")
+        .map(String::toBoolean).getOrElse(false)
+    if (!useConnectedDevices) managedDevices += "pixel6Api34"
 }
 
 dependencies {
-    implementation(libs.androidx.benchmark.macroJunit4)
-    implementation(libs.androidx.test.junit)
-    implementation(libs.androidx.test.espresso.core)
-    implementation(libs.androidx.test.uiautomator)
+    implementation(androidx.benchmark.macro)
+    implementation(androidx.test.ext)
+    implementation(androidx.test.espresso.core)
+    implementation(androidx.test.uiautomator)
 }
 
 androidComponents {
@@ -63,3 +41,4 @@ androidComponents {
         variant.instrumentationRunnerArguments.put("targetAppId", applicationId)
     }
 }
+// KMK <--

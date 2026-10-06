@@ -11,6 +11,8 @@ import tachiyomi.data.Database
 import tachiyomi.data.category.CategoryMapper
 import tachiyomi.domain.library.service.LibraryPreferences
 
+// KMK -->
+
 class MoveSortingModeSettingsMigration : Migration {
     override val version: Float = 38f
 
@@ -52,3 +54,4 @@ class MoveSortingModeSettingsMigration : Migration {
         return@withIOContext true
     }
 }
+// KMK <--
