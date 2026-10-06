@@ -193,20 +193,15 @@ class BackupRestorer(
         backupCategories: List<BackupCategory>,
     ) = launch {
         mangaRestorer.sortByNew(backupMangas).chunked(100).forEach { chunk ->
-            database.transaction {
-                chunk.forEach {
-                    ensureActive()
-                    try {
-                        mangaRestorer.restore(it, backupCategories)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        val sourceName = sourceMapping[it.source] ?: it.source.toString()
-                        errors.add(Date() to "${it.title} [$sourceName]: ${e.message}")
-                    }
-                    restoreProgress.incrementAndFetch()
-                }
-            }
+            database.restoreBatch(
+                chunk,
+                restore = { mangaRestorer.restore(it, backupCategories) },
+                onError = { manga, error ->
+                    val sourceName = sourceMapping[manga.source] ?: manga.source.toString()
+                    errors.add(Date() to "${manga.title} [$sourceName]: ${error.message}")
+                },
+            )
+            repeat(chunk.size) { restoreProgress.incrementAndFetch() }
             notifier.showRestoreProgress(chunk.last().title, restoreProgress.load(), restoreAmount, isSync)
         }
     }
@@ -253,19 +248,14 @@ class BackupRestorer(
         backupExtensionStores
             .chunked(100)
             .forEach { chunk ->
-                database.transaction {
-                    chunk.forEach {
-                        ensureActive()
-                        try {
-                            extensionStoreRestorer(it)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            errors.add(Date() to "Error adding extension store: ${it.name} : ${e.message}")
-                        }
-                        restoreProgress.incrementAndFetch()
-                    }
-                }
+                database.restoreBatch(
+                    chunk,
+                    restore = { extensionStoreRestorer(it) },
+                    onError = { store, error ->
+                        errors.add(Date() to "Error adding extension store: ${store.name} : ${error.message}")
+                    },
+                )
+                repeat(chunk.size) { restoreProgress.incrementAndFetch() }
                 notifier.showRestoreProgress(
                     context.stringResource(MR.strings.extensionStores),
                     restoreProgress.load(),

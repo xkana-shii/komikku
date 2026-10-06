@@ -64,18 +64,18 @@ class FeedSavedSearchRepositoryImpl(
 
             existedFeedId
                 // KMK <--
-                ?: database.transactionWithResult {
-                    database.feed_saved_searchQueries.insertReturningId(
+                // KMK -->
+                ?: database.feed_saved_searchQueries.insertReturningId(
                         feedSavedSearch.source,
                         feedSavedSearch.savedSearch,
                         feedSavedSearch.global,
-                    ).awaitAsOne()
-                }
+                ).awaitAsOne()
+                // KMK <--
         }
     }
 
     override suspend fun insertAll(feedSavedSearch: List<FeedSavedSearch>) {
-        return database.transactionWithResult {
+        database.transaction {
             feedSavedSearch.forEach {
                 database.feed_saved_searchQueries.insert(
                     it.source,

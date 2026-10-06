@@ -6,6 +6,7 @@ import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.transform
@@ -260,6 +261,8 @@ class MangaRepositoryImpl(
         return try {
             database.manga_chapter_statsQueries.hasMissing().awaitAsOne() &&
                 database.manga_chapter_statsQueries.refill() > 0
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logcat(LogPriority.WARN, e) { "Failed to refill manga_chapter_stats" }
             false

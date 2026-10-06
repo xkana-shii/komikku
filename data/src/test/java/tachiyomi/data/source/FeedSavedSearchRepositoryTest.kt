@@ -20,6 +20,7 @@ import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import java.io.File
 import java.nio.file.Files
+import java.util.Properties
 
 // KMK -->
 class FeedSavedSearchRepositoryTest {
@@ -35,7 +36,10 @@ class FeedSavedSearchRepositoryTest {
     }
 
     private suspend fun open(create: Boolean = false) {
-        driver = JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}")
+        driver = JdbcSqliteDriver(
+            "jdbc:sqlite:${file.absolutePath}",
+            Properties().apply { setProperty("foreign_keys", "true") },
+        )
         if (create) Database.Schema.create(driver).await()
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
         val db = Database(driver = driver, historyAdapter = History.Adapter(DateColumnAdapter), mangasAdapter = Mangas.Adapter(genreAdapter = StringListColumnAdapter, update_strategyAdapter = UpdateStrategyColumnAdapter, memoAdapter = MemoColumnAdapter), chaptersAdapter = Chapters.Adapter(MemoColumnAdapter))
@@ -50,7 +54,7 @@ class FeedSavedSearchRepositoryTest {
     }
 
     @Test
-    fun `query default and filtered records resolve by saved ID and source and survive a reopened database`() = runBlocking {
+    fun `query default and filtered records resolve by saved ID and source and survive a reopened database`() = runBlocking<Unit> {
         val values = listOf(
             SavedSearch(-1, 101, "Query", "title", null),
             SavedSearch(-1, 101, "Default", "", "[]"),
@@ -71,7 +75,7 @@ class FeedSavedSearchRepositoryTest {
     }
 
     @Test
-    fun `edit keeps references and delete removes only the deleted saved search feeds`() = runBlocking {
+    fun `edit keeps references and delete removes only the deleted saved search feeds`() = runBlocking<Unit> {
         val first = SavedSearch(-1, 101, "First", "old", null).let { it.copy(id = searches.insert(it)) }
         val second = SavedSearch(-1, 101, "Second", "other", null).let { it.copy(id = searches.insert(it)) }
         for (search in listOf(first, second)) feeds.insert(FeedSavedSearch(-1, 101, search.id, true, 0))

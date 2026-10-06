@@ -8,7 +8,7 @@ CREATE TABLE categories(
     flags INTEGER NOT NULL,
     manga_order TEXT AS List<Long> NOT NULL,
     -- KMK -->
-    hidden INTEGER NOT NULL DEFAULT 0
+    hidden INTEGER DEFAULT 0 NOT NULL
     -- KMK <--
 );
 

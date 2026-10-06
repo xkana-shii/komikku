@@ -10,7 +10,17 @@ android {
 
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")
+        // KMK -->
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // KMK <--
     }
+
+    // KMK -->
+    sourceSets {
+        getByName("test").java.srcDir("src/testSupport/kotlin")
+        getByName("androidTest").java.srcDir("src/testSupport/kotlin")
+    }
+    // KMK <--
 
     sqldelight {
         databases {
@@ -47,5 +57,9 @@ dependencies {
     testImplementation(libs.bundles.test)
     testImplementation(libs.sqldelight.sqlite.driver)
     testRuntimeOnly(libs.junit.platform.launcher)
+    androidTestImplementation(androidx.test.ext)
+    androidTestImplementation(androidx.test.runner)
+    androidTestImplementation(libs.sqlite.bundled)
+    androidTestImplementation(sylibs.sqlcipher)
     // KMK <--
 }

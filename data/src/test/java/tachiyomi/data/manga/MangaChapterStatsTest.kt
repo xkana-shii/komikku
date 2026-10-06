@@ -8,6 +8,11 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.AfterEach
@@ -22,7 +27,10 @@ import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.chapter.ChapterMapper
+import tachiyomi.data.chapter.ChapterRepositoryImpl
+import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
+import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.repository.CustomMangaRepository
 import uy.kohesive.injekt.Injekt
@@ -145,6 +153,49 @@ class MangaChapterStatsTest {
         ids.forEach { db.mangasQueries.deleteById(it) }
 
         statsRowCount() shouldBe 0
+    }
+
+    @Test
+    fun `live library invalidations refill once and keep emitting changed aggregates`() = runBlocking<Unit> {
+        seedLibrary(count = 1)
+        val id = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsOne().id
+        insertChapter(id, scanlator = null, read = false, bookmark = false)
+        val chapter = chaptersOf(id).single()
+        val emissions = Channel<List<LibraryManga>>(Channel.UNLIMITED)
+        val collector = launch {
+            MangaRepositoryImpl(db).getLibraryMangaAsFlow().collect { emissions.send(it) }
+        }
+        try {
+            withTimeout(3_000) { emissions.receive() }.single().readCount shouldBe 0
+            hasMissing() shouldBe false
+            ChapterRepositoryImpl(db).update(ChapterUpdate(id = chapter.id, read = true))
+            withTimeout(3_000) { emissions.receive() }.single().readCount shouldBe 1
+            hasMissing() shouldBe false
+            withTimeoutOrNull(600) { emissions.receive() } shouldBe null
+            ChapterRepositoryImpl(db).update(ChapterUpdate(id = chapter.id, read = false))
+            withTimeout(3_000) { emissions.receive() }.single().readCount shouldBe 0
+        } finally {
+            collector.cancelAndJoin()
+        }
+    }
+
+    @Test
+    fun `collecting a current library does not write the statistics cache again`() = runBlocking<Unit> {
+        seedLibrary(count = 1)
+        refill()
+        driver.execute(null, "CREATE TABLE refill_audit(count INTEGER NOT NULL)", 0)
+        driver.execute(null, "INSERT INTO refill_audit VALUES (0)", 0)
+        driver.execute(null, "CREATE TRIGGER count_extra_refills AFTER INSERT ON manga_chapter_stats BEGIN UPDATE refill_audit SET count = count + 1; END", 0)
+        val repository = MangaRepositoryImpl(db)
+        repository.getLibraryMangaAsFlow().first().size shouldBe 1
+        repository.getLibraryMangaAsFlow().first().size shouldBe 1
+        hasMissing() shouldBe false
+        driver.executeQuery(
+            null,
+            "SELECT count FROM refill_audit",
+            mapper = { cursor -> cursor.next(); QueryResult.Value(cursor.getLong(0)!!) },
+            parameters = 0,
+        ).value shouldBe 0
     }
 
     @Test

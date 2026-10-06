@@ -44,14 +44,14 @@ class SavedSearchRepositoryImpl(
 
             existedSavedSearchId
                 // KMK <--
-                ?: database.transactionWithResult {
-                    database.saved_searchQueries.insertReturningId(
+                // KMK -->
+                ?: database.saved_searchQueries.insertReturningId(
                         savedSearch.source,
                         savedSearch.name,
                         savedSearch.query,
                         savedSearch.filtersJson,
-                    ).awaitAsOne()
-                }
+                ).awaitAsOne()
+                // KMK <--
         }
     }
 
