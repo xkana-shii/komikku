@@ -53,7 +53,8 @@ class FeedRestorer(
                             (currentSavedSearch.filters_json ?: "[]") == backupFeed.savedSearch.filterList
                     }?._id
 
-                    existedSavedSearchId ?: database.transactionWithResult {
+                    // KMK -->
+                    existedSavedSearchId ?:
                         // Just in case, trying to create the associated saved_search
                         database.saved_searchQueries.insertReturningId(
                             source = backupFeed.source,
@@ -62,7 +63,7 @@ class FeedRestorer(
                             filtersJson = backupFeed.savedSearch.filterList.nullIfBlank()
                                 ?.takeUnless { it == "[]" },
                         ).awaitAsOne()
-                    }
+                    // KMK <--
                 }
 
                 database.feed_saved_searchQueries.insert(

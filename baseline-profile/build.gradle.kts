@@ -22,8 +22,9 @@ android {
 }
 
 baselineProfile {
-    managedDevices += "pixel6Api34"
-    useConnectedDevices = false
+    useConnectedDevices = providers.gradleProperty("baselineProfile.useConnectedDevices")
+        .map(String::toBoolean).getOrElse(false)
+    if (!useConnectedDevices) managedDevices += "pixel6Api34"
 }
 
 dependencies {

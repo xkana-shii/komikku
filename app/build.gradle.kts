@@ -126,7 +126,6 @@ android {
                 "libconscrypt_jni",
                 "libimagedecoder",
                 "libquickjs",
-                "libsqlite3x",
             )
                 .map { "**/$it.so" }
         }
@@ -192,6 +191,19 @@ kotlin {
 baselineProfile {
     baselineProfileOutputDir = "baselineProfiles"
     mergeIntoMain = true
+}
+
+androidComponents.finalizeDsl { android ->
+    // The profile plugin copies Kotlin source providers as "provider(?)" with this Kotlin/AGP
+    // combination. Resolve the original directories explicitly; '?' is invalid on Windows.
+    android.sourceSets.filter { it.name.startsWith("nonMinified") || it.name.startsWith("benchmark") && it.name != "benchmark" }
+        .forEach { sourceSet ->
+            val originalName = sourceSet.name.removePrefix("nonMinified").removePrefix("benchmark")
+                .replaceFirstChar(Char::lowercaseChar)
+            val original = android.sourceSets.findByName(originalName) ?: return@forEach
+            sourceSet.kotlin.directories.removeAll { it.endsWith("provider(?)") }
+            sourceSet.kotlin.directories.addAll(original.kotlin.directories)
+        }
 }
 // KMK <--
 
@@ -330,6 +342,9 @@ dependencies {
 
     // Tests
     testImplementation(libs.bundles.test)
+    // KMK -->
+    testImplementation(libs.sqldelight.sqlite.driver)
+    // KMK <--
     testImplementation(libs.okhttp.mockwebserver)
     testRuntimeOnly(libs.junit.platform.launcher)
 
