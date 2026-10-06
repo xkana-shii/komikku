@@ -239,7 +239,7 @@ class Config:
         if len(set(names)) != len(names):
             sys.exit(f"config: upstream names must be unique: {names}")
         return Config(
-            target_branch=raw.get("target_branch", "master"),
+            target_branch=raw.get("target_branch", "main"),
             since=raw.get("since", ""),
             output=raw.get("output", "cherrypick_log.md"),
             exclude_identity_regex=raw.get("exclude_identity_regex", ""),

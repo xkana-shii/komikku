@@ -1,5 +1,5 @@
 {
-  "target_branch": "master",
+  "target_branch": "main",
   "since": "2024-01-01",
   "output": "cherrypick_log.md",
   "exclude_identity_regex": "renovate",
