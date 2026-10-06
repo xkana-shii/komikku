@@ -209,7 +209,6 @@ fun MangaCoverDialog(
                             .memoryCachePolicy(CachePolicy.DISABLED)
                             .target { image ->
                                 val drawable = image.asDrawable(view.context.resources)
-
                                 // Copy bitmap in case it came from memory cache
                                 // Because SSIV needs to thoroughly read the image
                                 // KMK -->
