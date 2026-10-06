@@ -109,7 +109,9 @@ abstract class SyncService(
         }
 
         fun mangaCompositeKey(manga: BackupManga): String {
-            return "${manga.source}|${manga.url}|${manga.title.lowercase().trim()}|${manga.author?.lowercase()?.trim()}"
+            // KMK -->
+            return "${manga.source}|${manga.url}"
+            // KMK <--
         }
 
         // Create maps using composite keys
@@ -203,7 +205,9 @@ abstract class SyncService(
         val logTag = "MergeChapters"
 
         fun chapterCompositeKey(chapter: BackupChapter): String {
-            return "${chapter.url}|${chapter.name}|${chapter.chapterNumber}"
+            // KMK -->
+            return chapter.url
+            // KMK <--
         }
 
         val localChapterMap = localChapters.associateBy { chapterCompositeKey(it) }

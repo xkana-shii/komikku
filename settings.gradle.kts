@@ -55,7 +55,9 @@ include(":flagkit")
 // SY -->
 include(":i18n-sy")
 // SY <--
-include(":macrobenchmark")
+// KMK -->
+include(":baseline-profile")
+// KMK <--
 include(":presentation-core")
 include(":presentation-widget")
 include(":source-api")

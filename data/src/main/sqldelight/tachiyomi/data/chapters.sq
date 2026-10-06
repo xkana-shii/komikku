@@ -160,6 +160,13 @@ insert:
 INSERT INTO chapters(manga_id, url, name, scanlator, read, bookmark, fillermark, last_page_read, chapter_number, source_order, date_fetch, date_upload, last_modified_at, version, is_syncing, memo)
 VALUES (:mangaId, :url, :name, :scanlator, :read, :bookmark, :fillermark, :lastPageRead, :chapterNumber, :sourceOrder, :dateFetch, :dateUpload, 0, :version, 0, :memo);
 
+-- KMK -->
+insertReturningId:
+INSERT INTO chapters(manga_id, url, name, scanlator, read, bookmark, fillermark, last_page_read, chapter_number, source_order, date_fetch, date_upload, last_modified_at, version, is_syncing, memo)
+VALUES (:mangaId, :url, :name, :scanlator, :read, :bookmark, :fillermark, :lastPageRead, :chapterNumber, :sourceOrder, :dateFetch, :dateUpload, 0, :version, 0, :memo)
+RETURNING _id;
+-- KMK <--
+
 update:
 UPDATE chapters
 SET manga_id = coalesce(:mangaId, manga_id),
@@ -179,5 +186,3 @@ SET manga_id = coalesce(:mangaId, manga_id),
     memo = coalesce(:memo, memo)
 WHERE _id = :chapterId;
 
-selectLastInsertedRowId:
-SELECT last_insert_rowid();

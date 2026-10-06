@@ -1,12 +1,14 @@
 package tachiyomi.data.source
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.AndroidDatabaseHandler
 import tachiyomi.data.Chapters
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
@@ -20,6 +22,7 @@ import tachiyomi.domain.source.model.SavedSearch
 import java.io.File
 import java.nio.file.Files
 
+// KMK -->
 class FeedSavedSearchRepositoryTest {
     private lateinit var file: File
     private lateinit var driver: JdbcSqliteDriver
@@ -27,19 +30,18 @@ class FeedSavedSearchRepositoryTest {
     private lateinit var feeds: FeedSavedSearchRepositoryImpl
 
     @BeforeEach
-    fun setup() {
+    fun setup() = runBlocking<Unit> {
         file = Files.createTempFile("saved-feeds", ".db").toFile()
         open(create = true)
     }
 
-    private fun open(create: Boolean = false) {
+    private suspend fun open(create: Boolean = false) {
         driver = JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}")
-        if (create) Database.Schema.create(driver).value
+        if (create) Database.Schema.create(driver).await()
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
         val db = Database(driver = driver, historyAdapter = History.Adapter(DateColumnAdapter), mangasAdapter = Mangas.Adapter(genreAdapter = StringListColumnAdapter, update_strategyAdapter = UpdateStrategyColumnAdapter, memoAdapter = MemoColumnAdapter), chaptersAdapter = Chapters.Adapter(MemoColumnAdapter))
-        val handler = AndroidDatabaseHandler(db, driver)
-        searches = SavedSearchRepositoryImpl(handler)
-        feeds = FeedSavedSearchRepositoryImpl(handler)
+        searches = SavedSearchRepositoryImpl(db)
+        feeds = FeedSavedSearchRepositoryImpl(db)
     }
 
     @AfterEach
@@ -83,3 +85,4 @@ class FeedSavedSearchRepositoryTest {
         feeds.getGlobal().single().savedSearch shouldBe second.id
     }
 }
+// KMK <--

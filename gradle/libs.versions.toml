@@ -4,8 +4,11 @@ leakcanary = "2.14"
 moko = "0.26.4"
 okhttp_version = "5.3.2"
 shizuku_version = "13.1.5"
-sqldelight = "2.2.1"
-sqlite = "2.6.2"
+# KMK -->
+sqldelight = "2.3.2"
+sqlite = "2.7.0"
+sqldelight-androidx-driver = "0637a964a1"
+# KMK <--
 voyager = "1.1.0-beta03"
 spotless = "8.8.0"
 ktlint-core = "1.8.0"
@@ -38,9 +41,9 @@ disklrucache = "com.jakewharton:disklrucache:2.0.2"
 unifile = "com.github.komikku-app:UniFile:084a54140a"
 libarchive = "me.zhanghai.android.libarchive:library:1.1.6"
 
-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version.ref = "sqlite" }
-sqlite-ktx = { module = "androidx.sqlite:sqlite-ktx", version.ref = "sqlite" }
-sqlite-android = "com.github.requery:sqlite-android:665608662e"
+# KMK -->
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+# KMK <--
 
 preferencektx = "androidx.preference:preference-ktx:1.2.1"
 
@@ -86,7 +89,11 @@ leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", ve
 leakcanary-plumber = { module = "com.squareup.leakcanary:plumber-android", version.ref = "leakcanary" }
 
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
-sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions-jvm", version.ref = "sqldelight" }
+# KMK -->
+sqldelight-androidx-driver = { module = "com.github.mihon.sqldelight-androidx-driver:sqldelight-androidx-driver", version.ref = "sqldelight-androidx-driver" }
+sqldelight-async = { module = "app.cash.sqldelight:async-extensions", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+# KMK <--
 sqldelight-android-paging = { module = "app.cash.sqldelight:androidx-paging3-extensions", version.ref = "sqldelight" }
 sqldelight-dialects-sql = { module = "app.cash.sqldelight:sqlite-3-38-dialect", version = "2.3.2" }
 # KMK -->
@@ -114,6 +121,9 @@ stringSimilarity = { module = "com.aallam.similarity:string-similarity-kotlin", 
 materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
 
 [plugins]
+# KMK -->
+androidx-baselineProfile = { id = "androidx.baselineprofile", version = "1.5.0-alpha07" }
+# KMK <--
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlib_version" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 moko = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "moko" }
@@ -121,10 +131,11 @@ moko = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "moko"
 [bundles]
 okhttp = ["okhttp-core", "okhttp-logging", "okhttp-brotli", "okhttp-dnsoverhttps", "okhttp-zstd"]
 js-engine = ["quickjs-android"]
-sqlite = ["sqlite-framework", "sqlite-ktx", "sqlite-android"]
 coil = ["coil-core", "coil-gif", "coil-compose", "coil-network-okhttp"]
 shizuku = ["shizuku-api", "shizuku-provider"]
-sqldelight = ["sqldelight-android-driver", "sqldelight-coroutines", "sqldelight-android-paging"]
+# KMK -->
+sqldelight = ["sqldelight-android-driver", "sqldelight-androidx-driver", "sqldelight-async", "sqldelight-coroutines", "sqldelight-android-paging"]
+# KMK <--
 voyager = ["voyager-navigator", "voyager-screenmodel", "voyager-tab-navigator", "voyager-transitions"]
 test = ["junit-jupiter", "kotest-assertions", "mockk"]
 markdown = ["markdown-core", "markdown-coil"]

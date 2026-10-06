@@ -209,6 +209,13 @@ insert:
 INSERT INTO mangas(source, url, artist, author, description, genre, title, status, thumbnail_url, favorite, last_update, next_update, initialized, viewer, chapter_flags, cover_last_modified, date_added, update_strategy, calculate_interval, last_modified_at, version, notes, memo)
 VALUES (:source, :url, :artist, :author, :description, :genre, :title, :status, :thumbnailUrl, :favorite, :lastUpdate, :nextUpdate, :initialized, :viewerFlags, :chapterFlags, :coverLastModified, :dateAdded, :updateStrategy, :calculateInterval, 0, :version, :notes, :memo);
 
+-- KMK -->
+insertReturningId:
+INSERT INTO mangas(source, url, artist, author, description, genre, title, status, thumbnail_url, favorite, last_update, next_update, initialized, viewer, chapter_flags, cover_last_modified, date_added, update_strategy, calculate_interval, last_modified_at, version, notes, memo)
+VALUES (:source, :url, :artist, :author, :description, :genre, :title, :status, :thumbnailUrl, :favorite, :lastUpdate, :nextUpdate, :initialized, :viewerFlags, :chapterFlags, :coverLastModified, :dateAdded, :updateStrategy, :calculateInterval, 0, :version, :notes, :memo)
+RETURNING _id;
+-- KMK <--
+
 update:
 UPDATE mangas SET
     source = coalesce(:source, source),
@@ -236,8 +243,6 @@ UPDATE mangas SET
     memo = coalesce(:memo, memo)
 WHERE _id = :mangaId;
 
-selectLastInsertedRowId:
-SELECT last_insert_rowid();
 
 insertNetworkManga {
     -- Insert the manga if it doesn't exist already
@@ -301,10 +306,6 @@ SELECT * FROM mangas;
 deleteById:
 DELETE FROM mangas WHERE _id = :id;
 
-selectLastInsertRow:
-SELECT *
-FROM mangas
-WHERE _id = last_insert_rowid();
 
 getIdByUrlAndSource:
 SELECT _id

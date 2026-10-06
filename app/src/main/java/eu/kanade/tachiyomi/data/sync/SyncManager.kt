@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.data.sync
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import tachiyomi.data.Database
+
 import android.content.Context
 import android.net.Uri
 import eu.kanade.domain.sync.SyncPreferences
@@ -21,7 +24,6 @@ import logcat.LogPriority
 import logcat.logcat
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Chapters
-import tachiyomi.data.DatabaseHandler
 import tachiyomi.data.manga.MangaMapper.mapManga
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.manga.model.Manga
@@ -32,6 +34,8 @@ import java.io.IOException
 import java.util.Date
 import kotlin.system.measureTimeMillis
 
+// KMK -->
+
 /**
  * A manager to handle synchronization tasks in the app, such as updating
  * sync preferences and performing synchronization with a remote server.
@@ -40,7 +44,7 @@ import kotlin.system.measureTimeMillis
  */
 class SyncManager(
     private val context: Context,
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
     private val syncPreferences: SyncPreferences = Injekt.get(),
     private var json: Json = Json {
         encodeDefaults = true
@@ -74,9 +78,9 @@ class SyncManager(
      */
     suspend fun syncData() {
         // Reset isSyncing in case it was left over or failed syncing during restore.
-        handler.await(inTransaction = true) {
-            mangasQueries.resetIsSyncing()
-            chaptersQueries.resetIsSyncing()
+        database.transaction {
+            database.mangasQueries.resetIsSyncing()
+            database.chaptersQueries.resetIsSyncing()
         }
 
         val syncOptions = syncPreferences.getSyncSettings()
@@ -252,16 +256,15 @@ class SyncManager(
      * @return a list of all manga stored in the database
      */
     private suspend fun getAllMangaFromDB(): List<Manga> {
-        return handler.awaitList { mangasQueries.getAllManga(::mapManga) }
+        return database.mangasQueries.getAllManga(::mapManga).awaitAsList()
     }
 
     private suspend fun getAllMangaThatNeedsSync(): List<Manga> {
-        return handler.awaitList { mangasQueries.getMangasWithFavoriteTimestamp(::mapManga) }
+        return database.mangasQueries.getMangasWithFavoriteTimestamp(::mapManga).awaitAsList()
     }
 
     private suspend fun isMangaDifferent(localManga: Manga, remoteManga: BackupManga): Boolean {
-        val localChapters = handler.await {
-            chaptersQueries.getChaptersByMangaId(
+        val localChapters = database.chaptersQueries.getChaptersByMangaId(
                 localManga.id,
                 0,
                 // KMK -->
@@ -270,8 +273,7 @@ class SyncManager(
                 Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
                 Manga.CHAPTER_SHOW_FILLERMARKED,
                 // KMK <--
-            ).executeAsList()
-        }
+            ).awaitAsList()
         val localCategories = getCategories.await(localManga.id).map { it.order }
 
         if (areChaptersDifferent(localChapters, remoteManga.chapters)) {
@@ -324,13 +326,13 @@ class SyncManager(
         val elapsedTimeMillis = measureTimeMillis {
             val databaseManga = getAllMangaFromDB()
             val localMangaMap = databaseManga.associateBy {
-                Triple(it.source, it.url, it.title)
+                Pair(it.source, it.url)
             }
 
             logcat(LogPriority.DEBUG, logTag) { "Starting to filter favorites and non-favorites from backup data." }
 
             backup.backupManga.forEach { remoteManga ->
-                val compositeKey = Triple(remoteManga.source, remoteManga.url, remoteManga.title)
+                val compositeKey = Pair(remoteManga.source, remoteManga.url)
                 val localManga = localMangaMap[compositeKey]
                 when {
                     // Checks if the manga is in favorites and needs updating or adding
@@ -368,10 +370,10 @@ class SyncManager(
     private suspend fun updateNonFavorites(nonFavorites: List<BackupManga>) {
         val localMangaList = getAllMangaFromDB()
 
-        val localMangaMap = localMangaList.associateBy { Triple(it.source, it.url, it.title) }
+        val localMangaMap = localMangaList.associateBy { Pair(it.source, it.url) }
 
         nonFavorites.forEach { nonFavorite ->
-            val key = Triple(nonFavorite.source, nonFavorite.url, nonFavorite.title)
+            val key = Pair(nonFavorite.source, nonFavorite.url)
             localMangaMap[key]?.let { localManga ->
                 if (localManga.favorite != nonFavorite.favorite) {
                     val updatedManga = localManga.copy(favorite = nonFavorite.favorite)
@@ -381,3 +383,4 @@ class SyncManager(
         }
     }
 }
+// KMK <--

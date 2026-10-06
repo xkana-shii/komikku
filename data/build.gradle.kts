@@ -16,6 +16,9 @@ android {
         databases {
             create("Database") {
                 packageName.set("tachiyomi.data")
+                // KMK -->
+                generateAsync.set(true)
+                // KMK <--
                 dialect(libs.sqldelight.dialects.sql)
                 schemaOutputDirectory.set(project.file("./src/main/sqldelight"))
             }

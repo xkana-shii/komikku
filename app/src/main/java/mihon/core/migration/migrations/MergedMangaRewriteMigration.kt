@@ -1,5 +1,8 @@
 package mihon.core.migration.migrations
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import tachiyomi.data.Database
+
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.tachiyomi.source.Source
 import exh.source.MERGED_SOURCE_ID
@@ -9,7 +12,6 @@ import kotlinx.serialization.json.Json
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.data.DatabaseHandler
 import tachiyomi.data.chapter.ChapterMapper
 import tachiyomi.domain.chapter.interactor.DeleteChapters
 import tachiyomi.domain.chapter.interactor.UpdateChapter
@@ -22,11 +24,13 @@ import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.service.SourceManager
 
+// KMK -->
+
 class MergedMangaRewriteMigration : Migration {
     override val version: Float = 7f
 
     override suspend fun invoke(migrationContext: MigrationContext): Boolean = withIOContext {
-        val handler = migrationContext.get<DatabaseHandler>() ?: return@withIOContext false
+        val database = migrationContext.get<Database>() ?: return@withIOContext false
         val getMangaBySource = migrationContext.get<GetMangaBySource>() ?: return@withIOContext false
         val getManga = migrationContext.get<GetManga>() ?: return@withIOContext false
         val updateManga = migrationContext.get<UpdateManga>() ?: return@withIOContext false
@@ -89,20 +93,16 @@ class MergedMangaRewriteMigration : Migration {
                     .mapNotNull { it.load(getManga, sourceManager) }
                     .distinct()
                 val chapters =
-                    handler.awaitList {
-                        ehQueries.getChaptersByMangaIds(
+                    database.ehQueries.getChaptersByMangaIds(
                             mergedMangas.map { it.id },
                             ChapterMapper::mapChapter,
-                        )
-                    }
+                        ).awaitAsList()
 
                 val mergedMangaChapters =
-                    handler.awaitList {
-                        ehQueries.getChaptersByMangaIds(
+                    database.ehQueries.getChaptersByMangaIds(
                             loadedMangaList.map { it.manga.id },
                             ChapterMapper::mapChapter,
-                        )
-                    }
+                        ).awaitAsList()
 
                 val mergedMangaChaptersMatched = mergedMangaChapters.mapNotNull { chapter ->
                     loadedMangaList.firstOrNull {
@@ -188,3 +188,4 @@ class MergedMangaRewriteMigration : Migration {
 
     private data class LoadedMangaSource(val source: Source, val manga: Manga)
 }
+// KMK <--

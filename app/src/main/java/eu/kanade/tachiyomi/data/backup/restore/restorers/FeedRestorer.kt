@@ -1,25 +1,26 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import tachiyomi.data.Database
+
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import exh.EXHMigrations
 import exh.util.nullIfBlank
-import tachiyomi.data.DatabaseHandler
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
+// KMK -->
+
 class FeedRestorer(
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
 ) {
     suspend fun restoreFeeds(backupFeeds: List<BackupFeed>) {
         if (backupFeeds.isEmpty()) return
 
-        handler.await(true) {
-            val currentFeeds = handler.awaitList {
-                feed_saved_searchQueries.selectAllFeedWithSavedSearch()
-            }
-            val currentSavedSearches = handler.awaitList {
-                saved_searchQueries.selectAll()
-            }
+        database.transactionWithResult {
+            val currentFeeds = database.feed_saved_searchQueries.selectAllFeedWithSavedSearch().awaitAsList()
+            val currentSavedSearches = database.saved_searchQueries.selectAll().awaitAsList()
 
             backupFeeds.map {
                 // KMK -->
@@ -53,20 +54,19 @@ class FeedRestorer(
                             (currentSavedSearch.filters_json ?: "[]") == backupFeed.savedSearch.filterList
                     }?._id
 
-                    existedSavedSearchId ?: handler.awaitOneExecutable(true) {
+                    existedSavedSearchId ?: database.transactionWithResult {
                         // Just in case, trying to create the associated saved_search
-                        saved_searchQueries.insert(
+                        database.saved_searchQueries.insertReturningId(
                             source = backupFeed.source,
                             name = backupFeed.savedSearch.name,
                             query = backupFeed.savedSearch.query.nullIfBlank(),
                             filtersJson = backupFeed.savedSearch.filterList.nullIfBlank()
                                 ?.takeUnless { it == "[]" },
-                        )
-                        saved_searchQueries.selectLastInsertedRowId()
-                    }
+                        ).awaitAsOne()
+}
                 }
 
-                feed_saved_searchQueries.insert(
+                database.feed_saved_searchQueries.insert(
                     sourceId = backupFeed.source,
                     savedSearch = savedSearchId,
                     global = backupFeed.global,
@@ -75,3 +75,4 @@ class FeedRestorer(
         }
     }
 }
+// KMK <--

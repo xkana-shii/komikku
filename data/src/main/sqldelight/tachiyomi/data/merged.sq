@@ -101,6 +101,35 @@ VALUES (
     :mangaSource
 );
 
+-- KMK -->
+insertReturningId:
+INSERT INTO merged(
+    info_manga,
+    get_chapter_updates,
+    chapter_sort_mode,
+    chapter_priority,
+    download_chapters,
+    merge_id,
+    merge_url,
+    manga_id,
+    manga_url,
+    manga_source
+)
+VALUES (
+    :infoManga,
+    :getChapterUpdates,
+    :chapterSortMode,
+    :chapterPriority,
+    :downloadChapters,
+    :mergeId,
+    :mergeUrl,
+    :mangaId,
+    :mangaUrl,
+    :mangaSource
+)
+RETURNING _id;
+-- KMK <--
+
 updateSettingsById:
 UPDATE merged
 SET
@@ -117,5 +146,3 @@ DELETE FROM merged WHERE _id = ?;
 deleteAll:
 DELETE FROM merged;
 
-selectLastInsertedRowId:
-SELECT last_insert_rowid();

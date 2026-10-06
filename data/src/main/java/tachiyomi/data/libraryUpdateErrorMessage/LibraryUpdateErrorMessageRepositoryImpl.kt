@@ -1,53 +1,55 @@
 package tachiyomi.data.libraryUpdateErrorMessage
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
+
 import kotlinx.coroutines.flow.Flow
-import tachiyomi.data.DatabaseHandler
 import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.libraryUpdateErrorMessage.repository.LibraryUpdateErrorMessageRepository
 
+// KMK -->
+
 class LibraryUpdateErrorMessageRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : LibraryUpdateErrorMessageRepository {
 
     override suspend fun getAll(): List<LibraryUpdateErrorMessage> {
-        return handler.awaitList {
-            libraryUpdateErrorMessageQueries.getAllErrorMessages(
+        return database.libraryUpdateErrorMessageQueries.getAllErrorMessages(
                 LibraryUpdateErrorMessageMapper,
-            )
-        }
+            ).awaitAsList()
     }
 
     override fun getAllAsFlow(): Flow<List<LibraryUpdateErrorMessage>> {
-        return handler.subscribeToList {
-            libraryUpdateErrorMessageQueries.getAllErrorMessages(
+        return database.libraryUpdateErrorMessageQueries.getAllErrorMessages(
                 LibraryUpdateErrorMessageMapper,
-            )
-        }
+            ).subscribeToList()
     }
 
     override suspend fun deleteAll() {
-        return handler.await { libraryUpdateErrorMessageQueries.deleteAllErrorMessages() }
+        database.libraryUpdateErrorMessageQueries.deleteAllErrorMessages()
     }
 
     override suspend fun get(message: String): Long? {
-        return handler.awaitOneOrNullExecutable {
-            libraryUpdateErrorMessageQueries.getErrorMessages(message) { id, _ -> id }
-        }
+        return database.libraryUpdateErrorMessageQueries.getErrorMessages(message) { id, _ -> id }.awaitAsOneOrNull()
     }
 
     override suspend fun insert(libraryUpdateErrorMessage: LibraryUpdateErrorMessage): Long {
-        return handler.awaitOneExecutable(inTransaction = true) {
-            libraryUpdateErrorMessageQueries.insertAndGet(libraryUpdateErrorMessage.message)
-        }
+        return database.transactionWithResult {
+            database.libraryUpdateErrorMessageQueries.insertAndGet(libraryUpdateErrorMessage.message).awaitAsOne()
+}
     }
 
     override suspend fun insertAll(
         libraryUpdateErrorMessages: List<LibraryUpdateErrorMessage>,
     ): List<Pair<Long, String>> {
-        return handler.await(inTransaction = true) {
+        return database.transactionWithResult {
             libraryUpdateErrorMessages.map {
-                libraryUpdateErrorMessageQueries.insertAndGet(it.message).executeAsOne() to it.message
+                database.libraryUpdateErrorMessageQueries.insertAndGet(it.message).awaitAsOne() to it.message
             }
         }
     }
 }
+// KMK <--

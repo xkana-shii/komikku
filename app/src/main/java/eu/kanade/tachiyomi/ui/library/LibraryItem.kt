@@ -13,14 +13,23 @@ data class LibraryItem(
     val downloadCount: Long = -1,
     val unreadCount: Long = -1,
     val isLocal: Boolean = false,
-    val sourceLanguage: String = "",
     // KMK -->
+    val badges: Badges = Badges(),
     val useLangIcon: Boolean = true,
     val source: Source? = null,
     // KMK <--
     private val sourceManager: SourceManager = Injekt.get(),
 ) {
     val id: Long = libraryManga.id
+
+    // KMK -->
+    data class Badges(
+        val downloadCount: Long = 0,
+        val unreadCount: Long = 0,
+        val isLocal: Boolean = false,
+        val sourceLanguage: String = "",
+    )
+    // KMK <--
 
 //    /**
 //     * Checks if a query matches the manga

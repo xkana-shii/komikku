@@ -29,14 +29,19 @@ insert:
 INSERT INTO saved_search (source, name, query, filters_json)
 VALUES (:source, :name, :query, :filtersJson);
 
+-- KMK -->
+insertReturningId:
+INSERT INTO saved_search (source, name, query, filters_json)
+VALUES (:source, :name, :query, :filtersJson)
+RETURNING _id;
+-- KMK <--
+
 deleteById:
 DELETE FROM saved_search WHERE _id = :id;
 
 deleteAll:
 DELETE FROM saved_search;
 
-selectLastInsertedRowId:
-SELECT last_insert_rowid();
 
 update:
 UPDATE saved_search

@@ -1,5 +1,10 @@
 package mihon.data.extension.repository
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
+import tachiyomi.data.subscribeToOne
+
 import eu.kanade.tachiyomi.extension.model.Extension
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -10,19 +15,19 @@ import mihon.data.extension.service.ExtensionStoreService
 import mihon.domain.extension.model.ExtensionStore
 import mihon.domain.extension.repository.ExtensionStoreRepository
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.data.DatabaseHandler
+
+// KMK -->
 
 class ExtensionStoreRepositoryImpl(
     private val service: ExtensionStoreService,
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : ExtensionStoreRepository {
     override suspend fun insert(indexUrl: String): Result<Unit> {
         return service.fetch(indexUrl).mapCatching { upsert(it) }
     }
 
     override suspend fun insertFromPreference(indexUrl: String, name: String) {
-        handler.await {
-            extension_storeQueries.upsert(
+        database.extension_storeQueries.upsert(
                 indexUrl = indexUrl,
                 name = name,
                 badgeLabel = name,
@@ -32,20 +37,17 @@ class ExtensionStoreRepositoryImpl(
                 isLegacy = false,
                 extensionListUrl = null,
             )
-        }
     }
 
     override suspend fun refreshAll() {
         try {
-            handler.awaitList {
-                extension_storeQueries.getAll()
-            }.forEach { store ->
+            database.extension_storeQueries.getAll().awaitAsList().forEach { store ->
                 service.fetch(store.index_url)
                     .mapCatching {
-                        handler.await {
+                        run {
                             upsert(it)
                             if (store.index_url != it.indexUrl) {
-                                extension_storeQueries.delete(store.index_url)
+                                database.extension_storeQueries.delete(store.index_url)
                             }
                         }
                     }
@@ -61,8 +63,7 @@ class ExtensionStoreRepositoryImpl(
     }
 
     private suspend fun upsert(store: ExtensionStore) {
-        handler.await {
-            extension_storeQueries.upsert(
+        database.extension_storeQueries.upsert(
                 indexUrl = store.indexUrl,
                 name = store.name,
                 badgeLabel = store.badgeLabel,
@@ -72,7 +73,6 @@ class ExtensionStoreRepositoryImpl(
                 isLegacy = store.isLegacy,
                 extensionListUrl = store.extensionListUrl,
             )
-        }
     }
 
     override suspend fun fetchExtensions(
@@ -82,9 +82,7 @@ class ExtensionStoreRepositoryImpl(
     ): List<Extension.Available> {
         return try {
             supervisorScope {
-                handler.awaitList {
-                    extension_storeQueries.getAll(::extensionStoreMapper)
-                }
+                database.extension_storeQueries.getAll(::extensionStoreMapper).awaitAsList()
                     // KMK -->
                     .filterNot { it.indexUrl in disabledRepos }
                     // KMK <--
@@ -107,22 +105,20 @@ class ExtensionStoreRepositoryImpl(
     }
 
     override suspend fun getAll(): List<ExtensionStore> {
-        return handler.awaitList { extension_storeQueries.getAll(::extensionStoreMapper) }
+        return database.extension_storeQueries.getAll(::extensionStoreMapper).awaitAsList()
     }
 
     override fun getAllAsFlow(): Flow<List<ExtensionStore>> {
-        return handler.subscribeToList { extension_storeQueries.getAll(::extensionStoreMapper) }
+        return database.extension_storeQueries.getAll(::extensionStoreMapper).subscribeToList()
     }
 
     override fun getCountAsFlow(): Flow<Long> {
-        return handler.subscribeToOne {
-            extension_storeQueries
-                .getCount()
-        }
+        return database.extension_storeQueries
+                .getCount().subscribeToOne()
     }
 
     override suspend fun remove(indexUrl: String) {
-        handler.await { extension_storeQueries.delete(indexUrl) }
+        database.extension_storeQueries.delete(indexUrl)
     }
 
     private fun extensionStoreMapper(
@@ -147,3 +143,4 @@ class ExtensionStoreRepositoryImpl(
         extensionListUrl = extensionListUrl,
     )
 }
+// KMK <--

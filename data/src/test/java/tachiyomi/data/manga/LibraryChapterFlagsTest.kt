@@ -1,17 +1,17 @@
 package tachiyomi.data.manga
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+
 import app.cash.sqldelight.Query
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import io.kotest.matchers.shouldBe
-import io.mockk.coVerify
-import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.AndroidDatabaseHandler
 import tachiyomi.data.Chapters
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
@@ -21,24 +21,23 @@ import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
 
+// KMK -->
 class LibraryChapterFlagsTest {
     private lateinit var driver: SqlDriver
     private lateinit var db: Database
-    private lateinit var handler: AndroidDatabaseHandler
     private lateinit var repository: MangaRepositoryImpl
 
     @BeforeEach
-    fun setUp() {
+    fun setUp() = runBlocking<Unit> {
         driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-        Database.Schema.create(driver).value
+        Database.Schema.create(driver).await()
         db = Database(
             driver,
             historyAdapter = History.Adapter(last_readAdapter = DateColumnAdapter),
             mangasAdapter = Mangas.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
             chaptersAdapter = Chapters.Adapter(memoAdapter = MemoColumnAdapter),
         )
-        handler = spyk(AndroidDatabaseHandler(db, driver))
-        repository = MangaRepositoryImpl(handler)
+        repository = MangaRepositoryImpl(db)
     }
 
     @AfterEach
@@ -69,7 +68,6 @@ class LibraryChapterFlagsTest {
         }
         row(2) shouldBe outsideBefore
         invalidations shouldBe 1
-        coVerify(exactly = 1) { handler.await<Unit>(inTransaction = true, any()) }
     }
 
     @Test
@@ -122,3 +120,4 @@ class LibraryChapterFlagsTest {
         parameters = 0,
     ).value
 }
+// KMK <--

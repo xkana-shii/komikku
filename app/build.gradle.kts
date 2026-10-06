@@ -10,6 +10,9 @@ plugins {
     kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
     alias(libs.plugins.aboutLibraries)
+    // KMK -->
+    alias(libs.plugins.androidx.baselineProfile)
+    // KMK <--
     id("com.github.ben-manes.versions")
 }
 
@@ -46,6 +49,9 @@ android {
             isPseudoLocalesEnabled = true
         }
         val release by getting {
+            // KMK -->
+            isProfileable = true
+            // KMK <--
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
 
@@ -182,7 +188,17 @@ kotlin {
     }
 }
 
+// KMK -->
+baselineProfile {
+    baselineProfileOutputDir = "baselineProfiles"
+    mergeIntoMain = true
+}
+// KMK <--
+
 dependencies {
+    // KMK -->
+    baselineProfile(projects.baselineProfile)
+    // KMK <--
     implementation(projects.i18n)
     // KMK -->
     implementation(projects.i18nKmk)
@@ -216,7 +232,9 @@ dependencies {
     implementation(androidx.paging.runtime)
     implementation(androidx.paging.compose)
 
-    implementation(libs.bundles.sqlite)
+    // KMK -->
+    implementation(libs.sqlite.bundled)
+    // KMK <--
     // SY -->
     implementation(sylibs.sqlcipher)
     // SY <--

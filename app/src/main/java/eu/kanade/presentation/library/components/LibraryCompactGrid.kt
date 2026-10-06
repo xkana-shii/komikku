@@ -45,13 +45,17 @@ internal fun LibraryCompactGrid(
                     lastModified = manga.coverLastModified,
                 ),
                 coverBadgeStart = {
-                    DownloadsBadge(count = libraryItem.downloadCount)
-                    UnreadBadge(count = libraryItem.unreadCount)
+                    // KMK -->
+                    DownloadsBadge(count = libraryItem.badges.downloadCount)
+                    UnreadBadge(count = libraryItem.badges.unreadCount)
+                    // KMK <--
                 },
                 coverBadgeEnd = {
                     LanguageBadge(
-                        isLocal = libraryItem.isLocal,
-                        sourceLanguage = libraryItem.sourceLanguage,
+                        // KMK -->
+                        isLocal = libraryItem.badges.isLocal,
+                        sourceLanguage = libraryItem.badges.sourceLanguage,
+                        // KMK <--
                         // KMK -->
                         useLangIcon = libraryItem.useLangIcon,
                         // KMK <--

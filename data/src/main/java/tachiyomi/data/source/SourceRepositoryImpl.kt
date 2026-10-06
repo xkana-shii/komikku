@@ -1,5 +1,8 @@
 package tachiyomi.data.source
 
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
+
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -8,7 +11,6 @@ import exh.source.isEhBasedSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import tachiyomi.data.DatabaseHandler
 import tachiyomi.domain.source.model.SourceWithCount
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.repository.SourcePagingSource
@@ -16,9 +18,11 @@ import tachiyomi.domain.source.repository.SourceRepository
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.source.model.Source as DomainSource
 
+// KMK -->
+
 class SourceRepositoryImpl(
     private val sourceManager: SourceManager,
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : SourceRepository {
 
     override fun getSources(): Flow<List<DomainSource>> {
@@ -41,7 +45,7 @@ class SourceRepositoryImpl(
 
     override fun getSourcesWithFavoriteCount(): Flow<List<Pair<DomainSource, Long>>> {
         return combine(
-            handler.subscribeToList { mangasQueries.getSourceIdWithFavoriteCount() },
+            database.mangasQueries.getSourceIdWithFavoriteCount().subscribeToList(),
             sourceManager.sources,
         ) { sourceIdWithFavoriteCount, _ -> sourceIdWithFavoriteCount }
             .map {
@@ -60,7 +64,7 @@ class SourceRepositoryImpl(
 
     override fun getSourcesWithNonLibraryManga(): Flow<List<SourceWithCount>> {
         val sourceIdWithNonLibraryManga =
-            handler.subscribeToList { mangasQueries.getSourceIdsWithNonLibraryManga() }
+            database.mangasQueries.getSourceIdsWithNonLibraryManga().subscribeToList()
         return sourceIdWithNonLibraryManga.map { sourceId ->
             sourceId.map { (sourceId, count) ->
                 val source = sourceManager.getOrStub(sourceId)
@@ -114,3 +118,4 @@ class SourceRepositoryImpl(
         isStub = false,
     )
 }
+// KMK <--

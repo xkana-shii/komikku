@@ -1,16 +1,21 @@
 package eu.kanade.tachiyomi.data.backup.create.creators
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import tachiyomi.data.Database
+
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.backupSavedSearchMapper
-import tachiyomi.data.DatabaseHandler
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
+// KMK -->
+
 class SavedSearchBackupCreator(
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
 ) {
 
     suspend operator fun invoke(): List<BackupSavedSearch> {
-        return handler.awaitList { saved_searchQueries.selectAll(backupSavedSearchMapper) }
+        return database.saved_searchQueries.selectAll(backupSavedSearchMapper).awaitAsList()
     }
 }
+// KMK <--
