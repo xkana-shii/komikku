@@ -3,10 +3,9 @@ package tachiyomi.data.category
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
-import tachiyomi.data.subscribeToList
-
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.category.repository.CategoryRepository
@@ -48,7 +47,7 @@ class CategoryRepositoryImpl(
                 hidden = if (category.hidden) 1L else 0L,
                 // KMK <--
             ).awaitAsOne()
-}
+        }
     }
     // SY <--
 
@@ -82,8 +81,8 @@ class CategoryRepositoryImpl(
 
     override suspend fun delete(categoryId: Long) {
         database.categoriesQueries.delete(
-                categoryId = categoryId,
-            )
+            categoryId = categoryId,
+        )
     }
 }
 // KMK <--

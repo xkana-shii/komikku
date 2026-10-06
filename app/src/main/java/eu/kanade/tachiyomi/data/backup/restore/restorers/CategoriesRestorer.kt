@@ -1,9 +1,8 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import app.cash.sqldelight.async.coroutines.awaitAsOne
-import tachiyomi.data.Database
-
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
+import tachiyomi.data.Database
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.library.service.LibraryPreferences
 import uy.kohesive.injekt.Injekt
@@ -18,18 +17,19 @@ class CategoriesRestorer(
 ) {
 
     suspend operator fun invoke(backupCategories: List<BackupCategory>) {
-        if (backupCategories.isNotEmpty()) database.transaction {
-            val dbCategories = getCategories.await()
-            val dbCategoriesByName = dbCategories.associateBy { it.name }
-            var nextOrder = dbCategories.maxOfOrNull { it.order }?.plus(1) ?: 0
+        if (backupCategories.isNotEmpty()) {
+            database.transaction {
+                val dbCategories = getCategories.await()
+                val dbCategoriesByName = dbCategories.associateBy { it.name }
+                var nextOrder = dbCategories.maxOfOrNull { it.order }?.plus(1) ?: 0
 
-            val categories = backupCategories
-                .sortedBy { it.order }
-                .map {
-                    val dbCategory = dbCategoriesByName[it.name]
-                    if (dbCategory != null) return@map dbCategory
-                    val order = nextOrder++
-                    database.categoriesQueries.insertReturningId(
+                val categories = backupCategories
+                    .sortedBy { it.order }
+                    .map {
+                        val dbCategory = dbCategoriesByName[it.name]
+                        if (dbCategory != null) return@map dbCategory
+                        val order = nextOrder++
+                        database.categoriesQueries.insertReturningId(
                             it.name,
                             order,
                             it.flags,
@@ -37,14 +37,15 @@ class CategoriesRestorer(
                             hidden = if (it.hidden) 1L else 0L,
                             // KMK <--
                         ).awaitAsOne()
-                        .let { id -> it.toCategory(id).copy(order = order) }
-                }
+                            .let { id -> it.toCategory(id).copy(order = order) }
+                    }
 
-            libraryPreferences.categorizedDisplaySettings().set(
-                (dbCategories + categories)
-                    .distinctBy { it.flags }
-                    .size > 1,
-            )
+                libraryPreferences.categorizedDisplaySettings().set(
+                    (dbCategories + categories)
+                        .distinctBy { it.flags }
+                        .size > 1,
+                )
+            }
         }
     }
 }

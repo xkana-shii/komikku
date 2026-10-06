@@ -1,7 +1,5 @@
 package exh.debug
 
-import tachiyomi.data.Database
-
 import android.app.Application
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.backup.models.Backup
@@ -25,6 +23,7 @@ import mihon.core.migration.MigrationStrategyFactory
 import mihon.core.migration.Migrator
 import mihon.core.migration.migrations.migrations
 import mihon.domain.source.interactor.UpdateMangaFromRemote
+import tachiyomi.data.Database
 import tachiyomi.domain.manga.interactor.GetAllManga
 import tachiyomi.domain.manga.interactor.GetExhFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetFavorites

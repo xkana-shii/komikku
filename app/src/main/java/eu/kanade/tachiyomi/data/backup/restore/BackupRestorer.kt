@@ -18,10 +18,10 @@ import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
 import eu.kanade.tachiyomi.data.download.DownloadCache
-import exh.log.xLogE
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
-import kotlinx.coroutines.CoroutineScope
+import exh.log.xLogE
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -30,6 +30,8 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.data.Database
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,8 +40,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 // KMK -->
 @OptIn(ExperimentalAtomicApi::class)

@@ -1,10 +1,8 @@
 package eu.kanade.tachiyomi.data.sync
 
-import app.cash.sqldelight.async.coroutines.awaitAsList
-import tachiyomi.data.Database
-
 import android.content.Context
 import android.net.Uri
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
@@ -24,6 +22,7 @@ import logcat.LogPriority
 import logcat.logcat
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Chapters
+import tachiyomi.data.Database
 import tachiyomi.data.manga.MangaMapper.mapManga
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.manga.model.Manga
@@ -265,15 +264,15 @@ class SyncManager(
 
     private suspend fun isMangaDifferent(localManga: Manga, remoteManga: BackupManga): Boolean {
         val localChapters = database.chaptersQueries.getChaptersByMangaId(
-                localManga.id,
-                0,
-                // KMK -->
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                // KMK <--
-            ).awaitAsList()
+            localManga.id,
+            0,
+            // KMK -->
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            // KMK <--
+        ).awaitAsList()
         val localCategories = getCategories.await(localManga.id).map { it.order }
 
         if (areChaptersDifferent(localChapters, remoteManga.chapters)) {

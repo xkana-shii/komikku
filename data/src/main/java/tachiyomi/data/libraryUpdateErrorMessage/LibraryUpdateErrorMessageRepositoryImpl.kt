@@ -3,10 +3,9 @@ package tachiyomi.data.libraryUpdateErrorMessage
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
-
-import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.libraryUpdateErrorMessage.repository.LibraryUpdateErrorMessageRepository
 
@@ -18,14 +17,14 @@ class LibraryUpdateErrorMessageRepositoryImpl(
 
     override suspend fun getAll(): List<LibraryUpdateErrorMessage> {
         return database.libraryUpdateErrorMessageQueries.getAllErrorMessages(
-                LibraryUpdateErrorMessageMapper,
-            ).awaitAsList()
+            LibraryUpdateErrorMessageMapper,
+        ).awaitAsList()
     }
 
     override fun getAllAsFlow(): Flow<List<LibraryUpdateErrorMessage>> {
         return database.libraryUpdateErrorMessageQueries.getAllErrorMessages(
-                LibraryUpdateErrorMessageMapper,
-            ).subscribeToList()
+            LibraryUpdateErrorMessageMapper,
+        ).subscribeToList()
     }
 
     override suspend fun deleteAll() {
@@ -39,7 +38,7 @@ class LibraryUpdateErrorMessageRepositoryImpl(
     override suspend fun insert(libraryUpdateErrorMessage: LibraryUpdateErrorMessage): Long {
         return database.transactionWithResult {
             database.libraryUpdateErrorMessageQueries.insertAndGet(libraryUpdateErrorMessage.message).awaitAsOne()
-}
+        }
     }
 
     override suspend fun insertAll(

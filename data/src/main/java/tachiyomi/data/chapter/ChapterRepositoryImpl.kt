@@ -3,14 +3,13 @@ package tachiyomi.data.chapter
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
-import tachiyomi.data.Database
-import tachiyomi.data.subscribeToList
-
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.Database
 import tachiyomi.data.MemoColumnAdapter
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
@@ -94,16 +93,16 @@ class ChapterRepositoryImpl(
 
     override suspend fun getChapterByMangaId(mangaId: Long, applyFilter: Boolean): List<Chapter> {
         return database.chaptersQueries.getChaptersByMangaId(
-                mangaId,
-                applyFilter.toLong(),
-                // KMK -->
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                // KMK <--
-                ChapterMapper::mapChapter,
-            ).awaitAsList()
+            mangaId,
+            applyFilter.toLong(),
+            // KMK -->
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            // KMK <--
+            ChapterMapper::mapChapter,
+        ).awaitAsList()
     }
 
     override suspend fun getScanlatorsByMangaId(mangaId: Long): List<String> {
@@ -116,16 +115,16 @@ class ChapterRepositoryImpl(
 
     override suspend fun getBookmarkedChaptersByMangaId(mangaId: Long): List<Chapter> {
         return database.chaptersQueries.getBookmarkedChaptersByMangaId(
-                mangaId,
-                ChapterMapper::mapChapter,
-            ).awaitAsList()
+            mangaId,
+            ChapterMapper::mapChapter,
+        ).awaitAsList()
     }
 
     override suspend fun getFillermarkedChaptersByMangaId(mangaId: Long): List<Chapter> {
         return database.chaptersQueries.getFillermarkedChaptersByMangaId(
-                mangaId,
-                ChapterMapper::mapChapter,
-            ).awaitAsList()
+            mangaId,
+            ChapterMapper::mapChapter,
+        ).awaitAsList()
     }
 
     override suspend fun getChapterById(id: Long): Chapter? {
@@ -134,24 +133,24 @@ class ChapterRepositoryImpl(
 
     override suspend fun getChapterByMangaIdAsFlow(mangaId: Long, applyFilter: Boolean): Flow<List<Chapter>> {
         return database.chaptersQueries.getChaptersByMangaId(
-                mangaId,
-                applyFilter.toLong(),
-                // KMK -->
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                // KMK <--
-                ChapterMapper::mapChapter,
-            ).subscribeToList()
+            mangaId,
+            applyFilter.toLong(),
+            // KMK -->
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            // KMK <--
+            ChapterMapper::mapChapter,
+        ).subscribeToList()
     }
 
     override suspend fun getChapterByUrlAndMangaId(url: String, mangaId: Long): Chapter? {
         return database.chaptersQueries.getChapterByUrlAndMangaId(
-                url,
-                mangaId,
-                ChapterMapper::mapChapter,
-            ).awaitAsOneOrNull()
+            url,
+            mangaId,
+            ChapterMapper::mapChapter,
+        ).awaitAsOneOrNull()
     }
 
     // SY -->
@@ -161,16 +160,16 @@ class ChapterRepositoryImpl(
 
     override suspend fun getMergedChapterByMangaId(mangaId: Long, applyFilter: Boolean): List<Chapter> {
         return database.chaptersQueries.getMergedChaptersByMangaId(
-                mangaId,
-                applyFilter.toLong(),
-                // KMK -->
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                // KMK <--
-                ChapterMapper::mapChapter,
-            ).awaitAsList()
+            mangaId,
+            applyFilter.toLong(),
+            // KMK -->
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            // KMK <--
+            ChapterMapper::mapChapter,
+        ).awaitAsList()
     }
 
     override suspend fun getMergedChapterByMangaIdAsFlow(
@@ -178,16 +177,16 @@ class ChapterRepositoryImpl(
         applyFilter: Boolean,
     ): Flow<List<Chapter>> {
         return database.chaptersQueries.getMergedChaptersByMangaId(
-                mangaId,
-                applyFilter.toLong(),
-                // KMK -->
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                // KMK <--
-                ChapterMapper::mapChapter,
-            ).subscribeToList()
+            mangaId,
+            applyFilter.toLong(),
+            // KMK -->
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            // KMK <--
+            ChapterMapper::mapChapter,
+        ).subscribeToList()
     }
 
     override suspend fun getScanlatorsByMergeId(mangaId: Long): List<String> {

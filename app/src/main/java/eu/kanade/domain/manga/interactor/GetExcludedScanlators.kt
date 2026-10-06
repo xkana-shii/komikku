@@ -1,11 +1,10 @@
 package eu.kanade.domain.manga.interactor
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import tachiyomi.data.Database
-import tachiyomi.data.subscribeToList
-
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 
 // KMK -->
 

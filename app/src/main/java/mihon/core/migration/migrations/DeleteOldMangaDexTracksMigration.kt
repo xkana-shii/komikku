@@ -1,10 +1,9 @@
 package mihon.core.migration.migrations
 
-import tachiyomi.data.Database
-
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.data.Database
 
 // KMK -->
 

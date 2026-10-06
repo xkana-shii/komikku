@@ -1,9 +1,8 @@
 package tachiyomi.data.libraryUpdateError
 
+import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
-
-import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateErrorWithRelations
 import tachiyomi.domain.libraryUpdateError.repository.LibraryUpdateErrorWithRelationsRepository
 
@@ -15,8 +14,8 @@ class LibraryUpdateErrorWithRelationsRepositoryImpl(
 
     override fun subscribeAll(): Flow<List<LibraryUpdateErrorWithRelations>> {
         return database.libraryUpdateErrorViewQueries.errors(
-                libraryUpdateErrorWithRelationsMapper,
-            ).subscribeToList()
+            libraryUpdateErrorWithRelationsMapper,
+        ).subscribeToList()
     }
 }
 // KMK <--

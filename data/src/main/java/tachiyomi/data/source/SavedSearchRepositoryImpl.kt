@@ -3,10 +3,9 @@ package tachiyomi.data.source
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
-
-import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.SavedSearchRepository
 
@@ -52,17 +51,17 @@ class SavedSearchRepositoryImpl(
                         savedSearch.query,
                         savedSearch.filtersJson,
                     ).awaitAsOne()
-}
+                }
         }
     }
 
     override suspend fun update(savedSearch: SavedSearch) {
         database.saved_searchQueries.update(
-                name = savedSearch.name,
-                query = savedSearch.query,
-                filtersJson = savedSearch.filtersJson,
-                id = savedSearch.id,
-            )
+            name = savedSearch.name,
+            query = savedSearch.query,
+            filtersJson = savedSearch.filtersJson,
+            id = savedSearch.id,
+        )
     }
 
     override suspend fun insertAll(savedSearch: List<SavedSearch>) {

@@ -2,10 +2,9 @@ package tachiyomi.data.track
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
-
-import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.track.model.Track
 import tachiyomi.domain.track.repository.TrackRepository
 
@@ -43,9 +42,9 @@ class TrackRepositoryImpl(
 
     override suspend fun delete(mangaId: Long, trackerId: Long) {
         database.manga_syncQueries.delete(
-                mangaId = mangaId,
-                syncId = trackerId,
-            )
+            mangaId = mangaId,
+            syncId = trackerId,
+        )
     }
 
     override suspend fun insert(track: Track) {

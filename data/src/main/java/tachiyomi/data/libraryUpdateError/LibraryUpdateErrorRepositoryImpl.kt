@@ -1,10 +1,9 @@
 package tachiyomi.data.libraryUpdateError
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
+import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
-
-import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
 import tachiyomi.domain.libraryUpdateError.repository.LibraryUpdateErrorRepository
 

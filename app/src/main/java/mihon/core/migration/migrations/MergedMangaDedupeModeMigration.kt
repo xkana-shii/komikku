@@ -1,11 +1,10 @@
 package mihon.core.migration.migrations
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import tachiyomi.data.Database
-
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.data.Database
 import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.manga.interactor.UpdateMergedSettings
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate

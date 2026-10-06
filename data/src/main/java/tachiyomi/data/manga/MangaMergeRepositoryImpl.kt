@@ -2,12 +2,11 @@ package tachiyomi.data.manga
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
-import tachiyomi.data.Database
-import tachiyomi.data.subscribeToList
-
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
@@ -80,17 +79,17 @@ class MangaMergeRepositoryImpl(
 
     override suspend fun insert(reference: MergedMangaReference): Long? {
         return database.mergedQueries.insertReturningId(
-                infoManga = reference.isInfoManga,
-                getChapterUpdates = reference.getChapterUpdates,
-                chapterSortMode = reference.chapterSortMode.toLong(),
-                chapterPriority = reference.chapterPriority.toLong(),
-                downloadChapters = reference.downloadChapters,
-                mergeId = reference.mergeId!!,
-                mergeUrl = reference.mergeUrl,
-                mangaId = reference.mangaId,
-                mangaUrl = reference.mangaUrl,
-                mangaSource = reference.mangaSourceId,
-            ).awaitAsOneOrNull()
+            infoManga = reference.isInfoManga,
+            getChapterUpdates = reference.getChapterUpdates,
+            chapterSortMode = reference.chapterSortMode.toLong(),
+            chapterPriority = reference.chapterPriority.toLong(),
+            downloadChapters = reference.downloadChapters,
+            mergeId = reference.mergeId!!,
+            mergeUrl = reference.mergeUrl,
+            mangaId = reference.mangaId,
+            mangaUrl = reference.mangaUrl,
+            mangaSource = reference.mangaSourceId,
+        ).awaitAsOneOrNull()
     }
 
     override suspend fun insertAll(references: List<MergedMangaReference>) {

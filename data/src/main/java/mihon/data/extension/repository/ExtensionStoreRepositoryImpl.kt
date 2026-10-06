@@ -1,10 +1,6 @@
 package mihon.data.extension.repository
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import tachiyomi.data.Database
-import tachiyomi.data.subscribeToList
-import tachiyomi.data.subscribeToOne
-
 import eu.kanade.tachiyomi.extension.model.Extension
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -15,6 +11,9 @@ import mihon.data.extension.service.ExtensionStoreService
 import mihon.domain.extension.model.ExtensionStore
 import mihon.domain.extension.repository.ExtensionStoreRepository
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
+import tachiyomi.data.subscribeToOne
 
 // KMK -->
 
@@ -28,15 +27,15 @@ class ExtensionStoreRepositoryImpl(
 
     override suspend fun insertFromPreference(indexUrl: String, name: String) {
         database.extension_storeQueries.upsert(
-                indexUrl = indexUrl,
-                name = name,
-                badgeLabel = name,
-                signingKey = "NO_SIGNING_KEY",
-                contactWebsite = indexUrl,
-                contactDiscord = null,
-                isLegacy = false,
-                extensionListUrl = null,
-            )
+            indexUrl = indexUrl,
+            name = name,
+            badgeLabel = name,
+            signingKey = "NO_SIGNING_KEY",
+            contactWebsite = indexUrl,
+            contactDiscord = null,
+            isLegacy = false,
+            extensionListUrl = null,
+        )
     }
 
     override suspend fun refreshAll() {
@@ -64,15 +63,15 @@ class ExtensionStoreRepositoryImpl(
 
     private suspend fun upsert(store: ExtensionStore) {
         database.extension_storeQueries.upsert(
-                indexUrl = store.indexUrl,
-                name = store.name,
-                badgeLabel = store.badgeLabel,
-                signingKey = store.signingKey,
-                contactWebsite = store.contact.website,
-                contactDiscord = store.contact.discord,
-                isLegacy = store.isLegacy,
-                extensionListUrl = store.extensionListUrl,
-            )
+            indexUrl = store.indexUrl,
+            name = store.name,
+            badgeLabel = store.badgeLabel,
+            signingKey = store.signingKey,
+            contactWebsite = store.contact.website,
+            contactDiscord = store.contact.discord,
+            isLegacy = store.isLegacy,
+            extensionListUrl = store.extensionListUrl,
+        )
     }
 
     override suspend fun fetchExtensions(
@@ -114,7 +113,7 @@ class ExtensionStoreRepositoryImpl(
 
     override fun getCountAsFlow(): Flow<Long> {
         return database.extension_storeQueries
-                .getCount().subscribeToOne()
+            .getCount().subscribeToOne()
     }
 
     override suspend fun remove(indexUrl: String) {
