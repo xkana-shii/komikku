@@ -81,7 +81,9 @@ fun UpdateScreen(
     collapseToggle: (key: String) -> Unit,
     // KMK <--
 ) {
-    BackHandler(enabled = state.selectionMode, onBack = { onSelectAll(false) })
+    BackHandler(enabled = state.selectionMode) {
+        onSelectAll(false)
+    }
 
     Scaffold(
         topBar = { scrollBehavior ->
