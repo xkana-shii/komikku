@@ -30,8 +30,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku.kns"
 
-        versionCode = 139
-        versionName = "1.21.25"
+        versionCode = 138
+        versionName = "1.22.0"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
@@ -196,7 +196,7 @@ baselineProfile {
 androidComponents.finalizeDsl { android ->
     // The profile plugin copies Kotlin source providers as "provider(?)" with this Kotlin/AGP
     // combination. Resolve the original directories explicitly; '?' is invalid on Windows.
-    android.sourceSets.filter { it.name.startsWith("nonMinified") || it.name.startsWith("benchmark") && it.name != "benchmark" }
+    android.sourceSets.filter { it.name.startsWith("nonMinified") || (it.name.startsWith("benchmark") && it.name != "benchmark") }
         .forEach { sourceSet ->
             val originalName = sourceSet.name.removePrefix("nonMinified").removePrefix("benchmark")
                 .replaceFirstChar(Char::lowercaseChar)
