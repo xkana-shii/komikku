@@ -3,13 +3,12 @@ package tachiyomi.data.history
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
-import tachiyomi.data.Database
-import tachiyomi.data.subscribeToList
-
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.history.model.History
 import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.history.model.HistoryWithRelations
@@ -31,28 +30,28 @@ class HistoryRepositoryImpl(
         // KMK <--
     ): Flow<List<HistoryWithRelations>> {
         return database.historyViewQueries.history(
-                // KMK -->
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                unfinishedManga?.toLong(),
-                unfinishedChapter,
-                nonLibraryEntries,
-                // KMK <--
-                query,
-                HistoryMapper::mapHistoryWithRelations,
-            ).subscribeToList()
+            // KMK -->
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            unfinishedManga?.toLong(),
+            unfinishedChapter,
+            nonLibraryEntries,
+            // KMK <--
+            query,
+            HistoryMapper::mapHistoryWithRelations,
+        ).subscribeToList()
     }
 
     override suspend fun getLastHistory(): HistoryWithRelations? {
         return database.historyViewQueries.getLatestHistory(
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                HistoryMapper::mapHistoryWithRelations,
-            ).awaitAsOneOrNull()
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            HistoryMapper::mapHistoryWithRelations,
+        ).awaitAsOneOrNull()
     }
 
     override suspend fun getTotalReadDuration(): Long {
@@ -96,10 +95,10 @@ class HistoryRepositoryImpl(
     override suspend fun upsertHistory(historyUpdate: HistoryUpdate) {
         try {
             database.historyQueries.upsert(
-                    historyUpdate.chapterId,
-                    historyUpdate.readAt,
-                    historyUpdate.sessionReadDuration,
-                )
+                historyUpdate.chapterId,
+                historyUpdate.readAt,
+                historyUpdate.sessionReadDuration,
+            )
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
         }

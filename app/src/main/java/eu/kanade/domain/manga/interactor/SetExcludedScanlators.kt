@@ -5,7 +5,6 @@ import tachiyomi.data.Database
 
 // KMK -->
 
-
 class SetExcludedScanlators(
     private val database: Database,
 ) {

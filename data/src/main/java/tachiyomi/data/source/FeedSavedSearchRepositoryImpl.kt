@@ -2,10 +2,9 @@ package tachiyomi.data.source
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
-import tachiyomi.data.subscribeToList
-
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearchUpdate
 import tachiyomi.domain.source.model.SavedSearch
@@ -71,7 +70,7 @@ class FeedSavedSearchRepositoryImpl(
                         feedSavedSearch.savedSearch,
                         feedSavedSearch.global,
                     ).awaitAsOne()
-}
+                }
         }
     }
 

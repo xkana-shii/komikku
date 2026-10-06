@@ -2,11 +2,10 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
-import tachiyomi.data.Database
-
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import exh.EXHMigrations
 import exh.util.nullIfBlank
+import tachiyomi.data.Database
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -63,7 +62,7 @@ class FeedRestorer(
                             filtersJson = backupFeed.savedSearch.filterList.nullIfBlank()
                                 ?.takeUnless { it == "[]" },
                         ).awaitAsOne()
-}
+                    }
                 }
 
                 database.feed_saved_searchQueries.insert(

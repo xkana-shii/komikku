@@ -2,8 +2,6 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
-import tachiyomi.data.Database
-
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
@@ -14,6 +12,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
 import eu.kanade.tachiyomi.data.backup.models.BackupTracking
 import exh.EXHMigrations
 import exh.source.MERGED_SOURCE_ID
+import tachiyomi.data.Database
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.manga.MangaMapper
@@ -358,7 +357,7 @@ class MangaRestorer(
                 notes = manga.notes,
                 memo = manga.memo,
             ).awaitAsOne()
-}
+        }
     }
 
     private suspend fun restoreMangaDetails(
@@ -563,23 +562,23 @@ class MangaRestorer(
                             backupMergedMangaReference.mangaSourceId,
                             MangaMapper::mapManga,
                         )
-                        // KMK -->
-                        .awaitAsList().firstOrNull()
-                        // KMK <--
-                        ?: return@forEach
+                            // KMK -->
+                            .awaitAsList().firstOrNull()
+                            // KMK <--
+                            ?: return@forEach
                     backupMergedMangaReference.getMergedMangaReference().run {
                         database.mergedQueries.insert(
-                                infoManga = isInfoManga,
-                                getChapterUpdates = getChapterUpdates,
-                                chapterSortMode = chapterSortMode.toLong(),
-                                chapterPriority = chapterPriority.toLong(),
-                                downloadChapters = downloadChapters,
-                                mergeId = mergeMangaId,
-                                mergeUrl = mergeUrl,
-                                mangaId = mergedManga.id,
-                                mangaUrl = mangaUrl,
-                                mangaSource = mangaSourceId,
-                            )
+                            infoManga = isInfoManga,
+                            getChapterUpdates = getChapterUpdates,
+                            chapterSortMode = chapterSortMode.toLong(),
+                            chapterPriority = chapterPriority.toLong(),
+                            downloadChapters = downloadChapters,
+                            mergeId = mergeMangaId,
+                            mergeUrl = mergeUrl,
+                            mangaId = mergedManga.id,
+                            mangaUrl = mangaUrl,
+                            mangaSource = mangaSourceId,
+                        )
                     }
                 }
             }

@@ -2,8 +2,6 @@ package eu.kanade.tachiyomi.data.backup.create.creators
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
-import tachiyomi.data.Database
-
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupFlatMetadata
@@ -16,6 +14,7 @@ import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import exh.source.MERGED_SOURCE_ID
 import exh.source.getMainSource
+import tachiyomi.data.Database
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.history.interactor.GetHistory
@@ -76,16 +75,16 @@ class MangaBackupCreator(
         if (options.chapters) {
             // Backup all the chapters
             database.chaptersQueries.getChaptersByMangaId(
-                    mangaId = manga.id,
-                    applyFilter = 0, // false
-                    // KMK -->
-                    Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                    Manga.CHAPTER_SHOW_BOOKMARKED,
-                    Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                    Manga.CHAPTER_SHOW_FILLERMARKED,
-                    // KMK <--
-                    mapper = backupChapterMapper,
-                ).awaitAsList()
+                mangaId = manga.id,
+                applyFilter = 0, // false
+                // KMK -->
+                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+                Manga.CHAPTER_SHOW_BOOKMARKED,
+                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+                Manga.CHAPTER_SHOW_FILLERMARKED,
+                // KMK <--
+                mapper = backupChapterMapper,
+            ).awaitAsList()
                 .takeUnless(List<BackupChapter>::isEmpty)
                 ?.let { mangaObject.chapters = it }
         }

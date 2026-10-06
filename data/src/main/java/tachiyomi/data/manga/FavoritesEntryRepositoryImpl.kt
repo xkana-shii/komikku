@@ -1,10 +1,9 @@
 package tachiyomi.data.manga
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import tachiyomi.data.Database
-
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.Database
 import tachiyomi.domain.manga.model.FavoriteEntry
 import tachiyomi.domain.manga.model.FavoriteEntryAlternative
 import tachiyomi.domain.manga.repository.FavoritesEntryRepository
@@ -38,11 +37,11 @@ class FavoritesEntryRepositoryImpl(
     override suspend fun addAlternative(favoriteEntryAlternative: FavoriteEntryAlternative) {
         try {
             database.eh_favoritesQueries.addAlternative(
-                    otherGid = favoriteEntryAlternative.otherGid,
-                    otherToken = favoriteEntryAlternative.otherToken,
-                    gid = favoriteEntryAlternative.gid,
-                    token = favoriteEntryAlternative.token,
-                )
+                otherGid = favoriteEntryAlternative.otherGid,
+                otherToken = favoriteEntryAlternative.otherToken,
+                gid = favoriteEntryAlternative.gid,
+                token = favoriteEntryAlternative.token,
+            )
         } catch (e: Exception) {
             logcat(LogPriority.INFO, e)
         }

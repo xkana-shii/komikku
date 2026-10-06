@@ -1,11 +1,10 @@
 package mihon.core.migration
 
-import tachiyomi.data.Database
-
 import eu.kanade.domain.source.service.SourcePreferences
 import kotlinx.coroutines.runBlocking
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getAndSet
+import tachiyomi.data.Database
 
 // KMK -->
 

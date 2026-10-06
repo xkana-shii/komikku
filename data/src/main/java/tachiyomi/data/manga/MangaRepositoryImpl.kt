@@ -3,17 +3,11 @@ package tachiyomi.data.manga
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
-import tachiyomi.data.subscribeToList
-import tachiyomi.data.subscribeToOne
-import tachiyomi.data.subscribeToOneOrNull
-
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import kotlin.coroutines.EmptyCoroutineContext
-import kotlinx.coroutines.flow.filter
-
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.transform
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
@@ -21,6 +15,9 @@ import tachiyomi.data.Database
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
+import tachiyomi.data.subscribeToList
+import tachiyomi.data.subscribeToOne
+import tachiyomi.data.subscribeToOneOrNull
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
@@ -28,6 +25,7 @@ import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.repository.MangaRepository
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.coroutines.EmptyCoroutineContext
 
 // KMK -->
 
@@ -45,18 +43,18 @@ class MangaRepositoryImpl(
 
     override suspend fun getMangaByUrlAndSourceId(url: String, sourceId: Long): Manga? {
         return database.mangasQueries.getMangaByUrlAndSource(
-                url,
-                sourceId,
-                MangaMapper::mapManga,
-            ).awaitAsOneOrNull()
+            url,
+            sourceId,
+            MangaMapper::mapManga,
+        ).awaitAsOneOrNull()
     }
 
     override fun getMangaByUrlAndSourceIdAsFlow(url: String, sourceId: Long): Flow<Manga?> {
         return database.mangasQueries.getMangaByUrlAndSource(
-                url,
-                sourceId,
-                MangaMapper::mapManga,
-            ).subscribeToOneOrNull()
+            url,
+            sourceId,
+            MangaMapper::mapManga,
+        ).subscribeToOneOrNull()
     }
 
     override suspend fun getFavorites(): List<Manga> {

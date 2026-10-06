@@ -1,11 +1,10 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import tachiyomi.data.Database
-
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import exh.EXHMigrations
 import exh.util.nullIfBlank
+import tachiyomi.data.Database
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -23,7 +22,7 @@ class SavedSearchRestorer(
             val currentSavedSearches = // KMK -->
                 // database.saved_searchQueries.selectNamesAndSources()
                 database.saved_searchQueries.selectAll().awaitAsList()
-                // KMK <--
+            // KMK <--
 
             backupSavedSearches.map {
                 // KMK -->
