@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.data.Chapters
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
+import tachiyomi.data.History
 import tachiyomi.data.Mangas
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
@@ -55,7 +56,7 @@ class MangaChapterStatsTest {
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
         db = Database(
             driver = driver,
-            historyAdapter = tachiyomi.data.History.Adapter(last_readAdapter = DateColumnAdapter),
+            historyAdapter = History.Adapter(last_readAdapter = DateColumnAdapter),
             mangasAdapter = Mangas.Adapter(
                 genreAdapter = StringListColumnAdapter,
                 update_strategyAdapter = UpdateStrategyColumnAdapter,

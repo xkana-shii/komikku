@@ -7,13 +7,13 @@ build type remains available to `.github/workflows/build_benchmark.yml`.
 Generate profiles on the configured Pixel 6/API 34 managed device:
 
 ```sh
-./gradlew :app:generateReleaseBaselineProfile
+./gradlew :app:generateBaselineProfile
 ```
 
 Use an already connected Android device or emulator instead:
 
 ```sh
-./gradlew :app:generateReleaseBaselineProfile -PbaselineProfile.useConnectedDevices=true
+./gradlew :app:generateBaselineProfile '-PbaselineProfile.useConnectedDevices=true'
 ```
 
 Use an English device locale for the navigation selectors. Generation covers
@@ -21,6 +21,10 @@ cold startup and Library, Updates, History, Browse/Extensions, and More navigati
 Benchmark/non-minified builds suppress updater, onboarding, and changelog dialogs.
 Generated output belongs in `app/src/main/baselineProfiles`; do not copy profiles
 from TachiyomiSY or fabricate entries.
+
+On Windows, use `gradlew.bat` and keep the dotted Gradle property quoted in
+PowerShell. The app build resolves the Kotlin source directories copied by the
+profile plugin explicitly to avoid an invalid literal `provider(?)` path.
 
 Run timing comparisons on a physical device:
 

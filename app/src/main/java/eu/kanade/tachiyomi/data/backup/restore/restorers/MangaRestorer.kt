@@ -108,9 +108,12 @@ class MangaRestorer(
                 // SY -->
                 mergedMangaReferences = backupManga.mergedMangaReferences,
                 flatMetadata = backupManga.flatMetadata,
-                customManga = backupManga.getCustomMangaInfo(),
                 // SY <--
             )
+
+            // KMK --> Custom metadata lives outside SQLite; don't persist IDs from a rolled-back batch.
+            afterCommit { restoreEditedInfo(backupManga.getCustomMangaInfo()?.copy(id = restoredManga.id)) }
+            // KMK <--
 
             if (isSync) {
                 database.mangasQueries.resetIsSyncing()
@@ -150,6 +153,8 @@ class MangaRestorer(
             updateStrategy = newer.updateStrategy,
             initialized = this.initialized || newer.initialized,
             version = newer.version,
+            notes = newer.notes,
+            memo = newer.memo,
             lastUpdate = newer.lastUpdate.takeIf { it != 0L } ?: lastUpdate,
             nextUpdate = newer.nextUpdate.takeIf { it != 0L } ?: nextUpdate,
             fetchInterval = newer.fetchInterval.takeIf { it != 0 } ?: fetchInterval,
@@ -371,7 +376,6 @@ class MangaRestorer(
         // SY -->
         mergedMangaReferences: List<BackupMergedMangaReference>,
         flatMetadata: BackupFlatMetadata?,
-        customManga: CustomMangaInfo?,
         // SY <--
     ): Manga {
         restoreCategories(manga, categories, backupCategories)
@@ -385,7 +389,6 @@ class MangaRestorer(
         // SY -->
         restoreMergedMangaReferencesForManga(manga.id, mergedMangaReferences)
         flatMetadata?.let { restoreFlatMetadata(manga.id, it) }
-        restoreEditedInfo(customManga?.copy(id = manga.id))
         // SY <--
 
         return manga

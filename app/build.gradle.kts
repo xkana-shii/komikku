@@ -201,8 +201,10 @@ androidComponents.finalizeDsl { android ->
             val originalName = sourceSet.name.removePrefix("nonMinified").removePrefix("benchmark")
                 .replaceFirstChar(Char::lowercaseChar)
             val original = android.sourceSets.findByName(originalName) ?: return@forEach
-            sourceSet.kotlin.directories.removeAll { it.endsWith("provider(?)") }
-            sourceSet.kotlin.directories.addAll(original.kotlin.directories)
+            @Suppress("DEPRECATION")
+            sourceSet.kotlin.setSrcDirs(
+                (sourceSet.kotlin.directories + original.kotlin.directories).filterNot { it.endsWith("provider(?)") },
+            )
         }
 }
 // KMK <--

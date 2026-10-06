@@ -456,7 +456,7 @@ class LibraryScreenModel(
 
         // KMK -->
         val filterFnDownloaded: (LibraryItem) -> Boolean = {
-            applyFilter(filterDownloaded) { it.isLocal || it.downloadCount > 0 }
+            applyFilter(filterDownloaded) { it.isDownloaded }
         }
         // KMK <--
 
@@ -797,11 +797,15 @@ class LibraryScreenModel(
                     downloadCount = downloadCount,
                     unreadCount = manga.unreadCount,
                     isLocal = manga.manga.isLocal(),
-                    badges = LibraryItem.Badges(
-                        downloadCount = if (preferences.downloadBadge) downloadCount else 0,
-                        unreadCount = if (preferences.unreadBadge) manga.unreadCount else 0,
-                        isLocal = preferences.localBadge && manga.manga.isLocal(),
-                        sourceLanguage = if (preferences.languageBadge) source.lang else "",
+                    badges = libraryBadges(
+                        downloadCount = downloadCount,
+                        unreadCount = manga.unreadCount,
+                        isLocal = manga.manga.isLocal(),
+                        downloadBadge = preferences.downloadBadge,
+                        unreadBadge = preferences.unreadBadge,
+                        localBadge = preferences.localBadge,
+                        languageBadge = preferences.languageBadge,
+                        sourceLanguage = source.lang,
                     ),
                     // KMK <--
                     // KMK -->

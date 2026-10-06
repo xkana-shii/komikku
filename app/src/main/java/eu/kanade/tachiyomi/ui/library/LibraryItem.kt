@@ -23,6 +23,8 @@ data class LibraryItem(
     val id: Long = libraryManga.id
 
     // KMK -->
+    val isDownloaded: Boolean get() = isLocal || downloadCount > 0
+
     data class Badges(
         val downloadCount: Long = 0,
         val unreadCount: Long = 0,
@@ -81,3 +83,21 @@ data class LibraryItem(
     //     }
     // }
 }
+
+// KMK -->
+internal fun libraryBadges(
+    downloadCount: Long,
+    unreadCount: Long,
+    isLocal: Boolean,
+    downloadBadge: Boolean,
+    unreadBadge: Boolean,
+    localBadge: Boolean,
+    languageBadge: Boolean,
+    sourceLanguage: String,
+) = LibraryItem.Badges(
+    downloadCount = if (downloadBadge) downloadCount else 0,
+    unreadCount = if (unreadBadge) unreadCount else 0,
+    isLocal = localBadge && isLocal,
+    sourceLanguage = if (languageBadge) sourceLanguage else "",
+)
+// KMK <--

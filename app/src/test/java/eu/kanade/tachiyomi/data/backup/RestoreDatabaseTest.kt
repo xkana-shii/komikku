@@ -76,6 +76,20 @@ class RestoreDatabaseTest {
     fun tearDown() = driver.close()
 
     @Test
+    fun `SQLDelight rolls back siblings when a nested failure is caught inside the outer transaction`() = runBlocking<Unit> {
+        db.transaction {
+            db.categoriesQueries.insert("before", 1, 0, 0)
+            try {
+                db.transaction { error("nested failure") }
+            } catch (_: IllegalStateException) {
+                // This was the old batching strategy: the outer transaction is already failed.
+            }
+            db.categoriesQueries.insert("after", 2, 0, 0)
+        }
+        db.categoriesQueries.getCategories().awaitAsList().filter { it.id > 0 } shouldBe emptyList()
+    }
+
+    @Test
     fun `failed nested restore does not discard its successful neighbours`() = runBlocking<Unit> {
         val errors = mutableListOf<String>()
         db.restoreBatch(
@@ -131,17 +145,27 @@ class RestoreDatabaseTest {
         val category = BackupCategory("Reading", 1)
         val backup = BackupManga(
             source = 1, url = "/manga", title = "Original", author = "Original author",
+            customTitle = "Initial override",
             nextUpdate = 123456, fetchInterval = 7, version = 1,
             categories = listOf(1), chapters = listOf(BackupChapter("/chapter", "Original chapter", version = 1)),
             history = listOf(BackupHistory("/chapter", 1000, 42)),
             tracking = listOf(BackupTracking(syncId = 1, libraryId = 2, mediaId = 3, title = "Tracked")),
         )
+        try {
+            db.transaction {
+                restorer.restore(backup, listOf(category))
+                error("later entry fails")
+            }
+        } catch (_: IllegalStateException) {
+            customInfo shouldBe emptyMap()
+        }
         restorer.restore(backup, listOf(category))
         val mangaId = db.mangasQueries.getAll().awaitAsList().single()._id
         val chapterId = chapters.await(mangaId).single().id
         backup.title = "Renamed"
         backup.author = "Changed author"
         backup.version = 5
+        backup.notes = "Synced note"
         backup.chapterFlags = 123
         backup.viewer_flags = 456
         backup.customTitle = "My title"
@@ -154,6 +178,7 @@ class RestoreDatabaseTest {
         manga.chapter_flags shouldBe 123
         manga.viewer shouldBe 456
         manga.version shouldBe 5
+        manga.notes shouldBe "Synced note"
         customInfo[mangaId]?.title shouldBe "My title"
         val restoredChapter = chapters.await(mangaId).single()
         restoredChapter.id shouldBe chapterId
