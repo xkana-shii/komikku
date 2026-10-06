@@ -151,7 +151,7 @@ templates). Their note is `AI checked <date>: omitted - version bump only (<file
 
 | Key | Meaning |
 |-----|---------|
-| `target_branch` | Branch to check for already-picked commits (`master`) |
+| `target_branch` | Branch to check for already-picked commits (`main`) |
 | `since` | First commit date to include, `YYYY-MM-DD` (committer date). Required, and specific to each repo (Komikku: `2024-01-01`); `--since` overrides it |
 | `output` | Output Markdown path, relative to the repo root (or absolute) |
 | `exclude_identity_regex` | Case-insensitive regex matched against author, committer and co-authors (Komikku: `renovate`). Empty = exclude nothing |
