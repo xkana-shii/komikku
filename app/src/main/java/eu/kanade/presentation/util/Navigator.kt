@@ -85,16 +85,27 @@ fun ScreenTransition(
     modifier: Modifier = Modifier,
     content: ScreenTransitionContent = { it.Content() },
 ) {
+    // KMK -->
+    // Registered before the content so back handlers inside screens (and nested navigators) keep priority even
+    // when everything is composed at once, e.g. after the activity is recreated.
+    BackHandler(enabled = navigator.canPop, onBack = navigator::pop)
+    // KMK <--
+
     AnimatedContent(
         targetState = navigator.lastItem,
         transitionSpec = transition,
         modifier = modifier,
         label = "transition",
+        // KMK -->
+        // Key children by the same key saveableState uses, like Voyager's ScreenTransition. Keying by equality
+        // lets two screens sharing a key be composed at once (e.g. a restored copy of an object screen and the
+        // object itself), crashing with "Key <screen.key>:transition was used multiple times".
+        contentKey = { it.key },
+        // KMK <--
     ) { screen ->
         navigator.saveableState("transition", screen) {
             content(screen)
         }
     }
-
-    BackHandler(enabled = navigator.canPop, onBack = navigator::pop)
+    // KMK: BackHandler moved above AnimatedContent
 }
