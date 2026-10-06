@@ -66,11 +66,11 @@ class FeedSavedSearchRepositoryImpl(
                 // KMK <--
                 // KMK -->
                 ?: database.feed_saved_searchQueries.insertReturningId(
-                        feedSavedSearch.source,
-                        feedSavedSearch.savedSearch,
-                        feedSavedSearch.global,
+                    feedSavedSearch.source,
+                    feedSavedSearch.savedSearch,
+                    feedSavedSearch.global,
                 ).awaitAsOne()
-                // KMK <--
+            // KMK <--
         }
     }
 

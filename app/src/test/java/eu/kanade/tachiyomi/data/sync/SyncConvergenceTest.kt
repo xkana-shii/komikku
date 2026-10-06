@@ -16,7 +16,8 @@ import org.junit.jupiter.api.Test
 // KMK -->
 class SyncConvergenceTest {
     private val service = object : SyncService(
-        mockk(), Json,
+        mockk(),
+        Json,
         mockk<SyncPreferences> { every { uniqueDeviceID() } returns "test-device" },
     ) {
         override suspend fun doSync(syncData: SyncData): Backup? = syncData.backup
@@ -26,7 +27,11 @@ class SyncConvergenceTest {
     @Test
     fun `mutable metadata does not split identities and repeated merges converge`() {
         val local = BackupManga(
-            source = 1, url = "/same", title = "Local title", author = "Local author", version = 1,
+            source = 1,
+            url = "/same",
+            title = "Local title",
+            author = "Local author",
+            version = 1,
             chapters = listOf(BackupChapter("/chapter", "Old name", chapterNumber = 1F, version = 1)),
         )
         val remote = BackupManga(

@@ -54,7 +54,9 @@ class RestoreDatabaseTest {
     private val customInfo = mutableMapOf<Long, CustomMangaInfo>()
     private val customRepository = object : CustomMangaRepository {
         override fun get(mangaId: Long) = customInfo[mangaId]
-        override fun set(mangaInfo: CustomMangaInfo) { customInfo[mangaInfo.id] = mangaInfo }
+        override fun set(mangaInfo: CustomMangaInfo) {
+            customInfo[mangaInfo.id] = mangaInfo
+        }
     }
 
     @BeforeEach

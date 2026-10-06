@@ -54,8 +54,8 @@ class FeedRestorer(
                     }?._id
 
                     // KMK -->
-                    existedSavedSearchId ?:
-                        // Just in case, trying to create the associated saved_search
+                    existedSavedSearchId
+                        ?: // Just in case, trying to create the associated saved_search
                         database.saved_searchQueries.insertReturningId(
                             source = backupFeed.source,
                             name = backupFeed.savedSearch.name,

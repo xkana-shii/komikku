@@ -7,13 +7,13 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -29,8 +29,8 @@ import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.chapter.ChapterMapper
 import tachiyomi.data.chapter.ChapterRepositoryImpl
 import tachiyomi.domain.chapter.model.ChapterUpdate
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.library.model.LibraryManga
+import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.repository.CustomMangaRepository
 import uy.kohesive.injekt.Injekt
@@ -193,7 +193,10 @@ class MangaChapterStatsTest {
         driver.executeQuery(
             null,
             "SELECT count FROM refill_audit",
-            mapper = { cursor -> cursor.next(); QueryResult.Value(cursor.getLong(0)!!) },
+            mapper = { cursor ->
+                cursor.next()
+                QueryResult.Value(cursor.getLong(0)!!)
+            },
             parameters = 0,
         ).value shouldBe 0
     }
