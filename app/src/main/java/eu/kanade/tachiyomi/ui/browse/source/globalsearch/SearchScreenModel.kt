@@ -6,7 +6,6 @@ import androidx.compose.runtime.produceState
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.Source
@@ -17,8 +16,8 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toPersistentMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.collectLatest
@@ -37,7 +36,6 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.util.concurrent.Executors
 
 abstract class SearchScreenModel(
     initialState: State = State(),
@@ -49,7 +47,9 @@ abstract class SearchScreenModel(
     private val preferences: SourcePreferences = Injekt.get(),
 ) : StateScreenModel<SearchScreenModel.State>(initialState) {
 
-    private val coroutineDispatcher = Executors.newFixedThreadPool(5).asCoroutineDispatcher()
+    // KMK -->
+    private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(5)
+    // KMK <--
     private var searchJob: Job? = null
 
     private val enabledLanguages = sourcePreferences.enabledLanguages().get()
@@ -218,7 +218,8 @@ abstract class SearchScreenModel(
             )
         }
 
-        searchJob = ioCoroutineScope.launch {
+        // KMK -->
+        searchJob = screenModelScope.launch {
             sources.map { source ->
                 async {
                     if (state.value.items[source] !is SearchItemResult.Loading) {
@@ -247,6 +248,7 @@ abstract class SearchScreenModel(
             }
                 .awaitAll()
         }
+        // KMK <--
     }
 
     private fun updateItems(items: Map<Source, SearchItemResult>) {
@@ -260,7 +262,14 @@ abstract class SearchScreenModel(
     }
 
     private fun updateItem(source: Source, result: SearchItemResult) {
-        updateItems(state.value.items + (source to result))
+        // KMK -->
+        mutableState.update { currentState ->
+            val newItems = currentState.items + (source to result)
+            currentState.copy(
+                items = newItems.toSortedMap(sortComparator(newItems)).toPersistentMap(),
+            )
+        }
+        // KMK <--
     }
 
     fun setMigrateDialog(currentId: Long, target: Manga) {
