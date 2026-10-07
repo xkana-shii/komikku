@@ -91,22 +91,20 @@ refill:
 INSERT INTO manga_chapter_stats
 SELECT
     M._id,
-    count(C._id),
-    coalesce(sum(C.read), 0),
-    coalesce(sum(C.bookmark), 0),
-    coalesce(sum(CASE WHEN C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-    coalesce(max(C.date_upload), 0),
-    coalesce(max(C.date_fetch), 0),
-    coalesce(max(H.last_read), 0),
-    coalesce(sum(C.fillermark), 0),
-    coalesce(sum(CASE WHEN C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0)
+    count(CASE WHEN ES.manga_id IS NULL THEN C._id END),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.read ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.bookmark ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
+    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.date_upload ELSE 0 END), 0),
+    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.date_fetch ELSE 0 END), 0),
+    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN H.last_read ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.fillermark ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0)
 FROM mangas M
 LEFT JOIN chapters C
 ON C.manga_id = M._id
-AND NOT EXISTS (
-    SELECT 1 FROM excluded_scanlators ES
-    WHERE ES.manga_id = C.manga_id AND ES.scanlator = C.scanlator
-)
+LEFT JOIN excluded_scanlators ES
+ON ES.manga_id = C.manga_id AND ES.scanlator = C.scanlator
 LEFT JOIN history H
 ON H.chapter_id = C._id
 WHERE M.favorite = 1 AND M.source <> 6969

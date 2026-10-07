@@ -14,8 +14,6 @@ import exh.EXHMigrations
 import exh.source.MERGED_SOURCE_ID
 import kotlinx.serialization.json.JsonObject
 import tachiyomi.data.Database
-import tachiyomi.data.MemoColumnAdapter
-import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.category.interactor.GetCategories
@@ -171,7 +169,7 @@ class MangaRestorer(
                 artist = manga.ogArtist,
                 author = manga.ogAuthor,
                 description = manga.ogDescription,
-                genre = manga.ogGenre?.joinToString(separator = ", "),
+                genre = manga.ogGenre,
                 title = manga.ogTitle,
                 status = manga.ogStatus,
                 thumbnailUrl = manga.ogThumbnailUrl,
@@ -186,11 +184,11 @@ class MangaRestorer(
                 coverLastModified = manga.coverLastModified,
                 dateAdded = manga.dateAdded,
                 mangaId = manga.id,
-                updateStrategy = manga.updateStrategy.let(UpdateStrategyColumnAdapter::encode),
+                updateStrategy = manga.updateStrategy,
                 version = manga.version,
                 isSyncing = 1,
                 notes = manga.notes,
-                memo = manga.memo.let(MemoColumnAdapter::encode),
+                memo = manga.memo,
             )
         }
         return manga
@@ -342,7 +340,7 @@ class MangaRestorer(
                     chapterId = chapter.id,
                     version = chapter.version,
                     isSyncing = 1,
-                    memo = chapter.memo.let(MemoColumnAdapter::encode),
+                    memo = chapter.memo,
                 )
             }
         }
