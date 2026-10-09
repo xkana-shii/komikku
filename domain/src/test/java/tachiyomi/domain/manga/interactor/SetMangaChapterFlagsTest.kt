@@ -1,3 +1,4 @@
+
 package tachiyomi.domain.manga.interactor
 
 import io.kotest.matchers.shouldBe
@@ -55,9 +56,9 @@ class SetMangaChapterFlagsTest {
     @Test
     fun `per manga update uses the same combined flags and preserves repository result`() = runTest {
         val expected = subject.buildAllFlags(4, 8, 32, 128, 1024, 1, 1048576)
-        coEvery { repository.update(any()) } returns false
-        subject.awaitSetAllFlags(42, 4, 8, 32, 128, 1024, 1, 1048576) shouldBe false
-        coVerify(exactly = 1) { repository.update(MangaUpdate(id = 42, chapterFlags = expected)) }
+        coEvery { repository.updateAll(any()) } returns false
+        subject.awaitSetAllFlags(listOf(42L), 4, 8, 32, 128, 1024, 1, 1048576) shouldBe false
+        coVerify(exactly = 1) { repository.updateAll(listOf(MangaUpdate(id = 42, chapterFlags = expected))) }
         confirmVerified(repository)
     }
 }
