@@ -79,7 +79,7 @@ class SetMangaChapterFlags(
     }
 
     suspend fun awaitSetAllFlags(
-        mangaId: Long,
+        mangaIds: List<Long>,
         unreadFilter: Long,
         downloadedFilter: Long,
         bookmarkedFilter: Long,
@@ -88,20 +88,16 @@ class SetMangaChapterFlags(
         sortingDirection: Long,
         displayMode: Long,
     ): Boolean {
-        return mangaRepository.update(
-            MangaUpdate(
-                id = mangaId,
-                chapterFlags = buildAllFlags(
-                    unreadFilter = unreadFilter,
-                    downloadedFilter = downloadedFilter,
-                    bookmarkedFilter = bookmarkedFilter,
-                    fillermarkedFilter = fillermarkedFilter,
-                    sortingMode = sortingMode,
-                    sortingDirection = sortingDirection,
-                    displayMode = displayMode,
-                ),
-            ),
+        val flags = buildAllFlags(
+            unreadFilter = unreadFilter,
+            downloadedFilter = downloadedFilter,
+            bookmarkedFilter = bookmarkedFilter,
+            fillermarkedFilter = fillermarkedFilter,
+            sortingMode = sortingMode,
+            sortingDirection = sortingDirection,
+            displayMode = displayMode,
         )
+        return mangaRepository.updateAll(mangaIds.map { MangaUpdate(id = it, chapterFlags = flags) })
     }
 
     // KMK -->

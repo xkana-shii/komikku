@@ -1,0 +1,260 @@
+import kotlin.Boolean;
+import kotlinx.serialization.json.JsonObject;
+
+CREATE TABLE chapter(
+    id INTEGER NOT NULL PRIMARY KEY,
+    manga_id INTEGER NOT NULL,
+    remote_url TEXT NOT NULL,
+    remote_name TEXT NOT NULL,
+    remote_scanlator TEXT,
+    user_read INTEGER AS Boolean NOT NULL,
+    user_bookmark INTEGER AS Boolean NOT NULL,
+    -- KMK -->
+    user_fillermark INTEGER AS Boolean NOT NULL,
+    -- KMK <--
+    user_last_page_read INTEGER NOT NULL,
+    remote_chapter_number REAL NOT NULL,
+    remote_order INTEGER NOT NULL,
+    state_date_fetch INTEGER NOT NULL,
+    remote_date_upload INTEGER NOT NULL,
+    -- KMK -->
+    state_last_modified_at INTEGER NOT NULL DEFAULT 0,
+    state_version INTEGER NOT NULL DEFAULT 0,
+    state_is_syncing INTEGER NOT NULL DEFAULT 0,
+    -- KMK <--
+    remote_memo BLOB AS JsonObject NOT NULL DEFAULT (CAST('{}' AS BLOB)),
+    UNIQUE(manga_id, remote_url),
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+-- KMK -->
+CREATE INDEX idx_chapters_url ON chapter(remote_url);
+-- KMK <--
+CREATE INDEX chapter_state_date_fetch_index ON chapter(state_date_fetch);
+CREATE INDEX chapter_unread_state_date_fetch_index ON chapter(state_date_fetch) WHERE user_read = 0;
+
+-- KMK -->
+CREATE TRIGGER update_last_modified_at_chapters
+AFTER UPDATE ON chapter
+FOR EACH ROW
+BEGIN
+  UPDATE chapter
+  SET state_last_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapter
+WHEN new.state_is_syncing = 0 AND (
+    new.user_read != old.user_read OR
+    new.user_bookmark != old.user_bookmark OR
+    new.user_fillermark != old.user_fillermark OR
+    new.user_last_page_read != old.user_last_page_read
+)
+BEGIN
+    -- Update the chapter state_version
+    UPDATE chapter SET state_version = state_version + 1
+    WHERE id = new.id;
+
+    -- Update the manga state_version
+    UPDATE manga SET state_version = state_version + 1
+    WHERE id = new.manga_id AND (SELECT state_is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+-- KMK <--
+
+getChapterById:
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+FROM chapter
+WHERE id = :id;
+
+getChaptersByMangaId:
+SELECT
+    C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
+    C.user_bookmark, C.user_fillermark, C.user_last_page_read, C.remote_chapter_number,
+    C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
+    C.state_version, C.state_is_syncing, C.remote_memo
+FROM chapter C
+-- KMK -->
+JOIN manga M ON C.manga_id = M.id
+-- KMK <--
+LEFT JOIN excluded_scanlator ES
+ON C.manga_id = ES.manga_id
+AND C.remote_scanlator = ES.scanlator
+WHERE C.manga_id = :mangaId
+AND (
+    :applyFilter = 0
+    -- KMK -->
+    OR (
+        ES.scanlator IS NULL
+        AND ((M.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
+        AND ((M.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
+        AND ((M.user_chapter_flags & :fillermarkUnmask) = 0 OR C.user_fillermark = 0)
+        AND ((M.user_chapter_flags & :fillermarkMask) = 0 OR C.user_fillermark = 1)
+    )
+    -- KMK <--
+);
+
+getScanlatorsByMangaId:
+SELECT DISTINCT remote_scanlator
+FROM chapter
+WHERE manga_id = :mangaId;
+
+getBookmarkedChaptersByMangaId:
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+FROM chapter
+WHERE user_bookmark
+AND manga_id = :mangaId;
+
+-- KMK -->
+getFillermarkedChaptersByMangaId:
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+FROM chapter
+WHERE user_fillermark
+AND manga_id = :mangaId;
+-- KMK <--
+
+getChapterByUrl:
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+FROM chapter
+WHERE remote_url = :chapterUrl;
+
+getChapterByUrlAndMangaId:
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+FROM chapter
+WHERE manga_id = :mangaId
+AND remote_url = :remoteUrl;
+
+getMergedChaptersByMangaId:
+SELECT
+    C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
+    C.user_bookmark, C.user_fillermark, C.user_last_page_read, C.remote_chapter_number,
+    C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
+    C.state_version, C.state_is_syncing, C.remote_memo
+FROM (
+    SELECT manga_id,merge_id FROM merged WHERE merge_id = :mangaId
+) AS M
+JOIN chapter C
+ON C.manga_id = M.manga_id
+LEFT JOIN excluded_scanlator ES
+ON M.merge_id = ES.manga_id
+AND C.remote_scanlator = ES.scanlator
+-- KMK -->
+JOIN manga MA ON MA.id = :mangaId
+-- KMK <--
+WHERE M.merge_id = :mangaId
+AND (
+    :applyFilter = 0
+    -- KMK -->
+    OR (
+        ES.scanlator IS NULL
+        AND ((MA.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
+        AND ((MA.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
+        AND ((MA.user_chapter_flags & :fillermarkUnmask) = 0 OR C.user_fillermark = 0)
+        AND ((MA.user_chapter_flags & :fillermarkMask) = 0 OR C.user_fillermark = 1)
+    )
+    -- KMK <--
+)
+-- KMK -->
+ORDER BY C.manga_id, C.remote_order;
+-- KMK <--
+
+-- KMK -->
+updateFromBackup:
+UPDATE chapter SET
+    user_read = coalesce(:userRead, user_read),
+    user_bookmark = coalesce(:userBookmark, user_bookmark),
+    user_fillermark = coalesce(:userFillermark, user_fillermark),
+    user_last_page_read = coalesce(:userLastPageRead, user_last_page_read),
+    remote_order = coalesce(:remoteOrder, remote_order),
+    remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
+    state_version = coalesce(:stateVersion, state_version),
+    state_is_syncing = coalesce(:stateIsSyncing, state_is_syncing),
+    remote_memo = coalesce(:remoteMemo, remote_memo)
+WHERE id = :id;
+-- KMK <--
+getScanlatorsByMergeId:
+SELECT remote_scanlator
+FROM (
+    SELECT manga_id FROM merged WHERE merge_id = ?
+) AS M
+JOIN chapter
+ON chapter.manga_id = M.manga_id;
+
+removeChaptersWithIds:
+DELETE FROM chapter
+WHERE id IN :chapterIds;
+
+resetIsSyncing:
+UPDATE chapter
+SET state_is_syncing = 0
+WHERE state_is_syncing = 1;
+
+-- KMK -->
+insertReturningId:
+INSERT INTO chapter(
+    manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+)
+VALUES (
+    :mangaId, :remoteUrl, :remoteName, :remoteScanlator, :userRead, :userBookmark,
+    :userFillermark, :userLastPageRead, :remoteChapterNumber, :remoteOrder,
+    :stateDateFetch, :remoteDateUpload, 0, :stateVersion, 0, :remoteMemo
+)
+-- Two syncs of the same entry can race; the chapter the other one already stored is skipped rather
+-- than failing the whole batch
+ON CONFLICT(manga_id, remote_url) DO NOTHING
+RETURNING id;
+-- KMK <--
+
+update:
+UPDATE chapter
+SET manga_id = coalesce(:mangaId, manga_id),
+    remote_url = coalesce(:remoteUrl, remote_url),
+    remote_name = coalesce(:remoteName, remote_name),
+    remote_scanlator = coalesce(:remoteScanlator, remote_scanlator),
+    user_read = coalesce(:userRead, user_read),
+    user_bookmark = coalesce(:userBookmark, user_bookmark),
+    user_fillermark = coalesce(:userFillermark, user_fillermark),
+    user_last_page_read = coalesce(:userLastPageRead, user_last_page_read),
+    remote_chapter_number = coalesce(:remoteChapterNumber, remote_chapter_number),
+    remote_order = coalesce(:remoteOrder, remote_order),
+    state_date_fetch = coalesce(:stateDateFetch, state_date_fetch),
+    remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
+    state_version = coalesce(:stateVersion, state_version),
+    state_is_syncing = coalesce(:stateIsSyncing, state_is_syncing),
+    remote_memo = coalesce(:remoteMemo, remote_memo)
+WHERE id = :id;
+
+-- KMK -->
+updateRemote:
+UPDATE chapter
+SET remote_name = :remoteName,
+    remote_scanlator = coalesce(:remoteScanlator, remote_scanlator),
+    remote_chapter_number = :remoteChapterNumber,
+    remote_order = :remoteOrder,
+    remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
+    remote_memo = :remoteMemo
+WHERE id = :id;
+-- KMK <--

@@ -2,6 +2,7 @@ package tachiyomi.data.manga
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
@@ -19,11 +20,11 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.Chapters
+import tachiyomi.data.Chapter
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.History
-import tachiyomi.data.Mangas
+import tachiyomi.data.Manga
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
@@ -41,7 +42,6 @@ import kotlin.random.Random
 
 // KMK -->
 /** Verifies the library aggregates, cached or live, against a Kotlin recomputation. */
-// KMK -->
 class MangaChapterStatsTest {
 
     private lateinit var driver: SqlDriver
@@ -56,13 +56,13 @@ class MangaChapterStatsTest {
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
         db = Database(
             driver = driver,
-            historyAdapter = History.Adapter(last_readAdapter = DateColumnAdapter),
-            mangasAdapter = Mangas.Adapter(
-                genreAdapter = StringListColumnAdapter,
-                update_strategyAdapter = UpdateStrategyColumnAdapter,
-                memoAdapter = MemoColumnAdapter,
+            historyAdapter = History.Adapter(read_atAdapter = DateColumnAdapter),
+            mangaAdapter = Manga.Adapter(
+                remote_genreAdapter = StringListColumnAdapter,
+                remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
+                remote_memoAdapter = MemoColumnAdapter,
             ),
-            chaptersAdapter = Chapters.Adapter(memoAdapter = MemoColumnAdapter),
+            chapterAdapter = Chapter.Adapter(remote_memoAdapter = MemoColumnAdapter),
         )
     }
 
@@ -89,7 +89,7 @@ class MangaChapterStatsTest {
     @Test
     fun `refill caches every library entry except merged ones`() = runBlocking<Unit> {
         seedLibrary(count = 4)
-        val ids = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+        val ids = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
         insertChapter(ids[0], scanlator = null, read = true, bookmark = false)
         hasMissing() shouldBe true
 
@@ -104,24 +104,24 @@ class MangaChapterStatsTest {
     @Test
     fun `writes the aggregates ignore keep the cached row`() = runBlocking<Unit> {
         seedLibrary(count = 1)
-        val mangaId = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsOne().id
+        val mangaId = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsOne().id
         insertChapter(mangaId, scanlator = null, read = false, bookmark = false)
         refill()
         val chapter = chaptersOf(mangaId).single()
 
         // Reader page progress.
-        db.chaptersQueries.update(
-            mangaId = null, url = null, name = null, scanlator = null,
-            read = null, bookmark = null, fillermark = null, lastPageRead = 7, chapterNumber = null,
-            sourceOrder = null, dateFetch = null, dateUpload = null,
-            chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+        db.chapterQueries.update(
+            mangaId = null, remoteUrl = null, remoteName = null, remoteScanlator = null,
+            userRead = null, userBookmark = null, userFillermark = null, userLastPageRead = 7,
+            remoteChapterNumber = null, remoteOrder = null, stateDateFetch = null, remoteDateUpload = null,
+            id = chapter.id, stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
         )
         // Rewriting a value it already has.
-        db.chaptersQueries.update(
-            mangaId = null, url = null, name = null, scanlator = null,
-            read = false, bookmark = false, fillermark = null, lastPageRead = null, chapterNumber = null,
-            sourceOrder = null, dateFetch = null, dateUpload = null,
-            chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+        db.chapterQueries.update(
+            mangaId = null, remoteUrl = null, remoteName = null, remoteScanlator = null,
+            userRead = false, userBookmark = false, userFillermark = null, userLastPageRead = null,
+            remoteChapterNumber = null, remoteOrder = null, stateDateFetch = null, remoteDateUpload = null,
+            id = chapter.id, stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
         )
 
         hasMissing() shouldBe false
@@ -135,7 +135,7 @@ class MangaChapterStatsTest {
         insertChapter(mangaId, scanlator = null, read = true, bookmark = true)
         hasMissing() shouldBe false
 
-        driver.execute(null, "UPDATE mangas SET favorite = 1 WHERE _id = $mangaId", 0)
+        driver.execute(null, "UPDATE manga SET user_favorite_at = 0 WHERE id = $mangaId", 0)
 
         hasMissing() shouldBe true
         libraryRow(mangaId).readCount shouldBe 1
@@ -147,11 +147,11 @@ class MangaChapterStatsTest {
     @Test
     fun `deleting an entry leaves no orphaned stats`() = runBlocking<Unit> {
         seedLibrary(count = 4)
-        val ids = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+        val ids = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
         ids.forEach { insertChapter(it, scanlator = "alpha", read = true, bookmark = true) }
         refill()
 
-        ids.forEach { db.mangasQueries.deleteById(it) }
+        ids.forEach { db.mangaQueries.deleteById(it) }
 
         statsRowCount() shouldBe 0
     }
@@ -159,7 +159,7 @@ class MangaChapterStatsTest {
     @Test
     fun `live library invalidations refill once and keep emitting changed aggregates`() = runBlocking<Unit> {
         seedLibrary(count = 1)
-        val id = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsOne().id
+        val id = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsOne().id
         insertChapter(id, scanlator = null, read = false, bookmark = false)
         val chapter = chaptersOf(id).single()
         val emissions = Channel<List<LibraryManga>>(Channel.UNLIMITED)
@@ -205,7 +205,7 @@ class MangaChapterStatsTest {
     @Test
     fun `the library flow refills before it emits`() = runBlocking {
         seedLibrary(count = 4)
-        val ids = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+        val ids = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
         ids.forEach { insertChapter(it, scanlator = null, read = true, bookmark = false) }
 
         val library = MangaRepositoryImpl(db).getLibraryMangaAsFlow().first()
@@ -218,7 +218,7 @@ class MangaChapterStatsTest {
     @Test
     fun `a one-shot library read refills too`(): Unit = runBlocking {
         seedLibrary(count = 4)
-        val ids = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+        val ids = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
         ids.forEach { insertChapter(it, scanlator = null, read = true, bookmark = false) }
 
         MangaRepositoryImpl(db).getLibraryManga().size shouldBe 4
@@ -229,7 +229,7 @@ class MangaChapterStatsTest {
     @Test
     fun `a failing refill still returns the live aggregates`() = runBlocking {
         seedLibrary(count = 4)
-        val ids = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+        val ids = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
         ids.forEach { insertChapter(it, scanlator = null, read = true, bookmark = true) }
         driver.execute(
             null,
@@ -247,13 +247,13 @@ class MangaChapterStatsTest {
     @Test
     fun `filler changes invalidate cached counts and preserve merged and non library results`() = runBlocking<Unit> {
         seedLibrary(count = 3)
-        val id = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().first().id
+        val id = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().first().id
         insertChapter(id, scanlator = null, read = true, bookmark = false)
-        driver.execute(null, "UPDATE chapters SET fillermark = 0 WHERE manga_id = $id", 0)
+        driver.execute(null, "UPDATE chapter SET user_fillermark = 0 WHERE manga_id = $id", 0)
         refill()
         libraryRow(id).fillermarkCount shouldBe 0
 
-        driver.execute(null, "UPDATE chapters SET fillermark = 1 WHERE manga_id = $id", 0)
+        driver.execute(null, "UPDATE chapter SET user_fillermark = 1 WHERE manga_id = $id", 0)
         hasMissing() shouldBe true
         libraryRow(id).fillermarkCount shouldBe 1
         libraryRow(id).fillermarkReadCount shouldBe 1
@@ -262,7 +262,7 @@ class MangaChapterStatsTest {
         libraryRow(id).fillermarkCount shouldBe 1
         assertAggregatesMatch()
 
-        driver.execute(null, "UPDATE mangas SET favorite = 0", 0)
+        driver.execute(null, "UPDATE manga SET user_favorite_at = NULL", 0)
         val nonLibrary = db.libraryViewQueries.readMangaNonLibrary(MangaMapper::mapLibraryManga).awaitAsList()
         nonLibrary.size shouldBe 2 // The child and its merged parent.
         nonLibrary.forEach {
@@ -271,46 +271,12 @@ class MangaChapterStatsTest {
         }
     }
 
-    @Test
-    fun `migration creates aggregate cache with filler counts for existing chapters`() = runBlocking<Unit> {
-        seedLibrary(count = 1)
-        val id = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsOne().id
-        insertChapter(id, scanlator = null, read = true, bookmark = false)
-        driver.execute(null, "UPDATE chapters SET fillermark = 1 WHERE manga_id = $id", 0)
-        // Restore the pre-47 schema while retaining existing manga and chapter data.
-        listOf(
-            "insert_chapter",
-            "update_chapter",
-            "delete_chapter",
-            "insert_history",
-            "update_history",
-            "delete_history",
-            "insert_excluded_scanlator",
-            "delete_excluded_scanlator",
-        ).forEach { trigger ->
-            driver.execute(null, "DROP TRIGGER manga_chapter_stats_$trigger", 0)
-        }
-        driver.execute(null, "DROP TABLE manga_chapter_stats", 0)
-
-        Database.Schema.migrate(driver, 47, 48).await()
-
-        statsRowCount() shouldBe 0
-        refill()
-        libraryRow(id).fillermarkCount shouldBe 1
-        libraryRow(id).fillermarkReadCount shouldBe 1
-        driver.execute(null, "UPDATE chapters SET fillermark = 0 WHERE manga_id = $id", 0)
-        hasMissing() shouldBe true
-        refill()
-        libraryRow(id).fillermarkCount shouldBe 0
-        assertAggregatesMatch()
-    }
-
     // ------------------------------------------------------------------ oracle
 
     private suspend fun assertAggregatesMatch() {
         db.libraryViewQueries.library(MangaMapper::mapLibraryManga).awaitAsList().forEach { row ->
             val expected = recompute(sourceMangaIdsFor(row.id))
-            withClue(row.id) {
+            withClue("$row expected=$expected") {
                 row.totalChapters shouldBe expected.total
                 row.readCount shouldBe expected.read
                 row.bookmarkCount shouldBe expected.bookmark
@@ -345,19 +311,18 @@ class MangaChapterStatsTest {
     private suspend fun recompute(mangaIds: List<Long>): Aggregate {
         var agg = Aggregate()
         mangaIds.forEach { mangaId ->
-            val excluded = db.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(mangaId)
+            val excluded = db.excluded_scanlatorQueries.getExcludedScanlatorsByMangaId(mangaId)
                 .awaitAsList()
                 .filterNotNull()
                 .toSet()
-            val history = db.historyQueries.getHistoryByMangaId(mangaId) { _, chapterId, lastRead, _ ->
-                chapterId to (lastRead?.time ?: 0L)
-            }.awaitAsList().toMap()
-
-            db.chaptersQueries
+            db.chapterQueries
                 .getChaptersByMangaId(mangaId, 0L, 0L, 0L, 0L, 0L, ChapterMapper::mapChapter)
                 .awaitAsList()
                 .filter { it.scanlator !in excluded }
                 .forEach { chapter ->
+                    val lastRead = db.historyQueries.getHistoryByChapterUrl(chapter.url, mangaId) { _, _, readAt, _ ->
+                        readAt?.time ?: 0L
+                    }.awaitAsOneOrNull() ?: 0L
                     agg = agg.copy(
                         total = agg.total + 1,
                         read = agg.read + if (chapter.read) 1 else 0,
@@ -367,7 +332,7 @@ class MangaChapterStatsTest {
                         fillermarkRead = agg.fillermarkRead + if (chapter.fillermark && chapter.read) 1 else 0,
                         latestUpload = maxOf(agg.latestUpload, chapter.dateUpload),
                         fetchedAt = maxOf(agg.fetchedAt, chapter.dateFetch),
-                        lastRead = maxOf(agg.lastRead, history[chapter.id] ?: 0L),
+                        lastRead = maxOf(agg.lastRead, lastRead),
                     )
                 }
         }
@@ -377,7 +342,7 @@ class MangaChapterStatsTest {
     // ------------------------------------------------------------------ writes
 
     private suspend fun applyRandomWrite(rng: Random) {
-        val mangaIds = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+        val mangaIds = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
         val chapters = mangaIds.flatMap { chaptersOf(it) }
 
         when (rng.nextInt(10)) {
@@ -390,45 +355,51 @@ class MangaChapterStatsTest {
             )
             3, 4 -> chapters.randomOrNull(rng)?.let { chapter ->
                 // Match ChapterRepositoryImpl.partialUpdate.
-                db.chaptersQueries.update(
+                db.chapterQueries.update(
                     mangaId = null,
-                    url = null,
-                    name = null,
-                    scanlator = null,
-                    read = rng.nextBoolean(),
-                    bookmark = rng.nextBoolean(),
-                    fillermark = rng.nextBoolean(),
-                    lastPageRead = rng.nextLong(50),
-                    chapterNumber = null,
-                    sourceOrder = null,
-                    dateFetch = null,
-                    dateUpload = null,
-                    chapterId = chapter.id,
-                    version = null,
-                    isSyncing = 0,
-                    memo = null,
+                    remoteUrl = null,
+                    remoteName = null,
+                    remoteScanlator = null,
+                    userRead = rng.nextBoolean(),
+                    userBookmark = rng.nextBoolean(),
+                    userFillermark = rng.nextBoolean(),
+                    userLastPageRead = rng.nextLong(50),
+                    remoteChapterNumber = null,
+                    remoteOrder = null,
+                    stateDateFetch = null,
+                    remoteDateUpload = null,
+                    id = chapter.id,
+                    stateVersion = null,
+                    stateIsSyncing = 0,
+                    remoteMemo = null,
                 )
             }
             5 -> chapters.randomOrNull(rng)?.let { chapter ->
                 // Simulate the reader page update.
-                db.chaptersQueries.update(
-                    mangaId = null, url = null, name = null, scanlator = null,
-                    read = null, bookmark = null, fillermark = null, lastPageRead = rng.nextLong(50),
-                    chapterNumber = null, sourceOrder = null, dateFetch = null, dateUpload = null,
-                    chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+                db.chapterQueries.update(
+                    mangaId = null, remoteUrl = null, remoteName = null, remoteScanlator = null,
+                    userRead = null, userBookmark = null, userFillermark = null,
+                    userLastPageRead = rng.nextLong(50), remoteChapterNumber = null, remoteOrder = null,
+                    stateDateFetch = null, remoteDateUpload = null, id = chapter.id,
+                    stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
                 )
             }
             6 -> chapters.randomOrNull(rng)?.let { chapter ->
-                db.chaptersQueries.update(
-                    mangaId = null, url = null, name = null, scanlator = scanlators.random(rng),
-                    read = null, bookmark = null, fillermark = null, lastPageRead = null, chapterNumber = null,
-                    sourceOrder = null, dateFetch = rng.nextLong(1, 5_000),
-                    dateUpload = rng.nextLong(1, 5_000),
-                    chapterId = chapter.id, version = null, isSyncing = 0, memo = null,
+                db.chapterQueries.update(
+                    mangaId = null, remoteUrl = null, remoteName = null,
+                    remoteScanlator = scanlators.random(rng), userRead = null, userBookmark = null,
+                    userFillermark = null, userLastPageRead = null, remoteChapterNumber = null,
+                    remoteOrder = null, stateDateFetch = rng.nextLong(1, 5_000),
+                    remoteDateUpload = rng.nextLong(1, 5_000), id = chapter.id,
+                    stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
                 )
             }
             7 -> chapters.randomOrNull(rng)?.let { chapter ->
-                db.historyQueries.upsert(chapter.id, Date(rng.nextLong(1, 9_000)), rng.nextLong(1, 60))
+                db.historyQueries.upsert(
+                    chapterId = chapter.id,
+                    readAt = Date(rng.nextLong(1, 9_000)),
+                    readDuration = rng.nextLong(1, 60),
+                )
             }
             8 -> when (rng.nextInt(5)) {
                 0 -> db.historyQueries.resetHistoryByMangaIds(listOf(mangaIds.random(rng)))
@@ -445,12 +416,12 @@ class MangaChapterStatsTest {
             else -> {
                 val mangaId = mangaIds.random(rng)
                 val scanlator = scanlators.filterNotNull().random(rng)
-                val current = db.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(mangaId)
+                val current = db.excluded_scanlatorQueries.getExcludedScanlatorsByMangaId(mangaId)
                     .awaitAsList()
                 if (scanlator in current) {
-                    db.excluded_scanlatorsQueries.remove(mangaId, listOf(scanlator))
+                    db.excluded_scanlatorQueries.remove(mangaId, listOf(scanlator))
                 } else {
-                    db.excluded_scanlatorsQueries.insert(mangaId, scanlator)
+                    db.excluded_scanlatorQueries.insert(mangaId, scanlator)
                 }
             }
         }
@@ -462,7 +433,7 @@ class MangaChapterStatsTest {
             insertManga(favorite = true, source = if (count >= 3 && i == count - 1) MERGED_SOURCE_ID else 1L)
         }
         if (count >= 3) {
-            val ids = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
+            val ids = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().map { it.id }
             val mergeId = ids.last()
             // Add two merge children.
             listOf(ids[0], ids[1]).forEach { childId ->
@@ -483,8 +454,8 @@ class MangaChapterStatsTest {
     }
 
     private suspend fun insertManga(favorite: Boolean, source: Long = 1L): Long {
-        val index = db.mangasQueries.getAll(MangaMapper::mapManga).awaitAsList().size
-        return db.mangasQueries.insertReturningId(
+        val index = db.mangaQueries.getAll(MangaMapper::mapManga).awaitAsList().size
+        return db.mangaQueries.insertReturningId(
             source = source,
             url = "/manga/$index",
             artist = null,
@@ -518,39 +489,39 @@ class MangaChapterStatsTest {
         rng: Random = Random(0),
         dates: Long? = null,
     ) {
-        db.chaptersQueries.insert(
+        db.chapterQueries.insertReturningId(
             mangaId = mangaId,
-            url = "/chapter/${rng.nextLong()}",
-            name = "Chapter",
-            scanlator = scanlator,
-            read = read,
-            bookmark = bookmark,
-            fillermark = rng.nextBoolean(),
-            lastPageRead = 0,
-            chapterNumber = 1.0,
-            sourceOrder = 0,
-            dateFetch = dates ?: rng.nextLong(1, 5_000),
-            dateUpload = dates ?: rng.nextLong(1, 5_000),
-            version = 0,
-            memo = JsonObject(emptyMap()),
-        )
+            remoteUrl = "/chapter/${rng.nextLong()}",
+            remoteName = "Chapter",
+            remoteScanlator = scanlator,
+            userRead = read,
+            userBookmark = bookmark,
+            userFillermark = rng.nextBoolean(),
+            userLastPageRead = 0,
+            remoteChapterNumber = 1.0,
+            remoteOrder = 0,
+            stateDateFetch = dates ?: rng.nextLong(1, 5_000),
+            remoteDateUpload = dates ?: rng.nextLong(1, 5_000),
+            stateVersion = 0,
+            remoteMemo = JsonObject(emptyMap()),
+        ).awaitAsOne()
     }
 
     /** Matches ChapterRepositoryImpl.partialUpdate with a manga id set. */
     private suspend fun moveChapter(chapterId: Long, mangaId: Long) {
-        db.chaptersQueries.update(
-            mangaId = mangaId, url = null, name = null, scanlator = null,
-            read = null, bookmark = null, fillermark = null, lastPageRead = null, chapterNumber = null,
-            sourceOrder = null, dateFetch = null, dateUpload = null,
-            chapterId = chapterId, version = null, isSyncing = 0, memo = null,
+        db.chapterQueries.update(
+            mangaId = mangaId, remoteUrl = null, remoteName = null, remoteScanlator = null,
+            userRead = null, userBookmark = null, userFillermark = null, userLastPageRead = null,
+            remoteChapterNumber = null, remoteOrder = null, stateDateFetch = null, remoteDateUpload = null,
+            id = chapterId, stateVersion = null, stateIsSyncing = 0, remoteMemo = null,
         )
     }
 
     private suspend fun deleteChapters(chapterIds: List<Long>) {
-        db.chaptersQueries.removeChaptersWithIds(chapterIds)
+        db.chapterQueries.removeChaptersWithIds(chapterIds)
     }
 
-    private suspend fun chaptersOf(mangaId: Long) = db.chaptersQueries
+    private suspend fun chaptersOf(mangaId: Long) = db.chapterQueries
         .getChaptersByMangaId(mangaId, 0L, 0L, 0L, 0L, 0L, ChapterMapper::mapChapter)
         .awaitAsList()
 
@@ -599,5 +570,4 @@ class MangaChapterStatsTest {
         }
     }
 }
-// KMK <--
 // KMK <--

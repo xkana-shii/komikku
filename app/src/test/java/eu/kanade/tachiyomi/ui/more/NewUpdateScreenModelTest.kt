@@ -1,8 +1,11 @@
 package eu.kanade.tachiyomi.ui.more
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.work.WorkInfo
-import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
-import cafe.adriel.voyager.core.model.ScreenModelStore
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -17,7 +20,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.Test
 
-@OptIn(ExperimentalCoroutinesApi::class, InternalVoyagerApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class NewUpdateScreenModelTest {
     private val url = "https://example.invalid/update.apk"
     private fun work(
@@ -36,13 +39,25 @@ class NewUpdateScreenModelTest {
         every { outputData.getString(AppUpdateDownloadJob.ERROR) } returns "Failed request"
     }
 
+    private fun createModel(factory: () -> NewUpdateScreenModel): Pair<NewUpdateScreenModel, ViewModelStore> {
+        val store = ViewModelStore()
+        val owner = object : ViewModelStoreOwner {
+            override val viewModelStore = store
+        }
+        val model = ViewModelProvider(
+            owner,
+            viewModelFactory { initializer { factory() } },
+        )[NewUpdateScreenModel::class.java]
+        return model to store
+    }
+
     @Test
     fun `download progress retry install and duplicate tap handling follow worker state`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val works = MutableStateFlow(emptyList<WorkInfo>())
         var starts = 0
         val installs = mutableListOf<String>()
-        val model = ScreenModelStore.getOrPut("update-test", null) { NewUpdateScreenModel(url, "version", mockk(), works, { starts++ }, installs::add) }
+        val (model, store) = createModel { NewUpdateScreenModel(url, "version", mockk(), works, { starts++ }, installs::add) }
         try {
             testScheduler.runCurrent()
             model.state.value.stage shouldBe NewUpdateScreenModel.Stage.Available
@@ -66,7 +81,7 @@ class NewUpdateScreenModelTest {
             installs shouldBe listOf("content://apk")
             starts shouldBe 2
         } finally {
-            ScreenModelStore.onDisposeNavigator("update-test")
+            store.clear()
             Dispatchers.resetMain()
         }
     }
@@ -76,7 +91,7 @@ class NewUpdateScreenModelTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val works = MutableStateFlow(listOf(work(WorkInfo.State.RUNNING, 55)))
         var starts = 0
-        val model = ScreenModelStore.getOrPut("update-test", null) { NewUpdateScreenModel(url, "version", mockk(), works, { starts++ }, { error("APK missing") }) }
+        val (model, store) = createModel { NewUpdateScreenModel(url, "version", mockk(), works, { starts++ }, { error("APK missing") }) }
         try {
             model.accept()
             testScheduler.runCurrent()
@@ -90,7 +105,7 @@ class NewUpdateScreenModelTest {
             model.accept()
             starts shouldBe 1
         } finally {
-            ScreenModelStore.onDisposeNavigator("update-test")
+            store.clear()
             Dispatchers.resetMain()
         }
     }
@@ -100,7 +115,7 @@ class NewUpdateScreenModelTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val works = MutableStateFlow(listOf(work(WorkInfo.State.ENQUEUED, scheduled = true)))
         var starts = 0
-        val model = ScreenModelStore.getOrPut("scheduled-update-test", null) {
+        val (model, store) = createModel {
             NewUpdateScreenModel(url, "version", mockk(), works, { starts++ }, {})
         }
         try {
@@ -119,7 +134,7 @@ class NewUpdateScreenModelTest {
             testScheduler.runCurrent()
             model.state.value.progress shouldBe 13
         } finally {
-            ScreenModelStore.onDisposeNavigator("scheduled-update-test")
+            store.clear()
             Dispatchers.resetMain()
         }
     }
@@ -128,7 +143,7 @@ class NewUpdateScreenModelTest {
     fun `scheduled running work is reported as downloading`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val works = MutableStateFlow(listOf(work(WorkInfo.State.RUNNING, percent = 76, scheduled = true)))
-        val model = ScreenModelStore.getOrPut("scheduled-running-update-test", null) {
+        val (model, store) = createModel {
             NewUpdateScreenModel(url, "version", mockk(), works, {}, {})
         }
         try {
@@ -136,7 +151,7 @@ class NewUpdateScreenModelTest {
             model.state.value.stage shouldBe NewUpdateScreenModel.Stage.Downloading
             model.state.value.progress shouldBe 76
         } finally {
-            ScreenModelStore.onDisposeNavigator("scheduled-running-update-test")
+            store.clear()
             Dispatchers.resetMain()
         }
     }

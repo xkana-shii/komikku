@@ -11,11 +11,11 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.Chapters
+import tachiyomi.data.Chapter
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.History
-import tachiyomi.data.Mangas
+import tachiyomi.data.Manga
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
@@ -32,9 +32,9 @@ class LibraryChapterFlagsTest {
         Database.Schema.create(driver).await()
         db = Database(
             driver,
-            historyAdapter = History.Adapter(last_readAdapter = DateColumnAdapter),
-            mangasAdapter = Mangas.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
-            chaptersAdapter = Chapters.Adapter(memoAdapter = MemoColumnAdapter),
+            historyAdapter = History.Adapter(read_atAdapter = DateColumnAdapter),
+            mangaAdapter = Manga.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
+            chapterAdapter = Chapter.Adapter(remote_memoAdapter = MemoColumnAdapter),
         )
         repository = MangaRepositoryImpl(db)
     }
@@ -49,7 +49,7 @@ class LibraryChapterFlagsTest {
         insert(3, favorite = true, flags = 0)
         val outsideBefore = row(2)
         var invalidations = 0
-        val favorites = db.mangasQueries.getFavorites()
+        val favorites = db.mangaQueries.getFavorites()
         val listener = Query.Listener { invalidations++ }
         favorites.addListener(listener)
         try {
@@ -85,8 +85,8 @@ class LibraryChapterFlagsTest {
         driver.execute(
             null,
             """
-            CREATE TRIGGER reject_chapter_flags BEFORE UPDATE OF chapter_flags ON mangas
-            WHEN new._id = 2
+            CREATE TRIGGER reject_chapter_flags BEFORE UPDATE OF user_chapter_flags ON manga
+            WHEN new.id = 2
             BEGIN SELECT RAISE(ABORT, 'test failure'); END;
             """.trimIndent(),
             0,
@@ -100,9 +100,9 @@ class LibraryChapterFlagsTest {
         driver.execute(
             null,
             """
-            INSERT INTO mangas(_id, source, url, title, status, favorite, initialized,
-                viewer, chapter_flags, cover_last_modified, date_added, memo)
-            VALUES ($id, 1, '/$id', 'Series', 0, ${if (favorite) 1 else 0}, 1,
+            INSERT INTO manga(id, source_id, remote_url, remote_title, remote_status, user_favorite_at, state_initialized,
+                user_reader_flags, user_chapter_flags, state_cover_last_modified, state_date_added, remote_memo)
+            VALUES ($id, 1, '/$id', 'Series', 0, ${if (favorite) 0 else "NULL"}, 1,
                 23, $flags, 0, 0, CAST('not JSON' AS BLOB));
             """.trimIndent(),
             0,
@@ -111,7 +111,7 @@ class LibraryChapterFlagsTest {
 
     private fun row(id: Long): List<Long> = driver.executeQuery(
         null,
-        "SELECT chapter_flags, favorite, last_modified_at, viewer, version FROM mangas WHERE _id = $id",
+        "SELECT user_chapter_flags, user_favorite_at IS NOT NULL, state_last_modified_at, user_reader_flags, state_version FROM manga WHERE id = $id",
         mapper = { cursor ->
             cursor.next()
             QueryResult.Value(List(5) { cursor.getLong(it)!! })

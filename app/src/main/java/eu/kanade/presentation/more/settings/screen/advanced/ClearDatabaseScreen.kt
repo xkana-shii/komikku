@@ -30,9 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.browse.components.SourceIcon
@@ -41,6 +41,8 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import tachiyomi.core.common.util.lang.launchIO
@@ -68,13 +70,13 @@ class ClearDatabaseScreen : Screen() {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val model = rememberScreenModel { ClearDatabaseScreenModel() }
-        val state by model.state.collectAsState()
+        val viewModel = viewModel<ClearDatabaseViewModel>()
+        val state by viewModel.state.collectAsState()
         val scope = rememberCoroutineScope()
 
         when (val s = state) {
-            is ClearDatabaseScreenModel.State.Loading -> LoadingScreen()
-            is ClearDatabaseScreenModel.State.Ready -> {
+            is ClearDatabaseViewModel.State.Loading -> LoadingScreen()
+            is ClearDatabaseViewModel.State.Ready -> {
                 if (s.showConfirmation) {
                     var keepReadManga by remember { mutableStateOf(true) }
                     AlertDialog(
@@ -109,14 +111,14 @@ class ClearDatabaseScreen : Screen() {
                                 }
                             }
                         },
-                        onDismissRequest = model::hideConfirmation,
+                        onDismissRequest = viewModel::hideConfirmation,
                         confirmButton = {
                             TextButton(
                                 onClick = {
                                     scope.launchUI {
-                                        model.removeMangaBySourceId(keepReadManga)
-                                        model.clearSelection()
-                                        model.hideConfirmation()
+                                        viewModel.removeMangaBySourceId(keepReadManga)
+                                        viewModel.clearSelection()
+                                        viewModel.hideConfirmation()
                                         context.toast(MR.strings.clear_database_completed)
                                     }
                                 },
@@ -125,7 +127,7 @@ class ClearDatabaseScreen : Screen() {
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = model::hideConfirmation) {
+                            TextButton(onClick = viewModel::hideConfirmation) {
                                 Text(text = stringResource(MR.strings.action_cancel))
                             }
                         },
@@ -144,12 +146,12 @@ class ClearDatabaseScreen : Screen() {
                                             AppBar.Action(
                                                 title = stringResource(MR.strings.action_select_all),
                                                 icon = Icons.Outlined.SelectAll,
-                                                onClick = model::selectAll,
+                                                onClick = viewModel::selectAll,
                                             ),
                                             AppBar.Action(
                                                 title = stringResource(MR.strings.action_select_inverse),
                                                 icon = Icons.Outlined.FlipToBack,
-                                                onClick = model::invertSelection,
+                                                onClick = viewModel::invertSelection,
                                             ),
                                         ),
                                     )
@@ -169,14 +171,14 @@ class ClearDatabaseScreen : Screen() {
                             contentPadding = contentPadding,
                             actionLabel = stringResource(MR.strings.action_delete),
                             actionEnabled = s.selection.isNotEmpty(),
-                            onClickAction = model::showConfirmation,
+                            onClickAction = viewModel::showConfirmation,
                         ) {
                             items(s.items) { sourceWithCount ->
                                 ClearDatabaseItem(
                                     source = sourceWithCount.source,
                                     count = sourceWithCount.count,
                                     isSelected = s.selection.contains(sourceWithCount.id),
-                                    onClickSelect = { model.toggleSelection(sourceWithCount.source) },
+                                    onClickSelect = { viewModel.toggleSelection(sourceWithCount.source) },
                                 )
                             }
                         }
@@ -221,15 +223,18 @@ class ClearDatabaseScreen : Screen() {
     }
 }
 
-private class ClearDatabaseScreenModel : StateScreenModel<ClearDatabaseScreenModel.State>(State.Loading) {
+private class ClearDatabaseViewModel : ViewModel() {
+
+    val state: StateFlow<ClearDatabaseViewModel.State>
+        field = MutableStateFlow<ClearDatabaseViewModel.State>(State.Loading)
     private val getSourcesWithNonLibraryManga: GetSourcesWithNonLibraryManga = Injekt.get()
     private val database: Database = Injekt.get()
 
     init {
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             getSourcesWithNonLibraryManga.subscribe()
                 .collectLatest { list ->
-                    mutableState.update { old ->
+                    state.update { old ->
                         val items = list.sortedBy { it.name }
                         when (old) {
                             State.Loading -> State.Ready(items)
@@ -242,11 +247,11 @@ private class ClearDatabaseScreenModel : StateScreenModel<ClearDatabaseScreenMod
 
     suspend fun removeMangaBySourceId(keepReadManga: Boolean) = withNonCancellableContext {
         val state = state.value as? State.Ready ?: return@withNonCancellableContext
-        database.mangasQueries.deleteNonLibraryManga(state.selection, keepReadManga.toLong())
+        database.mangaQueries.deleteNonLibraryManga(state.selection, keepReadManga.toLong())
         database.historyQueries.removeResettedHistory()
     }
 
-    fun toggleSelection(source: Source) = mutableState.update { state ->
+    fun toggleSelection(source: Source) = state.update { state ->
         if (state !is State.Ready) return@update state
         val mutableList = state.selection.toMutableList()
         if (mutableList.contains(source.id)) {
@@ -257,17 +262,17 @@ private class ClearDatabaseScreenModel : StateScreenModel<ClearDatabaseScreenMod
         state.copy(selection = mutableList)
     }
 
-    fun clearSelection() = mutableState.update { state ->
+    fun clearSelection() = state.update { state ->
         if (state !is State.Ready) return@update state
         state.copy(selection = emptyList())
     }
 
-    fun selectAll() = mutableState.update { state ->
+    fun selectAll() = state.update { state ->
         if (state !is State.Ready) return@update state
         state.copy(selection = state.items.fastMap { it.id })
     }
 
-    fun invertSelection() = mutableState.update { state ->
+    fun invertSelection() = state.update { state ->
         if (state !is State.Ready) return@update state
         state.copy(
             selection = state.items
@@ -276,12 +281,12 @@ private class ClearDatabaseScreenModel : StateScreenModel<ClearDatabaseScreenMod
         )
     }
 
-    fun showConfirmation() = mutableState.update { state ->
+    fun showConfirmation() = state.update { state ->
         if (state !is State.Ready) return@update state
         state.copy(showConfirmation = true)
     }
 
-    fun hideConfirmation() = mutableState.update { state ->
+    fun hideConfirmation() = state.update { state ->
         if (state !is State.Ready) return@update state
         state.copy(showConfirmation = false)
     }

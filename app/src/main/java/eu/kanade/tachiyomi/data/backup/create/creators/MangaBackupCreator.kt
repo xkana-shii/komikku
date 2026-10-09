@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.create.creators
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
-import app.cash.sqldelight.async.coroutines.awaitAsOne
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupFlatMetadata
@@ -17,6 +16,7 @@ import exh.source.getMainSource
 import tachiyomi.data.Database
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -30,6 +30,7 @@ import uy.kohesive.injekt.api.get
 
 class MangaBackupCreator(
     private val database: Database = Injekt.get(),
+    private val chapterRepository: ChapterRepository = Injekt.get(),
     private val getCategories: GetCategories = Injekt.get(),
     private val getHistory: GetHistory = Injekt.get(),
     // SY -->
@@ -70,11 +71,11 @@ class MangaBackupCreator(
         }
         // SY <--
 
-        mangaObject.excludedScanlators = database.excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(manga.id).awaitAsList()
+        mangaObject.excludedScanlators = database.excluded_scanlatorQueries.getExcludedScanlatorsByMangaId(manga.id).awaitAsList()
 
         if (options.chapters) {
             // Backup all the chapters
-            database.chaptersQueries.getChaptersByMangaId(
+            database.chapterQueries.getChaptersByMangaId(
                 mangaId = manga.id,
                 applyFilter = 0, // false
                 // KMK -->
@@ -99,7 +100,7 @@ class MangaBackupCreator(
         }
 
         if (options.tracking) {
-            val tracks = database.manga_syncQueries.getTracksByMangaId(manga.id, backupTrackMapper).awaitAsList()
+            val tracks = database.manga_trackQueries.getTracksByMangaId(manga.id, backupTrackMapper).awaitAsList()
             if (tracks.isNotEmpty()) {
                 mangaObject.tracking = tracks
             }
@@ -108,9 +109,11 @@ class MangaBackupCreator(
         if (options.history) {
             val historyByMangaId = getHistory.await(manga.id)
             if (historyByMangaId.isNotEmpty()) {
-                val history = historyByMangaId.map { history ->
-                    val chapter = database.chaptersQueries.getChapterById(history.chapterId).awaitAsOne()
-                    BackupHistory(chapter.url, history.readAt?.time ?: 0L, history.readDuration)
+                val chapterUrlsById = chapterRepository.getChapterByMangaId(manga.id).associate { it.id to it.url }
+                val history = historyByMangaId.mapNotNull { history ->
+                    // A chapter removed since its history was read takes that history with it
+                    val url = chapterUrlsById[history.chapterId] ?: return@mapNotNull null
+                    BackupHistory(url, history.readAt?.time ?: 0L, history.readDuration)
                 }
                 if (history.isNotEmpty()) {
                     mangaObject.history = history

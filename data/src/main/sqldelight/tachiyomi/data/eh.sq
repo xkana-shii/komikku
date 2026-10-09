@@ -1,10 +1,10 @@
 deleteBySyncId:
-DELETE FROM manga_sync WHERE sync_id = :syncId;
+DELETE FROM manga_track WHERE tracker_id = :syncId;
 
 migrateSource:
-UPDATE mangas
-SET source = :newId
-WHERE source = :oldId;
+UPDATE manga
+SET source_id = :newId
+WHERE source_id = :oldId;
 
 -- KMK -->
 migrateMergedSource:
@@ -24,22 +24,22 @@ WHERE source = :oldId;
 -- KMK <--
 
 getChaptersByMangaIds:
-SELECT * FROM chapters WHERE manga_id IN :mangaIds;
+SELECT * FROM chapter WHERE manga_id IN :mangaIds;
 
 migrateAllNhentaiToOtherLang:
-UPDATE mangas
-SET source = :nh
-WHERE favorite = 1 AND source IN :sources;
+UPDATE manga
+SET source_id = :nh
+WHERE user_favorite_at IS NOT NULL AND source_id IN :sources;
 
 resetReaderViewerForAllManga:
-UPDATE mangas
-SET viewer = 0;
+UPDATE manga
+SET user_reader_flags = 0;
 
 fixReaderViewerBackupBug:
-UPDATE mangas
-SET viewer = 0
-WHERE viewer = -1;
+UPDATE manga
+SET user_reader_flags = 0
+WHERE user_reader_flags = -1;
 
 addAllMangaInDatabaseToLibrary:
-UPDATE mangas
-SET favorite = 1;
+UPDATE manga
+SET user_favorite_at = coalesce(user_favorite_at, strftime('%s', 'now'));

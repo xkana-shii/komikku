@@ -25,7 +25,7 @@ class ChapterRemoteSyncTest {
             val old = repository.addAll(listOf(Chapter.create().copy(mangaId = mangaId, url = "/old", name = "Old"))).single()
             driver.execute(
                 null,
-                "CREATE TRIGGER fail_insert BEFORE INSERT ON chapters WHEN NEW.url = '/failure' BEGIN SELECT RAISE(ABORT, 'test failure'); END",
+                "CREATE TRIGGER fail_insert BEFORE INSERT ON chapter WHEN NEW.remote_url = '/failure' BEGIN SELECT RAISE(ABORT, 'test failure'); END",
                 0,
             )
 

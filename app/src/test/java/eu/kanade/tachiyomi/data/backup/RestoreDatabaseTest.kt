@@ -21,11 +21,11 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.Chapters
+import tachiyomi.data.Chapter
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.History
-import tachiyomi.data.Mangas
+import tachiyomi.data.Manga
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
@@ -66,8 +66,8 @@ class RestoreDatabaseTest {
         db = Database(
             driver,
             historyAdapter = History.Adapter(DateColumnAdapter),
-            mangasAdapter = Mangas.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
-            chaptersAdapter = Chapters.Adapter(MemoColumnAdapter),
+            mangaAdapter = Manga.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
+            chapterAdapter = Chapter.Adapter(MemoColumnAdapter),
         )
         Injekt.addSingletonFactory { GetCustomMangaInfo(customRepository) }
     }
@@ -78,15 +78,15 @@ class RestoreDatabaseTest {
     @Test
     fun `SQLDelight rolls back siblings when a nested failure is caught inside the outer transaction`() = runBlocking<Unit> {
         db.transaction {
-            db.categoriesQueries.insert("before", 1, 0, 0)
+            db.categoryQueries.insert("before", 1, 0, 0)
             try {
                 db.transaction { error("nested failure") }
             } catch (_: IllegalStateException) {
                 // This was the old batching strategy: the outer transaction is already failed.
             }
-            db.categoriesQueries.insert("after", 2, 0, 0)
+            db.categoryQueries.insert("after", 2, 0, 0)
         }
-        db.categoriesQueries.getCategories().awaitAsList().filter { it.id > 0 } shouldBe emptyList()
+        db.categoryQueries.getCategories().awaitAsList().filter { it.id > 0 } shouldBe emptyList()
     }
 
     @Test
@@ -96,13 +96,14 @@ class RestoreDatabaseTest {
             listOf("before", "broken", "after"),
             restore = { name ->
                 db.transaction {
-                    db.categoriesQueries.insert(name, 1, 0, 0)
+                    val order = listOf("before", "broken", "after").indexOf(name) + 1L
+                    db.categoryQueries.insert(name, order, 0, 0)
                     check(name != "broken") { "damaged entry" }
                 }
             },
             onError = { name, _ -> errors.add(name) },
         )
-        db.categoriesQueries.getCategories().awaitAsList().filter { it.id > 0 }.map { it.name }.toSet() shouldBe setOf("before", "after")
+        db.categoryQueries.getCategories().awaitAsList().filter { it.id > 0 }.map { it.name }.toSet() shouldBe setOf("before", "after")
         errors shouldBe listOf("broken")
     }
 
@@ -115,7 +116,7 @@ class RestoreDatabaseTest {
                 listOf("one", "two"),
                 restore = {
                     attempts++
-                    db.categoriesQueries.insert(it, 1, 0, 0)
+                    db.categoryQueries.insert(it, 1, 0, 0)
                     throw CancellationException("cancel restore")
                 },
                 onError = { _, _ -> error("Cancellation must propagate") },
@@ -125,7 +126,7 @@ class RestoreDatabaseTest {
         }
         cancelled shouldBe true
         attempts shouldBe 1
-        db.categoriesQueries.getCategories().awaitAsList().filter { it.id > 0 } shouldBe emptyList()
+        db.categoryQueries.getCategories().awaitAsList().filter { it.id > 0 } shouldBe emptyList()
     }
 
     @Test
@@ -141,7 +142,7 @@ class RestoreDatabaseTest {
             fetchInterval = FetchInterval(chapters), setCustomMangaInfo = SetCustomMangaInfo(customRepository),
             insertFlatMetadata = mockk(relaxed = true), getFlatMetadataById = mockk(relaxed = true),
         )
-        db.categoriesQueries.insert("Reading", 1, 0, 1)
+        db.categoryQueries.insert("Reading", 1, 0, 1)
         val category = BackupCategory("Reading", 1)
         val backup = BackupManga(
             source = 1, url = "/manga", title = "Original", author = "Original author",
@@ -160,7 +161,7 @@ class RestoreDatabaseTest {
             customInfo shouldBe emptyMap()
         }
         restorer.restore(backup, listOf(category))
-        val mangaId = db.mangasQueries.getAll().awaitAsList().single()._id
+        val mangaId = db.mangaQueries.getAll().awaitAsList().single().id
         val chapterId = chapters.await(mangaId).single().id
         backup.title = "Renamed"
         backup.author = "Changed author"
@@ -171,14 +172,14 @@ class RestoreDatabaseTest {
         backup.customTitle = "My title"
         backup.chapters = listOf(BackupChapter("/chapter", "Renamed chapter", chapterNumber = 4F, read = true, bookmark = true, fillermark = true, version = 8))
         restorer.restore(backup, listOf(category))
-        val manga = db.mangasQueries.getAll().awaitAsList().single()
-        manga._id shouldBe mangaId
-        manga.title shouldBe "Renamed"
-        manga.author shouldBe "Changed author"
-        manga.chapter_flags shouldBe 123
-        manga.viewer shouldBe 456
-        manga.version shouldBe 5
-        manga.notes shouldBe "Synced note"
+        val manga = db.mangaQueries.getAll().awaitAsList().single()
+        manga.id shouldBe mangaId
+        manga.remote_title shouldBe "Renamed"
+        manga.remote_author shouldBe "Changed author"
+        manga.user_chapter_flags shouldBe 123
+        manga.user_reader_flags shouldBe 456
+        manga.state_version shouldBe 5
+        manga.user_notes shouldBe "Synced note"
         customInfo[mangaId]?.title shouldBe "My title"
         val restoredChapter = chapters.await(mangaId).single()
         restoredChapter.id shouldBe chapterId
@@ -187,7 +188,7 @@ class RestoreDatabaseTest {
         restoredChapter.fillermark shouldBe true
         restoredChapter.version shouldBe 8
         tracks.getTracksByMangaId(mangaId).single().remoteId shouldBe 3
-        db.historyQueries.getHistoryByChapterUrl(mangaId, "/chapter").awaitAsOne().time_read shouldBe 42
+        db.historyQueries.getHistoryByChapterUrl("/chapter", mangaId).awaitAsOne().read_duration shouldBe 42
         GetCategories(CategoryRepositoryImpl(db)).await(mangaId).single().name shouldBe "Reading"
         // Only the version changes; identical visible state must still catch up.
         backup.chapters = listOf(BackupChapter(restoredChapter.url, restoredChapter.name, chapterNumber = restoredChapter.chapterNumber.toFloat(), read = true, bookmark = true, fillermark = true, version = 9))
@@ -195,7 +196,7 @@ class RestoreDatabaseTest {
         chapters.await(mangaId).single().version shouldBe 9
         restorer.restore(backup, listOf(category))
         chapters.await(mangaId).single().version shouldBe 9
-        db.mangasQueries.getAll().awaitAsList().single().version shouldBe 5
+        db.mangaQueries.getAll().awaitAsList().single().state_version shouldBe 5
     }
 
     @Test

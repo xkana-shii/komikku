@@ -20,7 +20,7 @@ class MangaRemoteUpdateTest {
             Database.Schema.create(driver).await()
             val database = testDatabase(driver)
             val mangaId = insertTestManga(database, "/manga")
-            val before = database.mangasQueries.getMangaById(mangaId).awaitAsOne()
+            val before = database.mangaQueries.getMangaById(mangaId).awaitAsOne()
 
             check(
                 MangaRepositoryImpl(database).updateRemote(
@@ -41,13 +41,13 @@ class MangaRemoteUpdateTest {
                 ),
             )
 
-            val after = database.mangasQueries.getMangaById(mangaId).awaitAsOne()
-            check(after.title == "New title" && after.author == "New author")
-            check(after.favorite == before.favorite)
-            check(after.viewer == before.viewer)
-            check(after.chapter_flags == before.chapter_flags)
-            check(after.notes == before.notes)
-            check(after.version == before.version)
+            val after = database.mangaQueries.getMangaById(mangaId).awaitAsOne()
+            check(after.remote_title == "New title" && after.remote_author == "New author")
+            check(after.user_favorite_at == before.user_favorite_at)
+            check(after.user_reader_flags == before.user_reader_flags)
+            check(after.user_chapter_flags == before.user_chapter_flags)
+            check(after.user_notes == before.user_notes)
+            check(after.state_version == before.state_version)
         } finally {
             driver.close()
         }

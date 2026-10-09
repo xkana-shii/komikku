@@ -3,14 +3,16 @@ package eu.kanade.tachiyomi.ui.more
 import android.app.Application
 import android.content.Intent
 import androidx.core.net.toUri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import uy.kohesive.injekt.Injekt
@@ -24,12 +26,16 @@ class NewUpdateScreenModel(
     private val work: Flow<List<WorkInfo>> = context.workManager.getWorkInfosForUniqueWorkFlow(AppUpdateDownloadJob.TAG),
     private val startDownload: () -> Unit = { AppUpdateDownloadJob.start(context, downloadLink, versionName, inlineInstall = true) },
     private val install: (String) -> Unit = { installDownloadedUpdate(context, it) },
-) : StateScreenModel<NewUpdateScreenModel.State>(State()) {
+) : ViewModel() {
+
+    val state: StateFlow<NewUpdateScreenModel.State>
+        field = MutableStateFlow<NewUpdateScreenModel.State>(State())
+
     private var hasObservedWork = false
     private var manualDownloadRequested = false
 
     init {
-        screenModelScope.launch {
+        viewModelScope.launch {
             work.collect { work ->
                 hasObservedWork = true
                 val matching = work.filter { AppUpdateDownloadJob.urlTag(downloadLink) in it.tags }
@@ -44,14 +50,14 @@ class NewUpdateScreenModel(
                     ?: manual.firstOrNull()
                 if (info == null) {
                     if (!manualDownloadRequested) {
-                        mutableState.value = State()
+                        state.value = State()
                     }
                     return@collect
                 }
                 if (activeManual != null) {
                     manualDownloadRequested = false
                 }
-                mutableState.update {
+                state.update {
                     when (info.state) {
                         WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> State(
                             stage = Stage.Downloading,
@@ -76,15 +82,15 @@ class NewUpdateScreenModel(
             Stage.Downloaded -> try {
                 install(checkNotNull(state.value.uri))
             } catch (e: Exception) {
-                mutableState.update { it.copy(stage = Stage.Failed, error = with(context) { e.formattedMessage }) }
+                state.update { it.copy(stage = Stage.Failed, error = with(context) { e.formattedMessage }) }
             }
             else -> try {
                 manualDownloadRequested = true
-                mutableState.value = State(stage = Stage.Downloading)
+                state.value = State(stage = Stage.Downloading)
                 startDownload()
             } catch (e: Exception) {
                 manualDownloadRequested = false
-                mutableState.update { it.copy(stage = Stage.Failed, error = with(context) { e.formattedMessage }) }
+                state.update { it.copy(stage = Stage.Failed, error = with(context) { e.formattedMessage }) }
             }
         }
     }

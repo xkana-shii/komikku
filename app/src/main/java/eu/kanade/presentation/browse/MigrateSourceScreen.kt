@@ -40,7 +40,7 @@ import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.components.AnimatedFloatingSearchBox
 import eu.kanade.presentation.components.SOURCE_SEARCH_BOX_HEIGHT
 import eu.kanade.presentation.util.animateItemFastScroll
-import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceScreenModel
+import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceViewModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import exh.source.ExhPreferences
 import exh.source.eHentaiSourceIds
@@ -63,7 +63,7 @@ import uy.kohesive.injekt.api.get
 
 @Composable
 fun MigrateSourceScreen(
-    state: MigrateSourceScreenModel.State,
+    state: MigrateSourceViewModel.State,
     contentPadding: PaddingValues,
     onClickItem: (Source) -> Unit,
     onToggleSortingDirection: () -> Unit,
@@ -114,7 +114,7 @@ private fun MigrateSourceList(
     sortingDirection: SetMigrateSorting.Direction,
     onToggleSortingDirection: () -> Unit,
     // KMK -->
-    state: MigrateSourceScreenModel.State,
+    state: MigrateSourceViewModel.State,
     onChangeSearchQuery: (String?) -> Unit,
     // KMK <--
 ) {

@@ -12,34 +12,34 @@ CREATE TABLE manga_chapter_stats(
     last_read INTEGER NOT NULL,
     fillermark_count INTEGER NOT NULL DEFAULT 0,
     fillermark_read_count INTEGER NOT NULL DEFAULT 0,
-    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
     ON DELETE CASCADE
 );
 
 -- Any write that can change an entry's aggregates drops its row; the library query
 -- aggregates entries without a row live until `refill` restores it.
 CREATE TRIGGER manga_chapter_stats_insert_chapter
-AFTER INSERT ON chapters
+AFTER INSERT ON chapter
 BEGIN
     DELETE FROM manga_chapter_stats WHERE manga_id = new.manga_id;
 END;
 
 -- Page progress and other columns the aggregates don't read keep the row.
 CREATE TRIGGER manga_chapter_stats_update_chapter
-AFTER UPDATE OF manga_id, scanlator, read, bookmark, fillermark, date_upload, date_fetch ON chapters
+AFTER UPDATE OF manga_id, remote_scanlator, user_read, user_bookmark, user_fillermark, remote_date_upload, state_date_fetch ON chapter
 WHEN old.manga_id IS NOT new.manga_id
-OR old.scanlator IS NOT new.scanlator
-OR old.read IS NOT new.read
-OR old.bookmark IS NOT new.bookmark
-OR old.fillermark IS NOT new.fillermark
-OR old.date_upload IS NOT new.date_upload
-OR old.date_fetch IS NOT new.date_fetch
+OR old.remote_scanlator IS NOT new.remote_scanlator
+OR old.user_read IS NOT new.user_read
+OR old.user_bookmark IS NOT new.user_bookmark
+OR old.user_fillermark IS NOT new.user_fillermark
+OR old.remote_date_upload IS NOT new.remote_date_upload
+OR old.state_date_fetch IS NOT new.state_date_fetch
 BEGIN
     DELETE FROM manga_chapter_stats WHERE manga_id IN (old.manga_id, new.manga_id);
 END;
 
 CREATE TRIGGER manga_chapter_stats_delete_chapter
-AFTER DELETE ON chapters
+AFTER DELETE ON chapter
 BEGIN
     DELETE FROM manga_chapter_stats WHERE manga_id = old.manga_id;
 END;
@@ -48,32 +48,32 @@ CREATE TRIGGER manga_chapter_stats_insert_history
 AFTER INSERT ON history
 BEGIN
     DELETE FROM manga_chapter_stats
-    WHERE manga_id = (SELECT manga_id FROM chapters WHERE _id = new.chapter_id);
+    WHERE manga_id = (SELECT manga_id FROM chapter WHERE id = new.chapter_id);
 END;
 
 CREATE TRIGGER manga_chapter_stats_update_history
-AFTER UPDATE OF last_read ON history
-WHEN old.last_read IS NOT new.last_read
+AFTER UPDATE OF read_at ON history
+WHEN old.read_at IS NOT new.read_at
 BEGIN
     DELETE FROM manga_chapter_stats
-    WHERE manga_id = (SELECT manga_id FROM chapters WHERE _id = new.chapter_id);
+    WHERE manga_id = (SELECT manga_id FROM chapter WHERE id = new.chapter_id);
 END;
 
 CREATE TRIGGER manga_chapter_stats_delete_history
 AFTER DELETE ON history
 BEGIN
     DELETE FROM manga_chapter_stats
-    WHERE manga_id = (SELECT manga_id FROM chapters WHERE _id = old.chapter_id);
+    WHERE manga_id = old.manga_id;
 END;
 
 CREATE TRIGGER manga_chapter_stats_insert_excluded_scanlator
-AFTER INSERT ON excluded_scanlators
+AFTER INSERT ON excluded_scanlator
 BEGIN
     DELETE FROM manga_chapter_stats WHERE manga_id = new.manga_id;
 END;
 
 CREATE TRIGGER manga_chapter_stats_delete_excluded_scanlator
-AFTER DELETE ON excluded_scanlators
+AFTER DELETE ON excluded_scanlator
 BEGIN
     DELETE FROM manga_chapter_stats WHERE manga_id = old.manga_id;
 END;
@@ -81,33 +81,33 @@ END;
 -- Merged entries (6969) aggregate their children live, so they never get a row.
 hasMissing:
 SELECT EXISTS (
-    SELECT 1 FROM mangas
-    WHERE favorite = 1 AND source <> 6969
-    AND _id NOT IN (SELECT manga_id FROM manga_chapter_stats)
+    SELECT 1 FROM manga
+    WHERE user_favorite_at IS NOT NULL AND source_id <> 6969
+    AND id NOT IN (SELECT manga_id FROM manga_chapter_stats)
 );
 
 -- Recomputes the rows of library entries that have none.
 refill:
 INSERT INTO manga_chapter_stats
 SELECT
-    M._id,
-    count(CASE WHEN ES.manga_id IS NULL THEN C._id END),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.read ELSE 0 END), 0),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.bookmark ELSE 0 END), 0),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.bookmark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0),
-    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.date_upload ELSE 0 END), 0),
-    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.date_fetch ELSE 0 END), 0),
-    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN H.last_read ELSE 0 END), 0),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.fillermark ELSE 0 END), 0),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.fillermark = 1 AND C.read = 1 THEN 1 ELSE 0 END), 0)
-FROM mangas M
-LEFT JOIN chapters C
-ON C.manga_id = M._id
-LEFT JOIN excluded_scanlators ES
-ON ES.manga_id = C.manga_id AND ES.scanlator = C.scanlator
+    M.id,
+    count(CASE WHEN ES.manga_id IS NULL THEN C.id END),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.user_read ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.user_bookmark ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.user_bookmark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0),
+    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.remote_date_upload ELSE 0 END), 0),
+    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.state_date_fetch ELSE 0 END), 0),
+    coalesce(max(CASE WHEN ES.manga_id IS NULL THEN H.read_at ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.user_fillermark ELSE 0 END), 0),
+    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.user_fillermark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0)
+FROM manga M
+LEFT JOIN chapter C
+ON C.manga_id = M.id
+LEFT JOIN excluded_scanlator ES
+ON ES.manga_id = C.manga_id AND ES.scanlator = C.remote_scanlator
 LEFT JOIN history H
-ON H.chapter_id = C._id
-WHERE M.favorite = 1 AND M.source <> 6969
-AND M._id NOT IN (SELECT manga_id FROM manga_chapter_stats)
-GROUP BY M._id;
+ON H.chapter_id = C.id
+WHERE M.user_favorite_at IS NOT NULL AND M.source_id <> 6969
+AND M.id NOT IN (SELECT manga_id FROM manga_chapter_stats)
+GROUP BY M.id;
 -- KMK <--

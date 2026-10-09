@@ -1,97 +1,113 @@
 -- NOTE: must update MERGED_SOURCE_ID (6969) here
 CREATE VIEW updatesView AS
 SELECT
-    mangas._id AS mangaId,
-    mangas.title AS mangaTitle,
-    chapters._id AS chapterId,
-    chapters.name AS chapterName,
-    chapters.scanlator,
-    chapters.url AS chapterUrl,
-    chapters.read,
-    chapters.bookmark,
-    chapters.fillermark,
-    chapters.last_page_read,
-    mangas.source,
-    mangas.favorite,
-    mangas.thumbnail_url AS thumbnailUrl,
-    mangas.cover_last_modified AS coverLastModified,
-    chapters.date_upload AS dateUpload,
-    chapters.date_fetch AS datefetch,
-    excluded_scanlators.scanlator AS excludedScanlator
-FROM mangas JOIN chapters
-ON mangas._id = chapters.manga_id
-LEFT JOIN excluded_scanlators
-ON mangas._id = excluded_scanlators.manga_id
-AND chapters.scanlator = excluded_scanlators.scanlator
-WHERE favorite = 1 AND source <> 6969
-AND date_fetch > date_added
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    chapter.id AS chapterId,
+    chapter.remote_name AS chapterName,
+    chapter.remote_scanlator AS scanlator,
+    chapter.remote_url AS chapterUrl,
+    chapter.user_read AS read,
+    chapter.user_bookmark AS bookmark,
+    chapter.user_fillermark AS fillermark,
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    (manga.user_favorite_at IS NOT NULL) AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_date_upload AS dateUpload,
+    chapter.state_date_fetch AS dateFetch,
+    excluded_scanlator.scanlator AS excludedScanlator
+FROM manga JOIN chapter
+ON manga.id = chapter.manga_id
+LEFT JOIN excluded_scanlator
+ON manga.id = excluded_scanlator.manga_id
+AND chapter.remote_scanlator = excluded_scanlator.scanlator
+WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id <> 6969
+AND chapter.state_date_fetch > manga.state_date_added
 UNION
 SELECT
-    mangas._id AS mangaId,
-    mangas.title AS mangaTitle,
-    chapters._id AS chapterId,
-    chapters.name AS chapterName,
-    chapters.scanlator,
-    chapters.url AS chapterUrl,
-    chapters.read,
-    chapters.bookmark,
-    chapters.fillermark,
-    chapters.last_page_read,
-    mangas.source,
-    mangas.favorite,
-    mangas.thumbnail_url AS thumbnailUrl,
-    mangas.cover_last_modified AS coverLastModified,
-    chapters.date_upload AS dateUpload,
-    chapters.date_fetch AS datefetch,
-    excluded_scanlators.scanlator AS excludedScanlator
-FROM mangas
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    chapter.id AS chapterId,
+    chapter.remote_name AS chapterName,
+    chapter.remote_scanlator AS scanlator,
+    chapter.remote_url AS chapterUrl,
+    chapter.user_read AS read,
+    chapter.user_bookmark AS bookmark,
+    chapter.user_fillermark AS fillermark,
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    (manga.user_favorite_at IS NOT NULL) AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_date_upload AS dateUpload,
+    chapter.state_date_fetch AS dateFetch,
+    excluded_scanlator.scanlator AS excludedScanlator
+FROM manga
 LEFT JOIN (
     SELECT merged.manga_id,merged.merge_id
     FROM merged
     GROUP BY merged.merge_id
 ) AS ME
-ON ME.merge_id = mangas._id
-JOIN chapters
-ON ME.manga_id = chapters.manga_id
-LEFT JOIN excluded_scanlators
-ON mangas._id = excluded_scanlators.manga_id
-AND chapters.scanlator = excluded_scanlators.scanlator
-WHERE favorite = 1 AND source = 6969
-AND date_fetch > date_added
-ORDER BY datefetch DESC;
+ON ME.merge_id = manga.id
+JOIN chapter
+ON ME.manga_id = chapter.manga_id
+LEFT JOIN excluded_scanlator
+ON manga.id = excluded_scanlator.manga_id
+AND chapter.remote_scanlator = excluded_scanlator.scanlator
+WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id = 6969
+AND chapter.state_date_fetch > manga.state_date_added
+ORDER BY dateFetch DESC;
 
 getRecentUpdates:
-SELECT *
+SELECT
+    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
+    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    dateUpload, dateFetch, excludedScanlator
 FROM updatesView
 WHERE dateUpload > :after
-ORDER BY datefetch DESC
+ORDER BY dateFetch DESC
 LIMIT :limit;
 
 getRecentUpdatesWithFilters:
-SELECT *
+SELECT
+    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
+    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    dateUpload, dateFetch, excludedScanlator
 FROM updatesView
 WHERE dateUpload > :after
 AND (:read IS NULL OR read = :read)
 -- Started means some progress but not finished, Read means finished chapter, thus:
 AND (
     :started IS NULL
-    OR (:started = 1 AND last_page_read > 0 AND read = 0)
-    OR (:started = 0 AND last_page_read = 0 AND read = 0)
+    OR (:started = 1 AND lastPageRead > 0 AND read = 0)
+    OR (:started = 0 AND lastPageRead = 0 AND read = 0)
 )
 AND (:bookmarked IS NULL OR bookmark = :bookmarked)
 AND (:fillermarked IS NULL OR fillermark = :fillermarked)
-AND (
-    (excludedScanlator IS NULL OR :hideExcludedScanlators = 0)
-)
--- KMK -->
-ORDER BY datefetch DESC
--- KMK <--
+AND (excludedScanlator IS NULL OR :hideExcludedScanlators = 0)
+ORDER BY dateFetch DESC
 LIMIT :limit;
 
-getUpdatesByReadStatus:
-SELECT *
+getReadUpdates:
+SELECT
+    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
+    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    dateUpload, dateFetch, excludedScanlator
 FROM updatesView
-WHERE read = :read
+WHERE read = 1
 AND dateUpload > :after
-ORDER BY datefetch DESC
+ORDER BY dateFetch DESC
+LIMIT :limit;
+
+getUnreadUpdates:
+SELECT
+    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
+    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    dateUpload, dateFetch, excludedScanlator
+FROM updatesView
+WHERE read = 0
+AND dateUpload > :after
+ORDER BY dateFetch DESC
 LIMIT :limit;

@@ -8,11 +8,11 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.Chapters
+import tachiyomi.data.Chapter
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.History
-import tachiyomi.data.Mangas
+import tachiyomi.data.Manga
 import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
@@ -42,7 +42,7 @@ class FeedSavedSearchRepositoryTest {
         )
         if (create) Database.Schema.create(driver).await()
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
-        val db = Database(driver = driver, historyAdapter = History.Adapter(DateColumnAdapter), mangasAdapter = Mangas.Adapter(genreAdapter = StringListColumnAdapter, update_strategyAdapter = UpdateStrategyColumnAdapter, memoAdapter = MemoColumnAdapter), chaptersAdapter = Chapters.Adapter(MemoColumnAdapter))
+        val db = Database(driver = driver, historyAdapter = History.Adapter(DateColumnAdapter), mangaAdapter = Manga.Adapter(remote_genreAdapter = StringListColumnAdapter, remote_update_strategyAdapter = UpdateStrategyColumnAdapter, remote_memoAdapter = MemoColumnAdapter), chapterAdapter = Chapter.Adapter(MemoColumnAdapter))
         searches = SavedSearchRepositoryImpl(db)
         feeds = FeedSavedSearchRepositoryImpl(db)
     }

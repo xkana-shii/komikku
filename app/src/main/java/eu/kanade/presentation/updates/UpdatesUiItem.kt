@@ -61,7 +61,7 @@ import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
-import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel.UpdateSelectionOptions
+import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel.UpdateSelectionOptions
 import eu.kanade.tachiyomi.ui.updates.groupByDateAndManga
 import exh.debug.DebugToggles
 import me.saket.swipe.SwipeableActionsBox
