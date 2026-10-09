@@ -295,6 +295,15 @@ dependencies {
     }
     implementation(libs.image.decoder)
 
+    // KMK -->
+    implementation(libs.webgpuviewer) {
+        // Keep the renderer on Komikku's Compose/Core stack instead of importing Mihon's newer BOM.
+        exclude(group = "androidx.compose", module = "compose-bom")
+        exclude(group = "androidx.compose.foundation", module = "foundation")
+        exclude(group = "androidx.core", module = "core")
+    }
+    // KMK <--
+
     // UI libraries
     implementation(libs.material)
     implementation(libs.flexibleAdapter)

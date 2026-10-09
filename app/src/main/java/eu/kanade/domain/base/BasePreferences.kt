@@ -32,7 +32,11 @@ class BasePreferences(
 
     fun displayProfile() = preferenceStore.getString("pref_display_profile_key", "")
 
+    fun highQualityRenderer() = preferenceStore.getBoolean("pref_high_quality_renderer_key", false)
+
+    // KMK -->
     fun hardwareBitmapThreshold() = preferenceStore.getInt("pref_hardware_bitmap_threshold", GLUtil.SAFE_TEXTURE_LIMIT)
+    // KMK <--
 
     fun alwaysDecodeLongStripWithSSIV() = preferenceStore.getBoolean("pref_always_decode_long_strip_with_ssiv", false)
 
