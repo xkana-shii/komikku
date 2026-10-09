@@ -18,15 +18,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.util.fastForEach
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import cafe.adriel.voyager.core.model.StateScreenModel
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import mihon.domain.migration.models.MigrationFlag
 import mihon.domain.migration.usecases.MigrateMangaUseCase
@@ -52,11 +50,17 @@ internal fun Screen.MigrateMangaDialog(
 ) {
     val scope = rememberCoroutineScope()
 
-    val viewModel = viewModel<MigrateDialogViewModel>()
+    // KMK -->
+    val screenModel = rememberScreenModel { MigrateDialogScreenModel() }
+    // KMK <--
     LaunchedEffect(current, target) {
-        viewModel.init(current, target)
+        // KMK -->
+        screenModel.init(current, target)
+        // KMK <--
     }
-    val state by viewModel.state.collectAsState()
+    // KMK -->
+    val state by screenModel.state.collectAsState()
+    // KMK <--
 
     if (state.isMigrated) return
 
@@ -80,7 +84,9 @@ internal fun Screen.MigrateMangaDialog(
                     LabeledCheckbox(
                         label = stringResource(flag.getLabel()),
                         checked = flag in state.selectedFlags,
-                        onCheckedChange = { viewModel.toggleSelection(flag) },
+                        // KMK -->
+                        onCheckedChange = { screenModel.toggleSelection(flag) },
+                        // KMK <--
                     )
                 }
             }
@@ -106,7 +112,9 @@ internal fun Screen.MigrateMangaDialog(
                 TextButton(
                     onClick = {
                         scope.launchIO {
-                            viewModel.migrateManga(replace = false)
+                            // KMK -->
+                            screenModel.migrateManga(replace = false)
+                            // KMK <--
                             withUIContext { onComplete() }
                         }
                     },
@@ -116,7 +124,9 @@ internal fun Screen.MigrateMangaDialog(
                 TextButton(
                     onClick = {
                         scope.launchIO {
-                            viewModel.migrateManga(replace = true)
+                            // KMK -->
+                            screenModel.migrateManga(replace = true)
+                            // KMK <--
                             withUIContext { onComplete() }
                         }
                     },
@@ -128,15 +138,14 @@ internal fun Screen.MigrateMangaDialog(
     )
 }
 
-private class MigrateDialogViewModel(
-    val sourcePreference: SourcePreferences = Injekt.get(),
+// KMK -->
+private class MigrateDialogScreenModel(
+    private val sourcePreference: SourcePreferences = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val downloadManager: DownloadManager = Injekt.get(),
     private val migrateManga: MigrateMangaUseCase = Injekt.get(),
-) : ViewModel() {
-
-    val state: StateFlow<MigrateDialogViewModel.State>
-        field = MutableStateFlow<MigrateDialogViewModel.State>(State())
+) : StateScreenModel<MigrateDialogScreenModel.State>(State()) {
+// KMK <--
 
     fun init(current: Manga, target: Manga) {
         val applicableFlags = buildList {
@@ -158,7 +167,9 @@ private class MigrateDialogViewModel(
             }
         }
         val selectedFlags = sourcePreference.migrationFlags().get()
-        state.update {
+        // KMK -->
+        mutableState.update {
+            // KMK <--
             State(
                 current = current,
                 target = target,
@@ -169,7 +180,9 @@ private class MigrateDialogViewModel(
     }
 
     fun toggleSelection(flag: MigrationFlag) {
-        state.update {
+        // KMK -->
+        mutableState.update {
+            // KMK <--
             val selectedFlags = it.selectedFlags.toMutableSet()
                 .apply { if (contains(flag)) remove(flag) else add(flag) }
                 .toSet()
@@ -184,13 +197,17 @@ private class MigrateDialogViewModel(
         // KMK -->
         // sourcePreference.migrationFlags().set(currentState.selectedFlags)
         // KMK <--
-        state.update { it.copy(isMigrating = true) }
+        // KMK -->
+        mutableState.update { it.copy(isMigrating = true) }
+        // KMK <--
         try {
             migrateManga(current, target, replace, /* KMK --> */ currentState.selectedFlags /* KMK <-- */)
-            state.update { it.copy(isMigrating = false, isMigrated = true) }
+            // KMK -->
+            mutableState.update { it.copy(isMigrating = false, isMigrated = true) }
+            // KMK <--
             // KMK -->
         } catch (_: Throwable) {
-            state.update { it.copy(isMigrating = false, isMigrated = false) }
+            mutableState.update { it.copy(isMigrating = false, isMigrated = false) }
             // KMK <--
         }
     }
