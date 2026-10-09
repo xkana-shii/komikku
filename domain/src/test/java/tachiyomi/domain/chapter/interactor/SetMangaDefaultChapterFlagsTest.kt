@@ -34,7 +34,7 @@ class SetMangaDefaultChapterFlagsTest {
     }
     private val libraryPreferences = LibraryPreferences(store)
     private val repository = mockk<MangaRepository> {
-        coEvery { update(any()) } returns true
+        coEvery { updateAll(any()) } returns true
         coEvery { updateLibraryChapterFlags(any()) } returns true
     }
     private val flags = SetMangaChapterFlags(repository)
@@ -48,7 +48,7 @@ class SetMangaDefaultChapterFlagsTest {
     fun `await updates only the target manga`() = runTest {
         libraryPreferences.setChapterSettingsDefault(manga)
         subject.await(Manga.create().copy(id = 77, chapterFlags = -1))
-        coVerify(exactly = 1) { repository.update(MangaUpdate(id = 77, chapterFlags = expected)) }
+        coVerify(exactly = 1) { repository.updateAll(listOf(MangaUpdate(id = 77, chapterFlags = expected))) }
         confirmVerified(repository)
     }
 
