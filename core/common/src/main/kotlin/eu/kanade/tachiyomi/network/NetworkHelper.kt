@@ -104,30 +104,6 @@ open /* SY <-- */ class NetworkHelper(
             .addInterceptor(
                 CloudflareInterceptor(context, cookieJar, scope, ::defaultUserAgentProvider),
             )
-            // KMK -->
-            // FIXME (KMK): Dirty hack to fetch MangaDex covers
-            .addInterceptor { chain ->
-                val originalRequest = chain.request()
-                val url = originalRequest.url
-
-                if (!delegatedSourcesEnabled ||
-                    url.host != "uploads.mangadex.org" ||
-                    !url.encodedPath.startsWith("/covers/")
-                ) {
-                    return@addInterceptor chain.proceed(originalRequest)
-                }
-
-                val newRequest = originalRequest
-                    .newBuilder()
-                    .header("Referer", "https://mangadex.org/")
-                    .header("Origin", "https://mangadex.org")
-                    .header("sec-fetch-dest", "image")
-                    .header("sec-fetch-mode", "no-cors")
-                    .build()
-
-                chain.proceed(newRequest)
-            }
-            // KMK <--
             .build()
     }
 
