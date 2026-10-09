@@ -1,4 +1,3 @@
-
 package tachiyomi.domain.manga.interactor
 
 import io.kotest.matchers.shouldBe
