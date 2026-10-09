@@ -1,5 +1,6 @@
 package eu.kanade.presentation.reader.settings
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,7 +30,7 @@ import uy.kohesive.injekt.api.get
 import java.text.NumberFormat
 
 @Composable
-internal fun ReadingModePage(viewModel: ReaderSettingsViewModel) {
+internal fun ColumnScope.ReadingModePage(viewModel: ReaderSettingsViewModel) {
     HeadingItem(MR.strings.pref_category_for_this_series)
     val manga by viewModel.mangaFlow.collectAsState()
     val viewer by viewModel.viewerFlow.collectAsState()
@@ -46,7 +47,7 @@ internal fun ReadingModePage(viewModel: ReaderSettingsViewModel) {
     }
 
     if (viewer is WebGpuViewer) {
-        val default = Injekt.get<ReaderPreferences>().defaultReadingMode.get()
+        val default = Injekt.get<ReaderPreferences>().defaultReadingMode().get()
         val resolved = ReadingMode.fromPreference(
             when {
                 readingMode == ReadingMode.DEFAULT -> default
@@ -96,7 +97,7 @@ internal fun ReadingModePage(viewModel: ReaderSettingsViewModel) {
 
             CheckboxItem(
                 label = stringResource(MR.strings.pref_webtoon_disable_zoom_out),
-                pref = viewModel.preferences.webtoonDisableZoomOut,
+                pref = viewModel.preferences.webtoonDisableZoomOut(),
             )
         }
     }
@@ -428,7 +429,7 @@ private fun ColumnScope.WebGpuViewerSettings(viewModel: ReaderSettingsViewModel)
     val viewer by viewModel.viewerFlow.collectAsState()
 
     val readingMode = remember(manga) { ReadingMode.fromPreference(manga?.readingMode?.toInt()) }
-    val default = Injekt.get<ReaderPreferences>().defaultReadingMode.get()
+    val default = Injekt.get<ReaderPreferences>().defaultReadingMode().get()
     val resolved = ReadingMode.fromPreference(
         when {
             readingMode == ReadingMode.DEFAULT -> default
@@ -437,13 +438,13 @@ private fun ColumnScope.WebGpuViewerSettings(viewModel: ReaderSettingsViewModel)
     )
     val isDual = (viewer as? WebGpuViewer)?.isDualPageMode() == true
 
-    val navigationModePager by viewModel.preferences.navigationModePager.collectAsState()
-    val pagerNavInverted by viewModel.preferences.pagerNavInverted.collectAsState()
+    val navigationModePager by viewModel.preferences.navigationModePager().collectAsState()
+    val pagerNavInverted by viewModel.preferences.pagerNavInverted().collectAsState()
     TapZonesItems(
         selected = navigationModePager,
-        onSelect = viewModel.preferences.navigationModePager::set,
+        onSelect = viewModel.preferences.navigationModePager()::set,
         invertMode = pagerNavInverted,
-        onSelectInvertMode = viewModel.preferences.pagerNavInverted::set,
+        onSelectInvertMode = viewModel.preferences.pagerNavInverted()::set,
     )
 
     if (isDual) {
@@ -474,25 +475,25 @@ private fun ColumnScope.WebGpuViewerSettings(viewModel: ReaderSettingsViewModel)
     }
 
     if (resolved != ReadingMode.WEBTOON && resolved != ReadingMode.CONTINUOUS_VERTICAL) {
-        val imageScaleType by viewModel.preferences.imageScaleType.collectAsState()
+        val imageScaleType by viewModel.preferences.imageScaleType().collectAsState()
         SettingsChipRow(MR.strings.pref_image_scale_type) {
             ReaderPreferences.ImageScaleTypeWebGpuViewer.forEach {
                 FilterChip(
                     selected = ReaderPreferences.ImageScaleType[imageScaleType - 1] == it,
                     onClick = {
-                        viewModel.preferences.imageScaleType.set(ReaderPreferences.ImageScaleType.indexOf(it) + 1)
+                        viewModel.preferences.imageScaleType().set(ReaderPreferences.ImageScaleType.indexOf(it) + 1)
                     },
                     label = { Text(stringResource(it)) },
                 )
             }
         }
 
-        val zoomStart by viewModel.preferences.zoomStart.collectAsState()
+        val zoomStart by viewModel.preferences.zoomStart().collectAsState()
         SettingsChipRow(MR.strings.pref_zoom_start) {
             ReaderPreferences.ZoomStart.mapIndexed { index, it ->
                 FilterChip(
                     selected = zoomStart == index + 1,
-                    onClick = { viewModel.preferences.zoomStart.set(index + 1) },
+                    onClick = { viewModel.preferences.zoomStart().set(index + 1) },
                     label = { Text(stringResource(it)) },
                 )
             }
@@ -500,17 +501,17 @@ private fun ColumnScope.WebGpuViewerSettings(viewModel: ReaderSettingsViewModel)
 
         CheckboxItem(
             label = stringResource(MR.strings.pref_crop_borders),
-            pref = viewModel.preferences.cropBorders,
+            pref = viewModel.preferences.cropBorders(),
         )
 
         CheckboxItem(
             label = stringResource(MR.strings.pref_landscape_zoom),
-            pref = viewModel.preferences.landscapeZoom,
+            pref = viewModel.preferences.landscapeZoom(),
         )
 
         CheckboxItem(
             label = stringResource(MR.strings.pref_navigate_pan),
-            pref = viewModel.preferences.navigateToPan,
+            pref = viewModel.preferences.navigateToPan(),
         )
 
         val transitionAnimation by viewModel.preferences.transitionAnimation.collectAsState()

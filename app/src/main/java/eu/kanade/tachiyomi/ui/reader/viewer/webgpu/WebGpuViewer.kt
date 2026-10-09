@@ -8,6 +8,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -61,6 +62,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -113,6 +115,10 @@ open class WebGpuViewer(
     ).also { cachedOnBackgroundColor = it }
 
     protected val scope = MainScope()
+
+    // KMK -->
+    override val automationInProgress = MutableStateFlow(false)
+    // KMK <--
 
     // Dedicated thread for decode worker to avoid blocking Dispatchers.Default pool
     private val decodeExecutor = Executors.newSingleThreadExecutor { r ->
@@ -957,6 +963,9 @@ open class WebGpuViewer(
             }
 
             onTap = { offset ->
+                // KMK -->
+                automationInProgress.value = false
+                // KMK <--
                 when (config.navigator.getAction(PointF(offset.x, offset.y))) {
                     NavigationRegion.MENU -> activity.toggleMenu()
                     NavigationRegion.NEXT -> moveToNext()
@@ -1053,11 +1062,19 @@ open class WebGpuViewer(
             val showOnStart = config.navigationOverlayOnStart || config.forceNavigationOverlay
             activity.binding.navigationOverlay.setNavigation(config.navigator, showOnStart)
         }
+
+        // KMK -->
+        automateWebGpu(activity, this, automationInProgress, config, scope)
+        // KMK <--
     }
 
     override fun destroy() {
         // Before the interrupt: taken mid-decode, only the flag stops the worker parking.
         destroyed = true
+        // KMK -->
+        automationInProgress.value = false
+        activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // KMK <--
         scope.cancel()
 
         // shutdownNow interrupts the worker out of lock.wait().
@@ -1855,6 +1872,14 @@ open class WebGpuViewer(
         }
     }
 
+    // KMK -->
+    internal fun currentChapterId(): Long? = when (val page = currentPage) {
+        is ViewerReaderPage -> page.page.chapter.chapter.id
+        is ViewerTransitionPage -> page.nextChapter?.chapter?.id ?: page.prevChapter?.chapter?.id
+        else -> null
+    }
+    // KMK <--
+
     /**
      * Tells this viewer to move to the given [page].
      * In dual page mode, aligns to the start of the spread containing the page.
@@ -1879,6 +1904,9 @@ open class WebGpuViewer(
         (newPage as? ViewerTransitionPage)?.let { ViewerTransitionPage ->
             if (ViewerTransitionPage.prevChapter == null || ViewerTransitionPage.nextChapter == null) {
                 activity.showMenu()
+                // KMK -->
+                if (ViewerTransitionPage.nextChapter == null) automationInProgress.value = false
+                // KMK <--
             }
         }
 

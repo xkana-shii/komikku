@@ -27,6 +27,7 @@ import eu.kanade.presentation.util.isTabletUi
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import eu.kanade.tachiyomi.util.system.toast
 import tachiyomi.core.common.i18n.pluralStringResource
@@ -39,8 +40,11 @@ fun Automation(
     readerPreferences: ReaderPreferences,
     viewer: Viewer?,
 ) {
-    val isPagerViewer = viewer is PagerViewer
-    val isWebtoonViewer = viewer is WebtoonViewer
+    // KMK -->
+    val webGpuViewer = viewer as? WebGpuViewer
+    val isPagerViewer = viewer is PagerViewer || webGpuViewer?.isContinuous == false
+    val isWebtoonViewer = viewer is WebtoonViewer || webGpuViewer?.isContinuous == true
+    // KMK <--
     val isPagerFlipAvailableAndEnabled = isPagerViewer && readerPreferences.autoFlip().get()
     val isWebtoonScrollAvailableAndEnabled = isWebtoonViewer && readerPreferences.autoScroll().get()
     if (!isPagerFlipAvailableAndEnabled && !isWebtoonScrollAvailableAndEnabled) {
@@ -106,7 +110,7 @@ fun Automation(
             FilledIconButton(
                 onClick = {
                     android.util.Log.d("Automation", "Clicked start automation")
-                    viewer?.automationInProgress?.value = true
+                    viewer.automationInProgress.value = true
                 },
                 colors = buttonColor,
             ) {

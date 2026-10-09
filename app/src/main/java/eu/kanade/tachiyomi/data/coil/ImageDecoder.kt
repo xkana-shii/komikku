@@ -24,6 +24,7 @@ import tachiyomi.core.common.util.system.ImageUtil
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.BufferedInputStream
+import java.nio.ByteBuffer
 
 /**
  * A [Decoder] that uses [ImageDecoder] to decode image formats not supported
@@ -35,7 +36,7 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
 
     /**
      * Wraps a raw [ImageDecoder.Frame] as a Coil [Image] for callers that want
-     * direct access to the RGBA [java.nio.ByteBuffer] (e.g. the new-decoder path).
+     * direct access to the RGBA [ByteBuffer] (e.g. the new-decoder path).
      */
     class DecodeResultImage(
         val frame: ImageDecoder.Frame,
@@ -43,7 +44,7 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
         val hdrHeadroom: Float,
         val gainmap: ImageDecoder.Gainmap?,
     ) : Image {
-        val image: java.nio.ByteBuffer get() = frame.image
+        val image: ByteBuffer get() = frame.image
 
         // Taken now: a caller may close the frame once it has the pixels.
         override val size: Long = frame.image.capacity().toLong()
@@ -106,10 +107,14 @@ class ImageDecoder(private val resources: ImageSource, private val options: Opti
         // We must do this while `res` (and its native memory) is still alive.
         // HDR frames are half-float RGBA.
         val config = if (res.isHdr) Bitmap.Config.RGBA_F16 else Bitmap.Config.ARGB_8888
-        val fullBitmap = createBitmap(srcWidth, srcHeight, config)
-        res.image.rewind()
-        fullBitmap.copyPixelsFromBuffer(res.image)
-        res.frame.close()
+        val fullBitmap = try {
+            createBitmap(srcWidth, srcHeight, config).also { bitmap ->
+                res.image.rewind()
+                bitmap.copyPixelsFromBuffer(res.image)
+            }
+        } finally {
+            res.frame.close()
+        }
 
         // Downsample if needed. sampleSize is a power-of-two factor; the target
         // dimensions are src / sampleSize, matching BitmapFactory inSampleSize behaviour.
