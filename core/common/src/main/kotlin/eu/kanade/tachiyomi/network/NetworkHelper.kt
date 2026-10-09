@@ -8,7 +8,6 @@ import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import exh.log.EHLogLevel
-import exh.pref.DelegateSourcePreferences
 import kotlinx.coroutines.CoroutineScope
 import logcat.LogPriority
 import mihon.core.metro.AppCoroutineScope
@@ -32,16 +31,9 @@ open /* SY <-- */ class NetworkHelper(
     @AppCoroutineScope private val scope: CoroutineScope,
     private val context: Context,
     private val preferences: NetworkPreferences,
-    // KMK -->
-    val delegateSourcePreferences: DelegateSourcePreferences,
-    // KMK <--
 ) {
 
     /* SY --> */ open /* SY <-- */val cookieJar = AndroidCookieJar()
-
-    // KMK -->
-    private val delegatedSourcesEnabled = delegateSourcePreferences.delegateSources.get()
-    // KMK <--
 
     /**
      * Timeout in unit of seconds.

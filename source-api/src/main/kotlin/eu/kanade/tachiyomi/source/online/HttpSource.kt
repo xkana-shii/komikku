@@ -46,7 +46,7 @@ abstract class HttpSource : CatalogueSource {
         // is never used; give it a scoped instance rather than leaking a global one.
         val scope = CoroutineScope(Dispatchers.IO)
         // KUN <--
-        object : NetworkHelper(scope, Injekt.get<Application>(), Injekt.get(), network.delegateSourcePreferences) {
+        object : NetworkHelper(scope, Injekt.get<Application>(), Injekt.get()) {
             override val client: OkHttpClient
                 get() = delegate?.networkHttpClient ?: network.client
                     .newBuilder()
