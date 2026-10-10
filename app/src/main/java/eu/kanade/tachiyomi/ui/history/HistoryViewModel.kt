@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -100,13 +101,16 @@ class HistoryViewModel(
                 nonLibraryEntries = preferences.filterNonLibraryManga.toBooleanOrNull(),
             )
                 .distinctUntilChanged()
+                .map<List<HistoryWithRelations>, List<HistoryWithRelations>?> { it }
+                .onStart { emit(null) }
                 .catch { error ->
                     logcat(LogPriority.ERROR, error)
                     _events.send(Event.InternalError)
+                    emit(emptyList())
                 }
                 .flowOn(Dispatchers.IO)
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), persistentListOf())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
 
     val state: StateFlow<State> = combine(
         uiState,
@@ -116,8 +120,13 @@ class HistoryViewModel(
                 .any { it != TriState.DISABLED }
         }.distinctUntilChanged(),
     ) { uiState, history, hasActiveFilters ->
-        uiState.copy(isLoading = false, list = history.toImmutableList(), hasActiveFilters = hasActiveFilters)
+        uiState.copy(
+            isLoading = history == null,
+            list = history?.toImmutableList() ?: persistentListOf(),
+            hasActiveFilters = hasActiveFilters,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())
+
     suspend fun getNextChapter(): Chapter? {
         return withIOContext { getNextChapters.await(onlyUnread = false).firstOrNull() }
     }

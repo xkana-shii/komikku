@@ -3,8 +3,8 @@ package tachiyomi.presentation.core.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -110,14 +109,16 @@ fun AdaptiveSheet(
             }
         }
     } else {
-        val anchoredDraggableState = rememberSaveable(saver = AnchoredDraggableState.Saver()) {
-            AnchoredDraggableState(initialValue = 1)
+        val decayAnimationSpec = rememberSplineBasedDecay<Float>()
+        val anchoredDraggableState = remember {
+            AnchoredDraggableState(
+                initialValue = 1,
+                positionalThreshold = { with(density) { 56.dp.toPx() } },
+                velocityThreshold = { with(density) { 125.dp.toPx() } },
+                snapAnimationSpec = sheetAnimationSpec,
+                decayAnimationSpec = decayAnimationSpec,
+            )
         }
-        val flingBehavior = AnchoredDraggableDefaults.flingBehavior(
-            state = anchoredDraggableState,
-            positionalThreshold = { _: Float -> with(density) { 56.dp.toPx() } },
-            animationSpec = sheetAnimationSpec,
-        )
         val internalOnDismissRequest = {
             if (anchoredDraggableState.settledValue == 0) {
                 scope.launch { anchoredDraggableState.animateTo(1) }
@@ -152,9 +153,14 @@ fun AdaptiveSheet(
                         if (enableSwipeDismiss) {
                             Modifier.nestedScroll(
                                 remember(anchoredDraggableState) {
-                                    anchoredDraggableState.preUpPostDownNestedScrollConnection {
-                                        scope.launch { anchoredDraggableState.settle(sheetAnimationSpec) }
-                                    }
+                                    anchoredDraggableState.preUpPostDownNestedScrollConnection(
+                                        onFling = {
+                                            scope.launch {
+                                                @Suppress("DEPRECATION")
+                                                anchoredDraggableState.settle(it)
+                                            }
+                                        },
+                                    )
                                 },
                             )
                         } else {
@@ -175,7 +181,6 @@ fun AdaptiveSheet(
                         state = anchoredDraggableState,
                         orientation = Orientation.Vertical,
                         enabled = enableSwipeDismiss,
-                        flingBehavior = flingBehavior,
                     )
                     .navigationBarsPadding()
                     .statusBarsPadding(),
@@ -240,11 +245,7 @@ private fun <T> AnchoredDraggableState<T>.preUpPostDownNestedScrollConnection(
 
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
         onFling(available.toFloat())
-        return if (targetValue != settledValue) {
-            available
-        } else {
-            Velocity.Zero
-        }
+        return available
     }
 
     private fun Float.toOffset(): Offset = Offset(0f, this)
