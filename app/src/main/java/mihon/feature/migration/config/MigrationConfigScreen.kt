@@ -1,3 +1,4 @@
+
 package mihon.feature.migration.config
 
 import androidx.activity.compose.BackHandler
@@ -45,9 +46,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.util.fastForEachIndexed
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import cafe.adriel.voyager.core.model.StateScreenModel
+import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.source.service.SourcePreferences
@@ -60,8 +61,6 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import mihon.feature.migration.list.MigrationListScreen
 import sh.calvin.reorderable.ReorderableCollectionItemScope
@@ -101,7 +100,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        val viewModel = viewModel<Model>()
+        val viewModel = rememberScreenModel { Model() }
         val state by viewModel.state.collectAsState()
 
         // KMK -->
@@ -404,10 +403,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
     private class Model(
         val sourcePreferences: SourcePreferences = Injekt.get(),
         private val sourceManager: SourceManager = Injekt.get(),
-    ) : ViewModel() {
-
-        val state: StateFlow<Model.State>
-            field = MutableStateFlow<Model.State>(State())
+    ) : StateScreenModel<Model.State>(State()) {
 
         // KMK -->
         private val pinnedSources by lazy { sourcePreferences.pinnedSources().get().mapNotNull { it.toLongOrNull() } }
@@ -425,14 +421,14 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
         }
 
         init {
-            viewModelScope.launchIO {
+            screenModelScope.launchIO {
                 initSources()
-                state.update { it.copy(isLoading = false) }
+                mutableState.update { it.copy(isLoading = false) }
             }
         }
 
         private fun updateSources(action: (List<MigrationSource>) -> List<MigrationSource>) {
-            state.update { state ->
+            mutableState.update { state ->
                 val updatedSources = action(state.sources)
                 val includedSources = updatedSources.mapNotNull { if (!it.isSelected) null else it.id }
                     // KMK -->
@@ -475,7 +471,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 }
                 .toList()
 
-            state.update { state ->
+            mutableState.update { state ->
                 state.copy(sources = sources.sortedWith(sourcesComparator(includedSources)))
             }
         }
