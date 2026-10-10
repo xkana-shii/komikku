@@ -223,7 +223,7 @@ class ClearDatabaseScreen : Screen() {
     }
 }
 
-private class ClearDatabaseViewModel : ViewModel() {
+class ClearDatabaseViewModel : ViewModel() {
 
     val state: StateFlow<ClearDatabaseViewModel.State>
         field = MutableStateFlow<ClearDatabaseViewModel.State>(State.Loading)
