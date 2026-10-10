@@ -60,6 +60,7 @@ val migrations: List<Migration>
         ChapterUrlHashMigration(),
         // KMK -->
         GlobalSearchSourceCategoryMigration(),
+        FillermarkBlacklistMigration(),
         // KMK <--
         // KMK <--
         InstallationIdMigration(),
