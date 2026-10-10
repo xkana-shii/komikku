@@ -40,7 +40,24 @@ class GlobalSearchViewModel(
     }
 
     override fun getEnabledSources(): List<Source> {
+        // KMK --> The category scope uses the Sources tab's existing sourceId|category entries.
+        val category = state.value.sourceCategory
+        val memberIds = if (category.isBlank()) {
+            null
+        } else {
+            sourcesInCategories
+                .mapNotNull { entry ->
+                    entry.substringBefore('|')
+                        .takeIf { entry.substringAfter('|') == category }
+                        ?.toLongOrNull()
+                }
+                .toSet()
+        }
+        // KMK <--
         return super.getEnabledSources()
             .filter { state.value.sourceFilter != SourceFilter.PinnedOnly || "${it.id}" in pinnedSources }
+            // KMK --> A blank category keeps the normal pinned/all filter intact.
+            .filter { memberIds == null || it.id in memberIds }
+        // KMK <--
     }
 }

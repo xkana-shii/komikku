@@ -9,11 +9,8 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.Source
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentMap
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.coroutines.Dispatchers
@@ -66,9 +63,16 @@ abstract class SearchViewModel(
     private val enabledLanguages = sourcePreferences.enabledLanguages().get()
     private val disabledSources = sourcePreferences.disabledSources().get()
     protected val pinnedSources = sourcePreferences.pinnedSources().get()
+    // KMK --> Source category membership is shared with the Sources tab.
+    protected val sourcesInCategories = sourcePreferences.sourcesTabSourcesInCategories().get()
+    // KMK <--
 
     private var lastQuery: String? = null
     private var lastSourceFilter: SourceFilter? = null
+    // KMK --> A source category is an independent search scope and cache key.
+    private var lastSourceCategory: String? = null
+    private var searchGeneration = 0L
+    // KMK <--
 
     protected var extensionFilter: String? = null
 
@@ -93,23 +97,13 @@ abstract class SearchViewModel(
             }
         }
         // KMK <--
-        // KMK KNS -->
+        // KMK --> Keep the independent source-category scope restored across app restarts.
         viewModelScope.launch {
-            preferences.sourcesTabCategories().changes().collectLatest { categories ->
-                state.update { it.copy(categories = categories.toImmutableList()) }
+            preferences.globalSearchSourceCategory().changes().collectLatest { category ->
+                state.update { it.copy(sourceCategory = category) }
             }
         }
-        viewModelScope.launch {
-            preferences.sourcesTabSourcesInCategories().changes().collectLatest { sourcesInCats ->
-                state.update { it.copy(sourcesInCategories = sourcesInCats) }
-            }
-        }
-        viewModelScope.launch {
-            preferences.globalSearchCategoryFilter().changes().collectLatest { category ->
-                state.update { it.copy(selectedCategory = category) }
-            }
-        }
-        // KMK KNS <--
+        // KMK <--
     }
 
     @Composable
@@ -160,18 +154,7 @@ abstract class SearchViewModel(
             // KMK KNS <--
         }
 
-        // KMK KNS -->
-        return when (state.value.sourceFilter) {
-            SourceFilter.Category -> {
-                val categoryName = state.value.selectedCategory
-                val sourcesInThisCategory = state.value.sourcesInCategories
-                    .filter { it.substringAfter("|") == categoryName }
-                    .map { it.substringBefore("|").toLong() }
-                filteredByExtension.filter { it.id in sourcesInThisCategory }
-            }
-            else -> filteredByExtension
-        }
-        // KMK KNS <--
+        return filteredByExtension
     }
 
     fun updateSearchQuery(query: String?) {
@@ -186,13 +169,13 @@ abstract class SearchViewModel(
         search()
     }
 
-    // KMK KNS -->
-    fun setSelectedCategory(categoryName: String) {
-        preferences.globalSearchCategoryFilter().set(categoryName)
-        state.update { it.copy(selectedCategory = categoryName) }
+    // KMK --> This composes with Pinned Only and All rather than replacing either filter.
+    fun setSourceCategory(category: String) {
+        preferences.globalSearchSourceCategory().set(category)
+        state.update { it.copy(sourceCategory = category) }
         search()
     }
-    // KMK KNS <--
+    // KMK <--
 
     fun toggleFilterResults() {
         preferences.globalSearchFilterState().toggle()
@@ -200,14 +183,21 @@ abstract class SearchViewModel(
 
     fun search(query: String? = state.value.searchQuery) {
         val sourceFilter = state.value.sourceFilter
+        // KMK --> Prevent results from an old category from being presented as current.
+        val sourceCategory = state.value.sourceCategory
+        // KMK <--
 
         if (query.isNullOrBlank()) return
 
         val sameQuery = this.lastQuery == query
-        if (sameQuery && this.lastSourceFilter == sourceFilter) return
+        if (sameQuery && this.lastSourceFilter == sourceFilter && this.lastSourceCategory == sourceCategory) return
 
         this.lastQuery = query
         this.lastSourceFilter = sourceFilter
+        this.lastSourceCategory = sourceCategory
+        // KMK --> Each rerun invalidates in-flight results from an older scope.
+        val generation = ++searchGeneration
+        // KMK <--
 
         searchJob?.cancel()
 
@@ -247,11 +237,13 @@ abstract class SearchViewModel(
                             .distinctBy { it.url }
                             .let { networkToLocalManga(it) }
 
-                        if (isActive) {
+                        // KMK --> A cancelled search may finish its request before cancellation reaches it.
+                        if (isActive && generation == searchGeneration) {
                             updateItem(source, SearchItemResult.Success(titles))
                         }
                     } catch (e: Exception) {
-                        if (isActive) {
+                        // KMK --> Keep errors scoped to the active query, source filter, and category.
+                        if (isActive && generation == searchGeneration) {
                             updateItem(source, SearchItemResult.Error(e))
                         }
                     }
@@ -299,14 +291,12 @@ abstract class SearchViewModel(
         val from: Manga? = null,
         val searchQuery: String? = null,
         val sourceFilter: SourceFilter = SourceFilter.PinnedOnly,
+        // KMK --> Empty means no category restriction.
+        val sourceCategory: String = "",
+        // KMK <--
         val onlyShowHasResults: Boolean = false,
         val items: PersistentMap<Source, SearchItemResult> = persistentMapOf(),
         val dialog: Dialog? = null,
-        // KMK KNS -->
-        val categories: ImmutableList<String> = persistentListOf(),
-        val sourcesInCategories: Set<String> = emptySet(),
-        val selectedCategory: String = "",
-        // KMK KNS <--
     ) {
         val progress: Int = items.count { it.value !is SearchItemResult.Loading }
         val total: Int = items.size
@@ -322,9 +312,6 @@ abstract class SearchViewModel(
 enum class SourceFilter {
     All,
     PinnedOnly,
-    // KMK KNS -->
-    Category,
-    // KMK KNS <--
 }
 
 sealed interface SearchItemResult {
