@@ -54,6 +54,19 @@ class HistoryRepositoryImpl(
         ).awaitAsOneOrNull()
     }
 
+    // KMK -->
+    override suspend fun getRecentHistory(limit: Long): List<HistoryWithRelations> {
+        return database.historyViewQueries.getRecentHistory(
+            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
+            Manga.CHAPTER_SHOW_BOOKMARKED,
+            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
+            Manga.CHAPTER_SHOW_FILLERMARKED,
+            limit,
+            HistoryMapper::mapHistoryWithRelations,
+        ).awaitAsList()
+    }
+    // KMK <--
+
     override suspend fun getTotalReadDuration(): Long {
         return database.historyQueries.getReadDuration().awaitAsOne()
     }

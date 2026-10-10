@@ -18,6 +18,10 @@ interface HistoryRepository {
 
     suspend fun getLastHistory(): HistoryWithRelations?
 
+    // KMK -->
+    suspend fun getRecentHistory(limit: Long): List<HistoryWithRelations>
+    // KMK <--
+
     suspend fun getTotalReadDuration(): Long
 
     suspend fun getHistoryByMangaId(mangaId: Long): List<History>

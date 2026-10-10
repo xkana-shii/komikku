@@ -10,6 +10,10 @@ import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.interactor.GetManga
 import kotlin.math.max
 
+// KMK -->
+private const val DEFAULT_HISTORY_SCAN_LIMIT = 25L
+// KMK <--
+
 class GetNextChapters(
     private val getChaptersByMangaId: GetChaptersByMangaId,
     // SY -->
@@ -23,6 +27,26 @@ class GetNextChapters(
         val history = historyRepository.getLastHistory() ?: return emptyList()
         return await(history.mangaId, history.chapterId, onlyUnread)
     }
+
+    // KMK -->
+    /**
+     * Finds a readable chapter by walking back through recent History entries. The walk is
+     * capped so reselecting History cannot scan the full database.
+     */
+    suspend fun awaitFirstReadable(scanLimit: Long = DEFAULT_HISTORY_SCAN_LIMIT): Chapter? {
+        val checkedMangaIds = mutableSetOf<Long>()
+
+        historyRepository.getRecentHistory(scanLimit).forEach { history ->
+            if (!checkedMangaIds.add(history.mangaId)) return@forEach
+
+            val next = await(history.mangaId, history.chapterId, onlyUnread = false)
+                .firstOrNull { !it.read }
+            if (next != null) return next
+        }
+
+        return null
+    }
+    // KMK <--
 
     suspend fun await(mangaId: Long, onlyUnread: Boolean = true): List<Chapter> {
         val manga = getManga.await(mangaId) ?: return emptyList()

@@ -164,3 +164,42 @@ JOIN chapter
 ON chapter.id = history.chapter_id
 JOIN chapter_counts C
 ON C.manga_id = manga.id;
+
+-- KMK --> Resuming from the History tab walks back through recent entries until one
+-- has a chapter left. Keep the projection compatible with HistoryMapper and cap the scan.
+getRecentHistory:
+SELECT
+id,
+mangaId,
+chapterId,
+title,
+thumbnailUrl,
+source,
+favorite,
+cover_last_modified,
+chapterNumber,
+read,
+lastPageRead,
+CAST(
+CASE
+    WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
+    WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
+    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN totalCount - fillermarkCount
+    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkCount
+    ELSE totalCount
+END AS REAL) AS totalCount,
+CAST(
+CASE
+    WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
+    WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
+    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN readCount - fillermarkReadCount
+    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkReadCount
+    ELSE readCount
+END AS REAL) AS readCount,
+readAt,
+readDuration
+FROM historyView
+WHERE historyView.readAt > 0
+ORDER BY readAt DESC
+LIMIT :limit;
+-- KMK <--

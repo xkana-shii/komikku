@@ -119,7 +119,9 @@ class HistoryViewModel(
         uiState.copy(isLoading = false, list = history.toImmutableList(), hasActiveFilters = hasActiveFilters)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())
     suspend fun getNextChapter(): Chapter? {
-        return withIOContext { getNextChapters.await(onlyUnread = false).firstOrNull() }
+        // KMK -->
+        return withIOContext { getNextChapters.awaitFirstReadable() }
+        // KMK <--
     }
 
     fun getNextChapterForManga(mangaId: Long, chapterId: Long) {
