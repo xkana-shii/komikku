@@ -146,7 +146,7 @@ class CreateBackupScreen : Screen() {
     }
 }
 
-private class CreateBackupViewModel : ViewModel() {
+class CreateBackupViewModel : ViewModel() {
 
     val state: StateFlow<CreateBackupViewModel.State>
         field = MutableStateFlow<CreateBackupViewModel.State>(State())
