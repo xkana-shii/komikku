@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
 import tachiyomi.data.MemoColumnAdapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 
 @Serializable
@@ -16,7 +17,11 @@ class BackupChapter(
     @ProtoNumber(3) var scanlator: String? = null,
     @ProtoNumber(4) var read: Boolean = false,
     @ProtoNumber(5) var bookmark: Boolean = false,
+    // KMK -->
+    @ProtoNumber(14) var bookmarkColor: Int = BookmarkColor.NONE.value,
+    // Kept only to decode pre-blacklist Komikku backups.
     @ProtoNumber(15) var fillermark: Boolean = false,
+    // KMK <--
     // lastPageRead is called progress in 1.x
     @ProtoNumber(6) var lastPageRead: Long = 0,
     @ProtoNumber(7) var dateFetch: Long = 0,
@@ -36,7 +41,9 @@ class BackupChapter(
             scanlator = this@BackupChapter.scanlator,
             read = this@BackupChapter.read,
             bookmark = this@BackupChapter.bookmark,
-            fillermark = this@BackupChapter.fillermark,
+            // KMK -->
+            bookmarkColor = BookmarkColor.fromValue(this@BackupChapter.bookmarkColor.toLong()),
+            // KMK <--
             lastPageRead = this@BackupChapter.lastPageRead,
             dateFetch = this@BackupChapter.dateFetch,
             dateUpload = this@BackupChapter.dateUpload,
@@ -56,7 +63,9 @@ val backupChapterMapper = {
         scanlator: String?,
         read: Boolean,
         bookmark: Boolean,
-        fillermark: Boolean,
+        // KMK -->
+        bookmarkColor: Long,
+        // KMK <--
         lastPageRead: Long,
         chapterNumber: Double,
         sourceOrder: Long,
@@ -74,7 +83,9 @@ val backupChapterMapper = {
         scanlator = scanlator,
         read = read,
         bookmark = bookmark,
-        fillermark = fillermark,
+        // KMK -->
+        bookmarkColor = bookmarkColor.toInt(),
+        // KMK <--
         lastPageRead = lastPageRead,
         dateFetch = dateFetch,
         dateUpload = dateUpload,

@@ -24,7 +24,13 @@ WHERE source = :oldId;
 -- KMK <--
 
 getChaptersByMangaIds:
-SELECT * FROM chapter WHERE manga_id IN :mangaIds;
+SELECT
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    user_bookmark_color, user_last_page_read, remote_chapter_number, remote_order,
+    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
+    state_is_syncing, remote_memo
+FROM chapter
+WHERE manga_id IN :mangaIds;
 
 migrateAllNhentaiToOtherLang:
 UPDATE manga

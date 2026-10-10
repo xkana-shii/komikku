@@ -99,6 +99,7 @@ import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.service.getChapterSort
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.UpsertHistory
@@ -267,9 +268,15 @@ class ReaderViewModel @JvmOverloads constructor(
         val selectedChapter = chapters.find { it.id == chapterId }
             ?: error("Requested chapter of id $chapterId not found in chapter list")
 
+        // KMK --> Keep a chapter opened from history readable while excluding every other blacklist match.
+        val visibleChapters = chapters.filter {
+            !isChapterBlacklisted(it, manga.blacklistedChapters) || it.id == selectedChapter.id
+        }
+        // KMK <--
+
         val chaptersForReader = when {
             (readerPreferences.skipRead().get() || readerPreferences.skipFiltered().get()) -> {
-                val filteredChapters = chapters.filterNot {
+                val filteredChapters = visibleChapters.filterNot {
                     when {
                         readerPreferences.skipRead().get() && it.read -> true
                         readerPreferences.skipFiltered().get() -> {
@@ -286,9 +293,7 @@ class ReaderViewModel @JvmOverloads constructor(
                                     ) ||
                                 // SY <--
                                 (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
-                                (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark) ||
-                                (manga.fillermarkedFilterRaw == Manga.CHAPTER_SHOW_FILLERMARKED && !it.fillermark) ||
-                                (manga.fillermarkedFilterRaw == Manga.CHAPTER_SHOW_NOT_FILLERMARKED && it.fillermark)
+                                (manga.bookmarkedFilterRaw == Manga.CHAPTER_SHOW_NOT_BOOKMARKED && it.bookmark)
                         }
                         else -> false
                     }
@@ -300,7 +305,9 @@ class ReaderViewModel @JvmOverloads constructor(
                     filteredChapters + listOf(selectedChapter)
                 }
             }
-            else -> chapters
+            // KMK -->
+            else -> visibleChapters
+            // KMK <--
         }
 
         chaptersForReader
@@ -1148,18 +1155,6 @@ class ReaderViewModel @JvmOverloads constructor(
         }
     }
 
-    fun toggleFillermark(chapterId: Long, fillermarked: Boolean) {
-        val chapter = chapterList.find { it.chapter.id == chapterId }?.chapter ?: return
-        chapter.fillermark = fillermarked
-        viewModelScope.launchNonCancellable {
-            updateChapter.await(
-                ChapterUpdate(
-                    id = chapterId,
-                    fillermark = fillermarked,
-                ),
-            )
-        }
-    }
     // SY <--
 
     /**
@@ -1614,7 +1609,6 @@ class ReaderViewModel @JvmOverloads constructor(
         val initError: Throwable? = null,
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
-        val fillermarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
 

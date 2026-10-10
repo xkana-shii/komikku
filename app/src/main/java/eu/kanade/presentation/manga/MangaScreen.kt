@@ -68,6 +68,7 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.RelatedMangaTitle
 import eu.kanade.presentation.components.relativeDateText
+import eu.kanade.presentation.manga.components.BookmarkColorPickerDialog
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterHeader
 import eu.kanade.presentation.manga.components.ExpandableMangaDescription
@@ -111,6 +112,7 @@ import exh.ui.metadata.adapters.LanraragiDescription
 import exh.ui.metadata.adapters.MangaDexDescription
 import exh.ui.metadata.adapters.NHentaiDescription
 import exh.ui.metadata.adapters.PururinDescription
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.service.missingChaptersCount
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -184,7 +186,10 @@ fun MangaScreen(
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
-    onMultiFillermarkClicked: (List<Chapter>, fillermarked: Boolean) -> Unit,
+    // KMK -->
+    onBlacklistClicked: (List<Chapter>) -> Unit,
+    onSetBookmarkColor: (List<Chapter>, BookmarkColor) -> Unit,
+    // KMK <--
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
@@ -219,6 +224,10 @@ fun MangaScreen(
             context.copyToClipboard(it, it)
         }
     }
+
+    // KMK --> Keeps a selected color target stable through normal recomposition.
+    var pendingBookmarkColorTargets by remember { mutableStateOf<List<Chapter>?>(null) }
+    // KMK <--
 
     if (!isTabletUi) {
         MangaScreenSmallImpl(
@@ -260,7 +269,10 @@ fun MangaScreen(
             previewsRowCount = previewsRowCount,
             // SY <--
             onMultiBookmarkClicked = onMultiBookmarkClicked,
-            onMultiFillermarkClicked = onMultiFillermarkClicked,
+            // KMK -->
+            onBlacklistClicked = onBlacklistClicked,
+            onBookmarkColorClicked = { pendingBookmarkColorTargets = it },
+            // KMK <--
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
             onMultiDeleteClicked = onMultiDeleteClicked,
@@ -324,7 +336,10 @@ fun MangaScreen(
             previewsRowCount = previewsRowCount,
             // SY <--
             onMultiBookmarkClicked = onMultiBookmarkClicked,
-            onMultiFillermarkClicked = onMultiFillermarkClicked,
+            // KMK -->
+            onBlacklistClicked = onBlacklistClicked,
+            onBookmarkColorClicked = { pendingBookmarkColorTargets = it },
+            // KMK <--
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
             onMultiDeleteClicked = onMultiDeleteClicked,
@@ -349,6 +364,19 @@ fun MangaScreen(
             // KMK <--
         )
     }
+
+    // KMK -->
+    pendingBookmarkColorTargets?.let { targets ->
+        BookmarkColorPickerDialog(
+            current = targets.first().bookmarkColor,
+            onSelect = { color ->
+                onSetBookmarkColor(targets, color)
+                pendingBookmarkColorTargets = null
+            },
+            onDismiss = { pendingBookmarkColorTargets = null },
+        )
+    }
+    // KMK <--
 }
 
 @Composable
@@ -400,7 +428,10 @@ private fun MangaScreenSmallImpl(
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
-    onMultiFillermarkClicked: (List<Chapter>, fillermarked: Boolean) -> Unit,
+    // KMK -->
+    onBlacklistClicked: (List<Chapter>) -> Unit,
+    onBookmarkColorClicked: (List<Chapter>) -> Unit,
+    // KMK <--
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
@@ -526,7 +557,10 @@ private fun MangaScreenSmallImpl(
             SharedMangaBottomActionMenu(
                 selected = selectedChapters,
                 onMultiBookmarkClicked = onMultiBookmarkClicked,
-                onMultiFillermarkClicked = onMultiFillermarkClicked,
+                // KMK -->
+                onBlacklistClicked = onBlacklistClicked,
+                onBookmarkColorClicked = onBookmarkColorClicked,
+                // KMK <--
                 onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
                 onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
                 onDownloadChapter = onDownloadChapter,
@@ -869,7 +903,10 @@ private fun MangaScreenLargeImpl(
 
     // For bottom action menu
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
-    onMultiFillermarkClicked: (List<Chapter>, fillermarked: Boolean) -> Unit,
+    // KMK -->
+    onBlacklistClicked: (List<Chapter>) -> Unit,
+    onBookmarkColorClicked: (List<Chapter>) -> Unit,
+    // KMK <--
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
@@ -990,7 +1027,10 @@ private fun MangaScreenLargeImpl(
                 SharedMangaBottomActionMenu(
                     selected = selectedChapters,
                     onMultiBookmarkClicked = onMultiBookmarkClicked,
-                    onMultiFillermarkClicked = onMultiFillermarkClicked,
+                    // KMK -->
+                    onBlacklistClicked = onBlacklistClicked,
+                    onBookmarkColorClicked = onBookmarkColorClicked,
+                    // KMK <--
                     onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
                     onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
                     onDownloadChapter = onDownloadChapter,
@@ -1269,7 +1309,10 @@ private fun MangaScreenLargeImpl(
 private fun SharedMangaBottomActionMenu(
     selected: List<ChapterList.Item>,
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
-    onMultiFillermarkClicked: (List<Chapter>, fillermarked: Boolean) -> Unit,
+    // KMK -->
+    onBlacklistClicked: (List<Chapter>) -> Unit,
+    onBookmarkColorClicked: (List<Chapter>) -> Unit,
+    // KMK <--
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onDownloadChapter: ((List<ChapterList.Item>, ChapterDownloadAction) -> Unit)?,
@@ -1286,12 +1329,14 @@ private fun SharedMangaBottomActionMenu(
         onRemoveBookmarkClicked = {
             onMultiBookmarkClicked.invoke(selected.fastMap { it.chapter }, false)
         }.takeIf { selected.fastAll { it.chapter.bookmark } },
-        onFillermarkClicked = {
-            onMultiFillermarkClicked.invoke(selected.fastMap { it.chapter }, true)
-        }.takeIf { selected.fastAny { !it.chapter.fillermark } },
-        onRemoveFillermarkClicked = {
-            onMultiFillermarkClicked.invoke(selected.fastMap { it.chapter }, false)
-        }.takeIf { selected.fastAll { it.chapter.fillermark } },
+        // KMK -->
+        onBlacklistClicked = {
+            onBlacklistClicked(selected.fastMap { it.chapter })
+        },
+        onBookmarkColorClicked = {
+            onBookmarkColorClicked(selected.fastMap { it.chapter })
+        }.takeIf { selected.fastAll { it.chapter.bookmark } },
+        // KMK <--
         onMarkAsReadClicked = {
             onMultiMarkAsReadClicked(selected.fastMap { it.chapter }, true)
         }.takeIf { selected.fastAny { !it.chapter.read } },
@@ -1387,7 +1432,9 @@ private fun LazyListScope.sharedChapterItems(
                     // SY <--
                     read = item.chapter.read,
                     bookmark = item.chapter.bookmark,
-                    fillermark = item.chapter.fillermark,
+                    // KMK -->
+                    bookmarkColor = item.chapter.bookmarkColor,
+                    // KMK <--
                     selected = item.selected,
                     downloadIndicatorEnabled =
                     !isAnyChapterSelected && !(mergedData?.manga?.get(item.chapter.mangaId) ?: manga).isLocal(),

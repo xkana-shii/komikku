@@ -25,12 +25,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material.icons.outlined.SwapCalls
@@ -80,13 +82,15 @@ fun MangaBottomActionMenu(
     modifier: Modifier = Modifier,
     onBookmarkClicked: (() -> Unit)? = null,
     onRemoveBookmarkClicked: (() -> Unit)? = null,
-    onFillermarkClicked: (() -> Unit)? = null,
-    onRemoveFillermarkClicked: (() -> Unit)? = null,
     onMarkAsReadClicked: (() -> Unit)? = null,
     onMarkAsUnreadClicked: (() -> Unit)? = null,
     onMarkPreviousAsReadClicked: (() -> Unit)? = null,
     onDownloadClicked: (() -> Unit)? = null,
     onDeleteClicked: (() -> Unit)? = null,
+    // KMK -->
+    onBlacklistClicked: (() -> Unit)? = null,
+    onBookmarkColorClicked: (() -> Unit)? = null,
+    // KMK <--
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -140,24 +144,26 @@ fun MangaBottomActionMenu(
                         onClick = onRemoveBookmarkClicked,
                     )
                 }
-                if (onFillermarkClicked != null) {
+                // KMK --> Blacklisting retains the existing hold-to-confirm action.
+                if (onBlacklistClicked != null) {
                     Button(
-                        title = stringResource(KMR.strings.action_fillermark_chapter),
-                        painter = rememberVectorPainter(ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)),
+                        title = stringResource(KMR.strings.action_blacklist_chapter),
+                        icon = Icons.Outlined.Block,
                         toConfirm = confirm[2],
                         onLongClick = { onLongClickItem(2) },
-                        onClick = onFillermarkClicked,
+                        onClick = onBlacklistClicked,
                     )
                 }
-                if (onRemoveFillermarkClicked != null) {
+                if (onBookmarkColorClicked != null) {
                     Button(
-                        title = stringResource(KMR.strings.action_remove_fillermark_chapter),
-                        painter = rememberVectorPainter(ImageVector.vectorResource(id = R.drawable.ic_fillermark_border_24dp)),
+                        title = stringResource(KMR.strings.action_bookmark_color),
+                        icon = Icons.Outlined.Palette,
                         toConfirm = confirm[3],
                         onLongClick = { onLongClickItem(3) },
-                        onClick = onRemoveFillermarkClicked,
+                        onClick = onBookmarkColorClicked,
                     )
                 }
+                // KMK <--
                 if (onMarkAsReadClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_mark_as_read),

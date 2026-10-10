@@ -20,7 +20,12 @@ import tachiyomi.domain.chapter.model.Chapter as DomainChapter
 internal fun testDatabase(driver: SqlDriver) = Database(
     driver,
     historyAdapter = History.Adapter(DateColumnAdapter),
-    mangaAdapter = Manga.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
+    mangaAdapter = Manga.Adapter(
+        remote_genreAdapter = StringListColumnAdapter,
+        user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+        remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
+        remote_memoAdapter = MemoColumnAdapter,
+    ),
     chapterAdapter = Chapter.Adapter(MemoColumnAdapter),
 )
 
@@ -40,6 +45,7 @@ internal suspend fun insertTestManga(db: Database, url: String): Long = db.manga
     initialized = true,
     viewerFlags = 0,
     chapterFlags = 0,
+    blacklistedChapters = emptyList(),
     coverLastModified = 0,
     dateAdded = 0,
     updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
@@ -90,7 +96,7 @@ internal suspend fun verifyInsertIds(db: Database) {
         remoteScanlator = null,
         userRead = false,
         userBookmark = false,
-        userFillermark = false,
+        userBookmarkColor = 0L,
         userLastPageRead = 0,
         remoteChapterNumber = 2.0,
         remoteOrder = 1,

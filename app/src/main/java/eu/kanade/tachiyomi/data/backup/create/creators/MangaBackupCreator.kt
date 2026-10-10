@@ -78,12 +78,8 @@ class MangaBackupCreator(
             database.chapterQueries.getChaptersByMangaId(
                 mangaId = manga.id,
                 applyFilter = 0, // false
-                // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
-                Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                Manga.CHAPTER_SHOW_FILLERMARKED,
-                // KMK <--
                 mapper = backupChapterMapper,
             ).awaitAsList()
                 .takeUnless(List<BackupChapter>::isEmpty)
@@ -153,6 +149,9 @@ internal fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/*
         lastUpdate = this.lastUpdate,
         nextUpdate = this.nextUpdate,
         fetchInterval = this.fetchInterval,
+        // KMK -->
+        blacklistedChapters = this.blacklistedChapters,
+        // KMK <--
         // SY -->
     ).also { backupManga ->
         customMangaInfo?.let {

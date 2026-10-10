@@ -8,7 +8,6 @@ data class Chapter(
     val mangaId: Long,
     val read: Boolean,
     val bookmark: Boolean,
-    var fillermark: Boolean,
     val lastPageRead: Long,
     val dateFetch: Long,
     val sourceOrder: Long,
@@ -20,6 +19,9 @@ data class Chapter(
     val lastModifiedAt: Long,
     val version: Long,
     val memo: JsonObject,
+    // KMK -->
+    val bookmarkColor: BookmarkColor = BookmarkColor.NONE,
+    // KMK <--
 ) {
     val isRecognizedNumber: Boolean
         get() = chapterNumber >= 0f
@@ -40,7 +42,6 @@ data class Chapter(
             mangaId = -1,
             read = false,
             bookmark = false,
-            fillermark = false,
             lastPageRead = 0,
             dateFetch = 0,
             sourceOrder = 0,

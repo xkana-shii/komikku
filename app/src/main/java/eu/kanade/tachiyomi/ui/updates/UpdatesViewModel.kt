@@ -52,6 +52,7 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
@@ -129,7 +130,6 @@ class UpdatesViewModel(
                 preferences.filterDownloaded,
                 preferences.filterStarted,
                 preferences.filterBookmarked,
-                preferences.filterFillermarked,
             )
                 .any { it != TriState.DISABLED }
         }
@@ -145,7 +145,6 @@ class UpdatesViewModel(
                     unread = preferences.filterUnread.toBooleanOrNull(),
                     started = preferences.filterStarted.toBooleanOrNull(),
                     bookmarked = preferences.filterBookmarked.toBooleanOrNull(),
-                    fillermarked = preferences.filterFillermarked.toBooleanOrNull(),
                     hideExcludedScanlators = preferences.filterExcludedScanlators,
                 ).distinctUntilChanged()
             },
@@ -345,17 +344,14 @@ class UpdatesViewModel(
         viewModelScope.launchIO {
             updates
                 .filterNot { it.update.bookmark == bookmark }
-                .map { ChapterUpdate(id = it.update.chapterId, bookmark = bookmark) }
-                .let { updateChapter.awaitAll(it) }
-        }
-        toggleAllSelection(false)
-    }
-
-    fun fillermarkUpdates(updates: List<UpdatesItem>, fillermark: Boolean) {
-        viewModelScope.launchIO {
-            updates
-                .filterNot { it.update.fillermark == fillermark }
-                .map { ChapterUpdate(id = it.update.chapterId, fillermark = fillermark) }
+                // KMK --> Normal bookmarking never infers a previously selected color.
+                .map {
+                    ChapterUpdate(
+                        id = it.update.chapterId,
+                        bookmark = bookmark,
+                        bookmarkColor = BookmarkColor.NONE,
+                    )
+                }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
@@ -557,9 +553,6 @@ class UpdatesViewModel(
             LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> {
                 bookmarkUpdates(listOf(updateItem), !update.bookmark)
             }
-            LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
-                fillermarkUpdates(listOf(updateItem), !update.fillermark)
-            }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction = when (updateItem.downloadStateProvider()) {
                     Download.State.ERROR,
@@ -586,15 +579,13 @@ class UpdatesViewModel(
             updatesPreferences.filterUnread().changes(),
             updatesPreferences.filterStarted().changes(),
             updatesPreferences.filterBookmarked().changes(),
-            updatesPreferences.filterFillermarked().changes(),
             updatesPreferences.filterExcludedScanlators().changes(),
-        ) { downloaded, unread, started, bookmarked, fillermarked, excludedScanlators ->
+        ) { downloaded, unread, started, bookmarked, excludedScanlators ->
             ItemPreferences(
                 filterDownloaded = downloaded,
                 filterUnread = unread,
                 filterStarted = started,
                 filterBookmarked = bookmarked,
-                filterFillermarked = fillermarked,
                 filterExcludedScanlators = excludedScanlators,
             )
         }
@@ -610,7 +601,6 @@ class UpdatesViewModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
-        val filterFillermarked: TriState,
         val filterExcludedScanlators: Boolean,
     )
 

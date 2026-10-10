@@ -40,7 +40,7 @@ class SetMangaDefaultChapterFlagsTest {
     private val flags = SetMangaChapterFlags(repository)
     private val subject = SetMangaDefaultChapterFlags(libraryPreferences, flags, repository)
     private val expected = Manga.CHAPTER_SHOW_READ or Manga.CHAPTER_SHOW_NOT_DOWNLOADED or
-        Manga.CHAPTER_SHOW_BOOKMARKED or Manga.CHAPTER_SHOW_NOT_FILLERMARKED or
+        Manga.CHAPTER_SHOW_BOOKMARKED or
         Manga.CHAPTER_SORTING_UPLOAD_DATE or Manga.CHAPTER_SORT_ASC or Manga.CHAPTER_DISPLAY_NUMBER
     private val manga = Manga.create().copy(id = 42, chapterFlags = expected)
 
@@ -56,7 +56,7 @@ class SetMangaDefaultChapterFlagsTest {
     fun `awaitAll reads each preference once and makes only one bulk call without loading manga`() = runTest {
         libraryPreferences.setChapterSettingsDefault(manga)
         subject.awaitAll()
-        preferences.size shouldBe 7
+        preferences.size shouldBe 6
         preferences.values.forEach { preference -> verify(exactly = 1) { preference.get() } }
         coVerify(exactly = 1) { repository.updateLibraryChapterFlags(expected) }
         // Also rejects getFavorites, getAll, update, and any other per-manga work.
@@ -66,11 +66,10 @@ class SetMangaDefaultChapterFlagsTest {
     @Test
     fun `set as default with applyToExisting false stores settings without updating existing manga`() = runTest {
         subject.setAsDefault(manga, applyToExisting = false)
-        values.size shouldBe 7
+        values.size shouldBe 6
         libraryPreferences.filterChapterByRead().get() shouldBe manga.unreadFilterRaw
         libraryPreferences.filterChapterByDownloaded().get() shouldBe manga.downloadedFilterRaw
         libraryPreferences.filterChapterByBookmarked().get() shouldBe manga.bookmarkedFilterRaw
-        libraryPreferences.filterChapterByFillermarked().get() shouldBe manga.fillermarkedFilterRaw
         libraryPreferences.sortChapterBySourceOrNumber().get() shouldBe manga.sorting
         libraryPreferences.sortChapterByAscendingOrDescending().get() shouldBe Manga.CHAPTER_SORT_ASC
         libraryPreferences.displayChapterByNameOrNumber().get() shouldBe manga.displayMode

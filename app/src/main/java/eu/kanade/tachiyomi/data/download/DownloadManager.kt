@@ -24,6 +24,7 @@ import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
@@ -138,7 +139,7 @@ class DownloadManager(
      * @param autoStart whether to start the downloader after enqueing the chapters.
      */
     fun downloadChapters(manga: Manga, chapters: List<Chapter>, autoStart: Boolean = true) {
-        val filteredChapters = getChaptersToDownload(chapters)
+        val filteredChapters = getChaptersToDownload(manga, chapters)
         downloader.queueChapters(manga, filteredChapters, autoStart)
     }
 
@@ -576,12 +577,10 @@ class DownloadManager(
         }
     }
 
-    private fun getChaptersToDownload(chapters: List<Chapter>): List<Chapter> {
-        return if (!downloadPreferences.notDownloadFillermarkedItems().get()) {
-            chapters.filterNot { it.fillermark }
-        } else {
-            chapters
-        }
+    private fun getChaptersToDownload(manga: Manga, chapters: List<Chapter>): List<Chapter> {
+        // KMK --> Manual downloads use the same predicate as automatic downloads and navigation.
+        return chapters.filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        // KMK <--
     }
 
     fun statusFlow(): Flow<Download> = queueState

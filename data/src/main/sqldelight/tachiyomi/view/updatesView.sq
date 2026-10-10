@@ -9,7 +9,7 @@ SELECT
     chapter.remote_url AS chapterUrl,
     chapter.user_read AS read,
     chapter.user_bookmark AS bookmark,
-    chapter.user_fillermark AS fillermark,
+    chapter.user_bookmark_color AS bookmarkColor,
     chapter.user_last_page_read AS lastPageRead,
     manga.source_id AS sourceId,
     (manga.user_favorite_at IS NOT NULL) AS favorite,
@@ -35,7 +35,7 @@ SELECT
     chapter.remote_url AS chapterUrl,
     chapter.user_read AS read,
     chapter.user_bookmark AS bookmark,
-    chapter.user_fillermark AS fillermark,
+    chapter.user_bookmark_color AS bookmarkColor,
     chapter.user_last_page_read AS lastPageRead,
     manga.source_id AS sourceId,
     (manga.user_favorite_at IS NOT NULL) AS favorite,
@@ -63,7 +63,7 @@ ORDER BY dateFetch DESC;
 getRecentUpdates:
 SELECT
     mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
-    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    bookmarkColor, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
     dateUpload, dateFetch, excludedScanlator
 FROM updatesView
 WHERE dateUpload > :after
@@ -73,7 +73,7 @@ LIMIT :limit;
 getRecentUpdatesWithFilters:
 SELECT
     mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
-    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    bookmarkColor, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
     dateUpload, dateFetch, excludedScanlator
 FROM updatesView
 WHERE dateUpload > :after
@@ -85,7 +85,6 @@ AND (
     OR (:started = 0 AND lastPageRead = 0 AND read = 0)
 )
 AND (:bookmarked IS NULL OR bookmark = :bookmarked)
-AND (:fillermarked IS NULL OR fillermark = :fillermarked)
 AND (excludedScanlator IS NULL OR :hideExcludedScanlators = 0)
 ORDER BY dateFetch DESC
 LIMIT :limit;
@@ -93,7 +92,7 @@ LIMIT :limit;
 getReadUpdates:
 SELECT
     mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
-    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    bookmarkColor, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
     dateUpload, dateFetch, excludedScanlator
 FROM updatesView
 WHERE read = 1
@@ -104,7 +103,7 @@ LIMIT :limit;
 getUnreadUpdates:
 SELECT
     mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
-    fillermark, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
+    bookmarkColor, lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified,
     dateUpload, dateFetch, excludedScanlator
 FROM updatesView
 WHERE read = 0

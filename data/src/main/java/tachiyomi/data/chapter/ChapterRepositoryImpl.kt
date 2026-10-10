@@ -13,7 +13,6 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
-import tachiyomi.domain.manga.model.Manga
 
 // KMK -->
 
@@ -32,7 +31,9 @@ class ChapterRepositoryImpl(
                         remoteScanlator = chapter.scanlator,
                         userRead = chapter.read,
                         userBookmark = chapter.bookmark,
-                        userFillermark = chapter.fillermark,
+                        // KMK -->
+                        userBookmarkColor = chapter.bookmarkColor.value.toLong(),
+                        // KMK <--
                         userLastPageRead = chapter.lastPageRead,
                         remoteChapterNumber = chapter.chapterNumber,
                         remoteOrder = chapter.sourceOrder,
@@ -74,10 +75,8 @@ class ChapterRepositoryImpl(
                         .getChaptersByMangaId(
                             mangaId,
                             false.toLong(),
-                            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                            Manga.CHAPTER_SHOW_BOOKMARKED,
-                            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-                            Manga.CHAPTER_SHOW_FILLERMARKED,
+                            0L,
+                            0L,
                             ChapterMapper::mapChapter,
                         )
                         .awaitAsList()
@@ -92,7 +91,9 @@ class ChapterRepositoryImpl(
                     remoteScanlator = chapter.scanlator,
                     userRead = chapter.read,
                     userBookmark = chapter.bookmark,
-                    userFillermark = chapter.fillermark,
+                    // KMK -->
+                    userBookmarkColor = chapter.bookmarkColor.value.toLong(),
+                    // KMK <--
                     userLastPageRead = chapter.lastPageRead,
                     remoteChapterNumber = chapter.chapterNumber,
                     remoteOrder = chapter.sourceOrder,
@@ -129,7 +130,9 @@ class ChapterRepositoryImpl(
                     remoteScanlator = chapterUpdate.scanlator,
                     userRead = chapterUpdate.read,
                     userBookmark = chapterUpdate.bookmark,
-                    userFillermark = chapterUpdate.fillermark,
+                    // KMK -->
+                    userBookmarkColor = chapterUpdate.bookmarkColor?.value?.toLong(),
+                    // KMK <--
                     userLastPageRead = chapterUpdate.lastPageRead,
                     remoteChapterNumber = chapterUpdate.chapterNumber,
                     remoteOrder = chapterUpdate.sourceOrder,
@@ -157,10 +160,8 @@ class ChapterRepositoryImpl(
             mangaId,
             applyFilter.toLong(),
             // KMK -->
-            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-            Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
+            0L,
+            0L,
             // KMK <--
             ChapterMapper::mapChapter,
         ).awaitAsList()
@@ -181,13 +182,6 @@ class ChapterRepositoryImpl(
         ).awaitAsList()
     }
 
-    override suspend fun getFillermarkedChaptersByMangaId(mangaId: Long): List<Chapter> {
-        return database.chapterQueries.getFillermarkedChaptersByMangaId(
-            mangaId,
-            ChapterMapper::mapChapter,
-        ).awaitAsList()
-    }
-
     override suspend fun getChapterById(id: Long): Chapter? {
         return database.chapterQueries.getChapterById(id, ChapterMapper::mapChapter).awaitAsOneOrNull()
     }
@@ -197,10 +191,8 @@ class ChapterRepositoryImpl(
             mangaId,
             applyFilter.toLong(),
             // KMK -->
-            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-            Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
+            0L,
+            0L,
             // KMK <--
             ChapterMapper::mapChapter,
         ).subscribeToList()
@@ -224,10 +216,8 @@ class ChapterRepositoryImpl(
             mangaId,
             applyFilter.toLong(),
             // KMK -->
-            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-            Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
+            0L,
+            0L,
             // KMK <--
             ChapterMapper::mapChapter,
         ).awaitAsList()
@@ -241,10 +231,8 @@ class ChapterRepositoryImpl(
             mangaId,
             applyFilter.toLong(),
             // KMK -->
-            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-            Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
+            0L,
+            0L,
             // KMK <--
             ChapterMapper::mapChapter,
         ).subscribeToList()

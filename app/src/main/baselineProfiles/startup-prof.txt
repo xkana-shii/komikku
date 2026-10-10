@@ -20645,7 +20645,6 @@ SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilter
 SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterCategories()Z
 SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterCompleted()Ltachiyomi/core/common/preference/TriState;
 SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterDownloaded()Ltachiyomi/core/common/preference/TriState;
-SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterFillermarked()Ltachiyomi/core/common/preference/TriState;
 SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterIntervalCustom()Ltachiyomi/core/common/preference/TriState;
 SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterLewd()Ltachiyomi/core/common/preference/TriState;
 SPLeu/kanade/tachiyomi/ui/library/LibraryScreenModel$ItemPreferences;->getFilterStarted()Ltachiyomi/core/common/preference/TriState;
@@ -29694,7 +29693,6 @@ SPLtachiyomi/domain/library/service/LibraryPreferences;->filterCategoriesExclude
 SPLtachiyomi/domain/library/service/LibraryPreferences;->filterCategoriesInclude()Ltachiyomi/core/common/preference/Preference;
 SPLtachiyomi/domain/library/service/LibraryPreferences;->filterCompleted()Ltachiyomi/core/common/preference/Preference;
 SPLtachiyomi/domain/library/service/LibraryPreferences;->filterDownloaded()Ltachiyomi/core/common/preference/Preference;
-SPLtachiyomi/domain/library/service/LibraryPreferences;->filterFillermarked()Ltachiyomi/core/common/preference/Preference;
 SPLtachiyomi/domain/library/service/LibraryPreferences;->filterIntervalCustom()Ltachiyomi/core/common/preference/Preference;
 SPLtachiyomi/domain/library/service/LibraryPreferences;->filterLewd()Ltachiyomi/core/common/preference/Preference;
 SPLtachiyomi/domain/library/service/LibraryPreferences;->filterStarted()Ltachiyomi/core/common/preference/Preference;
@@ -29731,11 +29729,6 @@ SPLtachiyomi/domain/library/service/LibraryPreferences$filterDownloaded$$inlined
 SPLtachiyomi/domain/library/service/LibraryPreferences$filterDownloaded$$inlined$getEnum$1;-><init>()V
 Ltachiyomi/domain/library/service/LibraryPreferences$filterDownloaded$$inlined$getEnum$2;
 SPLtachiyomi/domain/library/service/LibraryPreferences$filterDownloaded$$inlined$getEnum$2;-><init>(Ljava/lang/Enum;)V
-Ltachiyomi/domain/library/service/LibraryPreferences$filterFillermarked$$inlined$getEnum$1;
-SPLtachiyomi/domain/library/service/LibraryPreferences$filterFillermarked$$inlined$getEnum$1;-><clinit>()V
-SPLtachiyomi/domain/library/service/LibraryPreferences$filterFillermarked$$inlined$getEnum$1;-><init>()V
-Ltachiyomi/domain/library/service/LibraryPreferences$filterFillermarked$$inlined$getEnum$2;
-SPLtachiyomi/domain/library/service/LibraryPreferences$filterFillermarked$$inlined$getEnum$2;-><init>(Ljava/lang/Enum;)V
 Ltachiyomi/domain/library/service/LibraryPreferences$filterIntervalCustom$$inlined$getEnum$1;
 SPLtachiyomi/domain/library/service/LibraryPreferences$filterIntervalCustom$$inlined$getEnum$1;-><clinit>()V
 SPLtachiyomi/domain/library/service/LibraryPreferences$filterIntervalCustom$$inlined$getEnum$1;-><init>()V

@@ -17,8 +17,6 @@ SELECT
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkReadCount,
-    coalesce(C.fillermarkCount, 0) AS fillermarkCount,
-    coalesce(C.fillermarkReadCount, 0) AS fillermarkReadCount,
     -- KMK <--
     history.read_at AS readAt,
     history.read_duration AS readDuration,
@@ -44,8 +42,6 @@ LEFT JOIN(
         sum(user_read) AS readCount,
         sum(user_bookmark) AS bookmarkCount,
         sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
-        sum(user_fillermark) AS fillermarkCount,
-        sum(CASE WHEN user_fillermark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS fillermarkReadCount,
         excluded_scanlator.scanlator AS ex_scanlator
     FROM chapter
     LEFT JOIN excluded_scanlator
@@ -74,15 +70,11 @@ lastPageRead,
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
-    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN totalCount - fillermarkCount
-    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkCount
     ELSE totalCount
 END AS totalCountCalculated,
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
-    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN readCount - fillermarkReadCount
-    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkReadCount
     ELSE readCount
 END AS readCountCalculated,
 -- KMK <--
@@ -117,9 +109,7 @@ chapter_counts AS (
         count(C.id) AS totalCount,
         coalesce(sum(C.user_read), 0) AS readCount,
         coalesce(sum(C.user_bookmark), 0) AS bookmarkCount,
-        coalesce(sum(CASE WHEN C.user_bookmark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0) AS bookmarkReadCount,
-        coalesce(sum(C.user_fillermark), 0) AS fillermarkCount,
-        coalesce(sum(CASE WHEN C.user_fillermark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0) AS fillermarkReadCount
+        coalesce(sum(CASE WHEN C.user_bookmark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0) AS bookmarkReadCount
     FROM chapter C
     LEFT JOIN excluded_scanlator ES
     ON C.manga_id = ES.manga_id
@@ -143,16 +133,12 @@ CAST(
 CASE
     WHEN (manga.user_chapter_flags & :bookmarkUnmask) != 0 THEN C.totalCount - C.bookmarkCount
     WHEN (manga.user_chapter_flags & :bookmarkMask) != 0 THEN C.bookmarkCount
-    WHEN (manga.user_chapter_flags & :fillermarkUnmask) != 0 THEN C.totalCount - C.fillermarkCount
-    WHEN (manga.user_chapter_flags & :fillermarkMask) != 0 THEN C.fillermarkCount
     ELSE C.totalCount
 END AS REAL) AS totalCount,
 CAST(
 CASE
     WHEN (manga.user_chapter_flags & :bookmarkUnmask) != 0 THEN C.readCount - C.bookmarkReadCount
     WHEN (manga.user_chapter_flags & :bookmarkMask) != 0 THEN C.bookmarkReadCount
-    WHEN (manga.user_chapter_flags & :fillermarkUnmask) != 0 THEN C.readCount - C.fillermarkReadCount
-    WHEN (manga.user_chapter_flags & :fillermarkMask) != 0 THEN C.fillermarkReadCount
     ELSE C.readCount
 END AS REAL) AS readCount,
 history.read_at AS readAt,
@@ -184,16 +170,12 @@ CAST(
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
-    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN totalCount - fillermarkCount
-    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkCount
     ELSE totalCount
 END AS REAL) AS totalCount,
 CAST(
 CASE
     WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
     WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
-    WHEN (chapterFlags & :fillermarkUnmask) != 0 THEN readCount - fillermarkReadCount
-    WHEN (chapterFlags & :fillermarkMask) != 0 THEN fillermarkReadCount
     ELSE readCount
 END AS REAL) AS readCount,
 readAt,

@@ -112,6 +112,7 @@ import mihon.domain.manga.model.toDomainManga
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
+import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.mapAsCheckboxState
 import tachiyomi.core.common.util.lang.launchIO
@@ -126,11 +127,14 @@ import tachiyomi.domain.chapter.interactor.DeleteChapters
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.getChapterSort
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
+import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
 import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
@@ -183,6 +187,9 @@ class MangaViewModel(
     private val smartSearched: Boolean,
     // SY <--
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    // KMK --> This is intentionally local UI state, not part of synchronized chapter flags.
+    private val preferenceStore: PreferenceStore = Injekt.get(),
+    // KMK <--
     private val trackPreferences: TrackPreferences = Injekt.get(),
     readerPreferences: ReaderPreferences = Injekt.get(),
     private val uiPreferences: UiPreferences = Injekt.get(),
@@ -516,6 +523,9 @@ class MangaViewModel(
                     alwaysShowReadingProgress =
                     readerPreferences.preserveReadingPosition().get() && manga.isEhBasedManga(),
                     previewsRowCount = uiPreferences.previewsRowCount().get(),
+                    // KMK -->
+                    bookmarkColorFilter = bookmarkColorFilter(manga.id),
+                    // KMK <--
                     // SY <--
                 )
             }
@@ -1255,9 +1265,6 @@ class MangaViewModel(
             LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> {
                 bookmarkChapters(listOf(chapter), !chapter.bookmark)
             }
-            LibraryPreferences.ChapterSwipeAction.ToggleFillermark -> {
-                fillermarkChapters(listOf(chapter), !chapter.fillermark)
-            }
             LibraryPreferences.ChapterSwipeAction.Download -> {
                 val downloadAction: ChapterDownloadAction = when (chapterItem.downloadState) {
                     Download.State.ERROR,
@@ -1282,14 +1289,22 @@ class MangaViewModel(
      */
     fun getNextUnreadChapter(): Chapter? {
         val successState = successState ?: return null
-        return successState.chapters.getNextUnread(successState.manga)
+        // KMK -->
+        return successState.chapters
+            .filterNot { isChapterBlacklisted(it.chapter, successState.manga.blacklistedChapters) }
+            .getNextUnread(successState.manga)
+        // KMK <--
     }
 
     private fun getUnreadChapters(): List<Chapter> {
+        val manga = successState?.manga ?: return emptyList()
         val chapterItems = if (skipFiltered) filteredChapters.orEmpty() else allChapters.orEmpty()
         return chapterItems
             .filter { (chapter, dlStatus) -> !chapter.read && dlStatus == Download.State.NOT_DOWNLOADED }
             .map { it.chapter }
+            // KMK -->
+            .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        // KMK <--
     }
 
     private fun getUnreadChaptersSorted(): List<Chapter> {
@@ -1304,10 +1319,14 @@ class MangaViewModel(
     }
 
     private fun getBookmarkedChapters(): List<Chapter> {
+        val manga = successState?.manga ?: return emptyList()
         val chapterItems = if (skipFiltered) filteredChapters.orEmpty() else allChapters.orEmpty()
         return chapterItems
             .filter { (chapter, dlStatus) -> chapter.bookmark && dlStatus == Download.State.NOT_DOWNLOADED }
             .map { it.chapter }
+            // KMK -->
+            .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        // KMK <--
     }
 
     private fun startDownload(
@@ -1490,21 +1509,66 @@ class MangaViewModel(
         viewModelScope.launchIO {
             chapters
                 .filterNot { it.bookmark == bookmarked }
-                .map { ChapterUpdate(id = it.id, bookmark = bookmarked) }
+                // KMK --> Re-bookmarking is always ordinary until the user selects a color.
+                .map { ChapterUpdate(id = it.id, bookmark = bookmarked, bookmarkColor = BookmarkColor.NONE) }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
     }
 
-    fun fillermarkChapters(chapters: List<Chapter>, fillermarked: Boolean) {
+    // KMK -->
+    fun blacklistChapters(chapters: List<Chapter>) {
+        val manga = successState?.manga ?: return
+        val keys = chapters.map { scanlatorBlacklistKey(it.chapterNumber, it.scanlator) }
+        if (keys.isEmpty()) return
+        viewModelScope.launchIO {
+            updateManga.await(
+                MangaUpdate(
+                    id = manga.id,
+                    blacklistedChapters = (manga.blacklistedChapters + keys).distinct(),
+                ),
+            )
+        }
+        toggleAllSelection(false)
+    }
+
+    fun removeBlacklistedChapters(entries: Collection<String>) {
+        val manga = successState?.manga ?: return
+        if (entries.isEmpty()) return
+        viewModelScope.launchIO {
+            updateManga.await(
+                MangaUpdate(
+                    id = manga.id,
+                    blacklistedChapters = manga.blacklistedChapters.filterNot(entries::contains),
+                ),
+            )
+        }
+    }
+
+    fun setBookmarkColor(chapters: List<Chapter>, color: BookmarkColor) {
         viewModelScope.launchIO {
             chapters
-                .filterNot { it.fillermark == fillermarked }
-                .map { ChapterUpdate(id = it.id, fillermark = fillermarked) }
+                .filter(Chapter::bookmark)
+                .map { ChapterUpdate(id = it.id, bookmarkColor = color) }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
     }
+
+    fun setBookmarkColorFilter(colors: Set<BookmarkColor>) {
+        val mangaId = successState?.manga?.id ?: return
+        preferenceStore.getStringSet(bookmarkColorFilterKey(mangaId)).set(colors.mapTo(mutableSetOf()) { it.name })
+        updateSuccessState { it.copy(bookmarkColorFilter = colors) }
+    }
+
+    private fun bookmarkColorFilter(mangaId: Long): Set<BookmarkColor> {
+        return preferenceStore.getStringSet(bookmarkColorFilterKey(mangaId)).get()
+            .mapNotNull { value -> BookmarkColor.entries.firstOrNull { it.name == value } }
+            .toSet()
+    }
+
+    private fun bookmarkColorFilterKey(mangaId: Long) = "manga_bookmark_color_filter_$mangaId"
+    // KMK <--
 
     /**
      * Deletes the given list of chapter.
@@ -1694,20 +1758,6 @@ class MangaViewModel(
 
         viewModelScope.launchNonCancellable {
             setMangaChapterFlags.awaitSetBookmarkFilter(manga, flag)
-        }
-    }
-
-    fun setFillermarkedFilter(state: TriState) {
-        val manga = successState?.manga ?: return
-
-        val flag = when (state) {
-            TriState.DISABLED -> Manga.SHOW_ALL
-            TriState.ENABLED_IS -> Manga.CHAPTER_SHOW_FILLERMARKED
-            TriState.ENABLED_NOT -> Manga.CHAPTER_SHOW_NOT_FILLERMARKED
-        }
-
-        viewModelScope.launchNonCancellable {
-            setMangaChapterFlags.awaitSetFillermarkFilter(manga, flag)
         }
     }
 
@@ -2051,6 +2101,7 @@ class MangaViewModel(
             val previewsRowCount: Int,
             // SY <--
             // KMK -->
+            val bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
             /**
              * status of fetching related mangas
              * - null: not started
@@ -2079,7 +2130,8 @@ class MangaViewModel(
             // KMK <--
 
             val processedChapters by lazy {
-                chapters.applyFilters(manga).toList()
+                chapters.filterNot { isChapterBlacklisted(it.chapter, manga.blacklistedChapters) }
+                    .applyFilters(manga).toList()
                     // KMK -->
                     // safe-guard some edge-cases where chapters are duplicated some how on a merged entry
                     .distinctBy { it.id }
@@ -2136,11 +2188,16 @@ class MangaViewModel(
                 val unreadFilter = manga.unreadFilter
                 val downloadedFilter = manga.downloadedFilter
                 val bookmarkedFilter = manga.bookmarkedFilter
-                val fillermarkedFilter = manga.fillermarkedFilter
                 return asSequence()
+                    .filterNot { (chapter) -> isChapterBlacklisted(chapter, manga.blacklistedChapters) }
+                    // KMK -->
+                    .filter { (chapter) ->
+                        bookmarkColorFilter.isEmpty() ||
+                            (chapter.bookmark && chapter.bookmarkColor in bookmarkColorFilter)
+                    }
+                    // KMK <--
                     .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
-                    .filter { (chapter) -> applyFilter(fillermarkedFilter) { chapter.fillermark } }
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
                     .sortedWith { (chapter1), (chapter2) -> getChapterSort(manga).invoke(chapter1, chapter2) }
             }

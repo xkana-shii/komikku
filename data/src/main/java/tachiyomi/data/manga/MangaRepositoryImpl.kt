@@ -246,6 +246,9 @@ class MangaRepositoryImpl(
                     isSyncing = 0,
                     notes = value.notes,
                     memo = value.memo,
+                    // KMK -->
+                    blacklistedChapters = value.blacklistedChapters,
+                    // KMK <--
                 )
             }
         }

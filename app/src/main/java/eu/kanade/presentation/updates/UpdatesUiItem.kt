@@ -54,6 +54,7 @@ import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.manga.components.MangaCoverHide
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
+import eu.kanade.presentation.manga.components.composeColor
 import eu.kanade.presentation.manga.components.getSwipeAction
 import eu.kanade.presentation.manga.components.swipeActionThreshold
 import eu.kanade.presentation.util.animateItemFastScroll
@@ -253,34 +254,24 @@ private fun UpdatesUiItem(
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
 
-    // KMK -->
-    val fillermarkPainter = rememberVectorPainter(
-        if (!update.fillermark) {
-            ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)
-        } else {
-            ImageVector.vectorResource(id = R.drawable.ic_fillermark_border_24dp)
-        },
-    )
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
-    val swipeStart = remember(updateSwipeStartAction, update.read, update.bookmark, update.fillermark, downloadStateProvider()) {
+    val swipeStart = remember(updateSwipeStartAction, update.read, update.bookmark, downloadStateProvider()) {
         getSwipeAction(
             action = updateSwipeStartAction,
             read = update.read,
             bookmark = update.bookmark,
             downloadState = downloadStateProvider(),
             background = swipeBackground,
-            fillermarkPainter = fillermarkPainter,
             onSwipe = { onUpdateSwipe(updateSwipeStartAction) },
         )
     }
-    val swipeEnd = remember(updateSwipeEndAction, update.read, update.bookmark, update.fillermark, downloadStateProvider()) {
+    val swipeEnd = remember(updateSwipeEndAction, update.read, update.bookmark, downloadStateProvider()) {
         getSwipeAction(
             action = updateSwipeEndAction,
             read = update.read,
             bookmark = update.bookmark,
             downloadState = downloadStateProvider(),
             background = swipeBackground,
-            fillermarkPainter = fillermarkPainter,
             onSwipe = { onUpdateSwipe(updateSwipeEndAction) },
         )
     }
@@ -406,17 +397,7 @@ private fun UpdatesUiItem(
                             contentDescription = stringResource(MR.strings.action_filter_bookmarked),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                    }
-                    if (update.fillermark) {
-                        Icon(
-                            painter = rememberVectorPainter(ImageVector.vectorResource(id = R.drawable.ic_fillermark_24dp)),
-                            contentDescription = stringResource(KMR.strings.action_fillermark_chapter),
-                            modifier = Modifier
-                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = update.bookmarkColor.composeColor() ?: MaterialTheme.colorScheme.primary,
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                     }

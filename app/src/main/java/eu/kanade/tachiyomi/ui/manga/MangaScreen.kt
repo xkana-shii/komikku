@@ -49,6 +49,7 @@ import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.NavigatorAdaptiveSheet
+import eu.kanade.presentation.manga.ChapterBlacklistDialog
 import eu.kanade.presentation.manga.ChapterSettingsDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.manga.EditCoverAction
@@ -390,13 +391,16 @@ class MangaScreen(
                 mergeWithAnother(navigator, context, successState.manga, viewModel::smartSearchMerge)
             },
             onOpenPagePreview = { page ->
-                openPagePreview(context, successState.chapters.minByOrNull { it.chapter.sourceOrder }?.chapter, page)
+                openPagePreview(context, successState.processedChapters.minByOrNull { it.chapter.sourceOrder }?.chapter, page)
             },
             onMorePreviewsClicked = { openMorePagePreviews(navigator, successState.manga) },
             // SY <--
             onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
             onMultiBookmarkClicked = viewModel::bookmarkChapters,
-            onMultiFillermarkClicked = viewModel::fillermarkChapters,
+            // KMK -->
+            onBlacklistClicked = viewModel::blacklistChapters,
+            onSetBookmarkColor = viewModel::setBookmarkColor,
+            // KMK <--
             onMultiMarkAsReadClicked = viewModel::markChaptersRead,
             onMarkPreviousAsReadClicked = viewModel::markPreviousChapterRead,
             onMultiDeleteClicked = viewModel::showDeleteChapterDialog,
@@ -469,6 +473,19 @@ class MangaScreen(
         )
 
         var showScanlatorsDialog by remember { mutableStateOf(false) }
+        // KMK -->
+        var showChapterBlacklistDialog by remember { mutableStateOf(false) }
+        // KMK <--
+
+        // KMK -->
+        if (showChapterBlacklistDialog) {
+            ChapterBlacklistDialog(
+                entries = successState.manga.blacklistedChapters,
+                onDismissRequest = { showChapterBlacklistDialog = false },
+                onRemove = { viewModel.removeBlacklistedChapters(listOf(it)) },
+            )
+        }
+        // KMK <--
 
         val onDismissRequest = {
             viewModel.dismissDialog()
@@ -529,13 +546,22 @@ class MangaScreen(
                 onDownloadFilterChanged = viewModel::setDownloadedFilter,
                 onUnreadFilterChanged = viewModel::setUnreadFilter,
                 onBookmarkedFilterChanged = viewModel::setBookmarkedFilter,
-                onFillermarkedFilterChanged = viewModel::setFillermarkedFilter,
+                // KMK -->
+                bookmarkColorFilter = successState.bookmarkColorFilter,
+                onBookmarkColorFilterChanged = viewModel::setBookmarkColorFilter,
+                // KMK <--
                 onSortModeChanged = viewModel::setSorting,
                 onDisplayModeChanged = viewModel::setDisplayMode,
                 onSetAsDefault = viewModel::setCurrentSettingsAsDefault,
                 onResetToDefault = viewModel::resetToDefaultSettings,
                 scanlatorFilterActive = successState.scanlatorFilterActive,
                 onScanlatorFilterClicked = { showScanlatorsDialog = true },
+                // KMK -->
+                onBlacklistedChaptersClicked = {
+                    viewModel.dismissDialog()
+                    showChapterBlacklistDialog = true
+                },
+                // KMK <--
             )
             MangaViewModel.Dialog.TrackSheet -> {
                 NavigatorAdaptiveSheet(

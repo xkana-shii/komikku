@@ -15,9 +15,6 @@
     <string name="action_hide">Hide</string>
     <string name="action_show_hidden_categories">Show hidden categories</string>
     <string name="action_panorama_cover">Panorama cover</string>
-    <string name="action_filter_fillermarked">Fillermarked</string>
-    <string name="action_fillermark_chapter">Fillermark chapter</string>
-    <string name="action_remove_fillermark_chapter">Unfillermark chapter</string>
     <string name="action_open_folder">Open folder</string>
     <string name="action_clear_manga">Clear manga</string>
     <string name="action_update">Update</string>
@@ -370,6 +367,12 @@
     <string name="track_date_conflict">The start date must be on or before this tracker’s finish date.</string>
     <string name="feed_saved_search_invalid">This saved search is missing or no longer matches the source. Edit the saved search and try again.</string>
     <!-- KMK -->
+    <string name="blacklisted_chapters">Blacklisted chapters</string>
+    <string name="blacklist_empty">No blacklisted chapters</string>
+    <string name="action_blacklist_chapter">Blacklist chapter</string>
+    <string name="action_bookmark_color">Bookmark color</string>
+    <string name="bookmark_color_dialog_title">Why did you bookmark this?</string>
+    <string name="bookmark_color_filter">Bookmark color</string>
     <string name="pref_global_search_source_category">Source category</string>
     <string name="pref_global_search_source_category_all">All categories</string>
     <!-- KMK <-->

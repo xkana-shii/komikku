@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
@@ -37,7 +38,11 @@ class PagePreviewScreenModel(
     init {
         screenModelScope.launchIO {
             val manga = getManga.await(mangaId)!!
-            val chapter = getChaptersByMangaId.await(mangaId).minByOrNull { it.sourceOrder }
+            // KMK -->
+            val chapter = getChaptersByMangaId.await(mangaId)
+                .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+                .minByOrNull { it.sourceOrder }
+            // KMK <--
             if (chapter == null) {
                 mutableState.update {
                     PagePreviewState.Error(Exception("No chapters found"))

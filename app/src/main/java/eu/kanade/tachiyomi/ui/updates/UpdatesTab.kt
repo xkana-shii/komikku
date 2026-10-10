@@ -103,7 +103,6 @@ data object UpdatesTab : Tab {
             onCancelUpdateLibrary = { viewModel.cancelLibraryUpdate(context) },
             onDownloadChapter = viewModel::downloadChapters,
             onMultiBookmarkClicked = viewModel::bookmarkUpdates,
-            onMultiFillermarkClicked = viewModel::fillermarkUpdates,
             onMultiMarkAsReadClicked = viewModel::markUpdatesRead,
             onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
             // KMK -->

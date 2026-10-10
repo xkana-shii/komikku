@@ -1,5 +1,6 @@
 package tachiyomi.domain.updates.model
 
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.model.MangaCover
 import uy.kohesive.injekt.injectLazy
@@ -15,7 +16,9 @@ data class UpdatesWithRelations(
     val chapterUrl: String,
     val read: Boolean,
     val bookmark: Boolean,
-    val fillermark: Boolean,
+    // KMK -->
+    val bookmarkColor: BookmarkColor,
+    // KMK <--
     val lastPageRead: Long,
     val sourceId: Long,
     val dateFetch: Long,

@@ -42,7 +42,17 @@ class FeedSavedSearchRepositoryTest {
         )
         if (create) Database.Schema.create(driver).await()
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
-        val db = Database(driver = driver, historyAdapter = History.Adapter(DateColumnAdapter), mangaAdapter = Manga.Adapter(remote_genreAdapter = StringListColumnAdapter, remote_update_strategyAdapter = UpdateStrategyColumnAdapter, remote_memoAdapter = MemoColumnAdapter), chapterAdapter = Chapter.Adapter(MemoColumnAdapter))
+        val db = Database(
+            driver = driver,
+            historyAdapter = History.Adapter(DateColumnAdapter),
+            mangaAdapter = Manga.Adapter(
+                remote_genreAdapter = StringListColumnAdapter,
+                user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
+                remote_memoAdapter = MemoColumnAdapter,
+            ),
+            chapterAdapter = Chapter.Adapter(MemoColumnAdapter),
+        )
         searches = SavedSearchRepositoryImpl(db)
         feeds = FeedSavedSearchRepositoryImpl(db)
     }

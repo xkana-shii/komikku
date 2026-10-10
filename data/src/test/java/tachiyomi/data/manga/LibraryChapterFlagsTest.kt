@@ -33,7 +33,12 @@ class LibraryChapterFlagsTest {
         db = Database(
             driver,
             historyAdapter = History.Adapter(read_atAdapter = DateColumnAdapter),
-            mangaAdapter = Manga.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
+            mangaAdapter = Manga.Adapter(
+                remote_genreAdapter = StringListColumnAdapter,
+                user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
+                remote_memoAdapter = MemoColumnAdapter,
+            ),
             chapterAdapter = Chapter.Adapter(remote_memoAdapter = MemoColumnAdapter),
         )
         repository = MangaRepositoryImpl(db)

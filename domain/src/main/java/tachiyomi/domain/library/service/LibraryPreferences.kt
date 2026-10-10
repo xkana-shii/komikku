@@ -104,11 +104,6 @@ class LibraryPreferences(
         TriState.DISABLED,
     )
 
-    fun filterFillermarked() = preferenceStore.getEnum(
-        "pref_filter_library_fillermarked_v2",
-        TriState.DISABLED,
-    )
-
     fun filterCompleted() = preferenceStore.getEnum(
         "pref_filter_library_completed_v2",
         TriState.DISABLED,
@@ -211,11 +206,6 @@ class LibraryPreferences(
         Manga.SHOW_ALL,
     )
 
-    fun filterChapterByFillermarked() = preferenceStore.getLong(
-        "default_chapter_filter_by_fillermarked",
-        Manga.SHOW_ALL,
-    )
-
     // and upload date
     fun sortChapterBySourceOrNumber() = preferenceStore.getLong(
         "default_chapter_sort_by_source_or_number",
@@ -236,7 +226,6 @@ class LibraryPreferences(
         filterChapterByRead().set(manga.unreadFilterRaw)
         filterChapterByDownloaded().set(manga.downloadedFilterRaw)
         filterChapterByBookmarked().set(manga.bookmarkedFilterRaw)
-        filterChapterByFillermarked().set(manga.fillermarkedFilterRaw)
         sortChapterBySourceOrNumber().set(manga.sorting)
         displayChapterByNameOrNumber().set(manga.displayMode)
         sortChapterByAscendingOrDescending().set(
@@ -274,7 +263,6 @@ class LibraryPreferences(
     enum class ChapterSwipeAction {
         ToggleRead,
         ToggleBookmark,
-        ToggleFillermark,
         Download,
         Disabled,
     }

@@ -1,0 +1,4 @@
+-- KMK -->
+-- A manga-owned list preserves blacklist keys through a chapter source refresh.
+ALTER TABLE manga ADD COLUMN user_blacklisted_chapters TEXT NOT NULL DEFAULT '';
+-- KMK <--

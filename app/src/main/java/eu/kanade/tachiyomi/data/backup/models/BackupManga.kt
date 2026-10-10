@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
 import tachiyomi.data.MemoColumnAdapter
+import tachiyomi.domain.chapter.service.legacyFillermarkBlacklistKeys
 import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 
@@ -51,6 +52,10 @@ class BackupManga(
     @ProtoNumber(113) var lastUpdate: Long = 0,
     @ProtoNumber(114) var nextUpdate: Long = 0,
     @ProtoNumber(115) var fetchInterval: Int = 0,
+    // KMK <--
+    // KMK -->
+    // Matches Houri's field number so compatible backups preserve chapter exclusions.
+    @ProtoNumber(615) var blacklistedChapters: List<String> = emptyList(),
     // KMK <--
 
     // SY specific values
@@ -120,6 +125,17 @@ class BackupManga(
             lastUpdate = this@BackupManga.lastUpdate,
             nextUpdate = this@BackupManga.nextUpdate,
             fetchInterval = this@BackupManga.fetchInterval,
+            // KMK -->
+            blacklistedChapters = (
+                this@BackupManga.blacklistedChapters +
+                    legacyFillermarkBlacklistKeys(
+                        this@BackupManga.chapters.asSequence()
+                            .filter(BackupChapter::fillermark)
+                            .map(BackupChapter::url)
+                            .asIterable(),
+                    )
+                ).distinct(),
+            // KMK <--
         )
     }
 }

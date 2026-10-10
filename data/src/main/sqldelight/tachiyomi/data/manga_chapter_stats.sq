@@ -26,12 +26,11 @@ END;
 
 -- Page progress and other columns the aggregates don't read keep the row.
 CREATE TRIGGER manga_chapter_stats_update_chapter
-AFTER UPDATE OF manga_id, remote_scanlator, user_read, user_bookmark, user_fillermark, remote_date_upload, state_date_fetch ON chapter
+AFTER UPDATE OF manga_id, remote_scanlator, user_read, user_bookmark, remote_date_upload, state_date_fetch ON chapter
 WHEN old.manga_id IS NOT new.manga_id
 OR old.remote_scanlator IS NOT new.remote_scanlator
 OR old.user_read IS NOT new.user_read
 OR old.user_bookmark IS NOT new.user_bookmark
-OR old.user_fillermark IS NOT new.user_fillermark
 OR old.remote_date_upload IS NOT new.remote_date_upload
 OR old.state_date_fetch IS NOT new.state_date_fetch
 BEGIN
@@ -98,8 +97,8 @@ SELECT
     coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.remote_date_upload ELSE 0 END), 0),
     coalesce(max(CASE WHEN ES.manga_id IS NULL THEN C.state_date_fetch ELSE 0 END), 0),
     coalesce(max(CASE WHEN ES.manga_id IS NULL THEN H.read_at ELSE 0 END), 0),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL THEN C.user_fillermark ELSE 0 END), 0),
-    coalesce(sum(CASE WHEN ES.manga_id IS NULL AND C.user_fillermark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0)
+    0,
+    0
 FROM manga M
 LEFT JOIN chapter C
 ON C.manga_id = M.id

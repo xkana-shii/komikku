@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.data.Database
 import tachiyomi.data.insertTestManga
 import tachiyomi.data.testDatabase
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import java.util.Properties
@@ -54,12 +55,30 @@ class ChapterRemoteSyncTest {
             val mangaId = insertTestManga(database, "/manga")
             val repository = ChapterRepositoryImpl(database)
             val old = repository.addAll(listOf(Chapter.create().copy(mangaId = mangaId, url = "/old", name = "Old"))).single()
-            val kept = repository.addAll(listOf(Chapter.create().copy(mangaId = mangaId, url = "/kept", name = "Kept", fillermark = true))).single()
+            val kept = repository.addAll(
+                listOf(
+                    Chapter.create().copy(
+                        mangaId = mangaId,
+                        url = "/kept",
+                        name = "Kept",
+                        bookmarkColor = BookmarkColor.PURPLE,
+                    ),
+                ),
+            ).single()
             val memo = JsonObject(mapOf("note" to JsonPrimitive("retained")))
 
             val added = repository.updateFromRemote(
                 removedIds = listOf(old.id),
-                added = listOf(Chapter.create().copy(mangaId = mangaId, url = "/new", name = "New", fillermark = true, version = 7, memo = memo)),
+                added = listOf(
+                    Chapter.create().copy(
+                        mangaId = mangaId,
+                        url = "/new",
+                        name = "New",
+                        bookmarkColor = BookmarkColor.RED,
+                        version = 7,
+                        memo = memo,
+                    ),
+                ),
                 updated = listOf(
                     ChapterRemoteUpdate(
                         id = kept.id,
@@ -74,8 +93,8 @@ class ChapterRemoteSyncTest {
             )
 
             check(repository.getChapterById(old.id) == null)
-            check(added.single().let { it.fillermark && it.version == 7L && it.memo == memo })
-            check(repository.getChapterById(kept.id)?.let { it.name == "Renamed" && it.fillermark } == true)
+            check(added.single().let { it.bookmarkColor == BookmarkColor.RED && it.version == 7L && it.memo == memo })
+            check(repository.getChapterById(kept.id)?.let { it.name == "Renamed" && it.bookmarkColor == BookmarkColor.PURPLE } == true)
         } finally {
             driver.close()
         }

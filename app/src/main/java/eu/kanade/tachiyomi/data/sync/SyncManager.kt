@@ -267,12 +267,8 @@ class SyncManager(
         val localChapters = database.chapterQueries.getChaptersByMangaId(
             localManga.id,
             0,
-            // KMK -->
             Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
             Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
-            // KMK <--
             ChapterMapper::mapChapter,
         ).awaitAsList()
         val localCategories = getCategories.await(localManga.id).map { it.order }

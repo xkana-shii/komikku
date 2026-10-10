@@ -35,6 +35,8 @@ import tachiyomi.data.manga.MangaRepositoryImpl
 import tachiyomi.data.track.TrackRepositoryImpl
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.model.BookmarkColor
+import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetMangaByUrlAndSourceId
@@ -66,7 +68,12 @@ class RestoreDatabaseTest {
         db = Database(
             driver,
             historyAdapter = History.Adapter(DateColumnAdapter),
-            mangaAdapter = Manga.Adapter(StringListColumnAdapter, UpdateStrategyColumnAdapter, MemoColumnAdapter),
+            mangaAdapter = Manga.Adapter(
+                remote_genreAdapter = StringListColumnAdapter,
+                user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
+                remote_memoAdapter = MemoColumnAdapter,
+            ),
             chapterAdapter = Chapter.Adapter(MemoColumnAdapter),
         )
         Injekt.addSingletonFactory { GetCustomMangaInfo(customRepository) }
@@ -148,7 +155,17 @@ class RestoreDatabaseTest {
             source = 1, url = "/manga", title = "Original", author = "Original author",
             customTitle = "Initial override",
             nextUpdate = 123456, fetchInterval = 7, version = 1,
-            categories = listOf(1), chapters = listOf(BackupChapter("/chapter", "Original chapter", version = 1)),
+            categories = listOf(1),
+            chapters = listOf(
+                BackupChapter(
+                    "/chapter",
+                    "Original chapter",
+                    bookmark = true,
+                    bookmarkColor = BookmarkColor.RED.value,
+                    fillermark = true,
+                    version = 1,
+                ),
+            ),
             history = listOf(BackupHistory("/chapter", 1000, 42)),
             tracking = listOf(BackupTracking(syncId = 1, libraryId = 2, mediaId = 3, title = "Tracked")),
         )
@@ -163,6 +180,9 @@ class RestoreDatabaseTest {
         restorer.restore(backup, listOf(category))
         val mangaId = db.mangaQueries.getAll().awaitAsList().single().id
         val chapterId = chapters.await(mangaId).single().id
+        chapters.await(mangaId).single().bookmarkColor shouldBe BookmarkColor.RED
+        db.mangaQueries.getAll().awaitAsList().single().user_blacklisted_chapters shouldBe
+            listOf(chapterUrlBlacklistKey("/chapter"))
         backup.title = "Renamed"
         backup.author = "Changed author"
         backup.version = 5
@@ -170,7 +190,18 @@ class RestoreDatabaseTest {
         backup.chapterFlags = 123
         backup.viewer_flags = 456
         backup.customTitle = "My title"
-        backup.chapters = listOf(BackupChapter("/chapter", "Renamed chapter", chapterNumber = 4F, read = true, bookmark = true, fillermark = true, version = 8))
+        backup.chapters = listOf(
+            BackupChapter(
+                "/chapter",
+                "Renamed chapter",
+                chapterNumber = 4F,
+                read = true,
+                bookmark = true,
+                bookmarkColor = BookmarkColor.PURPLE.value,
+                fillermark = true,
+                version = 8,
+            ),
+        )
         restorer.restore(backup, listOf(category))
         val manga = db.mangaQueries.getAll().awaitAsList().single()
         manga.id shouldBe mangaId
@@ -185,13 +216,25 @@ class RestoreDatabaseTest {
         restoredChapter.id shouldBe chapterId
         restoredChapter.read shouldBe true
         restoredChapter.bookmark shouldBe true
-        restoredChapter.fillermark shouldBe true
+        restoredChapter.bookmarkColor shouldBe BookmarkColor.PURPLE
         restoredChapter.version shouldBe 8
         tracks.getTracksByMangaId(mangaId).single().remoteId shouldBe 3
         db.historyQueries.getHistoryByChapterUrl("/chapter", mangaId).awaitAsOne().read_duration shouldBe 42
         GetCategories(CategoryRepositoryImpl(db)).await(mangaId).single().name shouldBe "Reading"
+        manga.user_blacklisted_chapters shouldBe listOf(chapterUrlBlacklistKey("/chapter"))
         // Only the version changes; identical visible state must still catch up.
-        backup.chapters = listOf(BackupChapter(restoredChapter.url, restoredChapter.name, chapterNumber = restoredChapter.chapterNumber.toFloat(), read = true, bookmark = true, fillermark = true, version = 9))
+        backup.chapters = listOf(
+            BackupChapter(
+                restoredChapter.url,
+                restoredChapter.name,
+                chapterNumber = restoredChapter.chapterNumber.toFloat(),
+                read = true,
+                bookmark = true,
+                bookmarkColor = BookmarkColor.PURPLE.value,
+                fillermark = true,
+                version = 9,
+            ),
+        )
         restorer.restore(backup, listOf(category))
         chapters.await(mangaId).single().version shouldBe 9
         restorer.restore(backup, listOf(category))

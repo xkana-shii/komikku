@@ -26,6 +26,9 @@ object MangaMapper {
         userChapterFlags: Long,
         @Suppress("UNUSED_PARAMETER")
         userFilteredScanlators: String?,
+        // KMK -->
+        userBlacklistedChapters: List<String>,
+        // KMK <--
         stateChapterLastUpdate: Long?,
         stateChapterNextUpdate: Long?,
         stateChapterFetchInterval: Long,
@@ -62,6 +65,9 @@ object MangaMapper {
         version = stateVersion,
         notes = userNotes,
         memo = remoteMemo,
+        // KMK -->
+        blacklistedChapters = userBlacklistedChapters,
+        // KMK <--
     )
 
     fun mapLibraryManga(
@@ -82,6 +88,9 @@ object MangaMapper {
         userReaderFlags: Long,
         userChapterFlags: Long,
         userFilteredScanlators: String?,
+        // KMK -->
+        userBlacklistedChapters: List<String>,
+        // KMK <--
         stateChapterLastUpdate: Long?,
         stateChapterNextUpdate: Long?,
         stateChapterFetchInterval: Long,
@@ -97,9 +106,7 @@ object MangaMapper {
         chapterFetchedAt: Long,
         lastRead: Long,
         bookmarkCount: Double,
-        fillermarkCount: Double,
         bookmarkedReadCount: Long,
-        fillermarkedReadCount: Long,
         categories: String,
     ): LibraryManga = LibraryManga(
         manga = mapManga(
@@ -120,6 +127,9 @@ object MangaMapper {
             userReaderFlags = userReaderFlags,
             userChapterFlags = userChapterFlags,
             userFilteredScanlators = userFilteredScanlators,
+            // KMK -->
+            userBlacklistedChapters = userBlacklistedChapters,
+            // KMK <--
             stateChapterLastUpdate = stateChapterLastUpdate,
             stateChapterNextUpdate = stateChapterNextUpdate,
             stateChapterFetchInterval = stateChapterFetchInterval,
@@ -134,9 +144,7 @@ object MangaMapper {
         totalChapters = totalCount,
         readCount = readCount.toLong(),
         bookmarkCount = bookmarkCount.toLong(),
-        fillermarkCount = fillermarkCount.toLong(),
         bookmarkReadCount = bookmarkedReadCount,
-        fillermarkReadCount = fillermarkedReadCount,
         chapterFlags = userChapterFlags,
         latestUpload = latestUpload,
         chapterFetchedAt = chapterFetchedAt,
@@ -161,6 +169,9 @@ object MangaMapper {
         userReaderFlags: Long,
         userChapterFlags: Long,
         userFilteredScanlators: String?,
+        // KMK -->
+        userBlacklistedChapters: List<String>,
+        // KMK <--
         stateChapterLastUpdate: Long?,
         stateChapterNextUpdate: Long?,
         stateChapterFetchInterval: Long,
@@ -190,6 +201,9 @@ object MangaMapper {
             userReaderFlags = userReaderFlags,
             userChapterFlags = userChapterFlags,
             userFilteredScanlators = userFilteredScanlators,
+            // KMK -->
+            userBlacklistedChapters = userBlacklistedChapters,
+            // KMK <--
             stateChapterLastUpdate = stateChapterLastUpdate,
             stateChapterNextUpdate = stateChapterNextUpdate,
             stateChapterFetchInterval = stateChapterFetchInterval,

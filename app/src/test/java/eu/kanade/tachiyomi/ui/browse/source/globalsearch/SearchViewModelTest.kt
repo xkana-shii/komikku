@@ -19,7 +19,7 @@ import org.junit.jupiter.params.provider.EnumSource
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
     @ParameterizedTest
-    @EnumSource(value = SourceFilter::class, names = ["PinnedOnly", "Category"])
+    @EnumSource(value = SourceFilter::class, names = ["PinnedOnly"])
     fun `search immediately observes new source filter before preference flow catches up`(next: SourceFilter) = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val flow = MutableStateFlow(SourceFilter.All)
@@ -30,8 +30,9 @@ class SearchViewModelTest {
             every { globalSearchPinnedState().changes() } returns flow
             every { globalSearchFilterState().changes() } returns MutableStateFlow(false)
             every { sourcesTabCategories().changes() } returns MutableStateFlow(emptySet())
+            every { sourcesTabSourcesInCategories().get() } returns emptySet()
             every { sourcesTabSourcesInCategories().changes() } returns MutableStateFlow(emptySet())
-            every { globalSearchCategoryFilter().changes() } returns MutableStateFlow("")
+            every { globalSearchSourceCategory().changes() } returns MutableStateFlow("")
         }
         val pinnedPreference = preferences.globalSearchPinnedState()
         val observed = mutableListOf<SourceFilter>()

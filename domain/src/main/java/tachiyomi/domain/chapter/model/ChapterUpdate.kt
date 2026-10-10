@@ -7,7 +7,6 @@ data class ChapterUpdate(
     val mangaId: Long? = null,
     val read: Boolean? = null,
     val bookmark: Boolean? = null,
-    val fillermark: Boolean? = null,
     val lastPageRead: Long? = null,
     val dateFetch: Long? = null,
     val sourceOrder: Long? = null,
@@ -18,6 +17,9 @@ data class ChapterUpdate(
     val scanlator: String? = null,
     val version: Long? = null,
     val memo: JsonObject? = null,
+    // KMK -->
+    val bookmarkColor: BookmarkColor? = null,
+    // KMK <--
 )
 
 fun Chapter.toChapterUpdate(): ChapterUpdate {
@@ -26,7 +28,6 @@ fun Chapter.toChapterUpdate(): ChapterUpdate {
         mangaId,
         read,
         bookmark,
-        fillermark,
         lastPageRead,
         dateFetch,
         sourceOrder,
@@ -37,5 +38,8 @@ fun Chapter.toChapterUpdate(): ChapterUpdate {
         scanlator,
         version,
         memo,
+        // KMK -->
+        bookmarkColor,
+        // KMK <--
     )
 }

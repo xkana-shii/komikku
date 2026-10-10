@@ -28,11 +28,6 @@ class UpdatesPreferences(
         TriState.DISABLED,
     )
 
-    fun filterFillermarked() = preferenceStore.getEnum(
-        "pref_filter_updates_fillermarked",
-        TriState.DISABLED,
-    )
-
     fun filterExcludedScanlators() = preferenceStore.getBoolean(
         "pref_filter_updates_hide_excluded_scanlators",
         false,

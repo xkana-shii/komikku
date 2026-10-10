@@ -10,6 +10,9 @@ CREATE TABLE chapter(
     user_read INTEGER AS Boolean NOT NULL,
     user_bookmark INTEGER AS Boolean NOT NULL,
     -- KMK -->
+    user_bookmark_color INTEGER NOT NULL DEFAULT 0,
+    -- KMK <--
+    -- KMK -->
     user_fillermark INTEGER AS Boolean NOT NULL,
     -- KMK <--
     user_last_page_read INTEGER NOT NULL,
@@ -48,6 +51,7 @@ CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapter
 WHEN new.state_is_syncing = 0 AND (
     new.user_read != old.user_read OR
     new.user_bookmark != old.user_bookmark OR
+    new.user_bookmark_color != old.user_bookmark_color OR
     new.user_fillermark != old.user_fillermark OR
     new.user_last_page_read != old.user_last_page_read
 )
@@ -64,8 +68,8 @@ END;
 
 getChapterById:
 SELECT
-    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
-    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_bookmark_color,
+    user_last_page_read, remote_chapter_number, remote_order,
     state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
     state_is_syncing, remote_memo
 FROM chapter
@@ -74,7 +78,7 @@ WHERE id = :id;
 getChaptersByMangaId:
 SELECT
     C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
-    C.user_bookmark, C.user_fillermark, C.user_last_page_read, C.remote_chapter_number,
+    C.user_bookmark, C.user_bookmark_color, C.user_last_page_read, C.remote_chapter_number,
     C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
     C.state_version, C.state_is_syncing, C.remote_memo
 FROM chapter C
@@ -92,8 +96,6 @@ AND (
         ES.scanlator IS NULL
         AND ((M.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
         AND ((M.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
-        AND ((M.user_chapter_flags & :fillermarkUnmask) = 0 OR C.user_fillermark = 0)
-        AND ((M.user_chapter_flags & :fillermarkMask) = 0 OR C.user_fillermark = 1)
     )
     -- KMK <--
 );
@@ -105,8 +107,8 @@ WHERE manga_id = :mangaId;
 
 getBookmarkedChaptersByMangaId:
 SELECT
-    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
-    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_bookmark_color,
+    user_last_page_read, remote_chapter_number, remote_order,
     state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
     state_is_syncing, remote_memo
 FROM chapter
@@ -114,21 +116,23 @@ WHERE user_bookmark
 AND manga_id = :mangaId;
 
 -- KMK -->
-getFillermarkedChaptersByMangaId:
-SELECT
-    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
-    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
-    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
-    state_is_syncing, remote_memo
+-- Used only by FillermarkBlacklistMigration. Keep the legacy column available
+-- through this release so existing installations can be converted atomically.
+getLegacyFillermarkedChapterUrls:
+SELECT manga_id AS mangaId, remote_url AS url
 FROM chapter
-WHERE user_fillermark
-AND manga_id = :mangaId;
+WHERE user_fillermark = 1;
+
+clearLegacyFillermarks:
+UPDATE chapter
+SET user_fillermark = 0
+WHERE user_fillermark = 1;
 -- KMK <--
 
 getChapterByUrl:
 SELECT
-    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
-    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_bookmark_color,
+    user_last_page_read, remote_chapter_number, remote_order,
     state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
     state_is_syncing, remote_memo
 FROM chapter
@@ -136,8 +140,8 @@ WHERE remote_url = :chapterUrl;
 
 getChapterByUrlAndMangaId:
 SELECT
-    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
-    user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
+    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_bookmark_color,
+    user_last_page_read, remote_chapter_number, remote_order,
     state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
     state_is_syncing, remote_memo
 FROM chapter
@@ -147,7 +151,7 @@ AND remote_url = :remoteUrl;
 getMergedChaptersByMangaId:
 SELECT
     C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
-    C.user_bookmark, C.user_fillermark, C.user_last_page_read, C.remote_chapter_number,
+    C.user_bookmark, C.user_bookmark_color, C.user_last_page_read, C.remote_chapter_number,
     C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
     C.state_version, C.state_is_syncing, C.remote_memo
 FROM (
@@ -169,8 +173,6 @@ AND (
         ES.scanlator IS NULL
         AND ((MA.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
         AND ((MA.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
-        AND ((MA.user_chapter_flags & :fillermarkUnmask) = 0 OR C.user_fillermark = 0)
-        AND ((MA.user_chapter_flags & :fillermarkMask) = 0 OR C.user_fillermark = 1)
     )
     -- KMK <--
 )
@@ -183,7 +185,9 @@ updateFromBackup:
 UPDATE chapter SET
     user_read = coalesce(:userRead, user_read),
     user_bookmark = coalesce(:userBookmark, user_bookmark),
-    user_fillermark = coalesce(:userFillermark, user_fillermark),
+    -- KMK -->
+    user_bookmark_color = coalesce(:userBookmarkColor, user_bookmark_color),
+    -- KMK <--
     user_last_page_read = coalesce(:userLastPageRead, user_last_page_read),
     remote_order = coalesce(:remoteOrder, remote_order),
     remote_date_upload = coalesce(:remoteDateUpload, remote_date_upload),
@@ -212,14 +216,14 @@ WHERE state_is_syncing = 1;
 -- KMK -->
 insertReturningId:
 INSERT INTO chapter(
-    manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
+    manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark, user_bookmark_color,
     user_fillermark, user_last_page_read, remote_chapter_number, remote_order,
     state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
     state_is_syncing, remote_memo
 )
 VALUES (
-    :mangaId, :remoteUrl, :remoteName, :remoteScanlator, :userRead, :userBookmark,
-    :userFillermark, :userLastPageRead, :remoteChapterNumber, :remoteOrder,
+    :mangaId, :remoteUrl, :remoteName, :remoteScanlator, :userRead, :userBookmark, :userBookmarkColor,
+    0, :userLastPageRead, :remoteChapterNumber, :remoteOrder,
     :stateDateFetch, :remoteDateUpload, 0, :stateVersion, 0, :remoteMemo
 )
 -- Two syncs of the same entry can race; the chapter the other one already stored is skipped rather
@@ -236,7 +240,9 @@ SET manga_id = coalesce(:mangaId, manga_id),
     remote_scanlator = coalesce(:remoteScanlator, remote_scanlator),
     user_read = coalesce(:userRead, user_read),
     user_bookmark = coalesce(:userBookmark, user_bookmark),
-    user_fillermark = coalesce(:userFillermark, user_fillermark),
+    -- KMK -->
+    user_bookmark_color = coalesce(:userBookmarkColor, user_bookmark_color),
+    -- KMK <--
     user_last_page_read = coalesce(:userLastPageRead, user_last_page_read),
     remote_chapter_number = coalesce(:remoteChapterNumber, remote_chapter_number),
     remote_order = coalesce(:remoteOrder, remote_order),

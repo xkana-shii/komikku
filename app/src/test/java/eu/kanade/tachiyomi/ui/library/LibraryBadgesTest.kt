@@ -11,11 +11,10 @@ import tachiyomi.domain.manga.model.applyFilter
 // KMK -->
 class LibraryBadgesTest {
     @Test
-    fun `badge combinations preserve downloaded unread local and fillermark filtering`() {
+    fun `badge combinations preserve downloaded unread and local filtering`() {
         val manga = mockk<LibraryManga> {
             every { id } returns 1
             every { unreadCount } returns 3
-            every { hasFillermarks } returns true
         }
         // A merged manga uses the aggregate count calculated by the ScreenModel.
         val downloaded = LibraryItem(manga, downloadCount = 5, unreadCount = 3, sourceManager = mockk(), source = mockk())
@@ -27,7 +26,6 @@ class LibraryBadgesTest {
             }
             items.map { item -> applyFilter(TriState.ENABLED_IS) { item.isDownloaded } } shouldBe listOf(true, true, false)
             items.map { item -> applyFilter(TriState.ENABLED_IS) { item.libraryManga.unreadCount > 0 } } shouldBe listOf(true, true, true)
-            items.map { item -> applyFilter(TriState.ENABLED_IS) { item.libraryManga.hasFillermarks } } shouldBe listOf(true, true, true)
             items.first().downloadCount shouldBe 5
             items.first().unreadCount shouldBe 3
             items[1].isLocal shouldBe true

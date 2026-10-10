@@ -18,6 +18,7 @@ import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -157,6 +158,9 @@ class MangaRestorer(
             lastUpdate = newer.lastUpdate.takeIf { it != 0L } ?: lastUpdate,
             nextUpdate = newer.nextUpdate.takeIf { it != 0L } ?: nextUpdate,
             fetchInterval = newer.fetchInterval.takeIf { it != 0 } ?: fetchInterval,
+            // KMK -->
+            blacklistedChapters = (blacklistedChapters + newer.blacklistedChapters).distinct(),
+            // KMK <--
         )
     }
 
@@ -181,6 +185,9 @@ class MangaRestorer(
                 initialized = manga.initialized,
                 viewer = manga.viewerFlags,
                 chapterFlags = manga.chapterFlags,
+                // KMK -->
+                blacklistedChapters = manga.blacklistedChapters,
+                // KMK <--
                 coverLastModified = manga.coverLastModified,
                 dateAdded = manga.dateAdded,
                 mangaId = manga.id,
@@ -215,7 +222,8 @@ class MangaRestorer(
                     kept.copy(
                         read = kept.read || other.read,
                         bookmark = kept.bookmark || other.bookmark,
-                        fillermark = kept.fillermark || other.fillermark,
+                        bookmarkColor = other.bookmarkColor.takeIf { it != BookmarkColor.NONE }
+                            ?: kept.bookmarkColor,
                         lastPageRead = max(kept.lastPageRead, other.lastPageRead),
                         version = max(kept.version, other.version),
                         memo = JsonObject(kept.memo + other.memo),
@@ -252,7 +260,6 @@ class MangaRestorer(
             chapter.copy(
                 id = dbChapter.id,
                 bookmark = chapter.bookmark || dbChapter.bookmark,
-                fillermark = chapter.fillermark || dbChapter.fillermark,
                 read = chapter.read,
                 lastPageRead = chapter.lastPageRead,
                 // KMK -->
@@ -266,7 +273,6 @@ class MangaRestorer(
                 .copy(
                     id = dbChapter.id,
                     bookmark = chapter.bookmark || dbChapter.bookmark,
-                    fillermark = chapter.fillermark || dbChapter.fillermark,
                     sourceOrder = max(chapter.sourceOrder, dbChapter.sourceOrder),
                     dateUpload = min(chapter.dateUpload, dbChapter.dateUpload),
                 )
@@ -306,7 +312,9 @@ class MangaRestorer(
                     remoteScanlator = chapter.scanlator,
                     userRead = chapter.read,
                     userBookmark = chapter.bookmark,
-                    userFillermark = chapter.fillermark,
+                    // KMK -->
+                    userBookmarkColor = chapter.bookmarkColor.value.toLong(),
+                    // KMK <--
                     userLastPageRead = chapter.lastPageRead,
                     remoteChapterNumber = chapter.chapterNumber,
                     remoteOrder = chapter.sourceOrder,
@@ -325,7 +333,9 @@ class MangaRestorer(
                 database.chapterQueries.updateFromBackup(
                     userRead = chapter.read,
                     userBookmark = chapter.bookmark,
-                    userFillermark = chapter.fillermark,
+                    // KMK -->
+                    userBookmarkColor = chapter.bookmarkColor.value.toLong(),
+                    // KMK <--
                     userLastPageRead = chapter.lastPageRead,
                     remoteOrder = chapter.sourceOrder,
                     remoteDateUpload = chapter.dateUpload,
@@ -364,6 +374,9 @@ class MangaRestorer(
                 initialized = manga.initialized,
                 viewerFlags = manga.viewerFlags,
                 chapterFlags = manga.chapterFlags,
+                // KMK -->
+                blacklistedChapters = manga.blacklistedChapters,
+                // KMK <--
                 coverLastModified = manga.coverLastModified,
                 dateAdded = manga.dateAdded,
                 updateStrategy = manga.updateStrategy,

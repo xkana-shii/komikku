@@ -83,13 +83,6 @@ private fun ColumnScope.FilterSheet(
         onClick = { viewModel.toggleFilter(UpdatesPreferences::filterBookmarked) },
     )
 
-    val filterFillermarked by viewModel.updatesPreferences.filterFillermarked().collectAsState()
-    TriStateItem(
-        label = stringResource(KMR.strings.action_filter_fillermarked),
-        state = filterFillermarked,
-        onClick = { viewModel.toggleFilter(UpdatesPreferences::filterFillermarked) },
-    )
-
     HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.small))
 
     val filterExcludedScanlators by viewModel.updatesPreferences.filterExcludedScanlators().collectAsState()

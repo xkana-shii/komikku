@@ -33,8 +33,6 @@ class HistoryRepositoryImpl(
             // KMK -->
             Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
             Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
             unfinishedManga?.toLong(),
             unfinishedChapter,
             nonLibraryEntries,
@@ -48,8 +46,6 @@ class HistoryRepositoryImpl(
         return database.historyViewQueries.getLatestHistory(
             Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
             Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
             HistoryMapper::mapHistoryWithRelations,
         ).awaitAsOneOrNull()
     }
@@ -59,8 +55,6 @@ class HistoryRepositoryImpl(
         return database.historyViewQueries.getRecentHistory(
             Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
             Manga.CHAPTER_SHOW_BOOKMARKED,
-            Manga.CHAPTER_SHOW_NOT_FILLERMARKED,
-            Manga.CHAPTER_SHOW_FILLERMARKED,
             limit,
             HistoryMapper::mapHistoryWithRelations,
         ).awaitAsList()

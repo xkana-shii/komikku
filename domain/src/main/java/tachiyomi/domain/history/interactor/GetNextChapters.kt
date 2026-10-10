@@ -6,8 +6,10 @@ import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.service.getChapterSort
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.manga.model.Manga
 import kotlin.math.max
 
 // KMK -->
@@ -50,6 +52,16 @@ class GetNextChapters(
 
     suspend fun await(mangaId: Long, onlyUnread: Boolean = true): List<Chapter> {
         val manga = getManga.await(mangaId) ?: return emptyList()
+
+        return chaptersFor(manga, onlyUnread)
+            // KMK --> Keep this after every source-specific branch so History, reader next chapter,
+            // and automatic downloads all agree on the same exclusion rule.
+            .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        // KMK <--
+    }
+
+    private suspend fun chaptersFor(manga: Manga, onlyUnread: Boolean): List<Chapter> {
+        val mangaId = manga.id
 
         // SY -->
         if (manga.source == MERGED_SOURCE_ID) {

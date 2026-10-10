@@ -205,7 +205,6 @@ class LibraryViewModel(
             prefs.filterUnread,
             prefs.filterStarted,
             prefs.filterBookmarked,
-            prefs.filterFillermarked,
             prefs.filterCompleted,
             prefs.filterIntervalCustom,
             // SY -->
@@ -457,7 +456,6 @@ class LibraryViewModel(
         val filterUnread = preferences.filterUnread
         val filterStarted = preferences.filterStarted
         val filterBookmarked = preferences.filterBookmarked
-        val filterFillermarked = preferences.filterFillermarked
         val filterCompleted = preferences.filterCompleted
         val filterIntervalCustom = preferences.filterIntervalCustom
         val filterCategories = preferences.filterCategories
@@ -488,10 +486,6 @@ class LibraryViewModel(
 
         val filterFnBookmarked: (LibraryItem) -> Boolean = {
             applyFilter(filterBookmarked) { it.libraryManga.hasBookmarks }
-        }
-
-        val filterFnFillermarked: (LibraryItem) -> Boolean = {
-            applyFilter(filterFillermarked) { it.libraryManga.hasFillermarks }
         }
 
         val filterFnCompleted: (LibraryItem) -> Boolean = {
@@ -548,7 +542,6 @@ class LibraryViewModel(
                 filterFnUnread(it) &&
                 filterFnStarted(it) &&
                 filterFnBookmarked(it) &&
-                filterFnFillermarked(it) &&
                 filterFnCompleted(it) &&
                 filterFnIntervalCustom(it) &&
                 filterFnTracking(it) &&
@@ -755,7 +748,6 @@ class LibraryViewModel(
             libraryPreferences.filterUnread().changes(),
             libraryPreferences.filterStarted().changes(),
             libraryPreferences.filterBookmarked().changes(),
-            libraryPreferences.filterFillermarked().changes(),
             libraryPreferences.filterCompleted().changes(),
             libraryPreferences.filterIntervalCustom().changes(),
             // SY -->
@@ -778,16 +770,15 @@ class LibraryViewModel(
                 filterUnread = it[7] as TriState,
                 filterStarted = it[8] as TriState,
                 filterBookmarked = it[9] as TriState,
-                filterFillermarked = it[10] as TriState,
-                filterCompleted = it[11] as TriState,
-                filterIntervalCustom = it[12] as TriState,
+                filterCompleted = it[10] as TriState,
+                filterIntervalCustom = it[11] as TriState,
                 // SY -->
-                filterLewd = it[13] as TriState,
+                filterLewd = it[12] as TriState,
                 // SY <--
                 // KMK -->
-                sourceBadge = it[14] as Boolean,
-                useLangIcon = it[15] as Boolean,
-                filterCategories = it[16] as Boolean,
+                sourceBadge = it[13] as Boolean,
+                useLangIcon = it[14] as Boolean,
+                filterCategories = it[15] as Boolean,
             )
         }
     }
@@ -1629,7 +1620,6 @@ class LibraryViewModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
-        val filterFillermarked: TriState,
         val filterCompleted: TriState,
         val filterIntervalCustom: TriState,
         // SY -->
