@@ -58,6 +58,9 @@ val migrations: List<Migration>
         DisabledRepoMigration(),
         SyncPrefKeyMigration(),
         ChapterUrlHashMigration(),
+        // KMK -->
+        GlobalSearchSourceCategoryMigration(),
+        // KMK <--
         // KMK <--
         InstallationIdMigration(),
     )

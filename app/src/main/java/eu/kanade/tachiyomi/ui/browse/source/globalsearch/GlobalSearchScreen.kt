@@ -15,6 +15,7 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.util.ifSourcesLoaded
+import eu.kanade.domain.source.interactor.GetSourceCategories
 import eu.kanade.presentation.browse.GlobalSearchScreen
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.util.Screen
@@ -22,6 +23,8 @@ import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class GlobalSearchScreen(
     val searchQuery: String = "",
@@ -52,6 +55,10 @@ class GlobalSearchScreen(
         // KMK -->
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
         val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+        // KMK --> Categories are owned by source management and update independently of filters.
+        val getSourceCategories = remember { Injekt.get<GetSourceCategories>() }
+        val sourceCategories by remember { getSourceCategories.subscribe() }.collectAsState(initial = emptyList())
+        // KMK <--
 
         val haptic = LocalHapticFeedback.current
 
@@ -111,10 +118,9 @@ class GlobalSearchScreen(
                 // KMK -->
                 bulkFavoriteScreenModel = bulkFavoriteScreenModel,
                 hasPinnedSources = viewModel.hasPinnedSources(),
+                sourceCategories = sourceCategories,
+                onChangeSourceCategory = viewModel::setSourceCategory,
                 // KMK <--
-                // KMK KNS -->
-                onChangeCategory = viewModel::setSelectedCategory,
-                // KMK KNS <--
             )
         }
 

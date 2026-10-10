@@ -369,4 +369,8 @@
     <string name="track_remove_remotely">Also remove remotely</string>
     <string name="track_date_conflict">The start date must be on or before this tracker’s finish date.</string>
     <string name="feed_saved_search_invalid">This saved search is missing or no longer matches the source. Edit the saved search and try again.</string>
+    <!-- KMK -->
+    <string name="pref_global_search_source_category">Source category</string>
+    <string name="pref_global_search_source_category_all">All categories</string>
+    <!-- KMK <-->
 </resources>
