@@ -6,17 +6,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
-import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
-import app.cash.sqldelight.async.coroutines.synchronous
 import app.cash.sqldelight.db.SqlDriver
-import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConcurrencyModel.MultipleReadersSingleWriter
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConfiguration
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteConnectionFactory
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDatabaseType
 import com.eygraber.sqldelight.androidx.driver.AndroidxSqliteDriver
+import com.eygraber.sqldelight.androidx.driver.DefaultAndroidxSqliteConnectionFactory
 import com.eygraber.sqldelight.androidx.driver.FileProvider
 import com.eygraber.sqldelight.androidx.driver.SqliteJournalMode
 import eu.kanade.domain.track.store.DelayedTrackingStore
@@ -39,11 +37,12 @@ import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.network.JavaScriptEngine
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.source.AndroidSourceManager
+import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import exh.eh.EHentaiUpdateHelper
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
 import mihon.core.archive.CbzCrypto
-import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import net.zetetic.database.sqlcipher.driver.SQLCipherDriver
 import nl.adaptivity.xmlutil.XmlDeclMode
 import nl.adaptivity.xmlutil.core.XmlVersion
 import nl.adaptivity.xmlutil.serialization.XML
@@ -89,36 +88,26 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory<SqlDriver> {
             // SY -->
             // KMK -->
+            val encryptDatabase = securityPreferences.encryptDatabase().get()
+            if (encryptDatabase) {
+                System.loadLibrary("sqlcipher")
+            }
+
             synchronized(sqlDriverLock) {
                 sqlDriverRef?.get()?.let { return@synchronized it }
-                val driver = if (securityPreferences.encryptDatabase().get()) {
-                    System.loadLibrary("sqlcipher")
-                    AndroidSqliteDriver(
-                        schema = Database.Schema.synchronous(),
-                        context = app,
-                        name = CbzCrypto.DATABASE_NAME,
-                        factory = SupportOpenHelperFactory(CbzCrypto.getDecryptedPasswordSql(), null, false, 25),
-                        callback = object : AndroidSqliteDriver.Callback(Database.Schema.synchronous()) {
-                            override fun onOpen(db: SupportSQLiteDatabase) {
-                                super.onOpen(db)
-                                setPragma(db, "foreign_keys = ON")
-                                setPragma(db, "journal_mode = WAL")
-                                setPragma(db, "synchronous = NORMAL")
-                                // KMK -->
-                                setPragma(db, "busy_timeout = 3000")
-                                // KMK <--
-                            }
-
-                            private fun setPragma(db: SupportSQLiteDatabase, pragma: String) {
-                                db.query("PRAGMA $pragma").use { it.moveToFirst() }
-                            }
-                        },
-                    )
-                } else {
-                    // KMK -->
-                    val isWal = app.getSystemService<ActivityManager>()?.isLowRamDevice != true
-                    AndroidxSqliteDriver(
-                        connectionFactory = object : AndroidxSqliteConnectionFactory {
+                val isWal = !encryptDatabase && app.getSystemService<ActivityManager>()?.isLowRamDevice != true
+                val driver = AndroidxSqliteDriver(
+                    connectionFactory = if (encryptDatabase) {
+                        // SQLCipher uses a single connection, so threads wait on it instead of hitting SQLITE_BUSY
+                        DefaultAndroidxSqliteConnectionFactory(
+                            SQLCipherDriver(
+                                CbzCrypto.getDecryptedPasswordSql(),
+                                null,
+                                null,
+                            ),
+                        )
+                    } else {
+                        object : AndroidxSqliteConnectionFactory {
                             override val driver: SQLiteDriver = BundledSQLiteDriver()
 
                             override fun createConnection(name: String): SQLiteConnection {
@@ -126,17 +115,37 @@ class AppModule(val app: Application) : InjektModule {
                                     execSQL("PRAGMA busy_timeout = 3000")
                                 }
                             }
-                        },
-                        databaseType = AndroidxSqliteDatabaseType.FileProvider(app, LEGACY_DATABASE_NAME),
-                        schema = Database.Schema,
-                        configuration = AndroidxSqliteConfiguration(
+                        }
+                    },
+                    databaseType = AndroidxSqliteDatabaseType.FileProvider(
+                        app,
+                        if (encryptDatabase) CbzCrypto.DATABASE_NAME else LEGACY_DATABASE_NAME,
+                    ),
+                    schema = Database.Schema,
+                    configuration = if (encryptDatabase) {
+                        AndroidxSqliteConfiguration(
+                            isForeignKeyConstraintsEnabled = true,
+                            // KMK -->
+                            // Prevent crash when using Database Inspector
+                            cacheSize = if (isDebugBuildType) 0 else 25,
+                            // KMK <--
+                        )
+                    } else {
+                        AndroidxSqliteConfiguration(
                             isForeignKeyConstraintsEnabled = true,
                             journalMode = if (isWal) SqliteJournalMode.WAL else SqliteJournalMode.Truncate,
-                            concurrencyModel = MultipleReadersSingleWriter(isWal = isWal, nonWalCount = 1, walCount = 4),
-                        ),
-                    )
-                    // KMK <--
-                }
+                            concurrencyModel = MultipleReadersSingleWriter(
+                                isWal = isWal,
+                                nonWalCount = 1,
+                                walCount = 4,
+                            ),
+                            // KMK -->
+                            // Prevent crash when using Database Inspector
+                            cacheSize = if (isDebugBuildType) 0 else 25,
+                            // KMK <--
+                        )
+                    },
+                )
                 driver.also { sqlDriverRef = WeakReference(it) }
             }
             // KMK <--
@@ -192,7 +201,9 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { ChapterCache(app, get(), get()) }
         addSingletonFactory { CoverCache(app) }
 
-        addSingletonFactory { NetworkHelper(app, get(), get()) }
+        // KMK -->
+        addSingletonFactory { NetworkHelper(app, get()) }
+        // KMK <--
         addSingletonFactory { JavaScriptEngine(app) }
 
         addSingletonFactory<SourceManager> { AndroidSourceManager(app, get(), get()) }

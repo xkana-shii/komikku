@@ -19,6 +19,16 @@ BEGIN
   WHERE _id = new._id;
 END;
 
+DROP TRIGGER IF EXISTS update_last_modified_at_mangas_categories;
+CREATE TRIGGER update_last_modified_at_mangas_categories
+AFTER UPDATE ON mangas_categories
+FOR EACH ROW
+BEGIN
+  UPDATE mangas_categories
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE _id = new._id;
+END;
+
 DROP TRIGGER IF EXISTS update_favorite_modified_at_mangas;
 CREATE TRIGGER update_last_favorited_at_mangas
 AFTER UPDATE OF favorite ON mangas
@@ -34,16 +44,6 @@ AFTER UPDATE ON chapters
 FOR EACH ROW
 BEGIN
   UPDATE chapters
-  SET last_modified_at = strftime('%s', 'now')
-  WHERE _id = new._id;
-END;
-
-DROP TRIGGER IF EXISTS update_last_modified_at_mangas_categories;
-CREATE TRIGGER update_last_modified_at_mangas_categories
-AFTER UPDATE ON mangas_categories
-FOR EACH ROW
-BEGIN
-  UPDATE mangas_categories
   SET last_modified_at = strftime('%s', 'now')
   WHERE _id = new._id;
 END;

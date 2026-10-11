@@ -25,11 +25,6 @@ CREATE TABLE manga(
     -- KMK -->
     state_date_added INTEGER NOT NULL,
     user_filtered_scanlators TEXT,
-    -- KMK -->
-    user_scanlator_priority TEXT AS List<String> NOT NULL DEFAULT '',
-    user_blacklisted_chapters TEXT AS List<String> NOT NULL DEFAULT '',
-    user_scanlator_range_rules TEXT AS List<String> NOT NULL DEFAULT '',
-    -- KMK <--
     remote_update_strategy INTEGER AS UpdateStrategy NOT NULL DEFAULT 0,
     state_chapter_fetch_interval INTEGER DEFAULT 0 NOT NULL,
     -- KMK -->
@@ -39,6 +34,11 @@ CREATE TABLE manga(
     -- KMK <--
     user_notes TEXT NOT NULL DEFAULT "",
     remote_memo BLOB AS JsonObject NOT NULL DEFAULT (CAST('{}' AS BLOB)),
+    -- KMK -->
+    user_blacklisted_chapters TEXT AS List<String> NOT NULL DEFAULT '',
+    user_scanlator_priority TEXT AS List<String> NOT NULL DEFAULT '',
+    user_scanlator_range_rules TEXT AS List<String> NOT NULL DEFAULT '',
+    -- KMK <--
     UNIQUE(source_id, remote_url)
 );
 
