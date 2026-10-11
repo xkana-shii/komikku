@@ -9,7 +9,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,7 +58,6 @@ fun ReaderAppBars(
     mangaTitle: String?,
     chapterTitle: String?,
     navigateUp: () -> Unit,
-    onClickTopAppBar: () -> Unit,
     bookmarked: Boolean,
     bookmarkColor: BookmarkColor,
     onToggleBookmarked: () -> Unit,
@@ -116,9 +114,9 @@ fun ReaderAppBars(
             Column {
                 // SY <--
                 ReaderTopBar(
-                    modifier = Modifier
-                        .background(backgroundColor)
-                        .clickable(onClick = onClickTopAppBar),
+                    // KMK -->
+                    modifier = Modifier.background(backgroundColor),
+                    // KMK <--
                     mangaTitle = mangaTitle,
                     chapterTitle = chapterTitle,
                     navigateUp = navigateUp,
