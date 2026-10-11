@@ -22,7 +22,13 @@ internal fun testDatabase(driver: SqlDriver) = Database(
     historyAdapter = History.Adapter(DateColumnAdapter),
     mangaAdapter = Manga.Adapter(
         remote_genreAdapter = StringListColumnAdapter,
+        // KMK -->
+        user_scanlator_priorityAdapter = StringListColumnAdapter,
+        // KMK <--
         user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+        // KMK -->
+        user_scanlator_range_rulesAdapter = StringListColumnAdapter,
+        // KMK <--
         remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
         remote_memoAdapter = MemoColumnAdapter,
     ),
@@ -45,7 +51,13 @@ internal suspend fun insertTestManga(db: Database, url: String): Long = db.manga
     initialized = true,
     viewerFlags = 0,
     chapterFlags = 0,
+    // KMK -->
+    scanlatorPriority = emptyList(),
+    // KMK <--
     blacklistedChapters = emptyList(),
+    // KMK -->
+    scanlatorRangeRules = emptyList(),
+    // KMK <--
     coverLastModified = 0,
     dateAdded = 0,
     updateStrategy = UpdateStrategy.ALWAYS_UPDATE,

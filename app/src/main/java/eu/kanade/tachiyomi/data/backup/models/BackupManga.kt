@@ -54,8 +54,11 @@ class BackupManga(
     @ProtoNumber(115) var fetchInterval: Int = 0,
     // KMK <--
     // KMK -->
+    // Houri reserves adjacent field numbers for compatible scanlator configuration.
+    @ProtoNumber(614) var scanlatorPriority: List<String> = emptyList(),
     // Matches Houri's field number so compatible backups preserve chapter exclusions.
     @ProtoNumber(615) var blacklistedChapters: List<String> = emptyList(),
+    @ProtoNumber(616) var scanlatorRangeRules: List<String> = emptyList(),
     // KMK <--
 
     // SY specific values
@@ -126,6 +129,7 @@ class BackupManga(
             nextUpdate = this@BackupManga.nextUpdate,
             fetchInterval = this@BackupManga.fetchInterval,
             // KMK -->
+            scanlatorPriority = this@BackupManga.scanlatorPriority,
             blacklistedChapters = (
                 this@BackupManga.blacklistedChapters +
                     legacyFillermarkBlacklistKeys(
@@ -135,6 +139,7 @@ class BackupManga(
                             .asIterable(),
                     )
                 ).distinct(),
+            scanlatorRangeRules = this@BackupManga.scanlatorRangeRules,
             // KMK <--
         )
     }

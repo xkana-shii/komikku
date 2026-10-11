@@ -1,0 +1,4 @@
+-- KMK -->
+ALTER TABLE manga ADD COLUMN user_scanlator_priority TEXT NOT NULL DEFAULT '';
+ALTER TABLE manga ADD COLUMN user_scanlator_range_rules TEXT NOT NULL DEFAULT '';
+-- KMK <--

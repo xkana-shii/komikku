@@ -105,7 +105,10 @@ SELECT
     M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
     M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
     M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators, M.user_blacklisted_chapters,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    -- KMK -->
+    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
+    -- KMK <--
     M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.state_date_added,
     M.state_last_modified_at, M.state_version, M.state_is_syncing,
@@ -163,7 +166,10 @@ SELECT
     M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
     M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
     M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators, M.user_blacklisted_chapters,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    -- KMK -->
+    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
+    -- KMK <--
     M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.state_date_added,
     M.state_last_modified_at, M.state_version, M.state_is_syncing,
@@ -215,7 +221,10 @@ SELECT
     M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
     M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
     M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators, M.user_blacklisted_chapters,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    -- KMK -->
+    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
+    -- KMK <--
     M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.state_date_added,
     M.state_last_modified_at, M.state_version, M.state_is_syncing,
@@ -268,7 +277,10 @@ SELECT
     M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
     M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
     M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators, M.user_blacklisted_chapters,
+    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    -- KMK -->
+    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
+    -- KMK <--
     M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.state_date_added,
     M.state_last_modified_at, M.state_version, M.state_is_syncing,

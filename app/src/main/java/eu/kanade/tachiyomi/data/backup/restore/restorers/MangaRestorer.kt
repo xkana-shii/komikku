@@ -159,7 +159,9 @@ class MangaRestorer(
             nextUpdate = newer.nextUpdate.takeIf { it != 0L } ?: nextUpdate,
             fetchInterval = newer.fetchInterval.takeIf { it != 0 } ?: fetchInterval,
             // KMK -->
+            scanlatorPriority = newer.scanlatorPriority.ifEmpty { scanlatorPriority },
             blacklistedChapters = (blacklistedChapters + newer.blacklistedChapters).distinct(),
+            scanlatorRangeRules = newer.scanlatorRangeRules.ifEmpty { scanlatorRangeRules },
             // KMK <--
         )
     }
@@ -186,7 +188,9 @@ class MangaRestorer(
                 viewer = manga.viewerFlags,
                 chapterFlags = manga.chapterFlags,
                 // KMK -->
+                scanlatorPriority = manga.scanlatorPriority,
                 blacklistedChapters = manga.blacklistedChapters,
+                scanlatorRangeRules = manga.scanlatorRangeRules,
                 // KMK <--
                 coverLastModified = manga.coverLastModified,
                 dateAdded = manga.dateAdded,
@@ -375,7 +379,9 @@ class MangaRestorer(
                 viewerFlags = manga.viewerFlags,
                 chapterFlags = manga.chapterFlags,
                 // KMK -->
+                scanlatorPriority = manga.scanlatorPriority,
                 blacklistedChapters = manga.blacklistedChapters,
+                scanlatorRangeRules = manga.scanlatorRangeRules,
                 // KMK <--
                 coverLastModified = manga.coverLastModified,
                 dateAdded = manga.dateAdded,

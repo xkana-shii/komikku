@@ -116,6 +116,14 @@ WHERE user_bookmark
 AND manga_id = :mangaId;
 
 -- KMK -->
+getMangaIdsWithBookmarkColors:
+SELECT DISTINCT manga_id
+FROM chapter
+WHERE user_bookmark = 1
+AND user_bookmark_color IN :bookmarkColors;
+-- KMK <--
+
+-- KMK -->
 -- Used only by FillermarkBlacklistMigration. Keep the legacy column available
 -- through this release so existing installations can be converted atomically.
 getLegacyFillermarkedChapterUrls:

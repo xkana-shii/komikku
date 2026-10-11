@@ -31,7 +31,9 @@ data class MangaUpdate(
     val filteredScanlators: List<String>? = null,
     // SY <--
     // KMK -->
+    val scanlatorPriority: List<String>? = null,
     val blacklistedChapters: List<String>? = null,
+    val scanlatorRangeRules: List<String>? = null,
     // KMK <--
 )
 

@@ -150,7 +150,9 @@ internal fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/*
         nextUpdate = this.nextUpdate,
         fetchInterval = this.fetchInterval,
         // KMK -->
+        scanlatorPriority = this.scanlatorPriority,
         blacklistedChapters = this.blacklistedChapters,
+        scanlatorRangeRules = this.scanlatorRangeRules,
         // KMK <--
         // SY -->
     ).also { backupManga ->

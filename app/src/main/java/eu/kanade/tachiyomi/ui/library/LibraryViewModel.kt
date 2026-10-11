@@ -35,6 +35,7 @@ import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
+import eu.kanade.tachiyomi.util.chapter.applySmartScanlatorMerge
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
 import exh.favorites.FavoritesSyncHelper
@@ -96,8 +97,11 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.Category.Companion.UNCATEGORIZED_ID
 import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetMangaIdsWithBookmarkColors
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
@@ -139,6 +143,9 @@ class LibraryViewModel(
     private val getTracksPerManga: GetTracksPerManga = Injekt.get(),
     private val getNextChapters: GetNextChapters = Injekt.get(),
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
+    // KMK -->
+    private val getMangaIdsWithBookmarkColors: GetMangaIdsWithBookmarkColors = Injekt.get(),
+    // KMK <--
     private val getBookmarkedChaptersByMangaId: GetBookmarkedChaptersByMangaId = Injekt.get(),
     private val setReadStatus: SetReadStatus = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
@@ -243,6 +250,21 @@ class LibraryViewModel(
         ::GroupingPreferences,
     )
 
+    // KMK -->
+    private val bookmarkColorMatchedMangaIds = combine(
+        libraryPreferences.filterBookmarked().changes(),
+        libraryPreferences.filterBookmarkColors().changes(),
+    ) { bookmarkFilter, names ->
+        names.mapNotNull { name ->
+            BookmarkColor.entries.firstOrNull { it.name == name }
+        }.toSet().takeIf { bookmarkFilter == TriState.ENABLED_IS && it.isNotEmpty() }
+    }
+        .flatMapLatest { colors ->
+            if (colors == null) flowOf(null) else getMangaIdsWithBookmarkColors.subscribe(colors)
+        }
+        .distinctUntilChanged()
+    // KMK <--
+
     private val libraryData = combine(
         combine(
             searchQuery.debounce(SEARCH_DEBOUNCE_MILLIS),
@@ -253,7 +275,10 @@ class LibraryViewModel(
         combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
         categoryFilters,
         getLibraryItemPreferencesFlow(),
-    ) { (query, categories, favorites), (tracksMap, trackingFilters), categoryFilters, itemPreferences ->
+        // KMK -->
+        bookmarkColorMatchedMangaIds,
+        // KMK <--
+    ) { (query, categories, favorites), (tracksMap, trackingFilters), categoryFilters, itemPreferences, bookmarkColorMangaIds ->
         val filteredFavorites = favorites
             .applyFilters(
                 tracksMap,
@@ -262,6 +287,9 @@ class LibraryViewModel(
                 // KMK -->
                 categoryFilters.included,
                 categoryFilters.excluded,
+                // KMK -->
+                bookmarkColorMangaIds,
+                // KMK <--
                 // KMK <--
             )
             .let { libraryItems ->
@@ -448,6 +476,9 @@ class LibraryViewModel(
         // KMK -->
         includedCategories: ImmutableSet<Long>,
         excludedCategories: ImmutableSet<Long>,
+        // KMK -->
+        bookmarkColorMangaIds: Set<Long>?,
+        // KMK <--
         // KMK <--
     ): List<LibraryItem> {
         val downloadedOnly = preferences.globalFilterDownloaded
@@ -485,7 +516,11 @@ class LibraryViewModel(
         }
 
         val filterFnBookmarked: (LibraryItem) -> Boolean = {
-            applyFilter(filterBookmarked) { it.libraryManga.hasBookmarks }
+            // KMK -->
+            applyFilter(filterBookmarked) {
+                bookmarkColorMangaIds?.let { ids -> it.id in ids } ?: it.libraryManga.hasBookmarks
+            }
+            // KMK <--
         }
 
         val filterFnCompleted: (LibraryItem) -> Boolean = {
@@ -867,13 +902,32 @@ class LibraryViewModel(
     suspend fun getNextUnreadChapter(manga: Manga): Chapter? {
         // SY -->
         val mergedManga = getMergedMangaById.await(manga.id).associateBy { it.id }
-        return if (manga.id == MERGED_SOURCE_ID) {
+        return if (manga.source == MERGED_SOURCE_ID) {
             getMergedChaptersByMangaId.await(manga.id, applyFilter = true)
         } else {
             getChaptersByMangaId.await(manga.id, applyFilter = true)
-        }.getNextUnread(manga, downloadManager, mergedManga)
+        }
+            // KMK -->
+            .processSmartScanlatorChapters(manga)
+            // KMK <--
+            .getNextUnread(manga, downloadManager, mergedManga)
         // SY <--
     }
+
+    // KMK -->
+    private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
+        val visible = filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        return if (libraryPreferences.smartScanlatorMerge().get()) {
+            visible.applySmartScanlatorMerge(
+                priority = manga.scanlatorPriority,
+                blacklistedChapters = emptyList(),
+                rangeRules = manga.scanlatorRangeRules,
+            )
+        } else {
+            visible
+        }
+    }
+    // KMK <--
 
     /**
      * Queues the amount specified of unread chapters from the list of selected manga

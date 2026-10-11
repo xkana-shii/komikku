@@ -30,6 +30,7 @@ import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.chapter.ChapterMapper
 import tachiyomi.data.chapter.ChapterRepositoryImpl
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
@@ -59,7 +60,13 @@ class MangaChapterStatsTest {
             historyAdapter = History.Adapter(read_atAdapter = DateColumnAdapter),
             mangaAdapter = Manga.Adapter(
                 remote_genreAdapter = StringListColumnAdapter,
+                // KMK -->
+                user_scanlator_priorityAdapter = StringListColumnAdapter,
+                // KMK <--
                 user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                // KMK -->
+                user_scanlator_range_rulesAdapter = StringListColumnAdapter,
+                // KMK <--
                 remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
                 remote_memoAdapter = MemoColumnAdapter,
             ),
@@ -143,6 +150,45 @@ class MangaChapterStatsTest {
         refill()
         libraryRow(mangaId).readCount shouldBe 1
         assertAggregatesMatch()
+    }
+
+    @Test
+    fun `bookmark color lookup uses OR semantics and only includes bookmarked chapters`() = runBlocking<Unit> {
+        val redManga = insertManga(favorite = true)
+        val blueManga = insertManga(favorite = true)
+        val unbookmarkedManga = insertManga(favorite = true)
+
+        insertChapter(
+            redManga,
+            scanlator = null,
+            read = false,
+            bookmark = true,
+            bookmarkColor = BookmarkColor.RED.value.toLong(),
+            rng = Random(1),
+        )
+        insertChapter(
+            blueManga,
+            scanlator = null,
+            read = false,
+            bookmark = true,
+            bookmarkColor = BookmarkColor.BLUE.value.toLong(),
+            rng = Random(2),
+        )
+        insertChapter(
+            unbookmarkedManga,
+            scanlator = null,
+            read = false,
+            bookmark = false,
+            bookmarkColor = BookmarkColor.NONE.value.toLong(),
+            rng = Random(3),
+        )
+
+        db.chapterQueries.getMangaIdsWithBookmarkColors(
+            listOf(BookmarkColor.RED.value.toLong(), BookmarkColor.BLUE.value.toLong()),
+        ).awaitAsList().toSet() shouldBe setOf(redManga, blueManga)
+        db.chapterQueries.getMangaIdsWithBookmarkColors(
+            listOf(BookmarkColor.NONE.value.toLong()),
+        ).awaitAsList() shouldBe emptyList()
     }
 
     @Test
@@ -319,7 +365,7 @@ class MangaChapterStatsTest {
                 scanlators.random(rng),
                 rng.nextBoolean(),
                 rng.nextBoolean(),
-                rng,
+                rng = rng,
             )
             3, 4 -> chapters.randomOrNull(rng)?.let { chapter ->
                 // Match ChapterRepositoryImpl.partialUpdate.
@@ -439,7 +485,13 @@ class MangaChapterStatsTest {
             initialized = true,
             viewerFlags = 0,
             chapterFlags = 0,
+            // KMK -->
+            scanlatorPriority = emptyList(),
+            // KMK <--
             blacklistedChapters = emptyList(),
+            // KMK -->
+            scanlatorRangeRules = emptyList(),
+            // KMK <--
             coverLastModified = 0,
             dateAdded = 0,
             updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
@@ -455,6 +507,9 @@ class MangaChapterStatsTest {
         scanlator: String?,
         read: Boolean,
         bookmark: Boolean,
+        // KMK -->
+        bookmarkColor: Long = BookmarkColor.NONE.value.toLong(),
+        // KMK <--
         rng: Random = Random(0),
         dates: Long? = null,
     ) {
@@ -465,7 +520,7 @@ class MangaChapterStatsTest {
             remoteScanlator = scanlator,
             userRead = read,
             userBookmark = bookmark,
-            userBookmarkColor = 0L,
+            userBookmarkColor = bookmarkColor,
             userLastPageRead = 0,
             remoteChapterNumber = 1.0,
             remoteOrder = 0,

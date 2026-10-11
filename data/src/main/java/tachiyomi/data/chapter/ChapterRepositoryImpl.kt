@@ -4,11 +4,13 @@ import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.ChapterUpdate
@@ -181,6 +183,15 @@ class ChapterRepositoryImpl(
             ChapterMapper::mapChapter,
         ).awaitAsList()
     }
+
+    // KMK -->
+    override fun getMangaIdsWithBookmarkColors(bookmarkColors: Set<BookmarkColor>): Flow<Set<Long>> {
+        return database.chapterQueries
+            .getMangaIdsWithBookmarkColors(bookmarkColors.map { it.value.toLong() })
+            .subscribeToList()
+            .map { it.toSet() }
+    }
+    // KMK <--
 
     override suspend fun getChapterById(id: Long): Chapter? {
         return database.chapterQueries.getChapterById(id, ChapterMapper::mapChapter).awaitAsOneOrNull()

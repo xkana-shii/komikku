@@ -3,6 +3,7 @@ package eu.kanade.presentation.library
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
+import eu.kanade.presentation.manga.BookmarkColorSelectionDialog
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.library.LibrarySettingsViewModel
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.map
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibrarySort
@@ -151,11 +154,35 @@ private fun ColumnScope.FilterPage(
         onClick = { viewModel.toggleFilter(LibraryPreferences::filterStarted) },
     )
     val filterBookmarked by viewModel.libraryPreferences.filterBookmarked().collectAsState()
-    TriStateItem(
-        label = stringResource(MR.strings.action_filter_bookmarked),
-        state = filterBookmarked,
-        onClick = { viewModel.toggleFilter(LibraryPreferences::filterBookmarked) },
-    )
+    // KMK -->
+    val bookmarkColorNames by viewModel.libraryPreferences.filterBookmarkColors().collectAsState()
+    val bookmarkColors = bookmarkColorNames.mapNotNull { name ->
+        BookmarkColor.entries.firstOrNull { it.name == name }
+    }.toSet()
+    var showBookmarkColorDialog by rememberSaveable { mutableStateOf(false) }
+    if (showBookmarkColorDialog) {
+        BookmarkColorSelectionDialog(
+            selected = bookmarkColors,
+            onChanged = viewModel::setBookmarkColorFilter,
+            onDismissRequest = { showBookmarkColorDialog = false },
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            TriStateItem(
+                label = stringResource(MR.strings.action_filter_bookmarked),
+                state = filterBookmarked,
+                onClick = { viewModel.toggleFilter(LibraryPreferences::filterBookmarked) },
+            )
+        }
+        TextButton(onClick = { showBookmarkColorDialog = true }) {
+            Text(stringResource(MR.strings.action_edit))
+        }
+    }
+    // KMK <--
     val filterCompleted by viewModel.libraryPreferences.filterCompleted().collectAsState()
     TriStateItem(
         label = stringResource(MR.strings.completed),

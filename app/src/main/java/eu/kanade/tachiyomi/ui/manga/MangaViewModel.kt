@@ -67,6 +67,7 @@ import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.isLoading
 import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.removeDuplicates
 import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.sorted
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import eu.kanade.tachiyomi.util.chapter.applySmartScanlatorMerge
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
@@ -132,6 +133,7 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.service.calculateChapterGap
+import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
@@ -387,10 +389,16 @@ class MangaViewModel(
                 }
                 .combine(downloadCache.changes) { state, _ -> state }
                 .combine(downloadManager.queueState) { state, _ -> state }
+                // KMK -->
+                .combine(libraryPreferences.smartScanlatorMerge().changes()) { state, _ -> state }
+                // KMK <--
                 // SY <--
                 .flowWithLifecycle(lifecycle)
                 .collectLatest { (manga, chapters /* SY --> */, flatMetadata, mergedData /* SY <-- */) ->
-                    val chapterItems = chapters.toChapterListItems(manga /* SY --> */, mergedData /* SY <-- */)
+                    // KMK -->
+                    val chapterItems = chapters.processSmartScanlatorChapters(manga)
+                        // KMK <--
+                        .toChapterListItems(manga /* SY --> */, mergedData /* SY <-- */)
                     updateSuccessState {
                         it.copy(
                             manga = manga,
@@ -460,6 +468,9 @@ class MangaViewModel(
             } else {
                 getMangaAndChapters.awaitChapters(mangaId, applyFilter = true)
             }
+                // KMK -->
+                .processSmartScanlatorChapters(manga)
+                // KMK <--
                 .toChapterListItems(manga, mergedData)
             val meta = getFlatMetadata.await(mangaId)
             // SY <--
@@ -1158,6 +1169,19 @@ class MangaViewModel(
         }
     }
 
+    // KMK -->
+    private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
+        if (libraryPreferences.smartScanlatorMerge().get()) {
+            return applySmartScanlatorMerge(
+                priority = manga.scanlatorPriority,
+                blacklistedChapters = manga.blacklistedChapters,
+                rangeRules = manga.scanlatorRangeRules,
+            )
+        }
+        return filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+    }
+    // KMK <--
+
     // SY -->
     private fun getPagePreviews(manga: Manga, source: Source) {
         viewModelScope.launchIO {
@@ -1519,7 +1543,15 @@ class MangaViewModel(
     // KMK -->
     fun blacklistChapters(chapters: List<Chapter>) {
         val manga = successState?.manga ?: return
-        val keys = chapters.map { scanlatorBlacklistKey(it.chapterNumber, it.scanlator) }
+        // KMK -->
+        val keys = chapters.map { chapter ->
+            if (chapter.chapterNumber.isFinite() && chapter.chapterNumber > 0.0) {
+                scanlatorBlacklistKey(chapter.chapterNumber, chapter.scanlator)
+            } else {
+                chapterUrlBlacklistKey(chapter.url)
+            }
+        }
+        // KMK <--
         if (keys.isEmpty()) return
         viewModelScope.launchIO {
             updateManga.await(
@@ -2192,7 +2224,8 @@ class MangaViewModel(
                     .filterNot { (chapter) -> isChapterBlacklisted(chapter, manga.blacklistedChapters) }
                     // KMK -->
                     .filter { (chapter) ->
-                        bookmarkColorFilter.isEmpty() ||
+                        bookmarkedFilter != TriState.ENABLED_IS ||
+                            bookmarkColorFilter.isEmpty() ||
                             (chapter.bookmark && chapter.bookmarkColor in bookmarkColorFilter)
                     }
                     // KMK <--

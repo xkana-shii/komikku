@@ -27,7 +27,9 @@ object MangaMapper {
         @Suppress("UNUSED_PARAMETER")
         userFilteredScanlators: String?,
         // KMK -->
+        userScanlatorPriority: List<String>,
         userBlacklistedChapters: List<String>,
+        userScanlatorRangeRules: List<String>,
         // KMK <--
         stateChapterLastUpdate: Long?,
         stateChapterNextUpdate: Long?,
@@ -66,7 +68,9 @@ object MangaMapper {
         notes = userNotes,
         memo = remoteMemo,
         // KMK -->
+        scanlatorPriority = userScanlatorPriority,
         blacklistedChapters = userBlacklistedChapters,
+        scanlatorRangeRules = userScanlatorRangeRules,
         // KMK <--
     )
 
@@ -89,7 +93,9 @@ object MangaMapper {
         userChapterFlags: Long,
         userFilteredScanlators: String?,
         // KMK -->
+        userScanlatorPriority: List<String>,
         userBlacklistedChapters: List<String>,
+        userScanlatorRangeRules: List<String>,
         // KMK <--
         stateChapterLastUpdate: Long?,
         stateChapterNextUpdate: Long?,
@@ -128,7 +134,9 @@ object MangaMapper {
             userChapterFlags = userChapterFlags,
             userFilteredScanlators = userFilteredScanlators,
             // KMK -->
+            userScanlatorPriority = userScanlatorPriority,
             userBlacklistedChapters = userBlacklistedChapters,
+            userScanlatorRangeRules = userScanlatorRangeRules,
             // KMK <--
             stateChapterLastUpdate = stateChapterLastUpdate,
             stateChapterNextUpdate = stateChapterNextUpdate,
@@ -170,7 +178,9 @@ object MangaMapper {
         userChapterFlags: Long,
         userFilteredScanlators: String?,
         // KMK -->
+        userScanlatorPriority: List<String>,
         userBlacklistedChapters: List<String>,
+        userScanlatorRangeRules: List<String>,
         // KMK <--
         stateChapterLastUpdate: Long?,
         stateChapterNextUpdate: Long?,
@@ -202,7 +212,9 @@ object MangaMapper {
             userChapterFlags = userChapterFlags,
             userFilteredScanlators = userFilteredScanlators,
             // KMK -->
+            userScanlatorPriority = userScanlatorPriority,
             userBlacklistedChapters = userBlacklistedChapters,
+            userScanlatorRangeRules = userScanlatorRangeRules,
             // KMK <--
             stateChapterLastUpdate = stateChapterLastUpdate,
             stateChapterNextUpdate = stateChapterNextUpdate,

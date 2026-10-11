@@ -247,7 +247,9 @@ class MangaRepositoryImpl(
                     notes = value.notes,
                     memo = value.memo,
                     // KMK -->
+                    scanlatorPriority = value.scanlatorPriority,
                     blacklistedChapters = value.blacklistedChapters,
+                    scanlatorRangeRules = value.scanlatorRangeRules,
                     // KMK <--
                 )
             }

@@ -369,6 +369,22 @@
     <!-- KMK -->
     <string name="blacklisted_chapters">Blacklisted chapters</string>
     <string name="blacklist_empty">No blacklisted chapters</string>
+    <string name="chapter_number_label">Chapter %s</string>
+    <string name="blacklist_chapter_unavailable">Unavailable chapter</string>
+    <string name="blacklist_matching_chapters">Applies to %d chapters</string>
+    <string name="pref_smart_scanlator_merge">Smart scanlator merge</string>
+    <string name="pref_smart_scanlator_merge_summary">Keep one preferred scanlator for duplicate chapters</string>
+    <string name="scanlator_preference">Scanlator preferences</string>
+    <string name="scanlator_priority">Priority</string>
+    <string name="scanlator_ranges">Ranges</string>
+    <string name="scanlator_range_add">Add range</string>
+    <string name="scanlator_ranges_empty">No scanlator ranges</string>
+    <string name="scanlator_range_from">Starting chapter</string>
+    <string name="scanlator_range_to">Ending chapter</string>
+    <string name="scanlator_range_scanlator">Preferred scanlator</string>
+    <string name="scanlator_chapter_count">%d chapters</string>
+    <string name="scanlator_coverage_more">and %d more</string>
+    <string name="action_exclude_scanlator">Exclude scanlator</string>
     <string name="action_blacklist_chapter">Blacklist chapter</string>
     <string name="action_bookmark_color">Bookmark color</string>
     <string name="bookmark_color_dialog_title">Why did you bookmark this?</string>

@@ -15,6 +15,7 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.interactor.SetDisplayMode
 import tachiyomi.domain.category.interactor.SetSortModeForCategory
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -50,6 +51,15 @@ class LibrarySettingsViewModel(
     fun toggleTracker(id: Int) {
         toggleFilter { libraryPreferences.filterTracking(id) }
     }
+
+    // KMK -->
+    fun setBookmarkColorFilter(colors: Set<BookmarkColor>) {
+        libraryPreferences.filterBookmarkColors().set(colors.mapTo(mutableSetOf()) { it.name })
+        if (colors.isNotEmpty()) {
+            libraryPreferences.filterBookmarked().set(TriState.ENABLED_IS)
+        }
+    }
+    // KMK <--
 
     fun setDisplayMode(mode: LibraryDisplayMode) {
         setDisplayMode.await(mode)

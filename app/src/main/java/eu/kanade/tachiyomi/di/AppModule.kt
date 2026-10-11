@@ -150,7 +150,13 @@ class AppModule(val app: Application) : InjektModule {
                 ),
                 mangaAdapter = Manga.Adapter(
                     remote_genreAdapter = StringListColumnAdapter,
+                    // KMK -->
+                    user_scanlator_priorityAdapter = StringListColumnAdapter,
+                    // KMK <--
                     user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                    // KMK -->
+                    user_scanlator_range_rulesAdapter = StringListColumnAdapter,
+                    // KMK <--
                     remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
                     remote_memoAdapter = MemoColumnAdapter,
                 ),

@@ -47,7 +47,9 @@ data class Manga(
     val notes: String,
     val memo: JsonObject,
     // KMK -->
+    val scanlatorPriority: List<String> = emptyList(),
     val blacklistedChapters: List<String> = emptyList(),
+    val scanlatorRangeRules: List<String> = emptyList(),
     // KMK <--
 ) : JavaSerializable {
 

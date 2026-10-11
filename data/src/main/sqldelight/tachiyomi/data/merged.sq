@@ -35,7 +35,10 @@ SELECT
     manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
     manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
     manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
-    manga.user_chapter_flags, manga.user_filtered_scanlators, manga.user_blacklisted_chapters,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    -- KMK -->
+    manga.user_scanlator_priority, manga.user_blacklisted_chapters, manga.user_scanlator_range_rules,
+    -- KMK <--
     manga.state_chapter_last_update, manga.state_chapter_next_update,
     manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
     manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
@@ -52,7 +55,10 @@ SELECT
     manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
     manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
     manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
-    manga.user_chapter_flags, manga.user_filtered_scanlators, manga.user_blacklisted_chapters,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    -- KMK -->
+    manga.user_scanlator_priority, manga.user_blacklisted_chapters, manga.user_scanlator_range_rules,
+    -- KMK <--
     manga.state_chapter_last_update, manga.state_chapter_next_update,
     manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
     manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
@@ -69,7 +75,10 @@ SELECT
     manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
     manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
     manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
-    manga.user_chapter_flags, manga.user_filtered_scanlators, manga.user_blacklisted_chapters,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    -- KMK -->
+    manga.user_scanlator_priority, manga.user_blacklisted_chapters, manga.user_scanlator_range_rules,
+    -- KMK <--
     manga.state_chapter_last_update, manga.state_chapter_next_update,
     manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
     manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
@@ -86,7 +95,10 @@ SELECT
     manga.remote_artist, manga.remote_description, manga.remote_genre, manga.remote_status,
     manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
     manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
-    manga.user_chapter_flags, manga.user_filtered_scanlators, manga.user_blacklisted_chapters,
+    manga.user_chapter_flags, manga.user_filtered_scanlators,
+    -- KMK -->
+    manga.user_scanlator_priority, manga.user_blacklisted_chapters, manga.user_scanlator_range_rules,
+    -- KMK <--
     manga.state_chapter_last_update, manga.state_chapter_next_update,
     manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
     manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,

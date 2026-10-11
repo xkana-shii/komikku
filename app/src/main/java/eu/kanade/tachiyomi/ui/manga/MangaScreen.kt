@@ -49,7 +49,6 @@ import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.NavigatorAdaptiveSheet
-import eu.kanade.presentation.manga.ChapterBlacklistDialog
 import eu.kanade.presentation.manga.ChapterSettingsDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.manga.EditCoverAction
@@ -57,7 +56,6 @@ import eu.kanade.presentation.manga.MangaScreen
 import eu.kanade.presentation.manga.components.ClearMangaDialog
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
-import eu.kanade.presentation.manga.components.ScanlatorFilterDialog
 import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.more.settings.screen.SettingsEhScreen
 import eu.kanade.presentation.theme.TachiyomiTheme
@@ -79,6 +77,7 @@ import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.merged.EditMergedSettingsDialog
 import eu.kanade.tachiyomi.ui.manga.notes.MangaNotesScreen
+import eu.kanade.tachiyomi.ui.manga.scanlator.ScanlatorPreferenceScreen
 import eu.kanade.tachiyomi.ui.manga.track.TrackInfoDialogHomeScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
@@ -472,21 +471,6 @@ class MangaScreen(
             // KMK <--
         )
 
-        var showScanlatorsDialog by remember { mutableStateOf(false) }
-        // KMK -->
-        var showChapterBlacklistDialog by remember { mutableStateOf(false) }
-        // KMK <--
-
-        // KMK -->
-        if (showChapterBlacklistDialog) {
-            ChapterBlacklistDialog(
-                entries = successState.manga.blacklistedChapters,
-                onDismissRequest = { showChapterBlacklistDialog = false },
-                onRemove = { viewModel.removeBlacklistedChapters(listOf(it)) },
-            )
-        }
-        // KMK <--
-
         val onDismissRequest = {
             viewModel.dismissDialog()
             // KMK -->
@@ -555,13 +539,11 @@ class MangaScreen(
                 onSetAsDefault = viewModel::setCurrentSettingsAsDefault,
                 onResetToDefault = viewModel::resetToDefaultSettings,
                 scanlatorFilterActive = successState.scanlatorFilterActive,
-                onScanlatorFilterClicked = { showScanlatorsDialog = true },
                 // KMK -->
-                onBlacklistedChaptersClicked = {
+                onScanlatorFilterClicked = {
                     viewModel.dismissDialog()
-                    showChapterBlacklistDialog = true
+                    navigator.push(ScanlatorPreferenceScreen(successState.manga.id))
                 },
-                // KMK <--
             )
             MangaViewModel.Dialog.TrackSheet -> {
                 NavigatorAdaptiveSheet(
@@ -678,15 +660,6 @@ class MangaScreen(
                 )
             }
             // KMK <--
-        }
-
-        if (showScanlatorsDialog) {
-            ScanlatorFilterDialog(
-                availableScanlators = successState.availableScanlators,
-                excludedScanlators = successState.excludedScanlators,
-                onDismissRequest = { showScanlatorsDialog = false },
-                onConfirm = viewModel::setExcludedScanlators,
-            )
         }
     }
 

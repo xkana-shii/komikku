@@ -104,6 +104,15 @@ class LibraryPreferences(
         TriState.DISABLED,
     )
 
+    // KMK -->
+    fun filterBookmarkColors() = preferenceStore.getStringSet(
+        "pref_filter_library_bookmark_colors",
+        emptySet(),
+    )
+
+    fun smartScanlatorMerge() = preferenceStore.getBoolean("pref_smart_scanlator_merge", false)
+    // KMK <--
+
     fun filterCompleted() = preferenceStore.getEnum(
         "pref_filter_library_completed_v2",
         TriState.DISABLED,

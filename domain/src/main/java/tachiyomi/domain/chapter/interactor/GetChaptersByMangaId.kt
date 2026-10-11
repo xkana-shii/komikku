@@ -1,5 +1,6 @@
 package tachiyomi.domain.chapter.interactor
 
+import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
@@ -17,4 +18,10 @@ class GetChaptersByMangaId(
             emptyList()
         }
     }
+
+    // KMK -->
+    suspend fun subscribe(mangaId: Long, applyFilter: Boolean = false): Flow<List<Chapter>> {
+        return chapterRepository.getChapterByMangaIdAsFlow(mangaId, applyFilter)
+    }
+    // KMK <--
 }

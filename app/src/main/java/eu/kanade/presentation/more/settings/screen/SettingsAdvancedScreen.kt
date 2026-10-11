@@ -405,6 +405,13 @@ object SettingsAdvancedScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_disallow_non_ascii_filenames),
                     subtitle = stringResource(MR.strings.pref_disallow_non_ascii_filenames_details),
                 ),
+                // KMK -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.smartScanlatorMerge(),
+                    title = stringResource(KMR.strings.pref_smart_scanlator_merge),
+                    subtitle = stringResource(KMR.strings.pref_smart_scanlator_merge_summary),
+                ),
+                // KMK <--
             ),
         )
     }

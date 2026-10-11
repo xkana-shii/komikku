@@ -2,6 +2,7 @@ package eu.kanade.presentation.manga
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.PeopleAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -37,7 +37,6 @@ import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.RadioItem
 import tachiyomi.presentation.core.components.SortItem
@@ -60,9 +59,6 @@ fun ChapterSettingsDialog(
     // KMK <--
     scanlatorFilterActive: Boolean,
     onScanlatorFilterClicked: () -> Unit,
-    // KMK -->
-    onBlacklistedChaptersClicked: () -> Unit,
-    // KMK <--
     onSortModeChanged: (Long) -> Unit,
     onDisplayModeChanged: (Long) -> Unit,
     onSetAsDefault: (applyToExistingManga: Boolean) -> Unit,
@@ -123,9 +119,6 @@ fun ChapterSettingsDialog(
                         // KMK <--
                         scanlatorFilterActive = scanlatorFilterActive,
                         onScanlatorFilterClicked = onScanlatorFilterClicked,
-                        // KMK -->
-                        onBlacklistedChaptersClicked = onBlacklistedChaptersClicked,
-                        // KMK <--
                     )
                 }
                 1 -> {
@@ -160,10 +153,22 @@ private fun ColumnScope.FilterPage(
     // KMK <--
     scanlatorFilterActive: Boolean,
     onScanlatorFilterClicked: () -> Unit,
-    // KMK -->
-    onBlacklistedChaptersClicked: () -> Unit,
-    // KMK <--
 ) {
+    // KMK -->
+    var showBookmarkColorDialog by rememberSaveable { mutableStateOf(false) }
+    if (showBookmarkColorDialog) {
+        BookmarkColorSelectionDialog(
+            selected = bookmarkColorFilter,
+            onChanged = { colors ->
+                onBookmarkColorFilterChanged(colors)
+                if (colors.isNotEmpty() && bookmarkedFilter != TriState.ENABLED_IS) {
+                    onBookmarkedFilterChanged(TriState.ENABLED_IS)
+                }
+            },
+            onDismissRequest = { showBookmarkColorDialog = false },
+        )
+    }
+    // KMK <--
     TriStateItem(
         label = stringResource(MR.strings.label_downloaded),
         state = downloadFilter,
@@ -174,48 +179,28 @@ private fun ColumnScope.FilterPage(
         state = unreadFilter,
         onClick = onUnreadFilterChanged,
     )
-    TriStateItem(
-        label = stringResource(MR.strings.action_filter_bookmarked),
-        state = bookmarkedFilter,
-        onClick = onBookmarkedFilterChanged,
-    )
     // KMK -->
-    BookmarkColorFilterItem(
-        selected = bookmarkColorFilter,
-        onChanged = onBookmarkColorFilterChanged,
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            TriStateItem(
+                label = stringResource(MR.strings.action_filter_bookmarked),
+                state = bookmarkedFilter,
+                onClick = onBookmarkedFilterChanged,
+            )
+        }
+        TextButton(onClick = { showBookmarkColorDialog = true }) {
+            Text(stringResource(MR.strings.action_edit))
+        }
+    }
     // KMK <--
     ScanlatorFilterItem(
         active = scanlatorFilterActive,
         onClick = onScanlatorFilterClicked,
     )
-    // KMK -->
-    ChapterBlacklistItem(onClick = onBlacklistedChaptersClicked)
-    // KMK <--
 }
-
-// KMK -->
-@Composable
-private fun ColumnScope.ChapterBlacklistItem(onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .fillMaxWidth()
-            .padding(horizontal = TabbedDialogPaddings.Horizontal, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Block,
-            contentDescription = null,
-        )
-        Text(
-            text = stringResource(KMR.strings.blacklisted_chapters),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
-// KMK <--
 
 @Composable
 fun ScanlatorFilterItem(

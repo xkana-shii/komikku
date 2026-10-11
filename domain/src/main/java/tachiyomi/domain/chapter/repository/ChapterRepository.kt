@@ -1,6 +1,7 @@
 package tachiyomi.domain.chapter.repository
 
 import kotlinx.coroutines.flow.Flow
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.ChapterUpdate
@@ -32,6 +33,10 @@ interface ChapterRepository {
     fun getScanlatorsByMangaIdAsFlow(mangaId: Long): Flow<List<String>>
 
     suspend fun getBookmarkedChaptersByMangaId(mangaId: Long): List<Chapter>
+
+    // KMK -->
+    fun getMangaIdsWithBookmarkColors(bookmarkColors: Set<BookmarkColor>): Flow<Set<Long>>
+    // KMK <--
 
     suspend fun getChapterById(id: Long): Chapter?
 

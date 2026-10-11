@@ -25,7 +25,10 @@ CREATE TABLE manga(
     -- KMK -->
     state_date_added INTEGER NOT NULL,
     user_filtered_scanlators TEXT,
+    -- KMK -->
+    user_scanlator_priority TEXT AS List<String> NOT NULL DEFAULT '',
     user_blacklisted_chapters TEXT AS List<String> NOT NULL DEFAULT '',
+    user_scanlator_range_rules TEXT AS List<String> NOT NULL DEFAULT '',
     -- KMK <--
     remote_update_strategy INTEGER AS UpdateStrategy NOT NULL DEFAULT 0,
     state_chapter_fetch_interval INTEGER DEFAULT 0 NOT NULL,
@@ -68,7 +71,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -81,7 +86,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -112,7 +119,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -125,7 +134,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -144,7 +155,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -160,7 +173,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -181,7 +196,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -206,7 +223,9 @@ SELECT
     M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
     M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
     M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
+    M.user_scanlator_priority,
     M.user_blacklisted_chapters,
+    M.user_scanlator_range_rules,
     M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.state_date_added,
     M.state_last_modified_at, M.state_version, M.state_is_syncing,
@@ -230,7 +249,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -285,8 +306,8 @@ VALUES (:source, :url, :artist, :author, :description, :genre, :title, :status, 
 
 -- KMK -->
 insertReturningId:
-INSERT INTO manga(source_id, remote_url, remote_artist, remote_author, remote_description, remote_genre, remote_title, remote_status, remote_cover, user_favorite_at, state_chapter_last_update, state_chapter_next_update, state_initialized, user_reader_flags, user_chapter_flags, user_blacklisted_chapters, state_cover_last_modified, state_date_added, remote_update_strategy, state_chapter_fetch_interval, state_last_modified_at, state_version, user_notes, remote_memo)
-VALUES (:source, :url, :artist, :author, :description, :genre, :title, :status, :thumbnailUrl, CASE WHEN :favorite THEN :dateAdded ELSE NULL END, :lastUpdate, :nextUpdate, :initialized, :viewerFlags, :chapterFlags, :blacklistedChapters, :coverLastModified, :dateAdded, :updateStrategy, :calculateInterval, 0, :version, :notes, :memo)
+INSERT INTO manga(source_id, remote_url, remote_artist, remote_author, remote_description, remote_genre, remote_title, remote_status, remote_cover, user_favorite_at, state_chapter_last_update, state_chapter_next_update, state_initialized, user_reader_flags, user_chapter_flags, user_scanlator_priority, user_blacklisted_chapters, user_scanlator_range_rules, state_cover_last_modified, state_date_added, remote_update_strategy, state_chapter_fetch_interval, state_last_modified_at, state_version, user_notes, remote_memo)
+VALUES (:source, :url, :artist, :author, :description, :genre, :title, :status, :thumbnailUrl, CASE WHEN :favorite THEN :dateAdded ELSE NULL END, :lastUpdate, :nextUpdate, :initialized, :viewerFlags, :chapterFlags, :scanlatorPriority, :blacklistedChapters, :scanlatorRangeRules, :coverLastModified, :dateAdded, :updateStrategy, :calculateInterval, 0, :version, :notes, :memo)
 RETURNING id;
 -- KMK <--
 
@@ -311,7 +332,9 @@ UPDATE manga SET
     state_initialized = coalesce(:initialized, state_initialized),
     user_reader_flags = coalesce(:viewer, user_reader_flags),
     user_chapter_flags = coalesce(:chapterFlags, user_chapter_flags),
+    user_scanlator_priority = coalesce(:scanlatorPriority, user_scanlator_priority),
     user_blacklisted_chapters = coalesce(:blacklistedChapters, user_blacklisted_chapters),
+    user_scanlator_range_rules = coalesce(:scanlatorRangeRules, user_scanlator_range_rules),
     state_cover_last_modified = coalesce(:coverLastModified, state_cover_last_modified),
     state_date_added = coalesce(:dateAdded, state_date_added),
     remote_update_strategy = coalesce(:updateStrategy, remote_update_strategy),
@@ -361,7 +384,9 @@ UPDATE manga SET
     state_initialized = coalesce(:initialized, state_initialized),
     user_reader_flags = coalesce(:viewer, user_reader_flags),
     user_chapter_flags = coalesce(:chapterFlags, user_chapter_flags),
+    user_scanlator_priority = coalesce(:scanlatorPriority, user_scanlator_priority),
     user_blacklisted_chapters = coalesce(:blacklistedChapters, user_blacklisted_chapters),
+    user_scanlator_range_rules = coalesce(:scanlatorRangeRules, user_scanlator_range_rules),
     state_cover_last_modified = coalesce(:coverLastModified, state_cover_last_modified),
     state_date_added = coalesce(:dateAdded, state_date_added),
     remote_update_strategy = coalesce(:updateStrategy, remote_update_strategy),
@@ -416,7 +441,9 @@ insertNetworkManga {
         remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
         user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
         user_filtered_scanlators,
+        user_scanlator_priority,
         user_blacklisted_chapters,
+        user_scanlator_range_rules,
         state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
         state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
         state_version, state_is_syncing
@@ -432,7 +459,9 @@ SELECT
     manga.remote_cover, manga.remote_update_strategy, manga.remote_memo,
     manga.user_favorite_at, manga.user_notes, manga.user_reader_flags,
     manga.user_chapter_flags, manga.user_filtered_scanlators,
+    manga.user_scanlator_priority,
     manga.user_blacklisted_chapters,
+    manga.user_scanlator_range_rules,
     manga.state_chapter_last_update, manga.state_chapter_next_update,
     manga.state_chapter_fetch_interval, manga.state_cover_last_modified,
     manga.state_initialized, manga.state_date_added, manga.state_last_modified_at,
@@ -454,7 +483,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
@@ -467,7 +498,9 @@ SELECT
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     user_filtered_scanlators,
+    user_scanlator_priority,
     user_blacklisted_chapters,
+    user_scanlator_range_rules,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
     state_version, state_is_syncing
