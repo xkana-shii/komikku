@@ -395,6 +395,11 @@ class MangaScreen(
             onMorePreviewsClicked = { openMorePagePreviews(navigator, successState.manga) },
             // SY <--
             onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
+            // KMK -->
+            onScanlatorPreferenceClicked = {
+                navigator.push(ScanlatorPreferenceScreen(successState.manga.id))
+            },
+            // KMK <--
             onMultiBookmarkClicked = viewModel::bookmarkChapters,
             // KMK -->
             onBlacklistClicked = viewModel::blacklistChapters,

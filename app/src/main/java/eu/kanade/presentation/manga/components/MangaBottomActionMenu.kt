@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material.icons.outlined.SwapCalls
@@ -70,6 +69,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -89,7 +89,8 @@ fun MangaBottomActionMenu(
     onDeleteClicked: (() -> Unit)? = null,
     // KMK -->
     onBlacklistClicked: (() -> Unit)? = null,
-    onBookmarkColorClicked: (() -> Unit)? = null,
+    onBookmarkColorSelected: ((BookmarkColor) -> Unit)? = null,
+    bookmarkColor: BookmarkColor? = null,
     // KMK <--
 ) {
     AnimatedVisibility(
@@ -108,6 +109,7 @@ fun MangaBottomActionMenu(
             val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false, false) }
             // KNS
             var resetJob by remember { mutableStateOf<Job?>(null) }
+            var bookmarkColorMenuExpanded by remember { mutableStateOf(false) }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 confirm.indices.forEach { i -> confirm[i] = i == toConfirmIndex }
@@ -131,18 +133,50 @@ fun MangaBottomActionMenu(
                         title = stringResource(MR.strings.action_bookmark),
                         icon = Icons.Outlined.BookmarkAdd,
                         toConfirm = confirm[0],
-                        onLongClick = { onLongClickItem(0) },
+                        onLongClick = {
+                            if (onBookmarkColorSelected != null) {
+                                bookmarkColorMenuExpanded = true
+                            } else {
+                                onLongClickItem(0)
+                            }
+                        },
                         onClick = onBookmarkClicked,
-                    )
+                    ) {
+                        BookmarkColorDropdownMenu(
+                            expanded = bookmarkColorMenuExpanded,
+                            selected = bookmarkColor,
+                            onSelect = {
+                                onBookmarkColorSelected?.invoke(it)
+                                bookmarkColorMenuExpanded = false
+                            },
+                            onDismissRequest = { bookmarkColorMenuExpanded = false },
+                        )
+                    }
                 }
                 if (onRemoveBookmarkClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_remove_bookmark),
                         icon = Icons.Outlined.BookmarkRemove,
                         toConfirm = confirm[1],
-                        onLongClick = { onLongClickItem(1) },
+                        onLongClick = {
+                            if (onBookmarkColorSelected != null) {
+                                bookmarkColorMenuExpanded = true
+                            } else {
+                                onLongClickItem(1)
+                            }
+                        },
                         onClick = onRemoveBookmarkClicked,
-                    )
+                    ) {
+                        BookmarkColorDropdownMenu(
+                            expanded = bookmarkColorMenuExpanded,
+                            selected = bookmarkColor,
+                            onSelect = {
+                                onBookmarkColorSelected?.invoke(it)
+                                bookmarkColorMenuExpanded = false
+                            },
+                            onDismissRequest = { bookmarkColorMenuExpanded = false },
+                        )
+                    }
                 }
                 // KMK --> Blacklisting retains the existing hold-to-confirm action.
                 if (onBlacklistClicked != null) {
@@ -152,15 +186,6 @@ fun MangaBottomActionMenu(
                         toConfirm = confirm[2],
                         onLongClick = { onLongClickItem(2) },
                         onClick = onBlacklistClicked,
-                    )
-                }
-                if (onBookmarkColorClicked != null) {
-                    Button(
-                        title = stringResource(KMR.strings.action_bookmark_color),
-                        icon = Icons.Outlined.Palette,
-                        toConfirm = confirm[3],
-                        onLongClick = { onLongClickItem(3) },
-                        onClick = onBookmarkColorClicked,
                     )
                 }
                 // KMK <--

@@ -72,6 +72,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -93,9 +94,11 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.service.getChapterSort
@@ -136,6 +139,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private val trackChapter: TrackChapter = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
+    private val getChapter: GetChapter = Injekt.get(),
     private val getNextChapters: GetNextChapters = Injekt.get(),
     private val upsertHistory: UpsertHistory = Injekt.get(),
     private val updateChapter: UpdateChapter = Injekt.get(),
@@ -354,6 +358,20 @@ class ReaderViewModel @JvmOverloads constructor(
 
         if (hasValidArgs) {
             viewModelScope.launch { init() }
+            viewModelScope.launchIO {
+                getChaptersByMangaId.subscribe(mangaId).collectLatest { chapters ->
+                    val currentChapterId = state.value.currentChapter?.chapter?.id?.toLong() ?: return@collectLatest
+                    chapters.firstOrNull { it.id == currentChapterId }?.let { chapter ->
+                        mutableState.update {
+                            it.copy(
+                                bookmarked = chapter.bookmark,
+                                bookmarkColor = chapter.bookmarkColor.takeIf { chapter.bookmark }
+                                    ?: BookmarkColor.NONE,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -664,6 +682,7 @@ class ReaderViewModel @JvmOverloads constructor(
             chapterList.getOrNull(chapterPos - 1),
             chapterList.getOrNull(chapterPos + 1),
         )
+        val persistedChapter = chapter.chapter.id?.toLong()?.let { getChapter.await(it) }
 
         withUIContext {
             mutableState.update {
@@ -674,7 +693,10 @@ class ReaderViewModel @JvmOverloads constructor(
                 chapterToDownload = cancelQueuedDownloads(newChapters.currChapter)
                 it.copy(
                     viewerChapters = newChapters,
-                    bookmarked = newChapters.currChapter.chapter.bookmark,
+                    bookmarked = persistedChapter?.bookmark ?: newChapters.currChapter.chapter.bookmark,
+                    bookmarkColor = persistedChapter?.bookmarkColor
+                        ?.takeIf { persistedChapter.bookmark }
+                        ?: BookmarkColor.NONE,
                 )
             }
         }
@@ -1130,6 +1152,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 ChapterUpdate(
                     id = chapter.id!!.toLong(),
                     bookmark = bookmarked,
+                    bookmarkColor = BookmarkColor.NONE.takeIf { bookmarked },
                 ),
             )
         }
@@ -1137,7 +1160,25 @@ class ReaderViewModel @JvmOverloads constructor(
         mutableState.update {
             it.copy(
                 bookmarked = bookmarked,
+                bookmarkColor = BookmarkColor.NONE.takeIf { bookmarked } ?: it.bookmarkColor,
             )
+        }
+    }
+
+    fun setChapterBookmarkColor(color: BookmarkColor) {
+        val chapter = getCurrentChapter()?.chapter ?: return
+        chapter.bookmark = true
+        viewModelScope.launchNonCancellable {
+            updateChapter.await(
+                ChapterUpdate(
+                    id = chapter.id!!.toLong(),
+                    bookmark = true,
+                    bookmarkColor = color,
+                ),
+            )
+        }
+        mutableState.update {
+            it.copy(bookmarked = true, bookmarkColor = color)
         }
     }
 
@@ -1609,6 +1650,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val initError: Throwable? = null,
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
+        val bookmarkColor: BookmarkColor = BookmarkColor.NONE,
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
 

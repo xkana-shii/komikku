@@ -389,6 +389,22 @@
     <string name="action_bookmark_color">Bookmark color</string>
     <string name="bookmark_color_dialog_title">Why did you bookmark this?</string>
     <string name="bookmark_color_filter">Bookmark color</string>
+    <!-- KMK -->
+    <string name="bookmark_color_default">Default</string>
+    <string name="bookmark_color_red">Red</string>
+    <string name="bookmark_color_orange">Orange</string>
+    <string name="bookmark_color_yellow">Yellow</string>
+    <string name="bookmark_color_green">Green</string>
+    <string name="bookmark_color_blue">Blue</string>
+    <string name="bookmark_color_purple">Purple</string>
+    <string name="action_smart_scanlator_merge">Smart scanlator merge</string>
+    <string name="scanlator_merge_global">Global default</string>
+    <string name="scanlator_merge_enabled">Enabled</string>
+    <string name="scanlator_merge_disabled">Disabled</string>
+    <string name="scanlator_merge_global_summary">Follows the global Smart scanlator merge setting</string>
+    <string name="scanlator_merge_override_summary">Uses a manga-specific Smart scanlator merge setting</string>
+    <string name="scanlator_merge_effective_enabled">Effective: enabled</string>
+    <string name="scanlator_merge_effective_disabled">Effective: disabled</string>
     <string name="pref_global_search_source_category">Source category</string>
     <string name="pref_global_search_source_category_all">All categories</string>
     <!-- KMK <-->

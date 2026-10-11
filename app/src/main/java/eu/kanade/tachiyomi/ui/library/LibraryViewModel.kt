@@ -917,7 +917,7 @@ class LibraryViewModel(
     // KMK -->
     private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
         val visible = filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
-        return if (libraryPreferences.smartScanlatorMerge().get()) {
+        return if (libraryPreferences.smartScanlatorMergeEnabled(manga.id)) {
             visible.applySmartScanlatorMerge(
                 priority = manga.scanlatorPriority,
                 blacklistedChapters = emptyList(),

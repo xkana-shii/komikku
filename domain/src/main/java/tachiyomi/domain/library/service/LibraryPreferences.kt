@@ -111,6 +111,20 @@ class LibraryPreferences(
     )
 
     fun smartScanlatorMerge() = preferenceStore.getBoolean("pref_smart_scanlator_merge", false)
+
+    // KMK -->
+    fun smartScanlatorMergeOverride(mangaId: Long) = preferenceStore.getString(
+        "pref_smart_scanlator_merge_override_$mangaId",
+        "",
+    )
+
+    fun smartScanlatorMergeEnabled(mangaId: Long): Boolean {
+        return when (smartScanlatorMergeOverride(mangaId).get()) {
+            "enabled" -> true
+            "disabled" -> false
+            else -> smartScanlatorMerge().get()
+        }
+    }
     // KMK <--
 
     fun filterCompleted() = preferenceStore.getEnum(

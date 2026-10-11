@@ -391,6 +391,7 @@ class MangaViewModel(
                 .combine(downloadManager.queueState) { state, _ -> state }
                 // KMK -->
                 .combine(libraryPreferences.smartScanlatorMerge().changes()) { state, _ -> state }
+                .combine(libraryPreferences.smartScanlatorMergeOverride(mangaId).changes()) { state, _ -> state }
                 // KMK <--
                 // SY <--
                 .flowWithLifecycle(lifecycle)
@@ -1171,7 +1172,7 @@ class MangaViewModel(
 
     // KMK -->
     private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
-        if (libraryPreferences.smartScanlatorMerge().get()) {
+        if (libraryPreferences.smartScanlatorMergeEnabled(manga.id)) {
             return applySmartScanlatorMerge(
                 priority = manga.scanlatorPriority,
                 blacklistedChapters = manga.blacklistedChapters,
@@ -1580,8 +1581,7 @@ class MangaViewModel(
     fun setBookmarkColor(chapters: List<Chapter>, color: BookmarkColor) {
         viewModelScope.launchIO {
             chapters
-                .filter(Chapter::bookmark)
-                .map { ChapterUpdate(id = it.id, bookmarkColor = color) }
+                .map { ChapterUpdate(id = it.id, bookmark = true, bookmarkColor = color) }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)

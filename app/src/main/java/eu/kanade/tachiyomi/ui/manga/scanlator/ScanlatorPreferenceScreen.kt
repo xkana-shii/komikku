@@ -73,7 +73,9 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -105,6 +107,7 @@ class ScanlatorPreferenceScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
             ) {
+                SmartMergeControl(state, screenModel)
                 PrimaryTabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
@@ -128,6 +131,57 @@ class ScanlatorPreferenceScreen(
                     else -> RangesTab(state, screenModel)
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun SmartMergeControl(
+        state: ScanlatorPreferenceScreenModel.State,
+        screenModel: ScanlatorPreferenceScreenModel,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = stringResource(KMR.strings.pref_smart_scanlator_merge),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(
+                    if (state.smartMergeOverride == null) {
+                        KMR.strings.scanlator_merge_global_summary
+                    } else {
+                        KMR.strings.scanlator_merge_override_summary
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = state.smartMergeOverride == null,
+                    onClick = { screenModel.setSmartMergeOverride(null) },
+                    label = { Text(stringResource(KMR.strings.scanlator_merge_global)) },
+                )
+                FilterChip(
+                    selected = state.smartMergeOverride == true,
+                    onClick = { screenModel.setSmartMergeOverride(true) },
+                    label = { Text(stringResource(KMR.strings.scanlator_merge_enabled)) },
+                )
+                FilterChip(
+                    selected = state.smartMergeOverride == false,
+                    onClick = { screenModel.setSmartMergeOverride(false) },
+                    label = { Text(stringResource(KMR.strings.scanlator_merge_disabled)) },
+                )
+            }
+            Text(
+                text = stringResource(
+                    if (state.smartMergeEnabled) {
+                        KMR.strings.scanlator_merge_effective_enabled
+                    } else {
+                        KMR.strings.scanlator_merge_effective_disabled
+                    },
+                ),
+                style = MaterialTheme.typography.labelMedium,
+            )
         }
     }
 
@@ -379,6 +433,13 @@ data class ScanlatorEntry(
     val coverage: ScanlatorCoverage?,
 )
 
+private data class ScanlatorState(
+    val manga: Manga,
+    val chapters: List<Chapter>,
+    val globalEnabled: Boolean,
+    val override: String,
+)
+
 class ScanlatorPreferenceScreenModel(
     private val mangaId: Long,
     private val getManga: GetManga = Injekt.get(),
@@ -386,6 +447,7 @@ class ScanlatorPreferenceScreenModel(
     private val getExcludedScanlators: GetExcludedScanlators = Injekt.get(),
     private val setExcludedScanlators: SetExcludedScanlators = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
+    private val libraryPreferences: LibraryPreferences = Injekt.get(),
 ) : StateScreenModel<ScanlatorPreferenceScreenModel.State>(State()) {
 
     data class State(
@@ -393,6 +455,8 @@ class ScanlatorPreferenceScreenModel(
         val excludedScanlators: Set<String> = emptySet(),
         val blacklist: List<ChapterBlacklistEntry> = emptyList(),
         val rangeRules: List<String> = emptyList(),
+        val smartMergeOverride: Boolean? = null,
+        val smartMergeEnabled: Boolean = false,
     )
 
     init {
@@ -400,8 +464,14 @@ class ScanlatorPreferenceScreenModel(
             combine(
                 getManga.subscribe(mangaId),
                 getChaptersByMangaId.subscribe(mangaId),
-            ) { manga, chapters -> manga to chapters }
-                .collectLatest { (manga, chapters) ->
+                libraryPreferences.smartScanlatorMerge().changes(),
+                libraryPreferences.smartScanlatorMergeOverride(mangaId).changes(),
+            ) { manga, chapters, globalEnabled, override ->
+                ScanlatorState(manga, chapters, globalEnabled, override)
+            }
+                .collectLatest { scanlatorState ->
+                    val manga = scanlatorState.manga
+                    val chapters = scanlatorState.chapters
                     val chaptersByScanlator = chapters
                         .mapNotNull { chapter ->
                             chapter.scanlator?.trim()?.takeIf { it.isNotEmpty() }?.let { it to chapter }
@@ -421,6 +491,14 @@ class ScanlatorPreferenceScreenModel(
                             },
                             blacklist = resolveChapterBlacklistEntries(manga.blacklistedChapters, chapters),
                             rangeRules = manga.scanlatorRangeRules,
+                            smartMergeOverride = scanlatorState.override
+                                .takeIf { it == "enabled" || it == "disabled" }
+                                ?.let { it == "enabled" },
+                            smartMergeEnabled = when (scanlatorState.override) {
+                                "enabled" -> true
+                                "disabled" -> false
+                                else -> scanlatorState.globalEnabled
+                            },
                         )
                     }
                 }
@@ -429,6 +507,15 @@ class ScanlatorPreferenceScreenModel(
             getExcludedScanlators.subscribe(mangaId).collectLatest { excluded ->
                 mutableState.update { it.copy(excludedScanlators = excluded.toSet()) }
             }
+        }
+    }
+
+    fun setSmartMergeOverride(enabled: Boolean?) {
+        val preference = libraryPreferences.smartScanlatorMergeOverride(mangaId)
+        if (enabled == null) {
+            preference.delete()
+        } else {
+            preference.set(if (enabled) "enabled" else "disabled")
         }
     }
 

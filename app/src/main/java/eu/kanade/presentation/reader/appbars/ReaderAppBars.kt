@@ -38,6 +38,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import kotlinx.collections.immutable.ImmutableSet
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.presentation.core.components.material.padding
 
 private val readerBarsSlideAnimationSpec = tween<IntOffset>(200)
@@ -60,7 +61,9 @@ fun ReaderAppBars(
     navigateUp: () -> Unit,
     onClickTopAppBar: () -> Unit,
     bookmarked: Boolean,
+    bookmarkColor: BookmarkColor,
     onToggleBookmarked: () -> Unit,
+    onBookmarkColorSelected: (BookmarkColor) -> Unit,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -131,7 +134,9 @@ fun ReaderAppBars(
                     onClickRetryAll = onClickRetryAll,
                     onClickBoostPage = onClickBoostPage,
                     bookmarked = bookmarked,
+                    bookmarkColor = bookmarkColor,
                     onToggleBookmarked = onToggleBookmarked,
+                    onBookmarkColorSelected = onBookmarkColorSelected,
                 )
             }
             // SY <--

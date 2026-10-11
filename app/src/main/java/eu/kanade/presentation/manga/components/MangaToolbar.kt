@@ -48,6 +48,9 @@ fun MangaToolbar(
     onClickRefresh: () -> Unit,
     onClickMigrate: (() -> Unit)?,
     onClickEditNotes: () -> Unit,
+    // KMK -->
+    onClickSmartScanlatorMerge: (() -> Unit)?,
+    // KMK <--
     // SY -->
     onClickEditInfo: (() -> Unit)?,
     // KMK -->
@@ -213,6 +216,14 @@ fun MangaToolbar(
                             AppBar.OverflowAction(
                                 title = stringResource(KMR.strings.pref_source_related_mangas),
                                 onClick = onClickRelatedMangas,
+                            ),
+                        )
+                    }
+                    if (onClickSmartScanlatorMerge != null) {
+                        add(
+                            AppBar.OverflowAction(
+                                title = stringResource(KMR.strings.action_smart_scanlator_merge),
+                                onClick = onClickSmartScanlatorMerge,
                             ),
                         )
                     }
