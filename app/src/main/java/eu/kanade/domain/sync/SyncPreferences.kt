@@ -14,7 +14,9 @@ class SyncPreferences(
     fun clientAPIKey() = preferenceStore.getString("connection_sync_client_api_key", "")
     fun lastSyncTimestamp() = preferenceStore.getLong(Preference.appStateKey("last_sync_timestamp"), 0L)
 
-    fun lastSyncEtag() = preferenceStore.getString("sync_etag", "")
+    // KMK -->
+    fun lastSyncEtag() = preferenceStore.getString(Preference.appStateKey("sync_etag"), "")
+    // KMK <--
 
     fun syncInterval() = preferenceStore.getInt("sync_interval", 0)
     fun syncService() = preferenceStore.getInt("sync_service", 0)
