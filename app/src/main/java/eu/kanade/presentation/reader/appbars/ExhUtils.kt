@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -61,13 +63,16 @@ fun ExhUtils(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             var bookmarkMenuExpanded by remember { mutableStateOf(false) }
+            // KMK -->
             Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .clip(CircleShape)
                     .combinedClickable(
                         onClick = onToggleBookmarked,
                         onLongClick = { bookmarkMenuExpanded = true },
                     ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = if (bookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
@@ -90,6 +95,7 @@ fun ExhUtils(
                     onDismissRequest = { bookmarkMenuExpanded = false },
                 )
             }
+            // KMK <--
             // Refresh Icon (Retry All)
             IconButton(onClick = onClickRetryAll) {
                 Icon(
