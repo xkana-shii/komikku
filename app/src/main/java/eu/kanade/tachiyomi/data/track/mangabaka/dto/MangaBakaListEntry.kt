@@ -5,7 +5,8 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.mangabaka.MangaBaka
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Serializable
 data class MangaBakaListResult(
@@ -44,12 +45,25 @@ data class MangaBakaListEntry(
             title = seriesData.chooseBestTitle()
             status = getStatus()
             score = rating?.toDouble() ?: 0.0
-            started_reading_date = startDate?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0
-            finished_reading_date = finishDate?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0
+            // KMK --> MangaBaka returns a midnight-UTC timestamp for date-only values.
+            started_reading_date = parseIsoDateAsLocalStartOfDay(startDate) ?: 0
+            finished_reading_date = parseIsoDateAsLocalStartOfDay(finishDate) ?: 0
+            // KMK <--
             last_chapter_read = progressChapter ?: 0.0
             total_chapters = seriesData.totalChapters?.toLongOrNull() ?: 0
             private = isPrivate
         }
+
+    // KMK -->
+    private fun parseIsoDateAsLocalStartOfDay(isoDate: String?): Long? {
+        return isoDate
+            ?.substringBefore("T")
+            ?.let { LocalDate.parse(it) }
+            ?.atStartOfDay(ZoneId.systemDefault())
+            ?.toInstant()
+            ?.toEpochMilli()
+    }
+    // KMK <--
 
     fun mergeWithResolved(other: MangaBakaListEntry?): MangaBakaListEntry {
         if (other == null) return this
