@@ -62,6 +62,7 @@ import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.GetChapterByUrlAndMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.GetMangaIdsWithBookmarkColors
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
@@ -127,7 +128,9 @@ class DomainModule : InjektModule {
         addFactory { GetMangaWithChapters(get(), get()) }
         addFactory { GetMangaByUrlAndSourceId(get()) }
         addFactory { GetManga(get()) }
-        addFactory { GetNextChapters(get(), get(), get(), get()) }
+        // KMK -->
+        addFactory { GetNextChapters(get(), get(), get(), get(), get()) }
+        // KMK <--
         addFactory { GetUpcomingManga(get()) }
         addFactory { ResetViewerFlags(get()) }
         addFactory { SetMangaChapterFlags(get()) }
@@ -163,6 +166,9 @@ class DomainModule : InjektModule {
         addSingletonFactory<ChapterRepository> { ChapterRepositoryImpl(get()) }
         addFactory { GetChapter(get()) }
         addFactory { GetChaptersByMangaId(get()) }
+        // KMK -->
+        addFactory { GetChaptersByMangaIds(get()) }
+        // KMK <--
         // KMK -->
         addFactory { GetMangaIdsWithBookmarkColors(get()) }
         // KMK <--

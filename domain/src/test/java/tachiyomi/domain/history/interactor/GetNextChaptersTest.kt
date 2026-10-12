@@ -3,6 +3,7 @@ package tachiyomi.domain.history.interactor
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeAll
@@ -14,6 +15,7 @@ import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.history.repository.HistoryRepository
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.CustomMangaInfo
@@ -32,12 +34,17 @@ class GetNextChaptersTest {
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId = mockk()
     private val getManga: GetManga = mockk()
     private val historyRepository: HistoryRepository = mockk()
+    private var smartMergeEnabled = false
+    private val libraryPreferences: LibraryPreferences = mockk {
+        every { smartScanlatorMergeEnabled(any()) } answers { smartMergeEnabled }
+    }
 
     private val interactor = GetNextChapters(
         getChaptersByMangaId,
         getMergedChaptersByMangaId,
         getManga,
         historyRepository,
+        libraryPreferences,
     )
 
     private fun chapter(id: Long, mangaId: Long, read: Boolean, number: Double) = Chapter.create().copy(
@@ -162,6 +169,21 @@ class GetNextChaptersTest {
 
         interactor.awaitFirstReadable() shouldBe unread
         coVerify { getChaptersByMangaId.await(10L, applyFilter = true) }
+    }
+
+    @Test
+    fun `resolves a hidden history chapter to the visible scanlator duplicate`() = runTest {
+        val hidden = chapter(1L, 10L, read = false, number = 1.0).copy(scanlator = "Group B")
+        val preferred = chapter(2L, 10L, read = false, number = 1.0).copy(scanlator = "Group A")
+        smartMergeEnabled = true
+        coEvery { getManga.await(10L) } returns Manga.create().copy(
+            id = 10L,
+            source = 1L,
+            scanlatorPriority = listOf("Group A", "Group B"),
+        )
+        coEvery { getChaptersByMangaId.await(10L, applyFilter = true) } returns listOf(hidden, preferred)
+
+        interactor.await(10L, hidden.id, onlyUnread = false).first() shouldBe preferred
     }
 
     companion object {

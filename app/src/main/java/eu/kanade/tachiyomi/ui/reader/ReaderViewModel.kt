@@ -101,8 +101,9 @@ import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.model.filterChapterVisibility
+import tachiyomi.domain.chapter.model.resolveVisibleChapter
 import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.UpsertHistory
@@ -269,13 +270,19 @@ class ReaderViewModel @JvmOverloads constructor(
         }
         // SY <--
 
-        val selectedChapter = chapters.find { it.id == chapterId }
+        // KMK --> Resolve a duplicate opened through History, a deep link, or a notification to
+        // the same visible chapter that the manga screen and navigation controls use.
+        val visibleChapters = chapters.filterChapterVisibility(
+            manga = manga,
+            smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+        )
+        val selectedChapter = chapters.resolveVisibleChapter(
+            manga = manga,
+            smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+            chapterId = chapterId,
+            visibleChapters = visibleChapters,
+        )
             ?: error("Requested chapter of id $chapterId not found in chapter list")
-
-        // KMK --> Keep a chapter opened from history readable while excluding every other blacklist match.
-        val visibleChapters = chapters.filter {
-            !isChapterBlacklisted(it, manga.blacklistedChapters) || it.id == selectedChapter.id
-        }
         // KMK <--
 
         val chaptersForReader = when {
@@ -303,7 +310,7 @@ class ReaderViewModel @JvmOverloads constructor(
                     }
                 }
 
-                if (filteredChapters.any { it.id == chapterId }) {
+                if (filteredChapters.any { it.id == selectedChapter.id }) {
                     filteredChapters
                 } else {
                     filteredChapters + listOf(selectedChapter)
