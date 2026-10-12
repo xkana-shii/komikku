@@ -1,0 +1,3 @@
+# Blocked or reverted TachiyomiSY candidates
+
+- 2c03122571afd23905dbbc8d551787a4c1cc5cea — upstream fix for resumable progress. Dependency chain: 6856da0d5b introduced resumable downloads; 7220723afe fixed HTTP 416; c148d18c01 later disabled resumable image downloads. Current target behavior matches the upstream disabled state, so these are obsolete/reverted as a feature chain. Revisit only if Komikku independently enables resumable downloads.

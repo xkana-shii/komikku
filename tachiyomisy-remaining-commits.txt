@@ -1,5 +1,5 @@
 # TachiyomiSY remaining applicable commits
 
-No additional commit is currently classified as both missing and applicable.
+No additional commit is currently confirmed missing and applicable from this processed segment.
 
-The audit has 1,015 patch-absent candidates that still require semantic review. They are tracked as Needs investigation in tachiyomisy-port-audit.md and are intentionally excluded here until applicability is established.
+1,011 of the original 1,019 candidates remain uninvestigated. See tachiyomisy-port-audit.md. Reverted or blocked dependency chains are listed in tachiyomisy-blocked-commits.txt.

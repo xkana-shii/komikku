@@ -12,9 +12,9 @@ The supplied candidate inventory contains 1,019 commits. An independent git cher
 
 ## Batch status
 
-- Audited and ported: 3
+- Audited and ported: 4
 - Audited as equivalent implementation: 1
-- Needs semantic investigation: 1,015
+- Needs semantic investigation: 1,011
 
 The pending entries are intentionally classified as **Needs investigation**, rather than as missing, until their full diffs, dependency chains, later reverts, and Komikku equivalents are reviewed.
 
@@ -55,7 +55,7 @@ The pending entries are intentionally classified as **Needs investigation**, rat
 | e3d052922368b51fbcf28e63ac901acbc520db16 | 2026-08-04 | Respect verbose logging preference in crash log dumps (#3682) | Missing and applicable — cherry-picked with adaptation | Resolved conflict by using Komikku current EHLogLevel.isExtraLogging() global preference state instead of the removed direct ExhPreferences accessor. | 97dc173791 |
 | b9a52f9dddfbe5cb128a9b2f8fc3367ebe402918 | 2026-08-04 | Fix MAL error when list entries have partial dates (#3573) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | a82473af8f9449f882592cc27e02ee724ca3d110 | 2026-08-04 | Add category filters to Upcoming calendar (#3607) # Conflicts: #	CHANGELOG.md | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
-| 134ec7a0b49aadfc1e507917a2979cd1f5d7d257 | 2026-08-03 | Fix reader loading indefinitely in some scenarios (#3686) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
+| 134ec7a0b49aadfc1e507917a2979cd1f5d7d257 | 2026-08-03 | Fix reader loading indefinitely in some scenarios (#3686) | Equivalent implementation | Komikku already validates launch args, initializes in ViewModel scope, and publishes initialization errors to ReaderActivity state. | |
 | 336f6b7d4eec5ded42c9321c48784da937efb365 | 2026-08-02 | Improve WebView spoofing (#3678) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | f3b74f72d2e4a56da9a0a56bcc8b86f7132b5792 | 2026-08-02 | Ensure R8 keeps methods called externally by Shizuku (#3676) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 6965f8a81c0779e383ddcf3875c5373ab0396245 | 2026-08-02 | Add category filters for Updates tab (#3589) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
@@ -81,9 +81,9 @@ The pending entries are intentionally classified as **Needs investigation**, rat
 | 73ecca3a043bbbeb4bd0569e4d531bb9ed7dd5b8 | 2026-07-21 | Update dependency io.kotest:kotest-assertions-core to v6.2.3 (#3622) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 82ee03df5c765b6c809aa44bf4a06de98adb18ff | 2026-07-21 | Always use Private installer to update Private extensions (#3614) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 88523df3989249d4ee11d9bb2c74afe431940e09 | 2026-07-21 | Update dependency androidx.compose:compose-bom-alpha to v2026.07.00 (#3597) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
-| 2c03122571afd23905dbbc8d551787a4c1cc5cea | 2026-07-21 | Fix incorrect progress when resuming resumable image downloads (#3616) # Conflicts: #	CHANGELOG.md | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
+| 2c03122571afd23905dbbc8d551787a4c1cc5cea | 2026-07-21 | Fix incorrect progress when resuming resumable image downloads (#3616) | Reverted upstream; blocked dependency documented | The complete prerequisite 6856da0d5b introduced resumable downloader and Range support; later 7220723afe fixed HTTP 416, then c148d18c01 disabled resumable downloads upstream. Do not port an improvement to a disabled feature. | |
 | 92f71c292ab520db8b7bbf7ae29c21966ef3ce25 | 2026-07-21 | Add MangaBaka to README list of trackers (#3615) [skip ci] # Conflicts: #	README.md | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
-| c6ce95ab9b446a29b6b167cb194370771d65a4e8 | 2026-07-19 | Fix crash caused by inaccessible view model classes during creation (#3609) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
+| c6ce95ab9b446a29b6b167cb194370771d65a4e8 | 2026-07-19 | Fix crash caused by inaccessible view model classes during creation (#3609) | Equivalent implementation | Komikku already migrated the affected migration dialog to Voyager ScreenModel and other UI models are public or ScreenModels. | |
 | e5ffba461dd4f8a0c44f0b4d0b3a96f10ce21bdd | 2026-07-17 | Update aboutLibraries to v15.0.4 (#3604) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 8717f578fac5a9cfcfc7ff19da26b3fddb6659cf | 2026-07-16 | Detect Shizuku with permission check (#3565) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | bdf847e8671e678eb45159343a6a1450b3a46c4c | 2026-07-16 | Remove non cancellable call when trying to init reader | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
@@ -1044,4 +1044,4 @@ The pending entries are intentionally classified as **Needs investigation**, rat
 
 ## Continuation
 
-Continue chronologically and dependency-aware from the remaining 1,015 entries. Do not treat a patch-absent result as proof that a port is required.
+Continue chronologically and dependency-aware from the remaining 1,011 entries. Do not treat a patch-absent result as proof that a port is required.
