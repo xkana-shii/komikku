@@ -302,9 +302,9 @@ fun ChapterNavigatorVert(
                         if (it == currentPage) return@f
                         onPageIndexChange(it - 1)
                     },
-                        // KMK -->
-                        onValueChangeFinished = onPageIndexChangeFinished,
-                        // KMK <--
+                    // KMK -->
+                    onValueChangeFinished = onPageIndexChangeFinished,
+                    // KMK <--
                     interactionSource = interactionSource,
                 )
 
