@@ -80,6 +80,23 @@ SELECT
 FROM manga
 WHERE id = :id;
 
+-- KMK -->
+getMangaByIds:
+SELECT
+    id, source_id, remote_url, remote_title, remote_author, remote_artist, remote_description,
+    remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
+    user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
+    user_filtered_scanlators,
+    user_scanlator_priority,
+    user_blacklisted_chapters,
+    user_scanlator_range_rules,
+    state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
+    state_cover_last_modified, state_initialized, state_date_added, state_last_modified_at,
+    state_version, state_is_syncing
+FROM manga
+WHERE id IN :mangaIds;
+-- KMK <--
+
 getMangaByUrlAndSource:
 SELECT
     id, source_id, remote_url, remote_title, remote_author, remote_artist, remote_description,

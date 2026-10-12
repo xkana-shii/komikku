@@ -64,6 +64,7 @@ import tachiyomi.domain.chapter.interactor.GetChapterByUrlAndMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.GetMangaIdsWithBookmarkColors
+import tachiyomi.domain.chapter.interactor.GetVisibleChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
@@ -168,6 +169,8 @@ class DomainModule : InjektModule {
         addFactory { GetChaptersByMangaId(get()) }
         // KMK -->
         addFactory { GetChaptersByMangaIds(get()) }
+        addFactory { GetVisibleChaptersByMangaIds(get(), get(), get()) }
+        // KMK <--
         // KMK <--
         // KMK -->
         addFactory { GetMangaIdsWithBookmarkColors(get()) }

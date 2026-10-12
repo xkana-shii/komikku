@@ -51,6 +51,7 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
+import tachiyomi.domain.chapter.interactor.GetVisibleChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
@@ -75,6 +76,9 @@ class UpdatesViewModel(
     private val getUpdates: GetUpdates = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
     private val getChapter: GetChapter = Injekt.get(),
+    // KMK -->
+    private val getVisibleChaptersByMangaIds: GetVisibleChaptersByMangaIds = Injekt.get(),
+    // KMK <--
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val updatesPreferences: UpdatesPreferences = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
@@ -146,7 +150,12 @@ class UpdatesViewModel(
                     started = preferences.filterStarted.toBooleanOrNull(),
                     bookmarked = preferences.filterBookmarked.toBooleanOrNull(),
                     hideExcludedScanlators = preferences.filterExcludedScanlators,
-                ).distinctUntilChanged()
+                )
+                    .distinctUntilChanged()
+                    // KMK --> Keep hidden duplicates and blacklisted chapters out before rows,
+                    // grouping, selection, and bulk actions are constructed.
+                    .flatMapLatest { updates -> updates.filterByChapterVisibility() }
+                // KMK <--
             },
         downloadCache.changes,
         downloadManager.queueState,
@@ -182,6 +191,27 @@ class UpdatesViewModel(
             emit(persistentListOf())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
+
+    // KMK -->
+    private fun List<UpdatesWithRelations>.filterByChapterVisibility(): Flow<List<UpdatesWithRelations>> {
+        val mangaIds = mapTo(mutableSetOf(), UpdatesWithRelations::mangaId)
+        val visibilityChanges = combine(
+            listOf(libraryPreferences.smartScanlatorMerge().changes().map { }) +
+                mangaIds.map { mangaId ->
+                    libraryPreferences.smartScanlatorMergeOverride(mangaId).changes().map { }
+                },
+        ) { }
+        return visibilityChanges.map {
+            // Updates applies its excluded-scanlator preference in its SQL query.
+            val visibleChapterIds = getVisibleChaptersByMangaIds.await(
+                getManga.await(mangaIds.toList()),
+                applyFilter = false,
+            )
+                .mapValues { (_, chapters) -> chapters.mapTo(mutableSetOf()) { chapter -> chapter.id } }
+            filter { update -> update.chapterId in visibleChapterIds[update.mangaId].orEmpty() }
+        }
+    }
+    // KMK <--
 
     private val selectionState = combine(selectedChapterIds, expandedState) { selectedIds, expanded ->
         selectedIds to expanded

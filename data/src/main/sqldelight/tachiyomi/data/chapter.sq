@@ -115,9 +115,14 @@ LEFT JOIN excluded_scanlator ES
 ON C.manga_id = ES.manga_id
 AND C.remote_scanlator = ES.scanlator
 WHERE C.manga_id IN :mangaIds
-AND ES.scanlator IS NULL
-AND ((M.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
-AND ((M.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1);
+AND (
+    :applyFilter = 0
+    OR (
+        ES.scanlator IS NULL
+        AND ((M.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
+        AND ((M.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
+    )
+);
 -- KMK <--
 
 getScanlatorsByMangaId:

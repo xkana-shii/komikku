@@ -20,6 +20,17 @@ class GetManga(
         }
     }
 
+    // KMK -->
+    suspend fun await(ids: List<Long>): List<Manga> {
+        return try {
+            mangaRepository.getMangaByIds(ids)
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            emptyList()
+        }
+    }
+    // KMK <--
+
     fun subscribe(id: Long): Flow<Manga> {
         return mangaRepository.getMangaByIdAsFlow(id)
     }

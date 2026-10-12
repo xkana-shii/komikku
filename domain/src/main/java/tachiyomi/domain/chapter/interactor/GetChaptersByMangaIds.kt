@@ -7,8 +7,8 @@ import tachiyomi.domain.chapter.repository.ChapterRepository
 class GetChaptersByMangaIds(
     private val chapterRepository: ChapterRepository,
 ) {
-    suspend fun await(mangaIds: List<Long>): List<Chapter> {
-        return chapterRepository.getChapterByMangaIds(mangaIds)
+    suspend fun await(mangaIds: List<Long>, applyFilter: Boolean = false): List<Chapter> {
+        return chapterRepository.getChapterByMangaIds(mangaIds, applyFilter)
     }
 }
 // KMK <--

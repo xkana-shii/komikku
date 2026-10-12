@@ -96,9 +96,9 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.Category.Companion.UNCATEGORIZED_ID
 import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
-import tachiyomi.domain.chapter.interactor.GetChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.GetMangaIdsWithBookmarkColors
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetVisibleChaptersByMangaIds
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.filterChapterVisibility
@@ -146,7 +146,7 @@ class LibraryViewModel(
     private val getNextChapters: GetNextChapters = Injekt.get(),
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
     // KMK -->
-    private val getChaptersByMangaIds: GetChaptersByMangaIds = Injekt.get(),
+    private val getVisibleChaptersByMangaIds: GetVisibleChaptersByMangaIds = Injekt.get(),
     private val getMangaIdsWithBookmarkColors: GetMangaIdsWithBookmarkColors = Injekt.get(),
     // KMK <--
     private val getBookmarkedChaptersByMangaId: GetBookmarkedChaptersByMangaId = Injekt.get(),
@@ -849,27 +849,13 @@ class LibraryViewModel(
                 libraryPreferences.smartScanlatorMergeEnabled(manga.id)
         }
         val affectedMangaIds = affectedManga.mapTo(mutableSetOf()) { it.id }
-        val regularChapters = getChaptersByMangaIds.await(
-            affectedManga
-                .filterNot { it.manga.source == MERGED_SOURCE_ID }
-                .map { it.id },
-        ).groupBy(Chapter::mangaId)
-        val mergedChapters = affectedManga
-            .filter { it.manga.source == MERGED_SOURCE_ID }
-            .associate { manga ->
-                manga.id to getMergedChaptersByMangaId.await(manga.id, applyFilter = true)
-            }
+        val visibleChapters = getVisibleChaptersByMangaIds.await(affectedManga.map(LibraryManga::manga))
 
         return map { manga ->
             val visibleStats = when {
                 manga.id !in affectedMangaIds -> null
-                manga.manga.source == MERGED_SOURCE_ID -> mergedChapters[manga.id].orEmpty()
-                else -> regularChapters[manga.id].orEmpty()
+                else -> visibleChapters[manga.id].orEmpty()
             }
-                ?.filterChapterVisibility(
-                    manga = manga.manga,
-                    smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
-                )
                 ?.visibleChapterStats()
             val visibleManga = visibleStats?.let { stats ->
                 manga.copy(

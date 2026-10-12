@@ -170,10 +170,11 @@ class ChapterRepositoryImpl(
     }
 
     // KMK -->
-    override suspend fun getChapterByMangaIds(mangaIds: List<Long>): List<Chapter> {
+    override suspend fun getChapterByMangaIds(mangaIds: List<Long>, applyFilter: Boolean): List<Chapter> {
         if (mangaIds.isEmpty()) return emptyList()
         return database.chapterQueries.getChaptersByMangaIds(
             mangaIds = mangaIds,
+            applyFilter = applyFilter.toLong(),
             bookmarkUnmask = 0L,
             bookmarkMask = 0L,
             mapper = ChapterMapper::mapChapter,

@@ -44,7 +44,9 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.interactor.GetVisibleChaptersByMangaIds
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.visibleChapterStats
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.RemoveHistory
@@ -67,6 +69,9 @@ class HistoryViewModel(
     private val getDuplicateLibraryManga: GetDuplicateLibraryManga = Injekt.get(),
     private val getHistory: GetHistory = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
+    // KMK -->
+    private val getVisibleChaptersByMangaIds: GetVisibleChaptersByMangaIds = Injekt.get(),
+    // KMK <--
     private val getNextChapters: GetNextChapters = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val removeHistory: RemoveHistory = Injekt.get(),
@@ -96,11 +101,28 @@ class HistoryViewModel(
         .flatMapLatest { (query, preferences) ->
             getHistory.subscribe(
                 query ?: "",
-                unfinishedManga = preferences.filterUnfinishedManga.toBooleanOrNull(),
+                // KMK --> Visibility-dependent counts are calculated below from shared chapter rules.
+                unfinishedManga = null,
+                // KMK <--
                 unfinishedChapter = preferences.filterUnfinishedChapter.toBooleanOrNull(),
                 nonLibraryEntries = preferences.filterNonLibraryManga.toBooleanOrNull(),
             )
                 .distinctUntilChanged()
+                // KMK --> SQL history counts are raw; map them to the same visible chapters as the
+                // manga, reader, and Library screens before deciding whether an entry is unfinished.
+                .flatMapLatest { histories ->
+                    histories.withVisibleChapterStats()
+                        .map { visibleHistory ->
+                            visibleHistory.filter { history ->
+                                when (preferences.filterUnfinishedManga) {
+                                    TriState.ENABLED_IS -> history.unreadCount > 0
+                                    TriState.ENABLED_NOT -> history.unreadCount <= 0
+                                    TriState.DISABLED -> true
+                                }
+                            }
+                        }
+                }
+                // KMK <--
                 .map<List<HistoryWithRelations>, List<HistoryWithRelations>?> { it }
                 .onStart { emit(null) }
                 .catch { error ->
@@ -111,6 +133,31 @@ class HistoryViewModel(
                 .flowOn(Dispatchers.IO)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
+
+    // KMK -->
+    private fun List<HistoryWithRelations>.withVisibleChapterStats(): Flow<List<HistoryWithRelations>> {
+        val mangaIds = mapTo(mutableSetOf(), HistoryWithRelations::mangaId)
+        val visibilityChanges = combine(
+            listOf(libraryPreferences.smartScanlatorMerge().changes().map { }) +
+                mangaIds.map { mangaId ->
+                    libraryPreferences.smartScanlatorMergeOverride(mangaId).changes().map { }
+                },
+        ) { }
+        return visibilityChanges.map {
+            val mangas = getManga.await(mangaIds.toList())
+            val statsByMangaId = getVisibleChaptersByMangaIds.await(mangas)
+                .mapValues { (_, chapters) -> chapters.visibleChapterStats() }
+            map { history ->
+                statsByMangaId[history.mangaId]?.let { stats ->
+                    history.copy(
+                        totalCountCalculated = stats.total,
+                        readCountCalculated = stats.read,
+                    )
+                } ?: history
+            }
+        }
+    }
+    // KMK <--
 
     val state: StateFlow<State> = combine(
         uiState,

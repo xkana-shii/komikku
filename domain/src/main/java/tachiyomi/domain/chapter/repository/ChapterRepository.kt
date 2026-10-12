@@ -29,7 +29,7 @@ interface ChapterRepository {
     suspend fun getChapterByMangaId(mangaId: Long, applyFilter: Boolean = false): List<Chapter>
 
     // KMK -->
-    suspend fun getChapterByMangaIds(mangaIds: List<Long>): List<Chapter>
+    suspend fun getChapterByMangaIds(mangaIds: List<Long>, applyFilter: Boolean = false): List<Chapter>
     // KMK <--
 
     suspend fun getScanlatorsByMangaId(mangaId: Long): List<String>

@@ -36,6 +36,13 @@ class MangaRepositoryImpl(
         return database.mangaQueries.getMangaById(id, MangaMapper::mapManga).awaitAsOne()
     }
 
+    // KMK -->
+    override suspend fun getMangaByIds(ids: List<Long>): List<Manga> {
+        if (ids.isEmpty()) return emptyList()
+        return database.mangaQueries.getMangaByIds(ids, MangaMapper::mapManga).awaitAsList()
+    }
+    // KMK <--
+
     override fun getMangaByIdAsFlow(id: Long): Flow<Manga> {
         return database.mangaQueries.getMangaById(id, MangaMapper::mapManga).subscribeToOne()
     }
