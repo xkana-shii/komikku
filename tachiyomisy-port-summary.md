@@ -10,7 +10,8 @@
 
 ## Stability and crash fixes
 
-- No commits ported in this batch.
+- Cherry-picked TachiyomiSY 2e77e33538c1510efc3916b2edb0daa6284f6fcd: suppresses R8 warnings for optional OEM Window extensions. Komikku commit: 0a87df9feb.
+- Cherry-picked TachiyomiSY e3d052922368b51fbcf28e63ac901acbc520db16: crash logs include verbose output when enhanced-source logging is enabled. Adapted to Komikku current EHLogLevel API. Komikku commit: 97dc173791.
 
 ## Reader and chapters
 
@@ -47,4 +48,4 @@
 
 ## Other changes
 
-- 1,017 patch-absent candidates await semantic review. See tachiyomisy-port-audit.md for the complete inventory and evidence status.
+- 1,015 patch-absent candidates await semantic review. See tachiyomisy-port-audit.md for the complete inventory and evidence status.

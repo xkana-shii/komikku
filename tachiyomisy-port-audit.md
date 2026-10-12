@@ -12,9 +12,9 @@ The supplied candidate inventory contains 1,019 commits. An independent git cher
 
 ## Batch status
 
-- Audited and ported: 1
+- Audited and ported: 3
 - Audited as equivalent implementation: 1
-- Needs semantic investigation: 1,017
+- Needs semantic investigation: 1,015
 
 The pending entries are intentionally classified as **Needs investigation**, rather than as missing, until their full diffs, dependency chains, later reverts, and Komikku equivalents are reviewed.
 
@@ -47,12 +47,12 @@ The pending entries are intentionally classified as **Needs investigation**, rat
 | 1b60ba9d054bdc444b21fb6ed47170c2c10edae4 | 2026-08-06 | Update Gradle to v9.7.0 (#3709) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 108029ce177053b839c9110240d925f9bbc8eb7d | 2026-08-06 | Don't recheck for updates on configuration change (#3708) # Conflicts: #	CHANGELOG.md | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | bbaded099a0b554a0a3cdb5bbcd6b195f4d2930c | 2026-08-06 | Download app update without WorkManager (#3707) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
-| 2e77e33538c1510efc3916b2edb0daa6284f6fcd | 2026-08-05 | Suppress R8 warnings for missing androidx.window extension classes | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
+| 2e77e33538c1510efc3916b2edb0daa6284f6fcd | 2026-08-05 | Suppress R8 warnings for missing androidx.window extension classes | Missing and applicable — cherry-picked | Direct clean cherry-pick; preserves OEM-provided optional Window extensions without R8 noise. | 0a87df9feb |
 | 9a66f0d6e7788665a9f9d5c63b461c3ab9aacfe7 | 2026-08-05 | Translations update from Hosted Weblate (#3677) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 974d34e3c4601ef620771edf19303dc8bd86eda4 | 2026-10-11 | Lint | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 9c1b47a71ceef2263f107decba29fd1f70a69cf8 | 2026-08-05 | Replace CategoryUpdate with dedicated update queries (#3693) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | e65e78419e0d24e9aad28601e3e1fda991fe8b9e | 2026-08-04 | Fix relative date display (#3696) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
-| e3d052922368b51fbcf28e63ac901acbc520db16 | 2026-08-04 | Respect verbose logging preference in crash log dumps (#3682) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
+| e3d052922368b51fbcf28e63ac901acbc520db16 | 2026-08-04 | Respect verbose logging preference in crash log dumps (#3682) | Missing and applicable — cherry-picked with adaptation | Resolved conflict by using Komikku current EHLogLevel.isExtraLogging() global preference state instead of the removed direct ExhPreferences accessor. | 97dc173791 |
 | b9a52f9dddfbe5cb128a9b2f8fc3367ebe402918 | 2026-08-04 | Fix MAL error when list entries have partial dates (#3573) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | a82473af8f9449f882592cc27e02ee724ca3d110 | 2026-08-04 | Add category filters to Upcoming calendar (#3607) # Conflicts: #	CHANGELOG.md | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
 | 134ec7a0b49aadfc1e507917a2979cd1f5d7d257 | 2026-08-03 | Fix reader loading indefinitely in some scenarios (#3686) | Needs investigation | Patch absent according to git cherry (+); semantic diff, dependency, revert, and Komikku-equivalence review pending. |  |
@@ -1044,4 +1044,4 @@ The pending entries are intentionally classified as **Needs investigation**, rat
 
 ## Continuation
 
-Continue chronologically and dependency-aware from the remaining 1,017 entries. Do not treat a patch-absent result as proof that a port is required.
+Continue chronologically and dependency-aware from the remaining 1,015 entries. Do not treat a patch-absent result as proof that a port is required.
