@@ -169,6 +169,18 @@ class ChapterRepositoryImpl(
         ).awaitAsList()
     }
 
+    // KMK -->
+    override suspend fun getChapterByMangaIds(mangaIds: List<Long>): List<Chapter> {
+        if (mangaIds.isEmpty()) return emptyList()
+        return database.chapterQueries.getChaptersByMangaIds(
+            mangaIds = mangaIds,
+            bookmarkUnmask = 0L,
+            bookmarkMask = 0L,
+            mapper = ChapterMapper::mapChapter,
+        ).awaitAsList()
+    }
+    // KMK <--
+
     override suspend fun getScanlatorsByMangaId(mangaId: Long): List<String> {
         return database.chapterQueries.getScanlatorsByMangaId(mangaId) { it.orEmpty() }.awaitAsList()
     }

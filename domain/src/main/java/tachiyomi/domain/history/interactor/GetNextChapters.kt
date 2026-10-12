@@ -5,9 +5,11 @@ import exh.source.isEhBasedManga
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.filterChapterVisibility
+import tachiyomi.domain.chapter.model.resolveVisibleChapter
 import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.history.repository.HistoryRepository
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import kotlin.math.max
@@ -23,6 +25,8 @@ class GetNextChapters(
     // SY <--
     private val getManga: GetManga,
     private val historyRepository: HistoryRepository,
+    // KMK -->
+    private val libraryPreferences: LibraryPreferences,
 ) {
 
     suspend fun await(onlyUnread: Boolean = true): List<Chapter> {
@@ -52,11 +56,15 @@ class GetNextChapters(
 
     suspend fun await(mangaId: Long, onlyUnread: Boolean = true): List<Chapter> {
         val manga = getManga.await(mangaId) ?: return emptyList()
+        // KMK --> Keep History, reader next chapter, and automatic downloads on the same rule.
+        val chapters = chaptersFor(manga, onlyUnread = false)
+            .filterChapterVisibility(manga, libraryPreferences.smartScanlatorMergeEnabled(manga.id))
 
-        return chaptersFor(manga, onlyUnread)
-            // KMK --> Keep this after every source-specific branch so History, reader next chapter,
-            // and automatic downloads all agree on the same exclusion rule.
-            .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        return when {
+            !onlyUnread -> chapters
+            manga.isEhBasedManga() -> chapters.takeLast(1).takeUnless { it.firstOrNull()?.read == true }.orEmpty()
+            else -> chapters.filterNot { it.read }
+        }
         // KMK <--
     }
 
@@ -101,8 +109,24 @@ class GetNextChapters(
         fromChapterId: Long,
         onlyUnread: Boolean = true,
     ): List<Chapter> {
-        val chapters = await(mangaId, onlyUnread)
-        val currChapterIndex = chapters.indexOfFirst { it.id == fromChapterId }
+        // KMK --> Resolve an old History entry to the surviving duplicate without touching History.
+        val manga = getManga.await(mangaId) ?: return emptyList()
+        val smartMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id)
+        val allChapters = chaptersFor(manga, onlyUnread = false)
+        val visibleChapters = allChapters.filterChapterVisibility(manga, smartMergeEnabled)
+        val chapters = when {
+            !onlyUnread -> visibleChapters
+            manga.isEhBasedManga() -> visibleChapters.takeLast(1).takeUnless { it.firstOrNull()?.read == true }.orEmpty()
+            else -> visibleChapters.filterNot { it.read }
+        }
+        val resolvedChapter = allChapters.resolveVisibleChapter(
+            manga,
+            smartMergeEnabled,
+            fromChapterId,
+            visibleChapters,
+        )
+        val currChapterIndex = chapters.indexOfFirst { it.id == resolvedChapter?.id }
+        // KMK <--
         val nextChapters = chapters.subList(max(0, currChapterIndex), chapters.size)
 
         if (onlyUnread) {

@@ -1,9 +1,9 @@
-package eu.kanade.tachiyomi.util.chapter
+package tachiyomi.domain.chapter.model
+
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
+import tachiyomi.domain.manga.model.Manga
 
 // KMK -->
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
-
 private const val TENTHS = 10L
 
 data class ScanlatorRangeRule(
@@ -62,6 +62,52 @@ fun List<Chapter>.applySmartScanlatorMerge(
         !chapter.chapterNumber.isFinite() || chapter.chapterNumber <= 0.0 || chapter.id in selectedIds
     }
 }
+
+/** Applies the same chapter visibility rule to every user-facing chapter sequence. */
+fun List<Chapter>.filterChapterVisibility(
+    manga: Manga,
+    smartScanlatorMergeEnabled: Boolean,
+): List<Chapter> {
+    return if (smartScanlatorMergeEnabled) {
+        applySmartScanlatorMerge(
+            priority = manga.scanlatorPriority,
+            blacklistedChapters = manga.blacklistedChapters,
+            rangeRules = manga.scanlatorRangeRules,
+        )
+    } else {
+        filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+    }
+}
+
+/**
+ * Resolves a chapter that Smart Scanlator Merge has hidden to the chosen duplicate. A hidden
+ * chapter with no matching visible chapter stays unresolved so callers do not reopen it.
+ */
+fun List<Chapter>.resolveVisibleChapter(
+    manga: Manga,
+    smartScanlatorMergeEnabled: Boolean,
+    chapterId: Long,
+    visibleChapters: List<Chapter> = filterChapterVisibility(manga, smartScanlatorMergeEnabled),
+): Chapter? {
+    return visibleChapters.firstOrNull { it.id == chapterId }
+        ?: firstOrNull { it.id == chapterId }
+            ?.takeIf { it.chapterNumber.isFinite() && it.chapterNumber > 0.0 }
+            ?.let { hidden -> visibleChapters.firstOrNull { it.chapterNumber == hidden.chapterNumber } }
+}
+
+data class VisibleChapterStats(
+    val total: Long,
+    val read: Long,
+    val bookmarked: Long,
+    val bookmarkedRead: Long,
+)
+
+fun List<Chapter>.visibleChapterStats() = VisibleChapterStats(
+    total = size.toLong(),
+    read = count(Chapter::read).toLong(),
+    bookmarked = count(Chapter::bookmark).toLong(),
+    bookmarkedRead = count { it.bookmark && it.read }.toLong(),
+)
 
 data class ScanlatorCoverage(
     val groups: List<String>,

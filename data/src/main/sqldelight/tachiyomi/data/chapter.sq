@@ -100,6 +100,26 @@ AND (
     -- KMK <--
 );
 
+-- KMK -->
+-- Fetches all user-filtered chapters for the affected library entries in one query so dynamic
+-- Smart Scanlator Merge counts do not require a query for every title.
+getChaptersByMangaIds:
+SELECT
+    C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.user_read,
+    C.user_bookmark, C.user_bookmark_color, C.user_last_page_read, C.remote_chapter_number,
+    C.remote_order, C.state_date_fetch, C.remote_date_upload, C.state_last_modified_at,
+    C.state_version, C.state_is_syncing, C.remote_memo
+FROM chapter C
+JOIN manga M ON C.manga_id = M.id
+LEFT JOIN excluded_scanlator ES
+ON C.manga_id = ES.manga_id
+AND C.remote_scanlator = ES.scanlator
+WHERE C.manga_id IN :mangaIds
+AND ES.scanlator IS NULL
+AND ((M.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
+AND ((M.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1);
+-- KMK <--
+
 getScanlatorsByMangaId:
 SELECT DISTINCT remote_scanlator
 FROM chapter

@@ -3,6 +3,8 @@ package eu.kanade.tachiyomi.util.chapter
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+import tachiyomi.domain.chapter.model.ScanlatorCoverage
+import tachiyomi.domain.chapter.model.scanlatorCoverage
 
 // KMK -->
 class ScanlatorCoverageTest {

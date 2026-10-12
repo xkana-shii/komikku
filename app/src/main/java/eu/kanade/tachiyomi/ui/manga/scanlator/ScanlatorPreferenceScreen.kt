@@ -60,11 +60,6 @@ import eu.kanade.presentation.manga.ChapterBlacklistEntries
 import eu.kanade.presentation.manga.ChapterBlacklistEntry
 import eu.kanade.presentation.manga.resolveChapterBlacklistEntries
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.util.chapter.ScanlatorCoverage
-import eu.kanade.tachiyomi.util.chapter.ScanlatorRangeRule
-import eu.kanade.tachiyomi.util.chapter.encodeScanlatorRangeRule
-import eu.kanade.tachiyomi.util.chapter.parseScanlatorRangeRule
-import eu.kanade.tachiyomi.util.chapter.scanlatorCoverage
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
@@ -73,6 +68,11 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.ScanlatorCoverage
+import tachiyomi.domain.chapter.model.ScanlatorRangeRule
+import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
+import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
+import tachiyomi.domain.chapter.model.scanlatorCoverage
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga

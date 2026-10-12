@@ -35,7 +35,6 @@ import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
-import eu.kanade.tachiyomi.util.chapter.applySmartScanlatorMerge
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
 import exh.favorites.FavoritesSyncHelper
@@ -97,10 +96,13 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.Category.Companion.UNCATEGORIZED_ID
 import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.GetMangaIdsWithBookmarkColors
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.filterChapterVisibility
+import tachiyomi.domain.chapter.model.visibleChapterStats
 import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
@@ -144,6 +146,7 @@ class LibraryViewModel(
     private val getNextChapters: GetNextChapters = Injekt.get(),
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
     // KMK -->
+    private val getChaptersByMangaIds: GetChaptersByMangaIds = Injekt.get(),
     private val getMangaIdsWithBookmarkColors: GetMangaIdsWithBookmarkColors = Injekt.get(),
     // KMK <--
     private val getBookmarkedChaptersByMangaId: GetBookmarkedChaptersByMangaId = Injekt.get(),
@@ -819,57 +822,105 @@ class LibraryViewModel(
     }
 
     private fun getFavoritesFlow(): Flow<List<LibraryItem>> {
-        return combine(
-            getLibraryManga.subscribe().withSourceUpdates(sourceManager),
-            getLibraryItemPreferencesFlow(),
-            downloadCache.changes,
-        ) { libraryManga, preferences, _ ->
-            libraryManga.map { manga ->
-                // Display mode based on user preference: take it from global library setting or category
-                // KMK -->
-                val source = sourceManager.getOrStub(manga.manga.source)
+        return getLibraryManga.subscribe()
+            .withSourceUpdates(sourceManager)
+            .flatMapLatest { libraryManga ->
+                val visibilityChanges = combine(
+                    listOf(
+                        libraryPreferences.smartScanlatorMerge().changes().map { },
+                    ) + libraryManga.map { manga ->
+                        libraryPreferences.smartScanlatorMergeOverride(manga.id).changes().map { }
+                    },
+                ) { }
+                combine(
+                    getLibraryItemPreferencesFlow(),
+                    downloadCache.changes,
+                    visibilityChanges,
+                ) { preferences, _, _ ->
+                    libraryManga.toLibraryItems(preferences)
+                }
+            }
+    }
+
+    // KMK -->
+    private suspend fun List<LibraryManga>.toLibraryItems(preferences: ItemPreferences): List<LibraryItem> {
+        val affectedManga = filter { manga ->
+            manga.manga.blacklistedChapters.isNotEmpty() ||
+                libraryPreferences.smartScanlatorMergeEnabled(manga.id)
+        }
+        val affectedMangaIds = affectedManga.mapTo(mutableSetOf()) { it.id }
+        val regularChapters = getChaptersByMangaIds.await(
+            affectedManga
+                .filterNot { it.manga.source == MERGED_SOURCE_ID }
+                .map { it.id },
+        ).groupBy(Chapter::mangaId)
+        val mergedChapters = affectedManga
+            .filter { it.manga.source == MERGED_SOURCE_ID }
+            .associate { manga ->
+                manga.id to getMergedChaptersByMangaId.await(manga.id, applyFilter = true)
+            }
+
+        return map { manga ->
+            val visibleStats = when {
+                manga.id !in affectedMangaIds -> null
+                manga.manga.source == MERGED_SOURCE_ID -> mergedChapters[manga.id].orEmpty()
+                else -> regularChapters[manga.id].orEmpty()
+            }
+                ?.filterChapterVisibility(
+                    manga = manga.manga,
+                    smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+                )
+                ?.visibleChapterStats()
+            val visibleManga = visibleStats?.let { stats ->
+                manga.copy(
+                    totalChapters = stats.total,
+                    readCount = stats.read,
+                    bookmarkCount = stats.bookmarked,
+                    bookmarkReadCount = stats.bookmarkedRead,
+                )
+            } ?: manga
+            // Display mode based on user preference: take it from global library setting or category
+            val source = sourceManager.getOrStub(visibleManga.manga.source)
+            val downloadCount = if (visibleManga.manga.source == MERGED_SOURCE_ID) {
+                getMergedMangaById.await(visibleManga.manga.id)
+                    .sumOf { downloadManager.getDownloadCount(it) }.toLong()
+            } else {
+                downloadManager.getDownloadCount(visibleManga.manga).toLong()
+            }
+            LibraryItem(
+                libraryManga = visibleManga,
+                downloadCount = downloadCount,
+                unreadCount = visibleManga.unreadCount,
+                isLocal = visibleManga.manga.isLocal(),
+                badges = libraryBadges(
+                    downloadCount = downloadCount,
+                    unreadCount = visibleManga.unreadCount,
+                    isLocal = visibleManga.manga.isLocal(),
+                    downloadBadge = preferences.downloadBadge,
+                    unreadBadge = preferences.unreadBadge,
+                    localBadge = preferences.localBadge,
+                    languageBadge = preferences.languageBadge,
+                    sourceLanguage = source.lang,
+                ),
                 // KMK <--
                 // KMK -->
-                val downloadCount = if (manga.manga.source == MERGED_SOURCE_ID) {
-                    getMergedMangaById.await(manga.manga.id)
-                        .sumOf { downloadManager.getDownloadCount(it) }.toLong()
+                useLangIcon = preferences.useLangIcon,
+                source = if (preferences.sourceBadge) {
+                    DomainSource(
+                        source.id,
+                        source.lang,
+                        source.name,
+                        supportsLatest = false,
+                        isStub = source is StubSource,
+                    )
                 } else {
-                    downloadManager.getDownloadCount(manga.manga).toLong()
-                }
-                LibraryItem(
-                    libraryManga = manga,
-                    downloadCount = downloadCount,
-                    unreadCount = manga.unreadCount,
-                    isLocal = manga.manga.isLocal(),
-                    badges = libraryBadges(
-                        downloadCount = downloadCount,
-                        unreadCount = manga.unreadCount,
-                        isLocal = manga.manga.isLocal(),
-                        downloadBadge = preferences.downloadBadge,
-                        unreadBadge = preferences.unreadBadge,
-                        localBadge = preferences.localBadge,
-                        languageBadge = preferences.languageBadge,
-                        sourceLanguage = source.lang,
-                    ),
-                    // KMK <--
-                    // KMK -->
-                    useLangIcon = preferences.useLangIcon,
-                    source = if (preferences.sourceBadge) {
-                        DomainSource(
-                            source.id,
-                            source.lang,
-                            source.name,
-                            supportsLatest = false,
-                            isStub = source is StubSource,
-                        )
-                    } else {
-                        null
-                    },
-                    // KMK <--
-                )
-            }
+                    null
+                },
+                // KMK <--
+            )
         }
     }
+    // KMK <--
 
     /**
      * Flow of tracking filter preferences
@@ -916,16 +967,10 @@ class LibraryViewModel(
 
     // KMK -->
     private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
-        val visible = filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
-        return if (libraryPreferences.smartScanlatorMergeEnabled(manga.id)) {
-            visible.applySmartScanlatorMerge(
-                priority = manga.scanlatorPriority,
-                blacklistedChapters = emptyList(),
-                rangeRules = manga.scanlatorRangeRules,
-            )
-        } else {
-            visible
-        }
+        return filterChapterVisibility(
+            manga = manga,
+            smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+        )
     }
     // KMK <--
 

@@ -3,8 +3,16 @@ package eu.kanade.tachiyomi.util.chapter
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.ScanlatorRangeRule
+import tachiyomi.domain.chapter.model.applySmartScanlatorMerge
+import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
+import tachiyomi.domain.chapter.model.filterChapterVisibility
+import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
+import tachiyomi.domain.chapter.model.resolveVisibleChapter
+import tachiyomi.domain.chapter.model.visibleChapterStats
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
+import tachiyomi.domain.manga.model.Manga
 
 // KMK -->
 class ChapterSmartMergeTest {
@@ -111,6 +119,33 @@ class ChapterSmartMergeTest {
         parseScanlatorRangeRule("12:1:Group") shouldBe null
         parseScanlatorRangeRule("NaN:1:Group") shouldBe null
         parseScanlatorRangeRule("1:Infinity:Group") shouldBe null
+    }
+
+    @Test
+    fun `uses the same visibility rule for merge toggles blacklist and library counts`() {
+        val hidden = chapter(id = 1, number = 5.0, scanlator = "Group B").copy(read = false)
+        val preferred = chapter(id = 2, number = 5.0, scanlator = "Group A").copy(read = true, bookmark = true)
+        val blacklisted = chapter(id = 3, number = 6.0, scanlator = "Group A")
+        val manga = Manga.create().copy(
+            scanlatorPriority = listOf("Group A", "Group B"),
+            blacklistedChapters = listOf(scanlatorBlacklistKey(6.0, "Group A")),
+        )
+
+        val merged = listOf(hidden, preferred, blacklisted).filterChapterVisibility(manga, true)
+
+        merged.map(Chapter::id) shouldBe listOf(2L)
+        merged.visibleChapterStats().total shouldBe 1L
+        merged.visibleChapterStats().read shouldBe 1L
+        listOf(hidden, preferred, blacklisted).filterChapterVisibility(manga, false).map(Chapter::id) shouldBe listOf(1L, 2L)
+    }
+
+    @Test
+    fun `resolves a hidden history chapter to its visible duplicate`() {
+        val hidden = chapter(id = 1, number = 5.0, scanlator = "Group B")
+        val preferred = chapter(id = 2, number = 5.0, scanlator = "Group A")
+        val manga = Manga.create().copy(scanlatorPriority = listOf("Group A", "Group B"))
+
+        listOf(hidden, preferred).resolveVisibleChapter(manga, true, hidden.id) shouldBe preferred
     }
 
     private fun chapter(

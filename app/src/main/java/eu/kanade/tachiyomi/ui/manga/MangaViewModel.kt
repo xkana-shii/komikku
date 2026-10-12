@@ -67,7 +67,6 @@ import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.isLoading
 import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.removeDuplicates
 import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.sorted
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
-import eu.kanade.tachiyomi.util.chapter.applySmartScanlatorMerge
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
@@ -132,6 +131,7 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
+import tachiyomi.domain.chapter.model.filterChapterVisibility
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.getChapterSort
@@ -1172,14 +1172,10 @@ class MangaViewModel(
 
     // KMK -->
     private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
-        if (libraryPreferences.smartScanlatorMergeEnabled(manga.id)) {
-            return applySmartScanlatorMerge(
-                priority = manga.scanlatorPriority,
-                blacklistedChapters = manga.blacklistedChapters,
-                rangeRules = manga.scanlatorRangeRules,
-            )
-        }
-        return filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        return filterChapterVisibility(
+            manga = manga,
+            smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+        )
     }
     // KMK <--
 
