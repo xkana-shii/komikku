@@ -1,3 +1,4 @@
+
 package tachiyomi.data
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
@@ -117,7 +118,13 @@ internal suspend fun verifyInsertIds(db: Database) {
         stateVersion = 0,
         remoteMemo = JsonObject(emptyMap()),
     ).awaitAsOne()
-    db.categoryQueries.insert("Bulk", 2, 0, 0)
+    db.categoryQueries.insert(
+        name = "Bulk",
+        order = 2L,
+        flags = 0L,
+        hidden = 0L,
+        parentId = 0L,
+    )
     check(searches.getBySourceId(1).size == 2)
     check(feeds.getBySourceId(1).single().savedSearch == searchId)
     check(merged.getReferencesById(mergeId).size == 2)
