@@ -302,9 +302,9 @@ fun ChapterNavigatorVert(
                         if (it == currentPage) return@f
                         onPageIndexChange(it - 1)
                     },
-                        // KMK -->
-                        onValueChangeFinished = onPageIndexChangeFinished,
-                        // KMK <--
+                    // KMK -->
+                    onValueChangeFinished = onPageIndexChangeFinished,
+                    // KMK <--
                     interactionSource = interactionSource,
                 )
 
@@ -347,7 +347,9 @@ private fun ChapterNavigatorPreview() {
             currentPage = currentPage,
             totalPages = 10,
             onPageIndexChange = { currentPage = (it + 1) },
+            // KMK -->
             onPageIndexChangeFinished = {},
+            // KMK <--
             // SY -->
             currentPageText = "1",
             isVerticalSlider = false,
@@ -363,7 +365,9 @@ private fun ChapterNavigatorPreview() {
             currentPage = currentPage,
             totalPages = 10,
             onPageIndexChange = { currentPage = (it + 1) },
+            // KMK -->
             onPageIndexChangeFinished = {},
+            // KMK <--
             currentPageText = "1",
             isVerticalSlider = true,
         )

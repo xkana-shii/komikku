@@ -71,7 +71,9 @@ fun WebViewScreenContent(
     onNavigateUp: () -> Unit,
     initialTitle: String?,
     url: String,
+    // KMK -->
     defaultUserAgentProvider: () -> String,
+    // KMK <--
     onShare: (String) -> Unit,
     onOpenInBrowser: (String) -> Unit,
     onClearCookies: (String) -> Unit,
@@ -305,7 +307,9 @@ fun WebViewScreenContent(
                         WebView.setWebContentsDebuggingEnabled(true)
                     }
 
+                    // KMK -->
                     webView.setUserAgent(headers["user-agent"] ?: defaultUserAgentProvider())
+                    // KMK <--
                 },
                 onDispose = { webView ->
                     val window = windowStack.items.find { it.webView == webView }

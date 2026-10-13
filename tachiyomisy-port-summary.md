@@ -1,52 +1,43 @@
 # TachiyomiSY port summary
 
-## Performance
+## Cumulative status
 
-- No commits ported in this batch.
+- Original inventory: 1,019
+- Audited candidates: 55
+- Genuine cherry-picks: 15
+- Manual ports: 1
+- Already implemented: 7
+- Behaviorally equivalent: 4
+- Superseded: 12
+- Reverted or obsolete: 10
+- Blocked: 6
+- Uninvestigated: 964
 
-## Database
+The categories are mutually exclusive and total 1,019. The latest completed window contains the 50 consecutive candidates from `336f6b7d4eec5ded42c9321c48784da937efb365` through `5621751c15585be94dc72607f2d7d277a79b81a3`. The next unprocessed candidate is `dfc0910912d0b45f03f7835c76cc3724d09ddd06`.
 
-- No commits ported in this batch.
+## Implemented in the 50-candidate window
 
-## Stability and crash fixes
+- WebView spoofing now keeps the configured user agent and matching `Sec-CH-UA` metadata in embedded and interceptor WebViews (`bec4673603`), using WebKit 1.15.0 because SY's 1.16.0 needs the blocked AGP 9 line.
+- Updates supports included/excluded category filters using Komikku's current SQL schema and existing blacklist/scanlator filters (`79d869a625`).
+- Tokyo Night is available in Compose and platform themes (`7bfdf807d1`).
+- Private extension updates retain private installation, Shizuku detection uses its permission, and the existing Shizuku installer/R8 fixes are recorded (`62682f288f`, `0e4b4287a9`, `5e73c5db41`, `0d82b9a45b`).
+- Sync state keys and SQLDelight `RETURNING` notification timing match later SY behavior (`dc0675ba01`, `f470161a30`).
+- Reader app bars close after page slider navigation in both horizontal and Komikku vertical layouts (`394cb8369d`).
+- Okio 3.18.1, Spotless 8.9.0, and MaterialKolor 5.0.0 were applied with genuine `-x` provenance (`424a2aad31`, `43dd4859e0`, `aa024c5aeb`).
 
-- Cherry-picked TachiyomiSY 2e77e33538c1510efc3916b2edb0daa6284f6fcd: suppresses R8 warnings for optional OEM Window extensions. Komikku commit: 0a87df9feb.
-- Cherry-picked TachiyomiSY e3d052922368b51fbcf28e63ac901acbc520db16: crash logs include verbose output when enhanced-source logging is enabled. Adapted to Komikku current EHLogLevel API. Komikku commit: 97dc173791.
+## Existing implementations confirmed
 
-## Reader and chapters
+- Backup restore already retries failed batch entries individually and scopes restored chapters/history correctly.
+- The migration dialog already avoids inaccessible reflective ViewModel construction.
+- AndroidX ViewModels, async MoveSorting migration, SQLCipher 4.19.1/Room3 driver, min SDK 26, FlexibleAdapter 5.1.0, ConstraintLayout 2.2.2, and MangaBaka raw user-agent behavior are present.
+- Reader initialization already reports failures without the historical indefinite-loading path.
 
-- Classified TachiyomiSY 134ec7a0b49aadfc1e507917a2979cd1f5d7d257 as equivalent: Komikku already handles invalid launch arguments and ViewModel initialization failures.
-- Classified resumable-download progress commit 2c03122571afd23905dbbc8d551787a4c1cc5cea as reverted upstream; resumable downloads were disabled by c148d18c01 after prerequisite 6856da0d5b and fix 7220723afe.
+## Deferred dependency chains
 
-## Library and Updates
+- Compose alpha BOM/workaround removal, AGP 9.3.1, AboutLibraries 15.0.4, every-cold-start update checks, and SyncYomi protocol v2 require coordinated adaptations described in `tachiyomisy-blocked-commits.txt`.
+- Resumable image downloads remain disabled in final upstream history; the historical progress fix is obsolete unless Komikku independently enables the feature.
 
-- No commits ported in this batch.
+## Previous ports
 
-## History
-
-- No commits ported in this batch.
-
-## Tracking
-
-- Ported TachiyomiSY f3d5f0fad9663788376dcad2a02e2296889c98db: MangaBaka date-only API values now retain their calendar day in negative time zones. Komikku commit: 5f7a4f83f5.
-- Classified TachiyomiSY c12919958b22cb9820013a219aa33e88f1554722 as equivalent: Komikku already converted selected MangaBaka score indices to their configured score values.
-
-## Downloads
-
-- No commits ported in this batch.
-
-## Extensions and sources
-
-- No commits ported in this batch.
-
-## Backup and restore
-
-- No commits ported in this batch.
-
-## UI and navigation
-
-- No commits ported in this batch.
-
-## Other changes
-
-- 1,011 patch-absent candidates await semantic review. See tachiyomisy-port-audit.md for the complete inventory and evidence status.
+- MangaBaka date-only values preserve their calendar day in negative time zones (`5f7a4f83f5`, manual adaptation).
+- Optional OEM Window R8 warnings and verbose enhanced-source crash logs were ported with genuine cherry-picks (`0a87df9feb`, `97dc173791`).

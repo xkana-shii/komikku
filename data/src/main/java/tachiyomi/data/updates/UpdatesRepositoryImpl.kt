@@ -32,8 +32,10 @@ class UpdatesRepositoryImpl(
         started: Boolean?,
         bookmarked: Boolean?,
         hideExcludedScanlators: Boolean,
+        // KMK -->
         includedCategories: List<Long>,
         excludedCategories: List<Long>,
+        // KMK <--
     ): Flow<List<UpdatesWithRelations>> {
         return database.updatesViewQueries.getRecentUpdatesWithFilters(
             after = after,

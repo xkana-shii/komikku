@@ -25,8 +25,10 @@ class GetUpdates(
         started: Boolean?,
         bookmarked: Boolean?,
         hideExcludedScanlators: Boolean,
+        // KMK -->
         includedCategories: List<Long>,
         excludedCategories: List<Long>,
+        // KMK <--
     ): Flow<List<UpdatesWithRelations>> {
         return repository.subscribeAll(
             instant.toEpochMilli(),
@@ -35,8 +37,10 @@ class GetUpdates(
             started = started,
             bookmarked = bookmarked,
             hideExcludedScanlators = hideExcludedScanlators,
+            // KMK -->
             includedCategories = includedCategories,
             excludedCategories = excludedCategories,
+            // KMK <--
         )
             // SY -->
             .catchNPE()

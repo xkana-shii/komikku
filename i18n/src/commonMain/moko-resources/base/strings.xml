@@ -235,7 +235,9 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_monet">Dynamic</string>
     <string name="theme_catppuccin">Catppuccin</string>
+    <!-- KMK -->
     <string name="theme_tokyonight">Tokyo Night</string>
+    <!-- KMK <-->
     <string name="theme_greenapple">Green Apple</string>
     <string name="theme_lavender">Lavender</string>
     <string name="theme_midnightdusk">Midnight Dusk</string>
@@ -905,7 +907,9 @@
     <string name="relative_time_span_never">Never</string>
     <string name="action_view_upcoming">View Upcoming Updates</string>
     <string name="action_filter_excluded_scanlators">Filter excluded scanlators</string>
+    <!-- KMK -->
     <string name="pref_filter_update_categories_details">Updates in excluded categories will not be shown even if they are also in any included categories.</string>
+    <!-- KMK <-->
 
     <!-- Upcoming -->
     <string name="upcoming_guide">Upcoming Guide</string>

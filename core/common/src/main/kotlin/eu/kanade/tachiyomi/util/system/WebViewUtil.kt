@@ -98,6 +98,7 @@ fun WebView.setDefaultSettings() {
     CookieManager.getInstance().acceptThirdPartyCookies(this)
 }
 
+// KMK -->
 /**
  * Sets the user agent along with the matching user agent metadata, which Chromium uses to populate
  * the `Sec-CH-UA` client hints. Without this the hints keep advertising the real WebView brand and
@@ -144,6 +145,7 @@ private const val WEBVIEW_BRAND = "Android WebView"
 private const val CHROMIUM_BRAND = "Chromium"
 private const val CHROME_BRAND = "Google Chrome"
 private val CHROME_VERSION_REGEX = """Chrome/(\d+)(\.[\d.]+)?""".toRegex()
+// KMK <--
 
 private fun WebView.getWebViewMajorVersion(): Int {
     val uaRegexMatch = """.*Chrome/(\d+)\..*""".toRegex().matchEntire(getDefaultUserAgentString())

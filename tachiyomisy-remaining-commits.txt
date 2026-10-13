@@ -1,5 +1,10 @@
-# TachiyomiSY remaining applicable commits
+# TachiyomiSY remaining candidates
 
-No additional commit is currently confirmed missing and applicable from this processed segment.
+964 of the original 1,019 candidates remain uninvestigated.
 
-1,011 of the original 1,019 candidates remain uninvestigated. See tachiyomisy-port-audit.md. Reverted or blocked dependency chains are listed in tachiyomisy-blocked-commits.txt.
+Next unprocessed candidate:
+dfc0910912d0b45f03f7835c76cc3724d09ddd06 — Test
+
+The completed 50-candidate window runs from 336f6b7d4eec5ded42c9321c48784da937efb365 through 5621751c15585be94dc72607f2d7d277a79b81a3.
+
+See tachiyomisy-port-audit.md for per-commit evidence and tachiyomisy-blocked-commits.txt for the six active blockers plus the obsolete resumable-download chain.

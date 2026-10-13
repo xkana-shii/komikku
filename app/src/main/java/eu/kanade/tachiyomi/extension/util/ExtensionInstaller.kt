@@ -53,7 +53,9 @@ internal class ExtensionInstaller(
      *
      * @param url The url of the apk.
      * @param extension The extension to install.
+     * KMK -->
      * @param isUpdateForPrivatelyInstalled If this is an update for a privately installed extension
+     * KMK <--
      */
     fun downloadAndInstall(
         url: String,
@@ -94,7 +96,9 @@ internal class ExtensionInstaller(
                     }
 
                 step.value = InstallStep.Installing
+                // KMK -->
                 installApk(downloadId, tmpFile, isUpdateForPrivatelyInstalled)
+                // KMK <--
             } catch (e: Exception) {
                 if (e is InterruptedException) {
                     // Canceled
@@ -122,13 +126,17 @@ internal class ExtensionInstaller(
      * Starts an intent to install the extension at the given uri.
      *
      * @param tempFile The file of the extension to install. Delete after use.
+     * KMK -->
      * @param isUpdateForPrivatelyInstalled If this install is an update for a privately installed extension
+     * KMK <--
      */
+    // KMK -->
     private fun installApk(downloadId: Long, tempFile: File, isUpdateForPrivatelyInstalled: Boolean = false) {
         if (isUpdateForPrivatelyInstalled) {
             installApkPrivately(downloadId, tempFile)
             return
         }
+        // KMK <--
 
         when (val installer = extensionInstaller.get()) {
             BasePreferences.ExtensionInstaller.LEGACY -> {
@@ -141,7 +149,9 @@ internal class ExtensionInstaller(
             }
 
             BasePreferences.ExtensionInstaller.PRIVATE -> {
+                // KMK -->
                 installApkPrivately(downloadId, tempFile)
+                // KMK <--
             }
 
             else -> {
@@ -156,6 +166,7 @@ internal class ExtensionInstaller(
         }
     }
 
+    // KMK -->
     private fun installApkPrivately(downloadId: Long, tempFile: File) {
         try {
             if (ExtensionLoader.installPrivateExtensionFile(context, tempFile)) {
@@ -170,6 +181,7 @@ internal class ExtensionInstaller(
 
         tempFile.delete()
     }
+    // KMK <--
 
     /**
      * Cancels extension install and remove from download manager and installer.

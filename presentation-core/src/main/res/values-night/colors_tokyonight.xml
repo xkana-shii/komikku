@@ -5,6 +5,7 @@
   https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors/moon.lua
 -->
 <resources>
+    <!-- KMK -->
     <color name="tokyonight_primary">#82AAFF</color>
     <color name="tokyonight_onPrimary">#1B1D2B</color>
     <color name="tokyonight_primaryContainer">#444A73</color>
@@ -40,4 +41,5 @@
     <color name="tokyonight_surfaceContainerHigh">#363B5D</color>
     <color name="tokyonight_surfaceContainerHighest">#3F466F</color>
     <color name="tokyonight_surfaceBright">#434A77</color>
+    <!-- KMK <-->
 </resources>

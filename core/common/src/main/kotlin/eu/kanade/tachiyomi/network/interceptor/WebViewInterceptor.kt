@@ -87,7 +87,9 @@ abstract class WebViewInterceptor(
         return WebView(context).apply {
             setDefaultSettings()
             // Avoid sending empty User-Agent, Chromium WebView will reset to default if empty
+            // KMK -->
             setUserAgent(request.header("User-Agent") ?: defaultUserAgentProvider())
+            // KMK <--
         }
     }
 }

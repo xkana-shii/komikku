@@ -12,7 +12,9 @@ import uy.kohesive.injekt.api.get
 
 class UpdatesSettingsViewModel(
     val updatesPreferences: UpdatesPreferences = Injekt.get(),
+    // KMK -->
     val getCategories: GetCategories = Injekt.get(),
+    // KMK <--
 ) : ViewModel() {
 
     // KMK -->
@@ -20,6 +22,7 @@ class UpdatesSettingsViewModel(
     val excludedCategories = updatesPreferences.filterExcludedCategories()
     // KMK <--
 
+    // KMK -->
     fun cycleCategory(category: Category) {
         when (category.id) {
             in includedCategories.get() -> {
@@ -31,6 +34,7 @@ class UpdatesSettingsViewModel(
             else -> includedCategories.getAndSet { it + category.id }
         }
     }
+    // KMK <--
 
     fun toggleFilter(preference: (UpdatesPreferences) -> Preference<TriState>) {
         preference(updatesPreferences).getAndSet {

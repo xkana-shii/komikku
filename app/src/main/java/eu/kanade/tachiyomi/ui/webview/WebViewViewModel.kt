@@ -67,5 +67,7 @@ class WebViewViewModel(
         }
     }
 
+    // KMK -->
     fun defaultUserAgentProvider() = network.defaultUserAgentProvider()
+    // KMK <--
 }
