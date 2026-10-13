@@ -52,6 +52,7 @@ import tachiyomi.domain.category.interactor.CreateCategoryWithName
 import tachiyomi.domain.category.interactor.DeleteCategory
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.HideCategory
+import tachiyomi.domain.category.interactor.MergeCategories
 import tachiyomi.domain.category.interactor.MoveCategory
 import tachiyomi.domain.category.interactor.RenameCategory
 import tachiyomi.domain.category.interactor.ReorderCategory
@@ -126,6 +127,7 @@ class DomainModule : InjektModule {
         // KMK -->
         addFactory { HideCategory(get()) }
         addFactory { MoveCategory(get()) }
+        addFactory { MergeCategories(get(), get(), get()) }
         addFactory { SetCategoryTrackStatus(get()) }
         addFactory { SetCategoryUpdateInterval(get()) }
         addFactory { SyncCategoriesWithTrackStatus(get(), get()) }

@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.service.CategoryTreeHandler
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -36,7 +37,11 @@ fun CategoryParentPickerDialog(
                     selected = category.parentId == Category.UNCATEGORIZED_ID,
                     onClick = { onSelect(Category.UNCATEGORIZED_ID) },
                 )
-                categories.filter { it.id != category.id }.forEach { parent ->
+                categories.filter { parent ->
+                    parent.id != category.id &&
+                        parent.parentId == Category.UNCATEGORIZED_ID &&
+                        CategoryTreeHandler.canMove(category.id, parent.id, categories)
+                }.forEach { parent ->
                     ParentChoice(
                         label = parent.name,
                         selected = category.parentId == parent.id,

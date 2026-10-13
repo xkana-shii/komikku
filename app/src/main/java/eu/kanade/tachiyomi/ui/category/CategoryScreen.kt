@@ -12,6 +12,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.category.CategoryScreen
 import eu.kanade.presentation.category.components.CategoryCreateDialog
 import eu.kanade.presentation.category.components.CategoryDeleteDialog
+import eu.kanade.presentation.category.components.CategoryMergeDialog
+import eu.kanade.presentation.category.components.CategoryMoveDialog
 import eu.kanade.presentation.category.components.CategoryParentPickerDialog
 import eu.kanade.presentation.category.components.CategoryRenameDialog
 import eu.kanade.presentation.category.components.TrackStatusPickerDialog
@@ -52,17 +54,26 @@ class CategoryScreen : Screen() {
             onClickUpdateInterval = { viewModel.showDialog(CategoryDialog.UpdateInterval(it)) },
             onClickCreateSubcategory = { viewModel.showDialog(CategoryDialog.CreateSubcategory(it)) },
             onClickMove = { viewModel.showDialog(CategoryDialog.Move(it)) },
-            // KMK -->
+            onReparentSubcategory = viewModel::reparentSubcategory,
             onSearchQuery = viewModel::setSearchQuery,
             onToggleCollapsed = viewModel::toggleCollapsed,
             onExpandAll = viewModel::expandAll,
             onCollapseAll = viewModel::collapseAll,
             onSortMode = viewModel::setSortMode,
             onToggleSelection = viewModel::toggleSelection,
-            onToggleSelectionMode = viewModel::setSelectionMode,
-            onBulkHide = viewModel::bulkSetHidden,
-            onBulkDelete = viewModel::bulkDelete,
-            // KMK <--
+            onToggleSelectionMode = { viewModel.setSelectionMode(!successState.selectionMode) },
+            onSelectVisible = viewModel::selectIds,
+            onBulkHide = { viewModel.bulkSetHidden(true) },
+            onBulkShow = { viewModel.bulkSetHidden(false) },
+            onShowBulkMove = {
+                viewModel.showDialog(CategoryDialog.MoveMany(successState.selectedIds.toList()))
+            },
+            onShowBulkMerge = {
+                viewModel.showDialog(CategoryDialog.MergeMany(successState.selectedIds.toList()))
+            },
+            onShowBulkDelete = {
+                viewModel.showDialog(CategoryDialog.DeleteMany(successState.selectedIds.toList()))
+            },
             // KMK <--
             navigateUp = navigator::pop,
         )
@@ -129,6 +140,32 @@ class CategoryScreen : Screen() {
                         viewModel.dismissDialog()
                     },
                     onDismiss = viewModel::dismissDialog,
+                )
+            }
+            is CategoryDialog.MoveMany -> {
+                CategoryMoveDialog(
+                    parents = successState.categories.filter { it.parentId == 0L }.toImmutableList(),
+                    excludedIds = dialog.ids.toSet(),
+                    onDismissRequest = viewModel::dismissDialog,
+                    onConfirm = { parentId -> viewModel.bulkMove(dialog.ids, parentId) },
+                )
+            }
+            is CategoryDialog.MergeMany -> {
+                val categoriesById = successState.categories.associateBy { it.id }
+                CategoryMergeDialog(
+                    candidates = dialog.ids.mapNotNull(categoriesById::get).toImmutableList(),
+                    onDismissRequest = viewModel::dismissDialog,
+                    onConfirm = { targetId ->
+                        viewModel.mergeInto(targetId, dialog.ids.filterNot { it == targetId })
+                    },
+                )
+            }
+            is CategoryDialog.DeleteMany -> {
+                CategoryDeleteDialog(
+                    onDismissRequest = viewModel::dismissDialog,
+                    onDelete = { viewModel.bulkDelete(dialog.ids) },
+                    title = stringResource(tachiyomi.i18n.kmk.KMR.strings.category_manager_delete_many_title),
+                    text = stringResource(tachiyomi.i18n.kmk.KMR.strings.category_manager_delete_many, dialog.ids.size),
                 )
             }
             // KMK <--

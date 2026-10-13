@@ -21,10 +21,60 @@ object CategoryTreeHandler {
         return descendants
     }
 
+    // KMK -->
     fun canMove(categoryId: Long, parentId: Long, categories: Iterable<Category>): Boolean =
-        categoryId != Category.UNCATEGORIZED_ID &&
-            parentId != categoryId &&
-            parentId !in descendantsOf(categoryId, categories)
+        categories.toList().let { categoryList ->
+            val category = categoryList.find { it.id == categoryId }
+                ?: return@let false
+            val parent = categoryList.find { it.id == parentId }
+            categoryId != Category.UNCATEGORIZED_ID &&
+                parentId != categoryId &&
+                parentId !in descendantsOf(categoryId, categoryList) &&
+                (parentId == Category.UNCATEGORIZED_ID || parent?.parentId == Category.UNCATEGORIZED_ID) &&
+                (parentId == Category.UNCATEGORIZED_ID || childrenOf(category.id, categoryList).isEmpty())
+        }
+
+    /**
+     * Returns the complete persisted order after moving [categoryId] among [newParentId]'s
+     * children. The result keeps every parent followed by its children so the single global
+     * SQLDelight order remains a stable representation of the two-level tree.
+     */
+    fun reorderedIds(
+        categoryId: Long,
+        newParentId: Long,
+        newIndex: Int,
+        categories: List<Category>,
+    ): List<Long>? {
+        if (!canMove(categoryId, newParentId, categories)) return null
+
+        val moved = categories.first { it.id == categoryId }.copy(parentId = newParentId)
+        val updated = categories.map { if (it.id == categoryId) moved else it }
+        val roots = updated.filter { it.parentId == Category.UNCATEGORIZED_ID && it.id != categoryId }
+            .sortedBy(Category::order)
+            .toMutableList()
+        val childrenByParent = updated
+            .filter { it.parentId != Category.UNCATEGORIZED_ID && it.id != categoryId }
+            .groupBy(Category::parentId)
+            .mapValues { (_, children) -> children.sortedBy(Category::order).toMutableList() }
+            .toMutableMap()
+
+        if (newParentId == Category.UNCATEGORIZED_ID) {
+            roots.add(newIndex.coerceIn(0, roots.size), moved)
+        } else {
+            val siblings = childrenByParent.getOrPut(newParentId) { mutableListOf() }
+            siblings.add(newIndex.coerceIn(0, siblings.size), moved)
+        }
+
+        return buildList {
+            roots.forEach { root ->
+                add(root.id)
+                childrenByParent[root.id].orEmpty().forEach { add(it.id) }
+            }
+            // Preserve malformed/orphaned legacy rows rather than dropping them from the order.
+            updated.filter { category -> category.id !in this }.sortedBy(Category::order).forEach { add(it.id) }
+        }
+    }
+    // KMK <--
 
     fun hasCycles(categories: Iterable<Category>): Boolean {
         val byId = categories.associateBy(Category::id)

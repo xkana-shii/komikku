@@ -7,6 +7,7 @@ import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryTreeHandler
 
 class ReorderCategory(
     private val categoryRepository: CategoryRepository,
@@ -15,19 +16,24 @@ class ReorderCategory(
 
     suspend fun await(category: Category, newIndex: Int) = withNonCancellableContext {
         mutex.withLock {
+            // KMK -->
             val categories = categoryRepository.getAll()
                 .filterNot(Category::isSystemCategory)
-                .toMutableList()
-
-            val currentIndex = categories.indexOfFirst { it.id == category.id }
-            if (currentIndex == -1) {
+            val orderedIds = CategoryTreeHandler.reorderedIds(
+                categoryId = category.id,
+                newParentId = category.parentId,
+                newIndex = newIndex,
+                categories = categories,
+            )
+            if (orderedIds == null) {
                 return@withNonCancellableContext Result.Unchanged
             }
+            // KMK <--
 
             try {
-                categories.add(newIndex, categories.removeAt(currentIndex))
-
-                categoryRepository.updateAllOrders(orderedIds = categories.map { it.id })
+                // KMK -->
+                categoryRepository.updateAllOrders(orderedIds = orderedIds)
+                // KMK <--
                 Result.Success
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)

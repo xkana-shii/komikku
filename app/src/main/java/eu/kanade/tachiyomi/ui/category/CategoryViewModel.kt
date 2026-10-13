@@ -22,6 +22,7 @@ import tachiyomi.domain.category.interactor.CreateCategoryWithName
 import tachiyomi.domain.category.interactor.DeleteCategory
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.HideCategory
+import tachiyomi.domain.category.interactor.MergeCategories
 import tachiyomi.domain.category.interactor.MoveCategory
 import tachiyomi.domain.category.interactor.RenameCategory
 import tachiyomi.domain.category.interactor.ReorderCategory
@@ -47,6 +48,7 @@ class CategoryViewModel(
     private val setCategoryTrackStatus: SetCategoryTrackStatus = Injekt.get(),
     private val setCategoryUpdateInterval: SetCategoryUpdateInterval = Injekt.get(),
     private val moveCategory: MoveCategory = Injekt.get(),
+    private val mergeCategories: MergeCategories = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val getLibraryManga: GetLibraryManga = Injekt.get(),
     private val categoryRepository: CategoryRepository = Injekt.get(),
@@ -65,27 +67,32 @@ class CategoryViewModel(
     private val selectedIds = MutableStateFlow<Set<Long>>(emptySet())
     private val selectionMode = MutableStateFlow(false)
 
-    val state: StateFlow<CategoryScreenState> = combine(
-        listOf(getCategories.subscribe(), dialog, searchQuery, collapsedIds, sortMode, selectedIds, selectionMode, getLibraryManga.subscribe()),
-    ) { values ->
-        val categories = values[0] as List<Category>
-        val dialog = values[1] as CategoryDialog?
-        val search = values[2] as String
-        val collapsed = values[3] as Set<Long>
-        val sort = values[4] as Int
-        val selected = values[5] as Set<Long>
-        val selecting = values[6] as Boolean
-        val library = values[7] as List<tachiyomi.domain.library.model.LibraryManga>
-        CategoryScreenState.Success(
+    private val categoryData = combine(
+        getCategories.subscribe(),
+        getLibraryManga.subscribe(),
+    ) { categories, library ->
+        CategoryManagerData(
             categories = categories.filterNot(Category::isSystemCategory).toImmutableList(),
+            mangaCounts = library.flatMap { manga -> manga.categories.map { it to manga.id } }
+                .groupBy({ it.first }, { it.second })
+                .mapValues { it.value.distinct().size },
+        )
+    }
+
+    val state: StateFlow<CategoryScreenState> = combine(
+        categoryData,
+        combine(dialog, searchQuery, collapsedIds, ::Triple),
+        combine(sortMode, selectedIds, selectionMode, ::Triple),
+    ) { data, (dialog, search, collapsed), (sort, selected, selecting) ->
+        CategoryScreenState.Success(
+            categories = data.categories,
             dialog = dialog,
             searchQuery = search,
             collapsedIds = collapsed,
             sortMode = sort,
             selectedIds = selected,
             selectionMode = selecting,
-            mangaCounts = library.flatMap { manga -> manga.categories.map { it to manga.id } }
-                .groupBy({ it.first }, { it.second }).mapValues { it.value.distinct().size },
+            mangaCounts = data.mangaCounts,
         )
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), CategoryScreenState.Loading)
@@ -167,6 +174,14 @@ class CategoryViewModel(
         }
     }
 
+    fun reparentSubcategory(category: Category, parentId: Long, newIndex: Int) {
+        viewModelScope.launch {
+            if (!moveCategory.await(category.id, parentId, newIndex)) {
+                _events.send(CategoryEvent.InternalError)
+            }
+        }
+    }
+
     // KMK --> Category manager state is cheap to update and persisted independently from the
     // category/library flows, so search and expansion never rebuild library grouping.
     fun setSearchQuery(value: String) = searchQuery.update { value }
@@ -202,6 +217,8 @@ class CategoryViewModel(
 
     fun clearSelection() = selectedIds.update { emptySet() }
 
+    fun selectIds(ids: Set<Long>) = selectedIds.update { ids }
+
     fun setSelectionMode(enabled: Boolean) {
         selectionMode.value = enabled
         if (!enabled) selectedIds.value = emptySet()
@@ -211,16 +228,48 @@ class CategoryViewModel(
         val ids = selectedIds.value
         viewModelScope.launch {
             ids.forEach { categoryRepository.updateHidden(it, hidden) }
-            clearSelection()
+            finishSelection()
         }
     }
 
-    fun bulkDelete() {
-        val ids = selectedIds.value
+    fun bulkDelete(ids: List<Long>) {
         viewModelScope.launch {
             ids.forEach { deleteCategory.await(it) }
-            clearSelection()
+            finishSelection()
         }
+    }
+
+    fun bulkMove(ids: List<Long>, parentId: Long) {
+        viewModelScope.launch {
+            val state = state.value as? CategoryScreenState.Success ?: return@launch
+            val selectedSet = ids.toSet()
+            if (parentId in selectedSet) {
+                _events.send(CategoryEvent.InternalError)
+                return@launch
+            }
+            var nextIndex = state.categories.count { it.parentId == parentId && it.id !in selectedSet }
+            var failed = false
+            ids.forEach { id ->
+                if (!moveCategory.await(id, parentId, nextIndex++)) failed = true
+            }
+            if (failed) _events.send(CategoryEvent.InternalError)
+            finishSelection()
+        }
+    }
+
+    fun mergeInto(targetId: Long, sourceIds: List<Long>) {
+        viewModelScope.launch {
+            if (mergeCategories.await(targetId, sourceIds) is MergeCategories.Result.InternalError) {
+                _events.send(CategoryEvent.InternalError)
+            }
+            finishSelection()
+        }
+    }
+
+    private fun finishSelection() {
+        selectedIds.value = emptySet()
+        selectionMode.value = false
+        dismissDialog()
     }
     // KMK <--
     // KMK <--
@@ -234,6 +283,11 @@ class CategoryViewModel(
     }
 }
 
+private data class CategoryManagerData(
+    val categories: ImmutableList<Category>,
+    val mangaCounts: Map<Long, Int>,
+)
+
 sealed interface CategoryDialog {
     data object Create : CategoryDialog
     // KMK -->
@@ -241,10 +295,27 @@ sealed interface CategoryDialog {
     data class UpdateInterval(val category: Category) : CategoryDialog
     data class CreateSubcategory(val parent: Category) : CategoryDialog
     data class Move(val category: Category) : CategoryDialog
+    data class MoveMany(val ids: List<Long>) : CategoryDialog
+    data class MergeMany(val ids: List<Long>) : CategoryDialog
+    data class DeleteMany(val ids: List<Long>) : CategoryDialog
     // KMK <--
     data class Rename(val category: Category) : CategoryDialog
     data class Delete(val category: Category) : CategoryDialog
 }
+
+// KMK --> Persisted values; append new modes instead of renumbering existing ones.
+object CategoryManagerSort {
+    const val MANUAL = 0
+    const val AZ = 1
+    const val ZA = 2
+    const val MOST_ITEMS = 3
+    const val LEAST_ITEMS = 4
+    const val DATE_ADDED_NEWEST = 5
+    const val DATE_ADDED_OLDEST = 6
+    const val DATE_MODIFIED_NEWEST = 7
+    const val DATE_MODIFIED_OLDEST = 8
+}
+// KMK <--
 
 sealed interface CategoryEvent {
     sealed class LocalizedMessage(val stringRes: StringResource) : CategoryEvent
