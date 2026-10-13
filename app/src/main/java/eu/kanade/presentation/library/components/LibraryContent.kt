@@ -30,6 +30,9 @@ fun LibraryContent(
     categories: List<Category>,
     // KMK -->
     activeCategoryIndex: Int,
+    getSubcategoriesForCategory: (Category) -> List<Category>,
+    activeSubCategoryId: Long?,
+    onSelectSubcategory: (Long?) -> Unit,
     // KMK <--
     searchQuery: String?,
     selection: Set<Long>,
@@ -86,6 +89,22 @@ fun LibraryContent(
                 },
             )
         }
+
+        // KMK --> Keep the parent tab stable and make the selected child a
+        // local filter. This avoids turning every subcategory into a top
+        // level pager page and lets direct-parent manga remain visible via All.
+        val currentCategory = categories.getOrNull(pagerState.currentPage.coerceAtMost(categories.lastIndex))
+        val subcategories = remember(currentCategory, getSubcategoriesForCategory) {
+            currentCategory?.let(getSubcategoriesForCategory).orEmpty()
+        }
+        if (showPageTabs && subcategories.isNotEmpty()) {
+            LibrarySubcategoryTabs(
+                subcategories = subcategories,
+                selectedSubcategoryId = activeSubCategoryId,
+                onSelectSubcategory = onSelectSubcategory,
+            )
+        }
+        // KMK <--
 
         PullRefresh(
             refreshing = isRefreshing,

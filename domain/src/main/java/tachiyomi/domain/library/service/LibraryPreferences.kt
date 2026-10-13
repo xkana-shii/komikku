@@ -8,6 +8,7 @@ import tachiyomi.domain.library.model.GroupLibraryMode
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibrarySort
+import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.manga.model.Manga
 
 class LibraryPreferences(
@@ -197,6 +198,13 @@ class LibraryPreferences(
 
     // KMK -->
     fun showHiddenCategories() = preferenceStore.getBoolean("hide_hidden_categories", false)
+
+    // KMK -->
+    fun subcategoryUpdateScope() = preferenceStore.getEnum(
+        "pref_library_update_subcategory_scope",
+        SubcategoryUpdateScope.WHOLE_CATEGORY,
+    )
+    // KMK <--
     // KMK <--
 
     fun updateCategories() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_PREF_KEY, emptySet())

@@ -306,6 +306,9 @@ data object LibraryTab : Tab {
                         categories = state.displayedCategories,
                         // KMK -->
                         activeCategoryIndex = state.coercedActiveCategoryIndex,
+                        getSubcategoriesForCategory = viewModel::getSubcategoriesForCategory,
+                        activeSubCategoryId = state.activeSubCategoryId,
+                        onSelectSubcategory = viewModel::selectSubcategory,
                         // KMK <--
                         searchQuery = state.searchQuery,
                         selection = state.selection,
@@ -333,7 +336,9 @@ data object LibraryTab : Tab {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.toggleRangeSelection(category, manga)
                         },
-                        onRefresh = { onClickRefresh(state.activeCategory) },
+                        // KMK -->
+                        onRefresh = { onClickRefresh(viewModel.getRefreshCategory(state.activeCategory)) },
+                        // KMK <--
                         onGlobalSearchClicked = {
                             navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
                         },
@@ -434,12 +439,15 @@ data object LibraryTab : Tab {
         )
         // SY <--
 
-        BackHandler(enabled = state.selectionMode || state.searchQuery != null) {
+        // KMK --> Back leaves a selected subcategory before navigating away.
+        BackHandler(enabled = state.selectionMode || state.searchQuery != null || state.activeSubCategoryId != null) {
             when {
                 state.selectionMode -> viewModel.clearSelection()
                 state.searchQuery != null -> viewModel.search(null)
+                state.activeSubCategoryId != null -> viewModel.selectSubcategory(null)
             }
         }
+        // KMK <--
 
         LaunchedEffect(state.selectionMode, state.dialog) {
             HomeScreen.showBottomNav(!state.selectionMode)

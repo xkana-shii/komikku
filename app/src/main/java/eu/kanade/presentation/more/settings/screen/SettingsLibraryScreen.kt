@@ -30,6 +30,7 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.ResetCategoryFlags
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.GroupLibraryMode
+import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_CHARGING
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_NETWORK_NOT_METERED
@@ -238,6 +239,18 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_library_update_refresh_metadata),
                     subtitle = stringResource(MR.strings.pref_library_update_refresh_metadata_summary),
                 ),
+                // KMK -->
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.subcategoryUpdateScope(),
+                    entries = persistentMapOf(
+                        SubcategoryUpdateScope.WHOLE_CATEGORY to
+                            stringResource(KMR.strings.pref_subcategory_update_scope_whole_category),
+                        SubcategoryUpdateScope.SUBCATEGORY_ONLY to
+                            stringResource(KMR.strings.pref_subcategory_update_scope_subcategory_only),
+                    ),
+                    title = stringResource(KMR.strings.pref_subcategory_update_scope),
+                ),
+                // KMK <--
                 Preference.PreferenceItem.MultiSelectListPreference(
                     preference = libraryPreferences.autoUpdateMangaRestrictions(),
                     entries = persistentMapOf(

@@ -111,6 +111,7 @@ import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.library.model.LibrarySearchParser
 import tachiyomi.domain.library.model.LibrarySearchToken
 import tachiyomi.domain.library.model.LibrarySort
+import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetIdsOfFavoriteMangaWithMetadata
@@ -183,6 +184,9 @@ class LibraryViewModel(
     private val activeCategory = MutableStateFlow(
         ActiveCategory(index = libraryPreferences.lastUsedCategory().get()),
     )
+    // KMK -->
+    private val activeSubCategoryId = MutableStateFlow<Long?>(null)
+    // KMK <--
 
     private val displayPreferences = combine(
         libraryPreferences.categoryTabs().changes(),
@@ -327,7 +331,27 @@ class LibraryViewModel(
         libraryData,
         groupingPreferences,
         groupingState,
-    ) { data, preferences, state ->
+        activeCategory,
+        activeSubCategoryId,
+    ) { data, preferences, state, activeCategory, activeSubCategoryId ->
+        // KMK -->
+        val subcategoryMangaMap = if (state.groupType == LibraryGroup.BY_DEFAULT) {
+            val subcategoryIds = data.categories
+                .filter { it.parentId != UNCATEGORIZED_ID }
+                .mapTo(HashSet()) { it.id }
+            buildMap {
+                data.favorites.forEach { item ->
+                    item.libraryManga.categories.forEach { categoryId ->
+                        if (categoryId in subcategoryIds) {
+                            getOrPut(categoryId) { mutableListOf() }.add(item.id)
+                        }
+                    }
+                }
+            }
+        } else {
+            emptyMap()
+        }
+        // KMK <--
         val groupedFavorites = data.favorites
             .applyGrouping(
                 data.categories,
@@ -338,6 +362,10 @@ class LibraryViewModel(
                     state.groupType
                 },
                 preferences.showHiddenCategories,
+                // KMK -->
+                activeCategoryId = activeCategory.id,
+                activeSubCategoryId = activeSubCategoryId,
+                // KMK <--
                 // KMK <--
             )
             .applySort(
@@ -352,7 +380,10 @@ class LibraryViewModel(
             .filter {
                 preferences.showEmptyCategoriesSearch ||
                     (state.searchQuery.isNullOrBlank() && !state.hasActiveFilters) ||
-                    it.value.isNotEmpty()
+                    it.value.isNotEmpty() ||
+                    // KMK --> Keep an empty selected subcategory visible.
+                    (it.key.id == activeCategory.id && activeSubCategoryId != null)
+                // KMK <--
             }
             .let {
                 it.ifEmpty {
@@ -369,7 +400,13 @@ class LibraryViewModel(
             }
         // KMK <--
 
-        Library(data = data, groupedFavorites = groupedFavorites)
+        Library(
+            data = data,
+            groupedFavorites = groupedFavorites,
+            // KMK -->
+            subcategoryMangaMap = subcategoryMangaMap,
+            // KMK <--
+        )
     }
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
@@ -377,10 +414,20 @@ class LibraryViewModel(
     val state: StateFlow<State> = combine(
         library,
         combine(searchQuery, selection, dialog, ::Triple),
-        combine(activeCategory, displayPreferences, hasActiveFilters, ::Triple),
+        // KMK -->
+        combine(
+            combine(activeCategory, activeSubCategoryId, ::Pair),
+            displayPreferences,
+            hasActiveFilters,
+            ::Triple,
+        ),
+        // KMK <--
         combine(showSyncExh, groupType, isSyncEnabled, ::Triple),
         categoryFilters,
-    ) { library, (searchQuery, selection, dialog), (activeCategory, display, hasActiveFilters), (showSyncExh, groupType, isSyncEnabled), categoryFilters ->
+    ) { library, (searchQuery, selection, dialog), (activeSelection, display, hasActiveFilters), (showSyncExh, groupType, isSyncEnabled), categoryFilters ->
+        // KMK -->
+        val (activeCategory, activeSubCategoryId) = activeSelection
+        // KMK <--
         State(
             isInitialized = library?.data?.isInitialized ?: false,
             isLoading = library == null,
@@ -395,8 +442,12 @@ class LibraryViewModel(
             activeCategoryIndex = activeCategory.index,
             // KMK -->
             activeCategoryId = activeCategory.id,
+            activeSubCategoryId = activeSubCategoryId,
             // KMK <--
             groupedFavorites = library?.groupedFavorites.orEmpty(),
+            // KMK -->
+            subcategoryMangaMap = library?.subcategoryMangaMap.orEmpty(),
+            // KMK <--
             // SY -->
             showSyncExh = showSyncExh,
             isSyncEnabled = isSyncEnabled,
@@ -454,6 +505,9 @@ class LibraryViewModel(
     private data class Library(
         val data: LibraryData,
         val groupedFavorites: Map<Category, List</* LibraryItem */ Long>>,
+        // KMK -->
+        val subcategoryMangaMap: Map<Long, List<Long>>,
+        // KMK <--
     )
 
     // SY -->
@@ -597,6 +651,8 @@ class LibraryViewModel(
         // KMK -->
         groupType: Int,
         showHiddenCategories: Boolean,
+        activeCategoryId: Long?,
+        activeSubCategoryId: Long?,
         // KMK <--
     ): Map<Category, List</* LibraryItem */ Long>> {
         // KMK -->
@@ -604,7 +660,23 @@ class LibraryViewModel(
             LibraryGroup.BY_DEFAULT -> {
                 // KMK <--
                 var showSystemCategory = false
-                val groupCache = mutableMapOf</* Category.id */ Long, MutableList</* LibraryItem */ Long>>()
+                // KMK --> Keep membership at its assigned node while also grouping each
+                // descendant below its root category tab. This preserves direct-parent
+                // manga in the combined view and allows the selected subcategory chip to
+                // filter by the exact stored category id.
+                val categoriesById = categories.associateBy { it.id }
+                val directCache = mutableMapOf<Long, MutableList<Long>>()
+                val treeCache = mutableMapOf<Long, MutableList<Long>>()
+                fun rootCategoryId(categoryId: Long): Long {
+                    var currentId = categoryId
+                    val visited = HashSet<Long>()
+                    while (visited.add(currentId)) {
+                        val current = categoriesById[currentId] ?: break
+                        if (current.parentId == UNCATEGORIZED_ID) break
+                        currentId = current.parentId
+                    }
+                    return currentId
+                }
                 forEach { item ->
                     item.libraryManga.categories.forEach { categoryId ->
                         // KMK -->
@@ -612,17 +684,23 @@ class LibraryViewModel(
                             showSystemCategory = true
                         }
                         // KMK <--
-                        groupCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
+                        directCache.getOrPut(categoryId) { mutableListOf() }.add(item.id)
+                        treeCache.getOrPut(rootCategoryId(categoryId)) { mutableListOf() }.add(item.id)
                     }
                 }
                 return categories.fastFilter {
                     (showSystemCategory || !it.isSystemCategory) &&
                         // KMK -->
-                        (showHiddenCategories || !it.hidden)
+                        (showHiddenCategories || !it.hidden) &&
+                        it.parentId == UNCATEGORIZED_ID
                     // KMK <--
                 }
-                    .associateWith {
-                        groupCache[it.id]?.toList().orEmpty()
+                    .associateWith { category ->
+                        if (category.id == activeCategoryId && activeSubCategoryId != null) {
+                            directCache[activeSubCategoryId].orEmpty()
+                        } else {
+                            treeCache[category.id].orEmpty()
+                        }
                             // KMK -->
                             .distinct()
                         // KMK <--
@@ -1465,11 +1543,37 @@ class LibraryViewModel(
     }
     fun updateActiveCategoryIndex(index: Int) {
         val categoryId = state.value.displayedCategories.getOrNull(index)?.id
+        // KMK --> Preserve a selected subcategory across recomposition on the
+        // same parent tab, but leave it when the user navigates to another tab.
+        if (categoryId != activeCategory.value.id) {
+            activeSubCategoryId.value = null
+        }
         activeCategory.update { ActiveCategory(index = index, id = categoryId) }
 
         val lastIndex = state.value.displayedCategories.lastIndex.coerceAtLeast(0)
         libraryPreferences.lastUsedCategory().set(index.coerceIn(0, lastIndex))
     }
+
+    // KMK -->
+    fun getSubcategoriesForCategory(category: Category): List<Category> {
+        return state.value.libraryData.categories
+            .filter { it.parentId == category.id && !it.hidden && it.name.isNotBlank() }
+            .sortedBy { it.order }
+    }
+
+    fun selectSubcategory(subcategoryId: Long?) {
+        activeSubCategoryId.value = subcategoryId
+    }
+
+    fun getRefreshCategory(category: Category?): Category? {
+        if (category == null || libraryPreferences.subcategoryUpdateScope().get() != SubcategoryUpdateScope.SUBCATEGORY_ONLY) {
+            return category
+        }
+        return activeSubCategoryId.value
+            ?.let { selectedId -> state.value.libraryData.categories.firstOrNull { it.id == selectedId } }
+            ?: category
+    }
+    // KMK <--
     fun openChangeCategoryDialog() {
         viewModelScope.launchIO {
             // Create a copy of selected manga
@@ -1741,8 +1845,12 @@ class LibraryViewModel(
         private val activeCategoryIndex: Int = 0,
         // KMK -->
         private val activeCategoryId: Long? = null,
+        val activeSubCategoryId: Long? = null,
         // KMK <--
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
+        // KMK -->
+        val subcategoryMangaMap: Map<Long, List<Long>> = emptyMap(),
+        // KMK <--
         // SY -->
         val showSyncExh: Boolean = false,
         val isSyncEnabled: Boolean = false,
@@ -1808,11 +1916,29 @@ class LibraryViewModel(
         }
 
         fun getItemsForCategory(category: Category): List<LibraryItem> {
-            return groupedFavorites[category].orEmpty().fastMapNotNull { libraryData.favoritesById[it] }
+            // KMK --> Filter immediately when a chip is selected. The grouping
+            // flow subsequently stores the same result for the active parent.
+            val selectedIds = activeSubCategoryId
+                ?.takeIf { category.id == activeCategoryId && groupType == LibraryGroup.BY_DEFAULT }
+                ?.let { subcategoryMangaMap[it].orEmpty().toHashSet() }
+            return groupedFavorites[category].orEmpty().fastMapNotNull { id ->
+                libraryData.favoritesById[id]?.takeIf { selectedIds == null || id in selectedIds }
+            }
+            // KMK <--
         }
 
         fun getItemCountForCategory(category: Category): Int? {
-            return if (showMangaCount || !searchQuery.isNullOrEmpty()) groupedFavorites[category]?.size else null
+            if (!(showMangaCount || !searchQuery.isNullOrEmpty())) return null
+            // KMK --> Match the selected subcategory view while its grouping is refreshed.
+            val selectedIds = activeSubCategoryId
+                ?.takeIf { category.id == activeCategoryId && groupType == LibraryGroup.BY_DEFAULT }
+                ?.let { subcategoryMangaMap[it].orEmpty().toHashSet() }
+            return if (selectedIds == null) {
+                groupedFavorites[category]?.size
+            } else {
+                groupedFavorites[category]?.count { it in selectedIds }
+            }
+            // KMK <--
         }
 
         fun getToolbarTitle(

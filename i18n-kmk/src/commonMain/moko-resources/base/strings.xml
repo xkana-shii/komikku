@@ -416,6 +416,9 @@
     <string name="category_create_subcategory">Create subcategory</string>
     <string name="category_move">Move category</string>
     <string name="category_root">Top level</string>
+    <string name="pref_subcategory_update_scope">Subcategory refresh scope</string>
+    <string name="pref_subcategory_update_scope_whole_category">Entire category (default)</string>
+    <string name="pref_subcategory_update_scope_subcategory_only">Selected subcategory only</string>
     <!-- KMK <-->
     <!-- KMK <-->
 </resources>
