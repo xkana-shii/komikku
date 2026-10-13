@@ -40,6 +40,9 @@ internal fun LibraryList(
 
         items(
             items = items,
+            // KMK -->
+            key = { it.id },
+            // KMK <--
             contentType = { "library_list_item" },
         ) { libraryItem ->
             val manga = libraryItem.libraryManga.manga

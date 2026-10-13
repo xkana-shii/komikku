@@ -1,9 +1,12 @@
 package eu.kanade.presentation.library.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -15,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.dp
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import kotlinx.coroutines.delay
@@ -30,7 +34,7 @@ fun LibraryContent(
     categories: List<Category>,
     // KMK -->
     activeCategoryIndex: Int,
-    getSubcategoriesForCategory: (Category) -> List<Category>,
+    subcategoriesByParent: Map<Long, List<Category>>,
     activeSubCategoryId: Long?,
     onSelectSubcategory: (Long?) -> Unit,
     // KMK <--
@@ -94,15 +98,24 @@ fun LibraryContent(
         // local filter. This avoids turning every subcategory into a top
         // level pager page and lets direct-parent manga remain visible via All.
         val currentCategory = categories.getOrNull(pagerState.currentPage.coerceAtMost(categories.lastIndex))
-        val subcategories = remember(currentCategory, getSubcategoriesForCategory) {
-            currentCategory?.let(getSubcategoriesForCategory).orEmpty()
-        }
-        if (showPageTabs && subcategories.isNotEmpty()) {
-            LibrarySubcategoryTabs(
-                subcategories = subcategories,
-                selectedSubcategoryId = activeSubCategoryId,
-                onSelectSubcategory = onSelectSubcategory,
-            )
+        val subcategories = currentCategory?.let { subcategoriesByParent[it.id] }.orEmpty()
+        if (showPageTabs && subcategoriesByParent.isNotEmpty()) {
+            // Keep the pager's vertical bounds stable while swiping between a parent that has
+            // subcategories and one that does not. A changing pager height forces every visible
+            // grid item to be measured again in the middle of the animation.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp),
+            ) {
+                if (subcategories.isNotEmpty()) {
+                    LibrarySubcategoryTabs(
+                        subcategories = subcategories,
+                        selectedSubcategoryId = activeSubCategoryId,
+                        onSelectSubcategory = onSelectSubcategory,
+                    )
+                }
+            }
         }
         // KMK <--
 
