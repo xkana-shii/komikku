@@ -42,6 +42,47 @@ class ChapterBlacklistTest {
         isChapterBlacklisted(chapter, keys) shouldBe true
     }
 
+    @Test
+    fun `hybrid key hides only the selected duplicate`() {
+        val selected = chapter(url = "/chapter,100%|one", number = 12.0, scanlator = "Team|A")
+        val duplicate = chapter(url = "/chapter/two", number = 12.0, scanlator = "Team|A").copy(id = 2)
+        val otherScanlator = chapter(url = "/chapter/three", number = 12.0, scanlator = "Team B").copy(id = 3)
+        val key = hybridChapterBlacklistKey(selected)
+
+        filterBlacklistedChapters(listOf(selected, duplicate, otherScanlator), listOf(key))
+            .map { it.url } shouldBe listOf(duplicate.url, otherScanlator.url)
+    }
+
+    @Test
+    fun `hybrid key falls back to a unique metadata match after URL change`() {
+        val original = chapter(url = "/old", number = 8.0, scanlator = "Team")
+        val refreshed = chapter(url = "/new", number = 8.0, scanlator = " team ")
+        val key = hybridChapterBlacklistKey(original)
+
+        filterBlacklistedChapters(listOf(refreshed), listOf(key)) shouldBe emptyList()
+    }
+
+    @Test
+    fun `hybrid key leaves ambiguous URL replacements visible`() {
+        val original = chapter(url = "/old", number = 8.0, scanlator = "Team")
+        val replacementOne = chapter(url = "/new-1", number = 8.0, scanlator = "Team").copy(id = 2)
+        val replacementTwo = chapter(url = "/new-2", number = 8.0, scanlator = "Team").copy(id = 3)
+
+        filterBlacklistedChapters(
+            listOf(replacementOne, replacementTwo),
+            listOf(hybridChapterBlacklistKey(original)),
+        ).size shouldBe 2
+    }
+
+    @Test
+    fun `hybrid key uses URL for special chapter numbers`() {
+        val selected = chapter(url = "/special", number = 0.0, scanlator = "Team")
+        val duplicate = chapter(url = "/other-special", number = 0.0, scanlator = "Team").copy(id = 2)
+
+        filterBlacklistedChapters(listOf(selected, duplicate), listOf(hybridChapterBlacklistKey(selected)))
+            .map { it.url } shouldBe listOf(duplicate.url)
+    }
+
     private fun chapter(
         url: String = "/chapter",
         number: Double = 1.0,

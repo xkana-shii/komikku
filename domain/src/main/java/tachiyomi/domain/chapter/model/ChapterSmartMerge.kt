@@ -1,6 +1,6 @@
 package tachiyomi.domain.chapter.model
 
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.manga.model.Manga
 
 // KMK -->
@@ -37,7 +37,7 @@ fun List<Chapter>.applySmartScanlatorMerge(
     blacklistedChapters: Collection<String>,
     rangeRules: List<String>,
 ): List<Chapter> {
-    val visible = filterNot { isChapterBlacklisted(it, blacklistedChapters) }
+    val visible = filterBlacklistedChapters(this, blacklistedChapters)
     val parsedRules = rangeRules.mapNotNull(::parseScanlatorRangeRule)
     val selectedIds = visible.asSequence()
         .filter { it.chapterNumber.isFinite() && it.chapterNumber > 0.0 }
@@ -75,7 +75,7 @@ fun List<Chapter>.filterChapterVisibility(
             rangeRules = manga.scanlatorRangeRules,
         )
     } else {
-        filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+        filterBlacklistedChapters(this, manga.blacklistedChapters)
     }
 }
 

@@ -21,7 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
+import tachiyomi.domain.chapter.service.chapterBlacklistKeyMetadata
+import tachiyomi.domain.chapter.service.resolveChapterBlacklistMatches
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -43,10 +44,9 @@ fun resolveChapterBlacklistEntries(
     chapters: List<Chapter>,
 ): List<ChapterBlacklistEntry> {
     return keys.map { key ->
-        val matches = chapters.filter { isChapterBlacklisted(it, listOf(key)) }
+        val matches = resolveChapterBlacklistMatches(key, chapters)
         val chapter = matches.firstOrNull()
-        val keyNumber = key.substringBefore('@').toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }
-        val keyScanlator = key.substringAfter('@', "").trim().takeIf(String::isNotEmpty)
+        val (keyNumber, keyScanlator) = chapterBlacklistKeyMetadata(key)
         ChapterBlacklistEntry(
             key = key,
             chapter = chapter,

@@ -134,8 +134,9 @@ import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.model.filterChapterVisibility
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
+import tachiyomi.domain.chapter.service.hybridChapterBlacklistKey
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
 import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
@@ -1310,8 +1311,12 @@ class MangaViewModel(
     fun getNextUnreadChapter(): Chapter? {
         val successState = successState ?: return null
         // KMK -->
+        val visibleIds = filterBlacklistedChapters(
+            successState.chapters.map { it.chapter },
+            successState.manga.blacklistedChapters,
+        ).mapTo(HashSet(), Chapter::id)
         return successState.chapters
-            .filterNot { isChapterBlacklisted(it.chapter, successState.manga.blacklistedChapters) }
+            .filter { it.chapter.id in visibleIds }
             .getNextUnread(successState.manga)
         // KMK <--
     }
@@ -1323,7 +1328,7 @@ class MangaViewModel(
             .filter { (chapter, dlStatus) -> !chapter.read && dlStatus == Download.State.NOT_DOWNLOADED }
             .map { it.chapter }
             // KMK -->
-            .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+            .let { filterBlacklistedChapters(it, manga.blacklistedChapters) }
         // KMK <--
     }
 
@@ -1345,7 +1350,7 @@ class MangaViewModel(
             .filter { (chapter, dlStatus) -> chapter.bookmark && dlStatus == Download.State.NOT_DOWNLOADED }
             .map { it.chapter }
             // KMK -->
-            .filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+            .let { filterBlacklistedChapters(it, manga.blacklistedChapters) }
         // KMK <--
     }
 
@@ -1543,7 +1548,7 @@ class MangaViewModel(
         // A blacklist made from a direct chapter selection must identify that exact source
         // chapter. Number-and-scanlator keys remain supported for existing entries, but using
         // one for new selections hid every duplicate release sharing that metadata (#39).
-        val keys = chapters.map { chapter -> chapterUrlBlacklistKey(chapter.url) }
+        val keys = chapters.map(::hybridChapterBlacklistKey)
         // KMK <--
         if (keys.isEmpty()) return
         viewModelScope.launchIO {
@@ -2154,8 +2159,7 @@ class MangaViewModel(
             // KMK <--
 
             val processedChapters by lazy {
-                chapters.filterNot { isChapterBlacklisted(it.chapter, manga.blacklistedChapters) }
-                    .applyFilters(manga).toList()
+                chapters.applyFilters(manga).toList()
                     // KMK -->
                     // safe-guard some edge-cases where chapters are duplicated some how on a merged entry
                     .distinctBy { it.id }
@@ -2212,8 +2216,12 @@ class MangaViewModel(
                 val unreadFilter = manga.unreadFilter
                 val downloadedFilter = manga.downloadedFilter
                 val bookmarkedFilter = manga.bookmarkedFilter
+                val visibleIds = filterBlacklistedChapters(
+                    map { it.chapter },
+                    manga.blacklistedChapters,
+                ).mapTo(HashSet(), Chapter::id)
                 return asSequence()
-                    .filterNot { (chapter) -> isChapterBlacklisted(chapter, manga.blacklistedChapters) }
+                    .filter { (chapter) -> chapter.id in visibleIds }
                     // KMK -->
                     .filter { (chapter) ->
                         bookmarkedFilter != TriState.ENABLED_IS ||

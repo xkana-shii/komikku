@@ -5,8 +5,8 @@ import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.source.local.isLocal
@@ -30,7 +30,7 @@ fun List<Chapter>.applyFilters(
     val downloadedFilter = manga.downloadedFilter
     val bookmarkedFilter = manga.bookmarkedFilter
 
-    return filterNot { isChapterBlacklisted(it, manga.blacklistedChapters) }
+    return filterBlacklistedChapters(this, manga.blacklistedChapters)
         // KMK --> An uncoloured bookmark is a real selectable color, never an unbookmarked chapter.
         .filter { chapter ->
             bookmarkColorFilter.isEmpty() || (chapter.bookmark && chapter.bookmarkColor in bookmarkColorFilter)
@@ -73,8 +73,10 @@ fun List<ChapterList.Item>.applyFilters(
     val unreadFilter = manga.unreadFilter
     val downloadedFilter = manga.downloadedFilter
     val bookmarkedFilter = manga.bookmarkedFilter
+    val visibleUrls = filterBlacklistedChapters(map { it.chapter }, manga.blacklistedChapters)
+        .mapTo(HashSet(), Chapter::url)
     return asSequence()
-        .filterNot { (chapter) -> isChapterBlacklisted(chapter, manga.blacklistedChapters) }
+        .filter { (chapter) -> chapter.url in visibleUrls }
         // KMK -->
         .filter { (chapter) ->
             bookmarkColorFilter.isEmpty() || (chapter.bookmark && chapter.bookmarkColor in bookmarkColorFilter)
