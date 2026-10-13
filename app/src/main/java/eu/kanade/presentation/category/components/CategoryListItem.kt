@@ -5,9 +5,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragHandle
+import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ElevatedCard
@@ -34,6 +38,10 @@ fun ReorderableCollectionItemScope.CategoryListItem(
     onDelete: () -> Unit,
     // KMK -->
     onHide: () -> Unit,
+    onTrackStatus: () -> Unit,
+    onUpdateInterval: () -> Unit,
+    onCreateSubcategory: () -> Unit,
+    onMove: () -> Unit,
     // KMK <--
     modifier: Modifier = Modifier,
 ) {
@@ -84,6 +92,35 @@ fun ReorderableCollectionItemScope.CategoryListItem(
                     )
                 },
             )
+            // KMK <--
+            // KMK -->
+            IconButton(onClick = onTrackStatus) {
+                Icon(
+                    imageVector = Icons.Outlined.Flag,
+                    contentDescription = stringResource(KMR.strings.category_track_status),
+                    tint = LocalContentColor.current.let {
+                        if (category.trackStatus == null) it.copy(alpha = 0.6f) else it
+                    },
+                )
+            }
+            IconButton(onClick = onUpdateInterval) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = stringResource(KMR.strings.category_update_interval),
+                )
+            }
+            IconButton(onClick = onCreateSubcategory) {
+                Icon(
+                    imageVector = Icons.Outlined.CreateNewFolder,
+                    contentDescription = stringResource(KMR.strings.category_create_subcategory),
+                )
+            }
+            IconButton(onClick = onMove) {
+                Icon(
+                    imageVector = Icons.Outlined.DriveFileMove,
+                    contentDescription = stringResource(KMR.strings.category_move),
+                )
+            }
             // KMK <--
             IconButton(onClick = onDelete) {
                 Icon(

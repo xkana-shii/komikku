@@ -29,6 +29,9 @@ class RefreshTracks(
     private val insertTrack: InsertTrack,
     private val syncChapterProgressWithTrack: SyncChapterProgressWithTrack,
     private val preferences: TrackPreferences = Injekt.get(),
+    // KMK -->
+    private val syncCategoryTrackStatus: SyncCategoryTrackStatus? = null,
+    // KMK <--
 ) {
 
     /**
@@ -92,6 +95,9 @@ class RefreshTracks(
                     errors += service to e
                 }
             }
+            // KMK --> The category sync reads the refreshed local records and therefore never
+            // duplicates remote calls made above.
+            syncCategoryTrackStatus?.await(mangaId)
             errors
         }
     }

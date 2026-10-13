@@ -9,6 +9,9 @@ data class Category(
     val flags: Long,
     // KMK -->
     val hidden: Boolean,
+    val parentId: Long = UNCATEGORIZED_ID,
+    val trackStatus: Int? = null,
+    val updateInterval: Int? = null,
     // KMK <--
 ) : Serializable {
 

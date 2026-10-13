@@ -1,0 +1,5 @@
+-- KMK -->
+-- Hierarchical categories. Existing categories remain roots so installed libraries retain
+-- their current layout until a user explicitly creates or moves a subcategory.
+ALTER TABLE category ADD COLUMN parent_id INTEGER NOT NULL DEFAULT 0;
+-- KMK <--

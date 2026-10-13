@@ -39,6 +39,10 @@ fun CategoryScreen(
     onChangeOrder: (Category, Int) -> Unit,
     // KMK -->
     onClickHide: (Category) -> Unit,
+    onClickTrackStatus: (Category) -> Unit,
+    onClickUpdateInterval: (Category) -> Unit,
+    onClickCreateSubcategory: (Category) -> Unit,
+    onClickMove: (Category) -> Unit,
     // KMK <--
     navigateUp: () -> Unit,
 ) {
@@ -75,6 +79,10 @@ fun CategoryScreen(
             onChangeOrder = onChangeOrder,
             // KMK -->
             onClickHide = onClickHide,
+            onClickTrackStatus = onClickTrackStatus,
+            onClickUpdateInterval = onClickUpdateInterval,
+            onClickCreateSubcategory = onClickCreateSubcategory,
+            onClickMove = onClickMove,
             // KMK <--
         )
     }
@@ -90,6 +98,10 @@ private fun CategoryContent(
     onChangeOrder: (Category, Int) -> Unit,
     // KMK -->
     onClickHide: (Category) -> Unit,
+    onClickTrackStatus: (Category) -> Unit,
+    onClickUpdateInterval: (Category) -> Unit,
+    onClickCreateSubcategory: (Category) -> Unit,
+    onClickMove: (Category) -> Unit,
     // KMK <--
 ) {
     val categoriesState = remember { categories.toMutableStateList() }
@@ -126,6 +138,10 @@ private fun CategoryContent(
                     onDelete = { onClickDelete(category) },
                     // KMK -->
                     onHide = { onClickHide(category) },
+                    onTrackStatus = { onClickTrackStatus(category) },
+                    onUpdateInterval = { onClickUpdateInterval(category) },
+                    onCreateSubcategory = { onClickCreateSubcategory(category) },
+                    onMove = { onClickMove(category) },
                     // KMK <--
                 )
             }

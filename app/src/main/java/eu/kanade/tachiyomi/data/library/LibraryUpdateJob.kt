@@ -61,6 +61,8 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.interactor.GetCategoryUpdateInterval
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.NoChaptersException
@@ -112,6 +114,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private val libraryPreferences: LibraryPreferences = Injekt.get()
     private val downloadManager: DownloadManager = Injekt.get()
     private val getLibraryManga: GetLibraryManga = Injekt.get()
+    private val getCategories: GetCategories = Injekt.get()
     private val getManga: GetManga = Injekt.get()
     private val fetchInterval: FetchInterval = Injekt.get()
     private val filterChaptersForDownload: FilterChaptersForDownload = Injekt.get()
@@ -307,6 +310,13 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         // KMK <--
         val skippedUpdates = mutableListOf<Pair<Manga, String?>>()
         val (_, fetchWindowUpperBound) = fetchInterval.getWindow(ZonedDateTime.now())
+        // KMK --> Resolve inherited category intervals once per worker run. A direct category
+        // membership may inherit from a parent; when an entry has several memberships the
+        // shortest explicit interval is due first.
+        val categories = getCategories.await()
+        val now = System.currentTimeMillis()
+        val dayMillis = TimeUnit.DAYS.toMillis(1)
+        // KMK <--
 
         mangaToUpdate = listToUpdate
             // SY -->
@@ -323,40 +333,53 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             }
             // KMK <--
             .filter {
-                when {
-                    it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {
-                        skippedUpdates.add(
-                            it.manga to
-                                context.stringResource(MR.strings.skipped_reason_not_always_update),
-                        )
-                        false
-                    }
+                // KMK --> Manual/category-targeted actions always bypass scheduled cadence.
+                // The periodic worker still applies every existing restriction below.
+                val intervalDays = GetCategoryUpdateInterval.intervalDaysFor(categories, it.categories.toSet())
+                if (
+                    tags.contains(WORK_NAME_AUTO) &&
+                    intervalDays != null &&
+                    it.manga.lastUpdate > 0L &&
+                    now - it.manga.lastUpdate < intervalDays * dayMillis
+                ) {
+                    false
+                } else {
+                    when {
+                        it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {
+                            skippedUpdates.add(
+                                it.manga to
+                                    context.stringResource(MR.strings.skipped_reason_not_always_update),
+                            )
+                            false
+                        }
 
-                    MANGA_NON_COMPLETED in restrictions && it.manga.status.toInt() == SManga.COMPLETED -> {
-                        skippedUpdates.add(it.manga to context.stringResource(MR.strings.skipped_reason_completed))
-                        false
-                    }
+                        MANGA_NON_COMPLETED in restrictions && it.manga.status.toInt() == SManga.COMPLETED -> {
+                            skippedUpdates.add(it.manga to context.stringResource(MR.strings.skipped_reason_completed))
+                            false
+                        }
 
-                    MANGA_HAS_UNREAD in restrictions && it.unreadCount != 0L -> {
-                        skippedUpdates.add(it.manga to context.stringResource(MR.strings.skipped_reason_not_caught_up))
-                        false
-                    }
+                        MANGA_HAS_UNREAD in restrictions && it.unreadCount != 0L -> {
+                            skippedUpdates.add(it.manga to context.stringResource(MR.strings.skipped_reason_not_caught_up))
+                            false
+                        }
 
-                    MANGA_NON_READ in restrictions && it.totalChapters > 0L && !it.hasStarted -> {
-                        skippedUpdates.add(it.manga to context.stringResource(MR.strings.skipped_reason_not_started))
-                        false
-                    }
+                        MANGA_NON_READ in restrictions && it.totalChapters > 0L && !it.hasStarted -> {
+                            skippedUpdates.add(it.manga to context.stringResource(MR.strings.skipped_reason_not_started))
+                            false
+                        }
 
-                    MANGA_OUTSIDE_RELEASE_PERIOD in restrictions && it.manga.nextUpdate > fetchWindowUpperBound -> {
-                        skippedUpdates.add(
-                            it.manga to
-                                context.stringResource(MR.strings.skipped_reason_not_in_release_period),
-                        )
-                        false
-                    }
+                        MANGA_OUTSIDE_RELEASE_PERIOD in restrictions && it.manga.nextUpdate > fetchWindowUpperBound -> {
+                            skippedUpdates.add(
+                                it.manga to
+                                    context.stringResource(MR.strings.skipped_reason_not_in_release_period),
+                            )
+                            false
+                        }
 
-                    else -> true
+                        else -> true
+                    }
                 }
+                // KMK <--
             }
             .sortedWith(
                 compareByDescending<LibraryManga> {
@@ -758,7 +781,17 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             prefInterval: Int? = null,
         ) {
             val preferences = Injekt.get<LibraryPreferences>()
-            val interval = prefInterval ?: preferences.autoUpdateInterval().get()
+            val globalInterval = prefInterval ?: preferences.autoUpdateInterval().get()
+            // KMK --> WorkManager owns one worker, never one per category. It wakes at the
+            // shortest enabled cadence, including when global scheduling is disabled; the worker
+            // then checks every manga's own inherited due interval before requesting a source.
+            val categoryInterval = runBlocking {
+                GetCategoryUpdateInterval.shortestConfiguredIntervalDays(
+                    Injekt.get<GetCategories>().await(),
+                )?.let { TimeUnit.DAYS.toHours(it.toLong()).toInt() }
+            }
+            val interval = listOfNotNull(globalInterval.takeIf { it > 0 }, categoryInterval).minOrNull() ?: 0
+            // KMK <--
             if (interval > 0) {
                 val restrictions = preferences.autoUpdateDeviceRestrictions().get()
                 val networkType = if (DEVICE_NETWORK_NOT_METERED in restrictions) {

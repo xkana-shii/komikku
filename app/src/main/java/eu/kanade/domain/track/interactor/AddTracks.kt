@@ -30,6 +30,9 @@ class AddTracks(
     private val syncChapterProgressWithTrack: SyncChapterProgressWithTrack,
     private val getChaptersByMangaId: GetChaptersByMangaId,
     private val trackerManager: TrackerManager,
+    // KMK -->
+    private val syncCategoryTrackStatus: SyncCategoryTrackStatus? = null,
+    // KMK <--
 ) {
 
     // TODO: update all trackers based on common data
@@ -94,6 +97,9 @@ class AddTracks(
                     }
                 }
             // KMK <--
+            // KMK --> Uses the stored result of the existing bind operation only.
+            syncCategoryTrackStatus?.await(mangaId)
+            // KMK <--
         }
     }
 
@@ -121,6 +127,9 @@ class AddTracks(
                                         context.toast(context.stringResource(KMR.strings.sync_progress_from_trackers_up_to_chapter, it))
                                     }
                                 }
+                            // KMK <--
+                            // KMK -->
+                            syncCategoryTrackStatus?.await(manga.id)
                             // KMK <--
                         }
                     } catch (e: Exception) {

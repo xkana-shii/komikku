@@ -25,6 +25,20 @@ interface CategoryRepository {
     suspend fun updateNameAndOrder(categoryId: Long, name: String, order: Long)
 
     suspend fun updateHidden(categoryId: Long, hidden: Boolean)
+
+    suspend fun getSubcategories(parentId: Long): List<Category>
+
+    fun getSubcategoriesAsFlow(parentId: Long): Flow<List<Category>>
+
+    suspend fun getTopLevelCategories(): List<Category>
+
+    suspend fun updateParent(categoryId: Long, parentId: Long)
+
+    suspend fun reparentChildren(categoryId: Long, parentId: Long)
+
+    suspend fun updateTrackStatus(categoryId: Long, trackStatus: Int?)
+
+    suspend fun updateUpdateInterval(categoryId: Long, updateInterval: Int?)
     // KMK <--
 
     suspend fun updateFlags(categoryId: Long, flags: Long)

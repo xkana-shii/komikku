@@ -10,6 +10,9 @@ object CategoryMapper {
         flags: Long,
         // KMK -->
         hidden: Long,
+        parentId: Long,
+        trackStatus: Long?,
+        updateInterval: Long?,
         // KMK <--
     ): Category {
         return Category(
@@ -19,6 +22,9 @@ object CategoryMapper {
             flags = flags,
             // KMK -->
             hidden = hidden == 1L,
+            parentId = parentId,
+            trackStatus = trackStatus?.toInt(),
+            updateInterval = updateInterval?.toInt(),
             // KMK <--
         )
     }

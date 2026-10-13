@@ -12,11 +12,15 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.category.CategoryScreen
 import eu.kanade.presentation.category.components.CategoryCreateDialog
 import eu.kanade.presentation.category.components.CategoryDeleteDialog
+import eu.kanade.presentation.category.components.CategoryParentPickerDialog
 import eu.kanade.presentation.category.components.CategoryRenameDialog
+import eu.kanade.presentation.category.components.TrackStatusPickerDialog
+import eu.kanade.presentation.category.components.UpdateIntervalPickerDialog
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.collectLatest
+import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
 
 class CategoryScreen : Screen() {
@@ -44,6 +48,10 @@ class CategoryScreen : Screen() {
             onChangeOrder = viewModel::changeOrder,
             // KMK -->
             onClickHide = viewModel::hideCategory,
+            onClickTrackStatus = { viewModel.showDialog(CategoryDialog.TrackStatus(it)) },
+            onClickUpdateInterval = { viewModel.showDialog(CategoryDialog.UpdateInterval(it)) },
+            onClickCreateSubcategory = { viewModel.showDialog(CategoryDialog.CreateSubcategory(it)) },
+            onClickMove = { viewModel.showDialog(CategoryDialog.Move(it)) },
             // KMK <--
             navigateUp = navigator::pop,
         )
@@ -72,6 +80,47 @@ class CategoryScreen : Screen() {
                     category = dialog.category.name,
                 )
             }
+            // KMK -->
+            is CategoryDialog.TrackStatus -> {
+                TrackStatusPickerDialog(
+                    currentStatus = dialog.category.trackStatus,
+                    onSelect = { status ->
+                        viewModel.setTrackStatus(dialog.category.id, status)
+                        viewModel.dismissDialog()
+                    },
+                    onDismiss = viewModel::dismissDialog,
+                )
+            }
+            is CategoryDialog.UpdateInterval -> {
+                UpdateIntervalPickerDialog(
+                    currentIntervalDays = dialog.category.updateInterval,
+                    onSelect = { days ->
+                        viewModel.setUpdateInterval(dialog.category.id, days)
+                        viewModel.dismissDialog()
+                    },
+                    onDismiss = viewModel::dismissDialog,
+                )
+            }
+            is CategoryDialog.CreateSubcategory -> {
+                CategoryCreateDialog(
+                    onDismissRequest = viewModel::dismissDialog,
+                    onCreate = { viewModel.createSubcategory(dialog.parent, it) },
+                    categories = successState.categories.fastMap { it.name }.toImmutableList(),
+                    title = stringResource(tachiyomi.i18n.kmk.KMR.strings.category_create_subcategory),
+                )
+            }
+            is CategoryDialog.Move -> {
+                CategoryParentPickerDialog(
+                    category = dialog.category,
+                    categories = successState.categories,
+                    onSelect = { parentId ->
+                        viewModel.moveCategory(dialog.category.id, parentId)
+                        viewModel.dismissDialog()
+                    },
+                    onDismiss = viewModel::dismissDialog,
+                )
+            }
+            // KMK <--
         }
 
         LaunchedEffect(Unit) {

@@ -23,6 +23,7 @@ import eu.kanade.domain.source.interactor.ToggleSource
 import eu.kanade.domain.source.interactor.ToggleSourcePin
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.domain.track.interactor.RefreshTracks
+import eu.kanade.domain.track.interactor.SyncCategoryTrackStatus
 import eu.kanade.domain.track.interactor.SyncChapterProgressWithTrack
 import eu.kanade.domain.track.interactor.TrackChapter
 import eu.kanade.domain.track.interactor.UpdateTracks
@@ -51,12 +52,16 @@ import tachiyomi.domain.category.interactor.CreateCategoryWithName
 import tachiyomi.domain.category.interactor.DeleteCategory
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.HideCategory
+import tachiyomi.domain.category.interactor.MoveCategory
 import tachiyomi.domain.category.interactor.RenameCategory
 import tachiyomi.domain.category.interactor.ReorderCategory
 import tachiyomi.domain.category.interactor.ResetCategoryFlags
+import tachiyomi.domain.category.interactor.SetCategoryTrackStatus
+import tachiyomi.domain.category.interactor.SetCategoryUpdateInterval
 import tachiyomi.domain.category.interactor.SetDisplayMode
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.interactor.SetSortModeForCategory
+import tachiyomi.domain.category.interactor.SyncCategoriesWithTrackStatus
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChapter
@@ -120,6 +125,10 @@ class DomainModule : InjektModule {
         addFactory { DeleteCategory(get(), get(), get()) }
         // KMK -->
         addFactory { HideCategory(get()) }
+        addFactory { MoveCategory(get()) }
+        addFactory { SetCategoryTrackStatus(get()) }
+        addFactory { SetCategoryUpdateInterval(get()) }
+        addFactory { SyncCategoriesWithTrackStatus(get(), get()) }
         // KMK <--
 
         addSingletonFactory<MangaRepository> { MangaRepositoryImpl(get()) }
@@ -154,10 +163,11 @@ class DomainModule : InjektModule {
         addFactory { GetApplicationRelease(get(), get()) }
 
         addSingletonFactory<TrackRepository> { TrackRepositoryImpl(get()) }
-        addFactory { TrackChapter(get(), get(), get(), get()) }
-        addFactory { AddTracks(get(), get(), get(), get()) }
-        addFactory { RefreshTracks(get(), get(), get(), get()) }
-        addFactory { UpdateTracks(get(), get(), get(), get()) }
+        addFactory { TrackChapter(get(), get(), get(), get(), get()) }
+        addFactory { AddTracks(get(), get(), get(), get(), get()) }
+        addFactory { RefreshTracks(get(), get(), get(), get(), syncCategoryTrackStatus = get()) }
+        addFactory { SyncCategoryTrackStatus(get(), get(), get(), get()) }
+        addFactory { UpdateTracks(get(), get(), get(), get(), get()) }
         addFactory { DeleteTrack(get()) }
         addFactory { GetTracksPerManga(get(), get()) }
         addFactory { GetTracks(get()) }

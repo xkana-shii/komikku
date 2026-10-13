@@ -1,0 +1,6 @@
+-- KMK -->
+-- NULL is significant for both settings: it means an ordinary category which inherits the
+-- global update schedule and is not controlled by tracker status automation.
+ALTER TABLE category ADD COLUMN track_status INTEGER;
+ALTER TABLE category ADD COLUMN update_interval INTEGER;
+-- KMK <--

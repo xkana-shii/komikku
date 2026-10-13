@@ -407,5 +407,15 @@
     <string name="scanlator_merge_effective_disabled">Effective: disabled</string>
     <string name="pref_global_search_source_category">Source category</string>
     <string name="pref_global_search_source_category_all">All categories</string>
+    <!-- KMK -->
+    <string name="category_track_status">Tracker status</string>
+    <string name="category_track_status_inherit">Not linked to a tracker status</string>
+    <string name="category_update_interval">Update interval</string>
+    <string name="category_update_interval_inherit">Inherit from parent or global schedule</string>
+    <string name="category_update_interval_days">Every %d days</string>
+    <string name="category_create_subcategory">Create subcategory</string>
+    <string name="category_move">Move category</string>
+    <string name="category_root">Top level</string>
+    <!-- KMK <-->
     <!-- KMK <-->
 </resources>

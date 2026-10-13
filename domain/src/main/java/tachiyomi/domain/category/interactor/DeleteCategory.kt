@@ -3,6 +3,7 @@ package tachiyomi.domain.category.interactor
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -15,6 +16,12 @@ class DeleteCategory(
 
     suspend fun await(categoryId: Long) = withNonCancellableContext {
         try {
+            // KMK --> Preserve child categories and their manga memberships. The deleted
+            // category's own memberships are removed by the existing foreign key, while direct
+            // children move one level up instead of becoming orphaned.
+            val parentId = categoryRepository.get(categoryId)?.parentId ?: Category.UNCATEGORIZED_ID
+            categoryRepository.reparentChildren(categoryId, parentId)
+            // KMK <--
             categoryRepository.delete(categoryId)
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)

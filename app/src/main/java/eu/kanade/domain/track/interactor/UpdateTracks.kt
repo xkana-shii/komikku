@@ -20,6 +20,9 @@ class UpdateTracks(
     private val manager: TrackerManager,
     private val insert: InsertTrack,
     private val delete: DeleteTrack,
+    // KMK -->
+    private val syncCategoryTrackStatus: SyncCategoryTrackStatus? = null,
+    // KMK <--
 ) {
     class InvalidDate : IllegalArgumentException()
 
@@ -46,7 +49,7 @@ class UpdateTracks(
         val entries = bindings.mapNotNull { binding ->
             manager.get(binding.trackerId)?.takeIf { it.isLoggedIn }?.let { it to binding }
         }
-        return trackerBatch(entries, insert) {
+        val result = trackerBatch(entries, insert) {
             // Check support before networking; unsupported services retain their binding unchanged.
             if (change is Change.Score && service.getScoreList().isEmpty()) {
                 skip()
@@ -107,6 +110,10 @@ class UpdateTracks(
                 failures = results.flatMap { result -> result.failures.map { result.service to it } },
             )
         }
+        // KMK --> Status changes made from the tracker sheet are local writes followed by the
+        // existing batch's remote operation. Re-read the saved binding once it completes.
+        syncCategoryTrackStatus?.await(mangaId)
+        return result
     }
 
     suspend fun remove(mangaId: Long, selected: Set<Long>, remotely: Boolean): List<Pair<Tracker?, Throwable>> {

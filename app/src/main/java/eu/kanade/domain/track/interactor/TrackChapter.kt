@@ -21,6 +21,9 @@ class TrackChapter(
     private val trackerManager: TrackerManager,
     private val insertTrack: InsertTrack,
     private val delayedTrackingStore: DelayedTrackingStore,
+    // KMK -->
+    private val syncCategoryTrackStatus: SyncCategoryTrackStatus? = null,
+    // KMK <--
 ) {
 
     /**
@@ -100,6 +103,9 @@ class TrackChapter(
                         throwable = it,
                     )
                 }
+            // KMK --> Uses the just-persisted local values; it does not make a second tracker request.
+            syncCategoryTrackStatus?.await(mangaId)
+            // KMK <--
         }
     }
 }

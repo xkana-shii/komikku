@@ -8,7 +8,10 @@ CREATE TABLE category(
     flags INTEGER NOT NULL,
     manga_order TEXT AS List<Long> NOT NULL,
     -- KMK -->
-    hidden INTEGER DEFAULT 0 NOT NULL
+    hidden INTEGER DEFAULT 0 NOT NULL,
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    track_status INTEGER,
+    update_interval INTEGER
     -- KMK <--
 );
 
@@ -24,7 +27,7 @@ BEGIN SELECT CASE
 END;
 
 getCategory:
-SELECT id,name,`order`,flags,hidden
+SELECT id,name,`order`,flags,hidden,parent_id,track_status,update_interval
 FROM category
 WHERE id = :id;
 
@@ -35,7 +38,10 @@ name,
 `order`,
 flags,
 -- KMK -->
-hidden
+hidden,
+parent_id,
+track_status,
+update_interval
 -- KMK <--
 FROM category
 ORDER BY `order`;
@@ -47,7 +53,10 @@ C.name,
 C.`order`,
 C.flags,
 -- KMK -->
-C.hidden
+C.hidden,
+C.parent_id,
+C.track_status,
+C.update_interval
 -- KMK <--
 FROM category C
 JOIN manga_category MC
@@ -56,13 +65,13 @@ WHERE MC.manga_id = :mangaId
 ORDER BY C.`order`;
 
 insert:
-INSERT INTO category(name, `order`, flags, manga_order, hidden)
-VALUES (:name, :order, :flags, "", :hidden);
+INSERT INTO category(name, `order`, flags, manga_order, hidden, parent_id)
+VALUES (:name, :order, :flags, "", :hidden, :parentId);
 
 -- KMK -->
 insertReturningId:
-INSERT INTO category(name, `order`, flags, manga_order, hidden)
-VALUES (:name, :order, :flags, "", :hidden)
+INSERT INTO category(name, `order`, flags, manga_order, hidden, parent_id)
+VALUES (:name, :order, :flags, "", :hidden, :parentId)
 RETURNING id;
 -- KMK <--
 
@@ -101,6 +110,40 @@ updateHidden:
 UPDATE category
 SET hidden = :hidden
 WHERE id = :categoryId;
+
+-- KMK -->
+getSubcategories:
+SELECT id,name,`order`,flags,hidden,parent_id,track_status,update_interval
+FROM category
+WHERE parent_id = :parentId
+ORDER BY `order`;
+
+getTopLevelCategories:
+SELECT id,name,`order`,flags,hidden,parent_id,track_status,update_interval
+FROM category
+WHERE parent_id = 0
+ORDER BY `order`;
+
+updateParent:
+UPDATE category
+SET parent_id = :parentId
+WHERE id = :categoryId;
+
+reparentChildren:
+UPDATE category
+SET parent_id = :parentId
+WHERE parent_id = :categoryId;
+
+updateTrackStatus:
+UPDATE category
+SET track_status = :trackStatus
+WHERE id = :categoryId;
+
+updateUpdateInterval:
+UPDATE category
+SET update_interval = :updateInterval
+WHERE id = :categoryId;
+-- KMK <--
 -- KMK <--
 
 updateAllFlags:

@@ -44,6 +44,7 @@ class CategoryRepositoryImpl(
                 flags = category.flags,
                 // KMK -->
                 hidden = if (category.hidden) 1L else 0L,
+                parentId = category.parentId,
                 // KMK <--
             ).awaitAsOne()
         }
@@ -65,6 +66,34 @@ class CategoryRepositoryImpl(
 
     override suspend fun updateHidden(categoryId: Long, hidden: Boolean) {
         database.categoryQueries.updateHidden(hidden = if (hidden) 1L else 0L, categoryId = categoryId)
+    }
+
+    override suspend fun getSubcategories(parentId: Long): List<Category> {
+        return database.categoryQueries.getSubcategories(parentId, CategoryMapper::mapCategory).awaitAsList()
+    }
+
+    override fun getSubcategoriesAsFlow(parentId: Long): Flow<List<Category>> {
+        return database.categoryQueries.getSubcategories(parentId, CategoryMapper::mapCategory).subscribeToList()
+    }
+
+    override suspend fun getTopLevelCategories(): List<Category> {
+        return database.categoryQueries.getTopLevelCategories(CategoryMapper::mapCategory).awaitAsList()
+    }
+
+    override suspend fun updateParent(categoryId: Long, parentId: Long) {
+        database.categoryQueries.updateParent(parentId = parentId, categoryId = categoryId)
+    }
+
+    override suspend fun reparentChildren(categoryId: Long, parentId: Long) {
+        database.categoryQueries.reparentChildren(parentId = parentId, categoryId = categoryId)
+    }
+
+    override suspend fun updateTrackStatus(categoryId: Long, trackStatus: Int?) {
+        database.categoryQueries.updateTrackStatus(trackStatus = trackStatus?.toLong(), categoryId = categoryId)
+    }
+
+    override suspend fun updateUpdateInterval(categoryId: Long, updateInterval: Int?) {
+        database.categoryQueries.updateUpdateInterval(updateInterval = updateInterval?.toLong(), categoryId = categoryId)
     }
     // KMK <--
 
