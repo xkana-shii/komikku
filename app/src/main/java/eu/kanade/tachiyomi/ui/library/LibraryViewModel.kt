@@ -103,7 +103,6 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.filterChapterVisibility
 import tachiyomi.domain.chapter.model.visibleChapterStats
-import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
@@ -331,9 +330,7 @@ class LibraryViewModel(
         libraryData,
         groupingPreferences,
         groupingState,
-        activeCategory,
-        activeSubCategoryId,
-    ) { data, preferences, state, activeCategory, activeSubCategoryId ->
+    ) { data, preferences, state ->
         // KMK -->
         val subcategoryMangaMap = if (state.groupType == LibraryGroup.BY_DEFAULT) {
             val subcategoryIds = data.categories
@@ -362,10 +359,6 @@ class LibraryViewModel(
                     state.groupType
                 },
                 preferences.showHiddenCategories,
-                // KMK -->
-                activeCategoryId = activeCategory.id,
-                activeSubCategoryId = activeSubCategoryId,
-                // KMK <--
                 // KMK <--
             )
             .applySort(
@@ -380,10 +373,7 @@ class LibraryViewModel(
             .filter {
                 preferences.showEmptyCategoriesSearch ||
                     (state.searchQuery.isNullOrBlank() && !state.hasActiveFilters) ||
-                    it.value.isNotEmpty() ||
-                    // KMK --> Keep an empty selected subcategory visible.
-                    (it.key.id == activeCategory.id && activeSubCategoryId != null)
-                // KMK <--
+                    it.value.isNotEmpty()
             }
             .let {
                 it.ifEmpty {
@@ -651,8 +641,6 @@ class LibraryViewModel(
         // KMK -->
         groupType: Int,
         showHiddenCategories: Boolean,
-        activeCategoryId: Long?,
-        activeSubCategoryId: Long?,
         // KMK <--
     ): Map<Category, List</* LibraryItem */ Long>> {
         // KMK -->
@@ -696,11 +684,7 @@ class LibraryViewModel(
                     // KMK <--
                 }
                     .associateWith { category ->
-                        if (category.id == activeCategoryId && activeSubCategoryId != null) {
-                            directCache[activeSubCategoryId].orEmpty()
-                        } else {
-                            treeCache[category.id].orEmpty()
-                        }
+                        treeCache[category.id].orEmpty()
                             // KMK -->
                             .distinct()
                         // KMK <--
