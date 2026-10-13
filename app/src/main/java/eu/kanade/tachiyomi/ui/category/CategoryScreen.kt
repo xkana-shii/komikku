@@ -52,6 +52,17 @@ class CategoryScreen : Screen() {
             onClickUpdateInterval = { viewModel.showDialog(CategoryDialog.UpdateInterval(it)) },
             onClickCreateSubcategory = { viewModel.showDialog(CategoryDialog.CreateSubcategory(it)) },
             onClickMove = { viewModel.showDialog(CategoryDialog.Move(it)) },
+            // KMK -->
+            onSearchQuery = viewModel::setSearchQuery,
+            onToggleCollapsed = viewModel::toggleCollapsed,
+            onExpandAll = viewModel::expandAll,
+            onCollapseAll = viewModel::collapseAll,
+            onSortMode = viewModel::setSortMode,
+            onToggleSelection = viewModel::toggleSelection,
+            onToggleSelectionMode = viewModel::setSelectionMode,
+            onBulkHide = viewModel::bulkSetHidden,
+            onBulkDelete = viewModel::bulkDelete,
+            // KMK <--
             // KMK <--
             navigateUp = navigator::pop,
         )

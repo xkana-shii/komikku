@@ -1,0 +1,3 @@
+-- KMK -->
+ALTER TABLE category ADD COLUMN date_modified INTEGER NOT NULL DEFAULT 0;
+-- KMK <--

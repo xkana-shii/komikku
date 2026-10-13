@@ -4,12 +4,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckBox
+import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Visibility
@@ -24,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import tachiyomi.domain.category.model.Category
 import tachiyomi.i18n.MR
@@ -44,6 +50,16 @@ fun ReorderableCollectionItemScope.CategoryListItem(
     onMove: () -> Unit,
     // KMK <--
     modifier: Modifier = Modifier,
+    // KMK -->
+    depth: Int = 0,
+    mangaCount: Int = 0,
+    expanded: Boolean = true,
+    selectable: Boolean = false,
+    selected: Boolean = false,
+    hasChildren: Boolean = false,
+    onToggleExpanded: () -> Unit = {},
+    onToggleSelected: () -> Unit = {},
+    // KMK <--
 ) {
     ElevatedCard(modifier = modifier) {
         Row(
@@ -57,6 +73,23 @@ fun ReorderableCollectionItemScope.CategoryListItem(
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // KMK -->
+            Row(modifier = Modifier.padding(start = (depth * 20).dp), verticalAlignment = Alignment.CenterVertically) {
+                if (selectable) {
+                    IconButton(onClick = onToggleSelected) {
+                        Icon(
+                            imageVector = if (selected) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
+                            contentDescription = null,
+                        )
+                    }
+                }
+                if (hasChildren) {
+                    IconButton(onClick = onToggleExpanded, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, contentDescription = null)
+                    }
+                }
+            }
+            // KMK <--
             Icon(
                 imageVector = Icons.Outlined.DragHandle,
                 contentDescription = null,
@@ -72,6 +105,9 @@ fun ReorderableCollectionItemScope.CategoryListItem(
                 // KMK <--
                 modifier = Modifier.weight(1f),
             )
+            // KMK -->
+            if (mangaCount > 0) Text(text = mangaCount.toString(), style = MaterialTheme.typography.labelMedium)
+            // KMK <--
             IconButton(onClick = onRename) {
                 Icon(
                     imageVector = Icons.Outlined.Edit,

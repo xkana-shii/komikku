@@ -194,6 +194,12 @@ class LibraryPreferences(
 
     fun categoryNumberOfItems() = preferenceStore.getBoolean("display_number_of_items", false)
 
+    // KMK --> Category manager presentation is persisted independently of library filtering.
+    fun categoryManagerSortMode() = preferenceStore.getInt("category_manager_sort_mode", 0)
+
+    fun categoryManagerCollapsedIds() = preferenceStore.getStringSet("category_manager_collapsed_ids", emptySet())
+    // KMK <--
+
     fun categorizedDisplaySettings() = preferenceStore.getBoolean("categorized_display", false)
 
     // KMK -->

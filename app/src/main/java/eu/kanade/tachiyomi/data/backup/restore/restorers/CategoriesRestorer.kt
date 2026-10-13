@@ -50,14 +50,16 @@ class CategoriesRestorer(
                             // KMK -->
                             hidden = if (it.hidden) 1L else 0L,
                             parentId = parentId,
+                            dateAdded = System.currentTimeMillis(),
+                            dateModified = System.currentTimeMillis(),
                             // KMK <--
                         ).awaitAsOne()
                             .let { id ->
                                 if (it.id != 0L) restoredIds[it.id] = id
                                 // KMK --> These columns use NULL as a meaningful value, so only
                                 // write a backup's explicit override.
-                                it.trackStatus?.let { status -> database.categoryQueries.updateTrackStatus(status.toLong(), id) }
-                                it.updateInterval?.let { interval -> database.categoryQueries.updateUpdateInterval(interval.toLong(), id) }
+                                it.trackStatus?.let { status -> database.categoryQueries.updateTrackStatus(status.toLong(), id, System.currentTimeMillis()) }
+                                it.updateInterval?.let { interval -> database.categoryQueries.updateUpdateInterval(interval.toLong(), id, System.currentTimeMillis()) }
                                 it.toCategory(id).copy(order = order, parentId = parentId)
                                 // KMK <--
                             }

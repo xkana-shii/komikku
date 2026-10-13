@@ -11,6 +11,8 @@ object CategoryMapper {
         // KMK -->
         hidden: Long,
         parentId: Long,
+        dateAdded: Long,
+        dateModified: Long,
         trackStatus: Long?,
         updateInterval: Long?,
         // KMK <--
@@ -23,6 +25,8 @@ object CategoryMapper {
             // KMK -->
             hidden = hidden == 1L,
             parentId = parentId,
+            dateAdded = dateAdded,
+            dateModified = dateModified,
             trackStatus = trackStatus?.toInt(),
             updateInterval = updateInterval?.toInt(),
             // KMK <--

@@ -415,6 +415,20 @@
     <string name="category_update_interval_days">Every %d days</string>
     <string name="category_create_subcategory">Create subcategory</string>
     <string name="category_move">Move category</string>
+    <!-- KMK -->
+    <string name="category_manager_search">Search categories</string>
+    <string name="category_manager_sort">Sort</string>
+    <string name="category_manager_sort_manual">Manual</string>
+    <string name="category_manager_sort_az">A to Z</string>
+    <string name="category_manager_sort_za">Z to A</string>
+    <string name="category_manager_sort_most">Most manga</string>
+    <string name="category_manager_sort_least">Least manga</string>
+    <string name="category_manager_expand_all">Expand all</string>
+    <string name="category_manager_collapse_all">Collapse all</string>
+    <string name="category_manager_select">Select</string>
+    <string name="category_manager_show">Show selected</string>
+    <string name="category_manager_hide">Hide selected</string>
+    <!-- KMK -->
     <string name="category_root">Top level</string>
     <string name="pref_subcategory_update_scope">Subcategory refresh scope</string>
     <string name="pref_subcategory_update_scope_whole_category">Entire category (default)</string>

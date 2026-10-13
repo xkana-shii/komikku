@@ -15,6 +15,8 @@ class CategoryRepositoryImpl(
     private val database: Database,
 ) : CategoryRepository {
 
+    private fun now() = System.currentTimeMillis()
+
     override suspend fun get(id: Long): Category? {
         return database.categoryQueries.getCategory(id, CategoryMapper::mapCategory).awaitAsOneOrNull()
     }
@@ -45,6 +47,8 @@ class CategoryRepositoryImpl(
                 // KMK -->
                 hidden = if (category.hidden) 1L else 0L,
                 parentId = category.parentId,
+                dateAdded = category.dateAdded.takeIf { it > 0 } ?: now(),
+                dateModified = category.dateModified.takeIf { it > 0 } ?: now(),
                 // KMK <--
             ).awaitAsOne()
         }
@@ -52,7 +56,7 @@ class CategoryRepositoryImpl(
     // SY <--
 
     override suspend fun updateName(categoryId: Long, name: String) {
-        database.categoryQueries.updateName(name = name, id = categoryId)
+        database.categoryQueries.updateName(name = name, id = categoryId, dateModified = now())
     }
 
     override suspend fun updateFlags(categoryId: Long, flags: Long) {
@@ -61,11 +65,11 @@ class CategoryRepositoryImpl(
 
     // KMK -->
     override suspend fun updateNameAndOrder(categoryId: Long, name: String, order: Long) {
-        database.categoryQueries.updateNameAndOrder(name = name, order = order, categoryId = categoryId)
+        database.categoryQueries.updateNameAndOrder(name = name, order = order, categoryId = categoryId, dateModified = now())
     }
 
     override suspend fun updateHidden(categoryId: Long, hidden: Boolean) {
-        database.categoryQueries.updateHidden(hidden = if (hidden) 1L else 0L, categoryId = categoryId)
+        database.categoryQueries.updateHidden(hidden = if (hidden) 1L else 0L, categoryId = categoryId, dateModified = now())
     }
 
     override suspend fun getSubcategories(parentId: Long): List<Category> {
@@ -81,19 +85,19 @@ class CategoryRepositoryImpl(
     }
 
     override suspend fun updateParent(categoryId: Long, parentId: Long) {
-        database.categoryQueries.updateParent(parentId = parentId, categoryId = categoryId)
+        database.categoryQueries.updateParent(parentId = parentId, categoryId = categoryId, dateModified = now())
     }
 
     override suspend fun reparentChildren(categoryId: Long, parentId: Long) {
-        database.categoryQueries.reparentChildren(parentId = parentId, categoryId = categoryId)
+        database.categoryQueries.reparentChildren(parentId = parentId, categoryId = categoryId, dateModified = now())
     }
 
     override suspend fun updateTrackStatus(categoryId: Long, trackStatus: Int?) {
-        database.categoryQueries.updateTrackStatus(trackStatus = trackStatus?.toLong(), categoryId = categoryId)
+        database.categoryQueries.updateTrackStatus(trackStatus = trackStatus?.toLong(), categoryId = categoryId, dateModified = now())
     }
 
     override suspend fun updateUpdateInterval(categoryId: Long, updateInterval: Int?) {
-        database.categoryQueries.updateUpdateInterval(updateInterval = updateInterval?.toLong(), categoryId = categoryId)
+        database.categoryQueries.updateUpdateInterval(updateInterval = updateInterval?.toLong(), categoryId = categoryId, dateModified = now())
     }
     // KMK <--
 
@@ -106,10 +110,10 @@ class CategoryRepositoryImpl(
             val current = database.categoryQueries.getUserCategoryIds().awaitAsList()
             val ids = orderedIds.filter { it in current } + current.filterNot { it in orderedIds }
             ids.forEachIndexed { index, categoryId ->
-                database.categoryQueries.updateOrder(order = -index - 2L, id = categoryId)
+                database.categoryQueries.updateOrder(order = -index - 2L, id = categoryId, dateModified = now())
             }
             ids.forEachIndexed { index, categoryId ->
-                database.categoryQueries.updateOrder(order = index.toLong(), id = categoryId)
+                database.categoryQueries.updateOrder(order = index.toLong(), id = categoryId, dateModified = now())
             }
         }
     }

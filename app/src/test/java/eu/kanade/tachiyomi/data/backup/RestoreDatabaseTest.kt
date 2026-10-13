@@ -92,13 +92,13 @@ class RestoreDatabaseTest {
     @Test
     fun `SQLDelight rolls back siblings when a nested failure is caught inside the outer transaction`() = runBlocking<Unit> {
         db.transaction {
-            db.categoryQueries.insert("before", 1, 0, 0, parentId = 0L)
+            db.categoryQueries.insert("before", 1, 0, 0, parentId = 0L, dateAdded = 0L, dateModified = 0L)
             try {
                 db.transaction { error("nested failure") }
             } catch (_: IllegalStateException) {
                 // This was the old batching strategy: the outer transaction is already failed.
             }
-            db.categoryQueries.insert("after", 2, 0, 0, parentId = 0L)
+            db.categoryQueries.insert("after", 2, 0, 0, parentId = 0L, dateAdded = 0L, dateModified = 0L)
         }
         db.categoryQueries.getCategories().awaitAsList().filter { it.id > 0 } shouldBe emptyList()
     }
@@ -111,7 +111,7 @@ class RestoreDatabaseTest {
             restore = { name ->
                 db.transaction {
                     val order = listOf("before", "broken", "after").indexOf(name) + 1L
-                    db.categoryQueries.insert(name, order, 0, 0, parentId = 0L)
+                    db.categoryQueries.insert(name, order, 0, 0, parentId = 0L, dateAdded = 0L, dateModified = 0L)
                     check(name != "broken") { "damaged entry" }
                 }
             },
@@ -130,7 +130,7 @@ class RestoreDatabaseTest {
                 listOf("one", "two"),
                 restore = {
                     attempts++
-                    db.categoryQueries.insert(it, 1, 0, 0, parentId = 0L)
+                    db.categoryQueries.insert(it, 1, 0, 0, parentId = 0L, dateAdded = 0L, dateModified = 0L)
                     throw CancellationException("cancel restore")
                 },
                 onError = { _, _ -> error("Cancellation must propagate") },
@@ -156,7 +156,7 @@ class RestoreDatabaseTest {
             fetchInterval = FetchInterval(chapters), setCustomMangaInfo = SetCustomMangaInfo(customRepository),
             insertFlatMetadata = mockk(relaxed = true), getFlatMetadataById = mockk(relaxed = true),
         )
-        db.categoryQueries.insert("Reading", 1, 0, 1, parentId = 0L)
+        db.categoryQueries.insert("Reading", 1, 0, 1, parentId = 0L, dateAdded = 0L, dateModified = 0L)
         val category = BackupCategory("Reading", 1)
         val backup = BackupManga(
             source = 1, url = "/manga", title = "Original", author = "Original author",

@@ -80,7 +80,7 @@ internal suspend fun verifyInsertIds(db: Database) {
     val category = Category(-1, "Category", 1, 0, hidden = true)
     val categories = CategoryRepositoryImpl(db)
     val categoryId = categories.insert(category)
-    check(categories.get(categoryId) == category.copy(id = categoryId))
+    check(categories.get(categoryId)?.let { it.copy(dateAdded = 0, dateModified = 0) } == category.copy(id = categoryId))
 
     val reference = MergedMangaReference(-1, true, true, 0, 0, false, mergeId, "/merge", mangaId, "/source", 1)
     val merged = MangaMergeRepositoryImpl(db)
@@ -124,6 +124,8 @@ internal suspend fun verifyInsertIds(db: Database) {
         flags = 0L,
         hidden = 0L,
         parentId = 0L,
+        dateAdded = 0L,
+        dateModified = 0L,
     )
     check(searches.getBySourceId(1).size == 2)
     check(feeds.getBySourceId(1).single().savedSearch == searchId)

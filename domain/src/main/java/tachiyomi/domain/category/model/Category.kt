@@ -10,6 +10,8 @@ data class Category(
     // KMK -->
     val hidden: Boolean,
     val parentId: Long = UNCATEGORIZED_ID,
+    val dateAdded: Long = DATE_UNKNOWN,
+    val dateModified: Long = DATE_UNKNOWN,
     val trackStatus: Int? = null,
     val updateInterval: Int? = null,
     // KMK <--
@@ -19,5 +21,6 @@ data class Category(
 
     companion object {
         const val UNCATEGORIZED_ID = 0L
+        const val DATE_UNKNOWN = 0L
     }
 }
