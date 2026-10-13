@@ -4,6 +4,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
+// KMK -->
 /**
  * Colors for Tokyo Night Moon/Day
  *
@@ -87,3 +88,4 @@ internal object TokyoNightColorScheme : BaseColorScheme() {
         surfaceContainerHighest = Color(0xFFA1A6C5),
     )
 }
+// KMK <--

@@ -169,6 +169,7 @@ fun Context.isPackageInstalled(packageName: String): Boolean {
 
 val Context.hasMiuiPackageInstaller get() = isPackageInstalled("com.miui.packageinstaller")
 
+// KMK -->
 val Context.isShizukuInstalled: Boolean
     get() = try {
         packageManager.getPermissionInfo(ShizukuProvider.PERMISSION, 0)
@@ -176,6 +177,7 @@ val Context.isShizukuInstalled: Boolean
     } catch (e: PackageManager.NameNotFoundException) {
         false
     }
+// KMK <--
 
 fun Context.launchRequestPackageInstallsPermission() {
     Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {

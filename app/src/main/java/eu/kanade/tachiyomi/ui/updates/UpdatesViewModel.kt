@@ -643,8 +643,10 @@ class UpdatesViewModel(
         val filterStarted: TriState,
         val filterBookmarked: TriState,
         val filterExcludedScanlators: Boolean,
+        // KMK -->
         val filterIncludedCategories: List<Long>,
         val filterExcludedCategories: List<Long>,
+        // KMK <--
     )
 
     private data class DownloadProgress(val status: Download.State, val progress: Int)

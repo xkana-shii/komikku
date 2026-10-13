@@ -40,7 +40,9 @@ class WebViewScreen(
             initialTitle = initialTitle,
             url = url,
             headers = viewModel.headers,
+            // KMK -->
             defaultUserAgentProvider = viewModel::defaultUserAgentProvider,
+            // KMK <--
             onUrlChange = { assistUrl = it },
             onShare = { viewModel.shareWebpage(context, it) },
             onOpenInBrowser = { viewModel.openInBrowser(context, it) },

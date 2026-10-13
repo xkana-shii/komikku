@@ -47,18 +47,24 @@ fun UpdatesFilterDialog(
         onDismissRequest = onDismissRequest,
         tabTitles = persistentListOf(
             stringResource(MR.strings.action_filter),
+            // KMK -->
             stringResource(MR.strings.categories),
+            // KMK <--
         ),
+        // KMK -->
     ) { page ->
+        // KMK <--
         Column(
             modifier = Modifier
                 .padding(vertical = TabbedDialogPaddings.Vertical)
                 .verticalScroll(rememberScrollState()),
         ) {
+            // KMK -->
             when (page) {
                 0 -> FilterSheet(viewModel = viewModel)
                 1 -> CategoryFilterSheet(viewModel = viewModel)
             }
+            // KMK <--
         }
     }
 }
@@ -150,6 +156,7 @@ private fun ColumnScope.FilterSheet(
     // KMK <--
 }
 
+// KMK -->
 @Composable
 private fun ColumnScope.CategoryFilterSheet(
     viewModel: UpdatesSettingsViewModel,
@@ -174,10 +181,8 @@ private fun ColumnScope.CategoryFilterSheet(
         return
     }
 
-    // KMK -->
     val excluded by viewModel.updatesPreferences.filterExcludedCategories().collectAsState()
     val included by viewModel.updatesPreferences.filterIncludedCategories().collectAsState()
-    // KMK <--
 
     val selected = remember {
         allCategories.map { category ->
@@ -203,3 +208,4 @@ private fun ColumnScope.CategoryFilterSheet(
         }
     }
 }
+// KMK <--

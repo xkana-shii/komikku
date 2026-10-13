@@ -191,6 +191,7 @@
         <item name="colorSurfaceContainerLowest">@color/catppuccin_surfaceContainerLowest</item>
     </style>
 
+    <!-- KMK -->
     <!--== Tokyo Night Theme ==-->
     <style name="Theme.Tachiyomi.TokyoNight">
         <!-- Theme Colors -->
@@ -230,6 +231,7 @@
         <item name="colorSurfaceContainerLow">@color/tokyonight_surfaceContainerLow</item>
         <item name="colorSurfaceContainerLowest">@color/tokyonight_surfaceContainerLowest</item>
     </style>
+    <!-- KMK <-->
 
     <!--== Green Apple Theme ==-->
     <style name="Theme.Tachiyomi.GreenApple">

@@ -14,8 +14,10 @@ interface UpdatesRepository {
         started: Boolean?,
         bookmarked: Boolean?,
         hideExcludedScanlators: Boolean,
+        // KMK -->
         includedCategories: List<Long>,
         excludedCategories: List<Long>,
+        // KMK <--
     ): Flow<List<UpdatesWithRelations>>
 
     fun subscribeWithRead(read: Boolean, after: Long, limit: Long): Flow<List<UpdatesWithRelations>>
