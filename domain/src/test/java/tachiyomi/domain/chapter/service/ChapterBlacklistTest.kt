@@ -24,6 +24,16 @@ class ChapterBlacklistTest {
     }
 
     @Test
+    fun `URL key only excludes the selected numbered chapter when scanlator metadata collides`() {
+        val selected = chapter(url = "/chapter/one", number = 12.0, scanlator = "Team")
+        val duplicate = chapter(url = "/chapter/two", number = 12.0, scanlator = "Team")
+        val keys = listOf(chapterUrlBlacklistKey(selected.url))
+
+        isChapterBlacklisted(selected, keys) shouldBe true
+        isChapterBlacklisted(duplicate, keys) shouldBe false
+    }
+
+    @Test
     fun `URL keys escape separators and remain exact`() {
         val chapter = chapter(url = "/chapter,100%")
         val keys = listOf(chapterUrlBlacklistKey(chapter.url))

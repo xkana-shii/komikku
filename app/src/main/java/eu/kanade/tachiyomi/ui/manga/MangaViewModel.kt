@@ -136,7 +136,6 @@ import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.chapter.service.isChapterBlacklisted
-import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
 import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
@@ -1541,13 +1540,10 @@ class MangaViewModel(
     fun blacklistChapters(chapters: List<Chapter>) {
         val manga = successState?.manga ?: return
         // KMK -->
-        val keys = chapters.map { chapter ->
-            if (chapter.chapterNumber.isFinite() && chapter.chapterNumber > 0.0) {
-                scanlatorBlacklistKey(chapter.chapterNumber, chapter.scanlator)
-            } else {
-                chapterUrlBlacklistKey(chapter.url)
-            }
-        }
+        // A blacklist made from a direct chapter selection must identify that exact source
+        // chapter. Number-and-scanlator keys remain supported for existing entries, but using
+        // one for new selections hid every duplicate release sharing that metadata (#39).
+        val keys = chapters.map { chapter -> chapterUrlBlacklistKey(chapter.url) }
         // KMK <--
         if (keys.isEmpty()) return
         viewModelScope.launchIO {
