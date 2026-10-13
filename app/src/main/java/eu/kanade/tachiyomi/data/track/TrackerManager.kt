@@ -43,7 +43,6 @@ class TrackerManager {
     val suwayomi = Suwayomi(9L)
     val hikka = Hikka(10L)
 
-
     val mangaBaka = MangaBaka(MANGABAKA)
 
     val trackers = listOf(

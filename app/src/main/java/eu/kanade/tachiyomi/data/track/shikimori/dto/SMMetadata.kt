@@ -31,8 +31,3 @@ data class SMMangaPersonRoles(
     val person: SMPerson,
     val rolesEn: List<String>,
 )
-
-@Serializable
-data class SMPerson(
-    val name: String,
-)

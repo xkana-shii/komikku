@@ -12,8 +12,8 @@ import eu.kanade.tachiyomi.data.track.anilist.dto.ALMangaMetadata
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALOAuth
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALSearchResult
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALUserListMangaQueryResult
-import eu.kanade.tachiyomi.data.track.anilist.dto.toAutofillMetadata
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALUserViewerData
+import eu.kanade.tachiyomi.data.track.anilist.dto.toAutofillMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.POST

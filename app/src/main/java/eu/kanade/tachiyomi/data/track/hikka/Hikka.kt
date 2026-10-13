@@ -66,6 +66,10 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
 
     override fun getCompletionStatus(): Long = COMPLETED
 
+    // KMK -->
+    override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ
+    // KMK <--
+
     override fun getScoreList(): ImmutableList<String> = SCORE_LIST
 
     override fun displayScore(track: DomainTrack): String {

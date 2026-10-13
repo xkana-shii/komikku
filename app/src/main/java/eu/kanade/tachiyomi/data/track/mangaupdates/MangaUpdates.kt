@@ -128,12 +128,11 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
 
     override suspend fun login(username: String, password: String) {
         val authenticated = api.authenticate(username, password)
-        interceptor.newAuth(authenticated.sessionToken)
-        val currentUser = api.getCurrentUser()
         synchronized(sessionLock) {
-            saveDisplayUsername(currentUser.username)
             saveCredentials(authenticated.uid.toString(), authenticated.sessionToken)
         }
+        val currentUser = api.getCurrentUser()
+        synchronized(sessionLock) { saveDisplayUsername(currentUser.username) }
     }
 
     override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
