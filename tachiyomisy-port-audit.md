@@ -24,6 +24,10 @@ The supplied candidate inventory contains 1,019 commits. An independent git cher
 
 The remaining entries are intentionally classified as **Needs investigation**, rather than as missing, until their full diffs, dependency chains, later reverts, and Komikku equivalents are reviewed. Every audited classification is exclusive, so the totals reconcile to the original 1,019 candidates.
 
+### Provenance verification
+
+The 15 candidates classified as genuine ports were checked against their upstream commit objects. Each resulting commit contains the upstream `(cherry picked from commit …)` trailer, and the reflog records a cherry-pick operation for the resulting SHA. They therefore remain genuine cherry-picks, even where conflict resolution or Komikku-specific adaptation changed the patch. `0a87df9feb` is a direct patch match; the other ports have expected patch differences from architecture, path, schema, catalog, or marker adaptations. The manual follow-up `c9b9ca2c9d` is deliberately excluded from the genuine-port count.
+
 ## Candidate inventory
 
 | Hash | Date | Title | Classification | Evidence / adaptation | Ported commit |
