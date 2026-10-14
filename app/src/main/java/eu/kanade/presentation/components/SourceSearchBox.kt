@@ -11,10 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +38,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowBack
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.Search
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -181,14 +181,14 @@ fun SearchBoxLeadingIcon(
             onClick = onClickCloseSearch,
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
                 contentDescription = "Close",
             )
         }
     } else {
         Icon(
             modifier = modifier,
-            imageVector = Icons.Filled.Search,
+            imageVector = MaterialSymbols.Rounded.Search,
             contentDescription = "Search",
         )
     }
@@ -206,7 +206,7 @@ fun SearchBoxTrailingIcon(
             onClick = onClickClearSearch,
         ) {
             Icon(
-                imageVector = Icons.Filled.Close,
+                imageVector = MaterialSymbols.Rounded.Close,
                 contentDescription = "Clear",
             )
         }

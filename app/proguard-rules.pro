@@ -1,8 +1,8 @@
 -dontobfuscate
 
--keep,allowoptimization class eu.kanade.**
--keep,allowoptimization class tachiyomi.**
--keep,allowoptimization class mihon.**
+# Injekt reads the injected type from the generic superclass of its type tokens
+-keepattributes Signature
+-keep,allowshrinking class * extends uy.kohesive.injekt.api.FullTypeReference
 
 # Keep common dependencies used in extensions
 -keep,allowoptimization class androidx.preference.** { public protected *; }
@@ -18,13 +18,10 @@
 -keep,allowoptimization class uy.kohesive.injekt.** { public protected *; }
 -keep,allowoptimization class com.squareup.zstd.** { public protected *; }
 
-# From extensions-lib
--keep,allowoptimization class eu.kanade.tachiyomi.network.interceptor.RateLimitInterceptorKt { public protected *; }
--keep,allowoptimization class eu.kanade.tachiyomi.network.interceptor.SpecificHostRateLimitInterceptorKt { public protected *; }
--keep,allowoptimization class eu.kanade.tachiyomi.network.NetworkHelper { public protected *; }
--keep,allowoptimization class eu.kanade.tachiyomi.network.OkHttpExtensionsKt { public protected *; }
--keep,allowoptimization class eu.kanade.tachiyomi.network.RequestsKt { public protected *; }
--keep,allowoptimization class eu.kanade.tachiyomi.AppInfo { public protected *; }
+# KMK -->
+# The former "From extensions-lib" keeps now live in :source-api/consumer-proguard.pro
+# (moved there by mihon 6dfa10ffac, which this fork now ports).
+# KMK <--
 
 # Debug functions
 -keep,allowoptimization class exh.debug.DebugFunctions { public *; }
@@ -33,6 +30,10 @@
     java.lang.Object writeReplace();
     java.lang.Object readResolve();
 }
+
+# Provided by the OEM at runtime when supported
+-dontwarn androidx.window.extensions.**
+-dontwarn androidx.window.sidecar.**
 
 ##---------------Begin: proguard configuration for RxJava 1.x  ----------
 -dontwarn sun.misc.**
@@ -136,6 +137,12 @@
 # Firebase
 -keep class com.google.firebase.installations.** { *; }
 -keep interface com.google.firebase.installations.** { *; }
+
+# KMK -->
+# KotlinX Datetime
+# Ported from mihon 6d69903a56 ("Replace java.time APIs with kotlin(x).(date)time", #3001).
+-keep,allowoptimization class kotlinx.datetime.** { public protected *; }
+# KMK <--
 
 # Google Drive
 -keep class com.google.api.services.** { *; }
@@ -314,3 +321,9 @@
 -dontwarn org.ietf.jgss.Oid
 -dontwarn com.google.re2j.Matcher
 -dontwarn com.google.re2j.Pattern
+
+# Methods called by Shizuku only
+-keepclassmembers class mihon.app.shizuku.ShellInterface {
+    public <init>();
+    public void destroy();
+}

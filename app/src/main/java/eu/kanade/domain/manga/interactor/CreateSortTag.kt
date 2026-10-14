@@ -1,8 +1,10 @@
 package eu.kanade.domain.manga.interactor
 
+import dev.zacsweers.metro.Inject
 import tachiyomi.core.common.preference.plusAssign
 import tachiyomi.domain.library.service.LibraryPreferences
 
+@Inject
 class CreateSortTag(
     private val preferences: LibraryPreferences,
     private val getSortTag: GetSortTag,
@@ -15,9 +17,9 @@ class CreateSortTag(
             return Result.TagExists
         }
 
-        val size = preferences.sortTagsForLibrary().get().size
+        val size = preferences.sortTagsForLibrary.get().size
 
-        preferences.sortTagsForLibrary() += encodeTag(size, tag)
+        preferences.sortTagsForLibrary += encodeTag(size, tag)
 
         return Result.Success
     }

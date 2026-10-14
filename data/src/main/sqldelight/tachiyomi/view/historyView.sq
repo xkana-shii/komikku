@@ -1,56 +1,55 @@
 CREATE VIEW historyView AS
 SELECT
-    history._id AS id,
-    mangas._id AS mangaId,
-    chapters._id AS chapterId,
-    mangas.title,
-    mangas.thumbnail_url AS thumbnailUrl,
-    mangas.source,
-    mangas.favorite,
-    mangas.cover_last_modified,
-    chapters.chapter_number AS chapterNumber,
+    history.id AS id,
+    manga.id AS mangaId,
+    chapter.id AS chapterId,
+    manga.remote_title AS title,
+    manga.remote_cover AS thumbnailUrl,
+    manga.source_id AS sourceId,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_chapter_number AS chapterNumber,
     -- KMK -->
-    mangas.chapter_flags AS chapterFlags,
-    chapters.read AS read,
-    chapters.last_page_read AS lastPageRead,
+    manga.user_chapter_flags AS chapterFlags,
+    chapter.user_read AS read,
+    chapter.user_last_page_read AS lastPageRead,
     coalesce(C.total, 0) AS totalCount,
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkReadCount,
     -- KMK <--
-    history.last_read AS readAt,
-    history.time_read AS readDuration,
-    max_last_read.last_read AS maxReadAt,
-    max_last_read.chapter_id AS maxReadAtChapterId
-FROM mangas
-JOIN chapters
-ON mangas._id = chapters.manga_id
+    history.read_at AS readAt,
+    history.read_duration AS readDuration,
+    max_read.read_at AS maxReadAt,
+    max_read.chapter_id AS maxReadAtChapterId
+FROM manga
+JOIN chapter
+ON manga.id = chapter.manga_id
 JOIN history
-ON chapters._id = history.chapter_id
+ON chapter.id = history.chapter_id
 JOIN (
-    SELECT chapters.manga_id,chapters._id AS chapter_id, MAX(history.last_read) AS last_read
-    FROM chapters JOIN history
-    ON chapters._id = history.chapter_id
-    GROUP BY chapters.manga_id
-) AS max_last_read
-ON chapters.manga_id = max_last_read.manga_id
+    SELECT manga_id, chapter_id, MAX(read_at) AS read_at
+    FROM history
+    GROUP BY manga_id
+) AS max_read
+ON chapter.manga_id = max_read.manga_id
 -- KMK -->
 LEFT JOIN(
     SELECT
-        chapters.manga_id,
+        chapter.manga_id,
         count(*) AS total,
-        sum(read) AS readCount,
-        sum(bookmark) AS bookmarkCount,
-        sum(CASE WHEN bookmark = 1 AND read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
-        excluded_scanlators.scanlator AS ex_scanlator
-    FROM chapters
-    LEFT JOIN excluded_scanlators
-    ON chapters.manga_id = excluded_scanlators.manga_id
-    AND chapters.scanlator = excluded_scanlators.scanlator
+        sum(user_read) AS readCount,
+        sum(user_bookmark) AS bookmarkCount,
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        excluded_scanlator.scanlator AS ex_scanlator
+    FROM chapter
+    LEFT JOIN excluded_scanlator
+    ON chapter.manga_id = excluded_scanlator.manga_id
+    AND chapter.remote_scanlator = excluded_scanlator.scanlator
     WHERE ex_scanlator IS NULL
-    GROUP BY chapters.manga_id
+    GROUP BY chapter.manga_id
 ) AS C
-ON mangas._id = C.manga_id;
+ON manga.id = C.manga_id;
 -- KMK <--
 
 history:
@@ -60,9 +59,9 @@ mangaId,
 chapterId,
 title,
 thumbnailUrl,
-source,
+sourceId,
 favorite,
-cover_last_modified,
+coverLastModified,
 chapterNumber,
 -- KMK -->
 read,
@@ -81,7 +80,7 @@ END AS readCountCalculated,
 readAt,
 readDuration
 FROM historyView
-WHERE historyView.readAt > 0
+WHERE historyView.readAt IS NOT NULL
 -- KMK -->
 AND (
     :unfinishedManga IS NULL
@@ -97,32 +96,56 @@ ORDER BY readAt DESC;
 
 getLatestHistory:
 SELECT
-id,
-mangaId,
-chapterId,
-title,
-thumbnailUrl,
-source,
-favorite,
-cover_last_modified,
-chapterNumber,
+history.id AS id,
+manga.id AS mangaId,
+chapter.id AS chapterId,
+manga.remote_title AS title,
+manga.remote_cover AS thumbnailUrl,
+manga.source_id AS sourceId,
+manga.user_favorite_at IS NOT NULL AS favorite,
+manga.state_cover_last_modified AS coverLastModified,
+chapter.remote_chapter_number AS chapterNumber,
 -- KMK -->
-read,
-lastPageRead,
-CASE
-    WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN totalCount - bookmarkCount
-    WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkCount
-    ELSE totalCount
-END AS totalCount,
-CASE
-    WHEN (chapterFlags & :bookmarkUnmask) != 0 THEN readCount - bookmarkReadCount
-    WHEN (chapterFlags & :bookmarkMask) != 0 THEN bookmarkReadCount
-    ELSE readCount
-END AS readCount,
+chapter.user_read AS read,
+chapter.user_last_page_read AS lastPageRead,
+(
+    SELECT
+        CASE
+            WHEN (manga.user_chapter_flags & :bookmarkUnmask) != 0 THEN count(*) - coalesce(sum(C.user_bookmark), 0)
+            WHEN (manga.user_chapter_flags & :bookmarkMask) != 0 THEN coalesce(sum(C.user_bookmark), 0)
+            ELSE count(*)
+        END
+    FROM chapter C
+    WHERE C.manga_id = manga.id
+    AND NOT EXISTS (
+        SELECT 1 FROM excluded_scanlator ES
+        WHERE ES.manga_id = C.manga_id
+        AND ES.scanlator = C.remote_scanlator
+    )
+) AS totalCount,
+(
+    SELECT
+        CASE
+            WHEN (manga.user_chapter_flags & :bookmarkUnmask) != 0 THEN coalesce(sum(C.user_read), 0) - coalesce(sum(CASE WHEN C.user_bookmark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0)
+            WHEN (manga.user_chapter_flags & :bookmarkMask) != 0 THEN coalesce(sum(CASE WHEN C.user_bookmark = 1 AND C.user_read = 1 THEN 1 ELSE 0 END), 0)
+            ELSE coalesce(sum(C.user_read), 0)
+        END
+    FROM chapter C
+    WHERE C.manga_id = manga.id
+    AND NOT EXISTS (
+        SELECT 1 FROM excluded_scanlator ES
+        WHERE ES.manga_id = C.manga_id
+        AND ES.scanlator = C.remote_scanlator
+    )
+) AS readCount,
 -- KMK <--
-readAt,
-readDuration
-FROM historyView
-WHERE historyView.readAt > 0
-ORDER BY readAt DESC
+history.read_at AS readAt,
+history.read_duration AS readDuration
+FROM history
+JOIN manga
+ON manga.id = history.manga_id
+JOIN chapter
+ON chapter.id = history.chapter_id
+WHERE history.read_at IS NOT NULL
+ORDER BY history.read_at DESC
 LIMIT 1;

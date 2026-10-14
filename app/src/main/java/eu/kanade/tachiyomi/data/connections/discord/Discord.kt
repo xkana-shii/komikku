@@ -5,16 +5,21 @@
 package eu.kanade.tachiyomi.data.connections.discord
 
 import android.graphics.Color
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.ConnectionsService
+import eu.kanade.tachiyomi.network.NetworkHelper
 import exh.log.xLogE
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.kmk.KMR
 import timber.log.Timber
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
-class Discord(id: Long) : ConnectionsService(id) {
+class Discord(
+    id: Long,
+    connectionsPreferences: ConnectionsPreferences,
+    networkHelper: NetworkHelper,
+    private val json: Json,
+) : ConnectionsService(id, connectionsPreferences, networkHelper) {
 
     override fun nameStrRes() = KMR.strings.connections_discord
 
@@ -39,10 +44,8 @@ class Discord(id: Long) : ConnectionsService(id) {
         return connectionsPreferences.connectionsToken(this).get()
     }
 
-    private val json = Injekt.get<Json>()
-
     fun getAccounts(): List<DiscordAccount> {
-        val accountsJson = connectionsPreferences.discordAccounts().get()
+        val accountsJson = connectionsPreferences.discordAccounts.get()
         return try {
             if (accountsJson.isNotBlank()) {
                 json.decodeFromString<List<DiscordAccount>>(accountsJson)
@@ -97,7 +100,7 @@ class Discord(id: Long) : ConnectionsService(id) {
     private fun saveAccounts(accounts: List<DiscordAccount>) {
         try {
             val accountsJson = json.encodeToString(accounts)
-            connectionsPreferences.discordAccounts().set(accountsJson)
+            connectionsPreferences.discordAccounts.set(accountsJson)
         } catch (e: Exception) {
             xLogE("Failed to save Discord accounts", e)
         }

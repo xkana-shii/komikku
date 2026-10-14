@@ -1,8 +1,6 @@
 package eu.kanade.tachiyomi.ui.browse.migration.search
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
@@ -19,10 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.core.util.ifSourcesLoaded
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.browse.BrowseSourceContent
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.browse.components.bulkSelectionButton
@@ -31,17 +29,18 @@ import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
+import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.SourceFilterDialog
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import mihon.feature.migration.dialog.MigrateMangaDialog
 import mihon.feature.migration.list.MigrationListScreen
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.presentation.core.util.collectAsLazyPagingItems
 import tachiyomi.core.common.Constants
 import tachiyomi.domain.manga.model.Manga
@@ -63,31 +62,39 @@ data class MigrateSourceSearchScreen(
 
     @Composable
     override fun Content() {
-        if (!ifSourcesLoaded()) {
-            LoadingScreen()
-            return
-        }
-
         val uriHandler = LocalUriHandler.current
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
 
-        val screenModel = rememberScreenModel { BrowseSourceScreenModel(sourceId, query) }
-        val state by screenModel.state.collectAsState()
+        val viewModel = assistedMetroViewModel<BrowseSourceViewModel, BrowseSourceViewModel.Factory> {
+            create(
+                sourceId = sourceId,
+                listingQuery = query,
+                filtersJson = null,
+                savedSearch = null,
+            )
+        }
+        val state by viewModel.state.collectAsState()
+
+        val source = state.source
+        if (source == null) {
+            LoadingScreen()
+            return
+        }
 
         val snackbarHostState = remember { SnackbarHostState() }
 
         // KMK -->
         val context = LocalContext.current
 
-        val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
-        val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+        val bulkFavoriteViewModel = metroViewModel<BulkFavoriteViewModel>()
+        val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
 
         BackHandler(enabled = bulkFavoriteState.selectionMode) {
-            bulkFavoriteScreenModel.backHandler()
+            bulkFavoriteViewModel.backHandler()
         }
 
-        val mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems()
+        val mangaList = viewModel.mangaPagerFlowFlow.collectAsLazyPagingItems()
         // KMK <--
 
         Scaffold(
@@ -97,34 +104,34 @@ data class MigrateSourceSearchScreen(
                     BulkSelectionToolbar(
                         selectedCount = bulkFavoriteState.selection.size,
                         isRunning = bulkFavoriteState.isRunning,
-                        onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                        onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                        onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                        onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                         onSelectAll = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .forEach { bulkFavoriteScreenModel.select(it) }
+                                .forEach { bulkFavoriteViewModel.select(it) }
                         },
                         onReverseSelection = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                                .let { bulkFavoriteViewModel.reverseSelection(it) }
                         },
                     )
                 } else {
                     // KMK <--
                     SearchToolbar(
                         searchQuery = state.toolbarQuery,
-                        onChangeSearchQuery = screenModel::setToolbarQuery,
+                        onChangeSearchQuery = viewModel::setToolbarQuery,
                         onClickCloseSearch = navigator::pop,
-                        onSearch = screenModel::search,
+                        onSearch = viewModel::search,
                         scrollBehavior = scrollBehavior,
                         // KMK -->
                         actions = {
                             AppBarActions(
-                                actions = persistentListOf(
+                                actions = listOf(
                                     bulkSelectionButton(
                                         isRunning = bulkFavoriteState.isRunning,
-                                        toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
+                                        toggleSelectionMode = bulkFavoriteViewModel::toggleSelectionMode,
                                     ),
                                 ),
                             )
@@ -136,8 +143,8 @@ data class MigrateSourceSearchScreen(
             floatingActionButton = {
                 SmallExtendedFloatingActionButton(
                     text = { Text(text = stringResource(MR.strings.action_filter)) },
-                    icon = { Icon(Icons.Outlined.FilterList, contentDescription = null) },
-                    onClick = screenModel::openFilterSheet,
+                    icon = { Icon(MaterialSymbols.Rounded.FilterList, contentDescription = null) },
+                    onClick = viewModel::openFilterSheet,
                     modifier = Modifier.animateFloatingActionButton(
                         visible = state.filters.isNotEmpty(),
                         alignment = Alignment.BottomEnd,
@@ -152,29 +159,29 @@ data class MigrateSourceSearchScreen(
                     .lastOrNull()
 
                 if (migrateListScreen == null) {
-                    screenModel.setDialog(BrowseSourceScreenModel.Dialog.Migrate(target = it, current = currentManga))
+                    viewModel.setDialog(BrowseSourceViewModel.Dialog.Migrate(target = it, current = currentManga))
                 } else {
                     migrateListScreen.addMatchOverride(current = currentManga.id, target = it.id)
                     navigator.popUntil { screen -> screen is MigrationListScreen }
                 }
             }
             BrowseSourceContent(
-                source = screenModel.source,
+                source = source,
                 mangaList = mangaList,
-                columns = screenModel.getColumnsPreference(LocalConfiguration.current.orientation),
+                columns = viewModel.getColumnsPreference(LocalConfiguration.current.orientation),
                 // SY -->
-                ehentaiBrowseDisplayMode = screenModel.ehentaiBrowseDisplayMode,
+                ehentaiBrowseDisplayMode = viewModel.ehentaiBrowseDisplayMode,
                 // SY <--
-                displayMode = screenModel.displayMode,
+                displayMode = viewModel.displayMode,
                 snackbarHostState = snackbarHostState,
                 contentPadding = paddingValues,
                 onWebViewClick = {
-                    val source = screenModel.source as? HttpSource ?: return@BrowseSourceContent
+                    val httpSource = source as? HttpSource ?: return@BrowseSourceContent
                     navigator.push(
                         WebViewScreen(
-                            url = source.getHomeUrl(),
-                            initialTitle = source.name,
-                            sourceId = source.id,
+                            url = httpSource.getHomeUrl(),
+                            initialTitle = httpSource.name,
+                            sourceId = httpSource.id,
                         ),
                     )
                 },
@@ -183,7 +190,7 @@ data class MigrateSourceSearchScreen(
                 onMangaClick = { manga ->
                     // KMK -->
                     if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
+                        bulkFavoriteViewModel.toggleSelection(manga)
                     } else {
                         // KMK <--
                         openMigrateDialog(manga)
@@ -196,22 +203,22 @@ data class MigrateSourceSearchScreen(
             )
         }
 
-        val onDismissRequest = { screenModel.setDialog(null) }
+        val onDismissRequest = { viewModel.setDialog(null) }
         when (val dialog = state.dialog) {
-            is BrowseSourceScreenModel.Dialog.Filter -> {
+            is BrowseSourceViewModel.Dialog.Filter -> {
                 SourceFilterDialog(
                     onDismissRequest = onDismissRequest,
                     filters = state.filters,
-                    onReset = screenModel::resetFilters,
-                    onFilter = { screenModel.search(filters = state.filters) },
-                    onUpdate = screenModel::setFilters,
+                    onReset = viewModel::resetFilters,
+                    onFilter = { viewModel.search(filters = state.filters) },
+                    onUpdate = viewModel::setFilters,
                     // SY -->
-                    startExpanded = screenModel.startExpanded,
+                    startExpanded = viewModel.startExpanded,
                     onSave = {},
                     // KMK -->
                     savedSearches = state.savedSearches,
                     onSavedSearch = { search ->
-                        screenModel.onSavedSearch(search) {
+                        viewModel.onSavedSearch(search) {
                             context.toast(it)
                         }
                     },
@@ -224,7 +231,7 @@ data class MigrateSourceSearchScreen(
                     // SY <--
                 )
             }
-            is BrowseSourceScreenModel.Dialog.Migrate -> {
+            is BrowseSourceViewModel.Dialog.Migrate -> {
                 MigrateMangaDialog(
                     current = currentManga,
                     target = dialog.target,
@@ -246,7 +253,7 @@ data class MigrateSourceSearchScreen(
         // KMK -->
         // Bulk-favorite actions only
         BulkFavoriteDialogs(
-            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            bulkFavoriteViewModel = bulkFavoriteViewModel,
             dialog = bulkFavoriteState.dialog,
         )
         // KMK <--

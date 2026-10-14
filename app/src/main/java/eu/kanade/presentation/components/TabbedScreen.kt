@@ -24,10 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.zIndex
 import dev.icerock.moko.resources.StringResource
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.feed.FeedScreenModel
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
+import eu.kanade.tachiyomi.ui.browse.feed.FeedViewModel
 import kotlinx.coroutines.launch
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.TabText
@@ -36,21 +34,21 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun TabbedScreen(
     titleRes: StringResource,
-    tabs: ImmutableList<TabContent>,
+    tabs: List<TabContent>,
     state: PagerState = rememberPagerState { tabs.size },
     searchQuery: String? = null,
     onChangeSearchQuery: (String?) -> Unit = {},
     // KMK -->
-    feedScreenModel: FeedScreenModel,
-    bulkFavoriteScreenModel: BulkFavoriteScreenModel,
+    feedViewModel: FeedViewModel,
+    bulkFavoriteViewModel: BulkFavoriteViewModel,
     // KMK <--
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // KMK -->
-    val feedState by feedScreenModel.state.collectAsState()
-    val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+    val feedState by feedViewModel.state.collectAsState()
+    val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
     // KMK <--
 
     Scaffold(
@@ -62,20 +60,20 @@ fun TabbedScreen(
                 BulkSelectionToolbar(
                     selectedCount = bulkFavoriteState.selection.size,
                     isRunning = bulkFavoriteState.isRunning,
-                    onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                    onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                    onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                    onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                     onSelectAll = {
                         feedState.items?.let { result ->
                             result.mapNotNull { it.results }
                                 .flatten()
-                                .forEach { bulkFavoriteScreenModel.select(it) }
+                                .forEach { bulkFavoriteViewModel.select(it) }
                         }
                     },
                     onReverseSelection = {
                         feedState.items?.let { result ->
                             result.mapNotNull { it.results }
                                 .flatten()
-                                .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                                .let { bulkFavoriteViewModel.reverseSelection(it) }
                         }
                     },
                 )
@@ -131,6 +129,6 @@ data class TabContent(
     val titleRes: StringResource,
     val badgeNumber: Int? = null,
     val searchEnabled: Boolean = false,
-    val actions: ImmutableList<AppBar.AppBarAction> = persistentListOf(),
+    val actions: List<AppBar.AppBarAction> = listOf(),
     val content: @Composable (contentPadding: PaddingValues, snackbarHostState: SnackbarHostState) -> Unit,
 )

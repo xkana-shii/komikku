@@ -10,12 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,15 +27,21 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.tachiyomi.R
-import kotlinx.collections.immutable.persistentListOf
 import mihon.domain.extension.model.ExtensionStore
 import mihon.domain.extension.model.KOMIKKU_SIGNATURE
 import mihon.domain.extension.model.REPO_SIGNATURE
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.ContentCopy
+import mihon.icons.materialsymbols.rounded.Delete
+import mihon.icons.materialsymbols.rounded.Public
+import mihon.icons.materialsymbols.roundedfilled.Visibility
+import mihon.icons.materialsymbols.roundedfilled.VisibilityOff
+import mihon.icons.simpleicons.Discord
+import mihon.icons.simpleicons.SimpleIcons
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
-import tachiyomi.presentation.core.icons.CustomIcons
-import tachiyomi.presentation.core.icons.Discord
 
 @Composable
 fun ExtensionStoresContent(
@@ -146,7 +146,7 @@ private fun ExtensionStoresListItem(
                 ) {
                     IconButton(onClick = onOpenWebsite) {
                         Icon(
-                            imageVector = Icons.Outlined.Public,
+                            imageVector = MaterialSymbols.Rounded.Public,
                             contentDescription = stringResource(MR.strings.action_open_in_browser),
                         )
                     }
@@ -154,7 +154,7 @@ private fun ExtensionStoresListItem(
                     if (store.contact.discord != null) {
                         IconButton(onClick = onOpenDiscord) {
                             Icon(
-                                imageVector = CustomIcons.Discord,
+                                imageVector = SimpleIcons.Discord,
                                 contentDescription = null,
                             )
                         }
@@ -162,7 +162,7 @@ private fun ExtensionStoresListItem(
 
                     IconButton(onClick = onCopy) {
                         Icon(
-                            imageVector = Icons.Outlined.ContentCopy,
+                            imageVector = MaterialSymbols.Rounded.ContentCopy,
                             contentDescription = stringResource(MR.strings.action_copy_to_clipboard),
                         )
                     }
@@ -170,15 +170,17 @@ private fun ExtensionStoresListItem(
                     // KMK -->
                     IconButton(onClick = if (isDisabled) onEnable else onDisable) {
                         Icon(
-                            imageVector = if (isDisabled) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                            contentDescription = stringResource(MR.strings.action_disable),
+                            imageVector = if (isDisabled) MaterialSymbols.RoundedFilled.Visibility else MaterialSymbols.RoundedFilled.VisibilityOff,
+                            contentDescription = stringResource(
+                                if (isDisabled) KMR.strings.action_enable else MR.strings.action_disable,
+                            ),
                         )
                     }
                     // KMK <--
 
                     IconButton(onClick = onDelete) {
                         Icon(
-                            imageVector = Icons.Outlined.Delete,
+                            imageVector = MaterialSymbols.Rounded.Delete,
                             contentDescription = stringResource(MR.strings.action_delete),
                         )
                     }
@@ -198,7 +200,7 @@ fun repoResId(signKey: String) = when (signKey) {
 @PreviewLightDark
 @Composable
 fun ExtensionReposContentPreview() {
-    val repos = persistentListOf(
+    val repos = listOf(
         ExtensionStore("https://komikku", "Komikku", "", KOMIKKU_SIGNATURE, ExtensionStore.Contact("", ""), false, null),
         ExtensionStore("https://repo", "Repo", "", REPO_SIGNATURE, ExtensionStore.Contact("", ""), false, null),
         ExtensionStore("https://other", "Other", "", "key2", ExtensionStore.Contact("", ""), true, null),

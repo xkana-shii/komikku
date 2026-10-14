@@ -1,10 +1,11 @@
 [versions]
-aboutlib_version = "13.2.1"
+aboutlib_version = "15.0.3"
 leakcanary = "2.14"
 moko = "0.26.4"
 okhttp_version = "5.3.2"
 shizuku_version = "13.1.5"
-sqldelight = "2.3.2"
+sqldelight = "2.4.1"
+sqldelight-androidx-driver = "0.2.2"
 voyager = "1.1.0-beta03"
 spotless = "8.8.0"
 ktlint-core = "1.8.0"
@@ -13,10 +14,27 @@ flexibleAdapter = "5.1.0"
 markdown = "0.39.2"
 junit = "6.1.3"
 materialKolor = "5.0.0-alpha07"
+androidx-webkit = "1.16.0"
+image-decoder = "16"
+webgpuviewer = "52"
+apollo = "5.2.0"
+apollo-adapters = "0.8.0"
+metro = "1.4.2"
+metrox-viewmodel = "1.4.2"
+metrox-viewmodel-compose = "1.4.2"
+# KMK -->
+valkyrie = "0.5.2"
+# KMK <--
 
 [libraries]
 desugar = "com.android.tools:desugar_jdk_libs:2.1.5"
-android-shortcut-gradle = "com.github.komikku-app:android-shortcut-gradle-plugin:0.2.0"
+
+apollo = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
+apollo-adapters = { module = "com.apollographql.adapters:apollo-adapters-core", version.ref = "apollo-adapters" }
+
+metro-runtime = { module = "dev.zacsweers.metro:runtime", version.ref = "metro" }
+metrox-viewmodel = { module = "dev.zacsweers.metro:metrox-viewmodel", version.ref = "metrox-viewmodel" }
+metrox-viewmodel-compose = { module = "dev.zacsweers.metro:metrox-viewmodel-compose", version.ref = "metrox-viewmodel-compose" }
 
 rxjava = "io.reactivex:rxjava:1.3.8"
 
@@ -34,12 +52,15 @@ quickjs-android = { group = "com.github.zhanghai.quickjs-java", name = "quickjs-
 jsoup = "org.jsoup:jsoup:1.23.2"
 
 disklrucache = "com.jakewharton:disklrucache:2.0.2"
-unifile = "com.github.komikku-app:UniFile:084a54140a"
+unifile = "com.github.komi-kun:UniFile:b7f6a2ef47"
 libarchive = "me.zhanghai.android.libarchive:library:1.1.6"
+
 
 preferencektx = "androidx.preference:preference-ktx:1.2.1"
 
-injekt = "com.github.mihonapp:injekt:91edab2317"
+androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "androidx-webkit" }
+
+injekt = "uy.kohesive.injekt:injekt-core:1.16.1"
 
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version = "3.5.0" }
 coil-core = { module = "io.coil-kt.coil3:coil" }
@@ -47,8 +68,15 @@ coil-gif = { module = "io.coil-kt.coil3:coil-gif" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 
-subsamplingscaleimageview = "com.github.tachiyomiorg:subsampling-scale-image-view:66e0db195d"
-image-decoder = "com.github.tachiyomiorg:image-decoder:41c059e540"
+# KMK -->
+# Mihon's SSIV fork (its `Decoder` uses ca.mpreg:imagedecoder). The tachiyomiorg fork
+# (`66e0db195d`) still links against the legacy `tachiyomi.decoder.ImageDecoder`, which this fork no
+# longer ships (it uses ca.mpreg:imagedecoder), so its SSIV reader path crashed at runtime. This hash
+# is the one mihon/main pairs with image-decoder 16.
+subsamplingscaleimageview = "com.github.mihonapp:subsampling-scale-image-view:1b283e2bc4"
+# KMK <--
+image-decoder = { module = "ca.mpreg:imagedecoder", version.ref = "image-decoder" }
+webgpuviewer = { module = "ca.mpreg:webgpuviewer", version.ref = "webgpuviewer" }
 
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"
 
@@ -60,7 +88,7 @@ photoview = "com.github.chrisbanes:PhotoView:2.3.0"
 directionalviewpager = "com.github.tachiyomiorg:DirectionalViewPager:1.0.0"
 compose-materialmotion = "io.github.fornewid:material-motion-compose-core:2.0.1"
 compose-webview = "io.github.kevinnzou:compose-webview:0.33.6"
-compose-grid = "io.woong.compose.grid:grid:1.2.2"
+compose-grid = "com.cheonjaeung.compose.grid:grid:2.8.0"
 reorderable = { module = "sh.calvin.reorderable:reorderable", version = "3.1.0" }
 palette-ktx = "androidx.palette:palette-ktx:1.0.0"
 haze = "dev.chrisbanes.haze:haze:1.7.2"
@@ -84,18 +112,19 @@ shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizu
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 leakcanary-plumber = { module = "com.squareup.leakcanary:plumber-android", version.ref = "leakcanary" }
 
-sqldelight-androidx-driver = { module = "com.eygraber:sqldelight-androidx-driver", version = "0.0.17" }
-sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions-jvm", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-androidx-driver = { module = "com.eygraber:sqldelight-androidx-driver", version.ref = "sqldelight-androidx-driver" }
+sqldelight-async = { module = "app.cash.sqldelight:async-extensions", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-android-paging = { module = "app.cash.sqldelight:androidx-paging3-extensions", version.ref = "sqldelight" }
 sqldelight-dialects-sql = { module = "app.cash.sqldelight:sqlite-3-38-dialect", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 kotest-assertions = "io.kotest:kotest-assertions-core:6.2.1"
 mockk = "io.mockk:mockk:1.14.11"
-
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
-voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "voyager" }
 voyager-tab-navigator = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "voyager" }
 voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "voyager" }
 
@@ -112,16 +141,22 @@ materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "ma
 [plugins]
 google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlib_version" }
+apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }
+metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 moko = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "moko" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.8" }
+androidx-baselineProfile = { id = "androidx.baselineprofile", version = "1.5.0" }
+# KMK -->
+valkyrie = { id = "io.github.composegears.valkyrie", version.ref = "valkyrie" }
+# KMK <--
 
 [bundles]
 okhttp = ["okhttp-core", "okhttp-logging", "okhttp-brotli", "okhttp-dnsoverhttps", "okhttp-zstd"]
 js-engine = ["quickjs-android"]
 coil = ["coil-core", "coil-gif", "coil-compose", "coil-network-okhttp"]
 shizuku = ["shizuku-api", "shizuku-provider"]
-sqldelight = ["sqldelight-androidx-driver", "sqldelight-coroutines", "sqldelight-android-paging"]
-voyager = ["voyager-navigator", "voyager-screenmodel", "voyager-tab-navigator", "voyager-transitions"]
+sqldelight = ["sqldelight-android-driver", "sqldelight-androidx-driver", "sqldelight-async", "sqldelight-coroutines", "sqldelight-android-paging"]
+voyager = ["voyager-navigator", "voyager-tab-navigator", "voyager-transitions"]
 test = ["junit-jupiter", "kotest-assertions", "mockk"]
 markdown = ["markdown-core", "markdown-coil"]

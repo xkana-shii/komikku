@@ -16,8 +16,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * Configuration used by pager viewers.
@@ -25,7 +23,7 @@ import uy.kohesive.injekt.api.get
 class PagerConfig(
     private val viewer: PagerViewer,
     scope: CoroutineScope,
-    readerPreferences: ReaderPreferences = Injekt.get(),
+    readerPreferences: ReaderPreferences,
 ) : ViewerConfig(readerPreferences, scope) {
 
     var automaticBackground = false
@@ -67,7 +65,7 @@ class PagerConfig(
     var shiftDoublePage = false
 
     var doublePages =
-        readerPreferences.pageLayout().get() == PageLayout.DOUBLE_PAGES && !readerPreferences.dualPageSplitPaged().get()
+        readerPreferences.pageLayout.get() == PageLayout.DOUBLE_PAGES && !readerPreferences.dualPageSplitPaged.get()
         set(value) {
             field = value
             if (!value) {
@@ -77,7 +75,7 @@ class PagerConfig(
 
     var invertDoublePages = false
 
-    var autoDoublePages = readerPreferences.pageLayout().get() == PageLayout.AUTOMATIC
+    var autoDoublePages = readerPreferences.pageLayout.get() == PageLayout.AUTOMATIC
 
     @ColorInt
     var pageCanvasColor = Color.WHITE
@@ -86,7 +84,7 @@ class PagerConfig(
     // SY <--
 
     init {
-        readerPreferences.readerTheme()
+        readerPreferences.readerTheme
             .register(
                 {
                     // SY -->
@@ -103,39 +101,39 @@ class PagerConfig(
                 },
             )
 
-        readerPreferences.imageScaleType()
+        readerPreferences.imageScaleType
             .register({ imageScaleType = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.zoomStart()
+        readerPreferences.zoomStart
             .register({ zoomTypeFromPreference(it) }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.cropBorders()
+        readerPreferences.cropBorders
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigateToPan()
+        readerPreferences.navigateToPan
             .register({ navigateToPan = it })
 
-        readerPreferences.landscapeZoom()
+        readerPreferences.landscapeZoom
             .register({ landscapeZoom = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigationModePager()
+        readerPreferences.navigationModePager
             .register({ navigationMode = it }, { updateNavigation(navigationMode) })
 
-        readerPreferences.pagerNavInverted()
+        readerPreferences.pagerNavInverted
             .register({ tappingInverted = it }, { navigator.invertMode = it })
-        readerPreferences.pagerNavInverted().changes()
+        readerPreferences.pagerNavInverted.changes()
             .drop(1)
             .onEach { navigationModeChangedListener?.invoke() }
             .launchIn(scope)
 
         // KMK -->
-        readerPreferences.smallerTapZone().changes()
+        readerPreferences.smallerTapZone.changes()
             .drop(1)
             .onEach { updateNavigation(navigationMode) }
             .launchIn(scope)
         // KMK <--
 
-        readerPreferences.dualPageSplitPaged()
+        readerPreferences.dualPageSplitPaged
             .register(
                 { dualPageSplit = it },
                 {
@@ -144,34 +142,34 @@ class PagerConfig(
                 },
             )
 
-        readerPreferences.dualPageInvertPaged()
+        readerPreferences.dualPageInvertPaged
             .register({ dualPageInvert = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.dualPageRotateToFit()
+        readerPreferences.dualPageRotateToFit
             .register(
                 { dualPageRotateToFit = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.dualPageRotateToFitInvert()
+        readerPreferences.dualPageRotateToFitInvert
             .register(
                 { dualPageRotateToFitInvert = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
         // KMK -->
-        readerPreferences.pagedDisableZoomIn()
+        readerPreferences.pagedDisableZoomIn
             .register(
                 { disableZoomIn = it },
                 { imagePropertyChangedListener?.invoke() },
             )
-        readerPreferences.pagedDoubleTapZoomEnabled()
+        readerPreferences.pagedDoubleTapZoomEnabled
             .register(
                 { doubleTapZoom = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.landscapeZoomType()
+        readerPreferences.landscapeZoomType
             .register(
                 { landscapeZoomScaleType = it },
                 { imagePropertyChangedListener?.invoke() },
@@ -179,10 +177,10 @@ class PagerConfig(
         // KMK <--
 
         // SY -->
-        readerPreferences.pageTransitionsPager()
+        readerPreferences.pageTransitionsPager
             .register({ usePageTransitions = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.pageLayout()
+        readerPreferences.pageLayout
             .register(
                 {
                     autoDoublePages = it == PageLayout.AUTOMATIC
@@ -199,10 +197,10 @@ class PagerConfig(
                 },
             )
 
-        readerPreferences.centerMarginType()
+        readerPreferences.centerMarginType
             .register({ centerMarginType = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.invertDoublePages()
+        readerPreferences.invertDoublePages
             .register({ invertDoublePages = it && dualPageSplit == false }, { imagePropertyChangedListener?.invoke() })
         // SY <--
     }
@@ -231,19 +229,19 @@ class PagerConfig(
 
     override fun defaultNavigation(): ViewerNavigation {
         return when (viewer) {
-            is VerticalPagerViewer -> LNavigation()
-            else -> RightAndLeftNavigation()
+            is VerticalPagerViewer -> LNavigation(readerPreferences)
+            else -> RightAndLeftNavigation(readerPreferences)
         }
     }
 
     override fun updateNavigation(navigationMode: Int) {
         navigator = when (navigationMode) {
             0 -> defaultNavigation()
-            1 -> LNavigation()
-            2 -> KindlishNavigation()
-            3 -> EdgeNavigation()
-            4 -> RightAndLeftNavigation()
-            5 -> DisabledNavigation()
+            1 -> LNavigation(readerPreferences)
+            2 -> KindlishNavigation(readerPreferences)
+            3 -> EdgeNavigation(readerPreferences)
+            4 -> RightAndLeftNavigation(readerPreferences)
+            5 -> DisabledNavigation(readerPreferences)
             else -> defaultNavigation()
         }
         navigationModeChangedListener?.invoke()

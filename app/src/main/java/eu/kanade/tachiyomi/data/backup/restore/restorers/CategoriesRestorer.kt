@@ -1,53 +1,36 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
-import tachiyomi.data.DatabaseHandler
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
+@Inject
 class CategoriesRestorer(
-    private val handler: DatabaseHandler = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    private val categoryRepository: CategoryRepository,
+    private val getCategories: GetCategories,
+    private val libraryPreferences: LibraryPreferences,
 ) {
+    // SY -->
+    var isSync: Boolean = false
+    // SY <--
 
     suspend operator fun invoke(backupCategories: List<BackupCategory>) {
-        if (backupCategories.isNotEmpty()) {
-            val dbCategories = getCategories.await()
-            val dbCategoriesByName = dbCategories.associateBy { it.name }
-            var nextOrder = dbCategories.maxOfOrNull { it.order }?.plus(1) ?: 0
+        if (backupCategories.isEmpty()) return
 
-            val categories = backupCategories
+        val dbCategories = getCategories.await()
+        val categories = categoryRepository.restoreCategories(
+            categories = backupCategories
                 .sortedBy { it.order }
-                .map {
-                    val dbCategory = dbCategoriesByName[it.name]
-                    if (dbCategory != null) return@map dbCategory
-                    val order = nextOrder++
-                    handler.awaitOneExecutable(
-                        // KMK -->
-                        inTransaction = true,
-                        // KMK <--
-                    ) {
-                        categoriesQueries.insert(
-                            it.name,
-                            order,
-                            it.flags,
-                            // KMK -->
-                            hidden = if (it.hidden) 1L else 0L,
-                            // KMK <--
-                        )
-                        categoriesQueries.selectLastInsertedRowId()
-                    }
-                        .let { id -> it.toCategory(id).copy(order = order) }
-                }
+                .map { it.toCategory(id = 0) },
+            isSync = isSync,
+        )
 
-            libraryPreferences.categorizedDisplaySettings().set(
-                (dbCategories + categories)
-                    .distinctBy { it.flags }
-                    .size > 1,
-            )
-        }
+        libraryPreferences.categorizedDisplaySettings.set(
+            (dbCategories + categories)
+                .distinctBy { it.flags }
+                .size > 1,
+        )
     }
 }

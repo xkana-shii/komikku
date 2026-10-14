@@ -7,12 +7,18 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
 
-class MangaHotHandler(val client: OkHttpClient) {
+class MangaHotHandler(currentClient: OkHttpClient, userAgent: String) {
     val baseUrl = "https://mangahot.jp"
     private val apiUrl = "https://api.mangahot.jp"
+    val headers = Headers.Builder()
+        .add("User-Agent", userAgent)
+        .build()
+
+    val client: OkHttpClient = currentClient
 
     suspend fun fetchPageList(externalUrl: String): List<Page> {
         val request =
@@ -20,6 +26,7 @@ class MangaHotHandler(val client: OkHttpClient) {
                 externalUrl.substringBefore("?")
                     .replace(baseUrl, apiUrl)
                     .replace("viewer", "v1/works/storyDetail"),
+                headers,
             )
         return pageListParse(client.newCall(request).awaitSuccess())
     }

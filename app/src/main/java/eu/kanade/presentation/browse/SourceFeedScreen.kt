@@ -3,9 +3,6 @@ package eu.kanade.presentation.browse
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.Text
@@ -26,9 +23,10 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.components.SearchToolbar
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.Public
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
@@ -90,7 +88,7 @@ sealed class SourceFeedUI {
 fun SourceFeedScreen(
     name: String,
     isLoading: Boolean,
-    items: ImmutableList<SourceFeedUI>,
+    items: List<SourceFeedUI>,
     hasFilters: Boolean,
     onFabClick: () -> Unit,
     onClickBrowse: () -> Unit,
@@ -112,11 +110,11 @@ fun SourceFeedScreen(
     onSourceSettingClick: (() -> Unit?)?,
     onSortFeedClick: (() -> Unit)?,
     onLongClickManga: (Manga) -> Unit,
-    bulkFavoriteScreenModel: BulkFavoriteScreenModel,
+    bulkFavoriteViewModel: BulkFavoriteViewModel,
     // KMK <--
 ) {
     // KMK -->
-    val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+    val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
     // KMK <--
 
     Scaffold(
@@ -126,17 +124,17 @@ fun SourceFeedScreen(
                 BulkSelectionToolbar(
                     selectedCount = bulkFavoriteState.selection.size,
                     isRunning = bulkFavoriteState.isRunning,
-                    onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                    onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                    onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                    onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                     onSelectAll = {
                         items.mapNotNull { it.results }
                             .flatten()
-                            .forEach { bulkFavoriteScreenModel.select(it) }
+                            .forEach { bulkFavoriteViewModel.select(it) }
                     },
                     onReverseSelection = {
                         items.mapNotNull { it.results }
                             .flatten()
-                            .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                            .let { bulkFavoriteViewModel.reverseSelection(it) }
                     },
                 )
             } else {
@@ -153,7 +151,7 @@ fun SourceFeedScreen(
                     onToggleIncognito = onToggleIncognito,
                     onSourceSettingClick = onSourceSettingClick,
                     onSortFeedClick = onSortFeedClick,
-                    toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
+                    toggleSelectionMode = bulkFavoriteViewModel::toggleSelectionMode,
                     isRunning = bulkFavoriteState.isRunning,
                     // KMK <--
                 )
@@ -171,7 +169,7 @@ fun SourceFeedScreen(
                         },
                     )
                 },
-                icon = { Icon(Icons.Outlined.FilterList, contentDescription = "") },
+                icon = { Icon(MaterialSymbols.Rounded.FilterList, contentDescription = "") },
                 onClick = onFabClick,
             )
             // KMK <--
@@ -206,7 +204,7 @@ fun SourceFeedScreen(
 
 @Composable
 fun SourceFeedList(
-    items: ImmutableList<SourceFeedUI>,
+    items: List<SourceFeedUI>,
     paddingValues: PaddingValues,
     getMangaState: @Composable ((Manga) -> State<Manga>),
     onClickBrowse: () -> Unit,
@@ -336,7 +334,7 @@ fun SourceFeedToolbar(
         // KMK -->
         actions = {
             AppBarActions(
-                actions = persistentListOf<AppBar.AppBarAction>().builder().apply {
+                actions = buildList {
                     add(bulkSelectionButton(isRunning, toggleSelectionMode))
 
                     onWebViewClick?.let { func ->
@@ -344,7 +342,7 @@ fun SourceFeedToolbar(
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_web_view),
                                 onClick = { func() },
-                                icon = Icons.Outlined.Public,
+                                icon = MaterialSymbols.Rounded.Public,
                             ),
                         )
                     }
@@ -375,8 +373,7 @@ fun SourceFeedToolbar(
                             ),
                         )
                     }
-                }
-                    .build(),
+                },
             )
         },
         // KMK <--

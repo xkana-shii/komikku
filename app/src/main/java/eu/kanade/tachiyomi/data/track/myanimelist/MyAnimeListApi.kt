@@ -20,6 +20,8 @@ import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.PkceUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.FormBody
 import okhttp3.Headers
@@ -33,7 +35,7 @@ import java.util.Locale
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 class MyAnimeListApi(
-    private val trackId: Long,
+    private val trackerId: Long,
     private val client: OkHttpClient,
     interceptor: MyAnimeListInterceptor,
 ) {
@@ -43,7 +45,7 @@ class MyAnimeListApi(
     private val authClient = client.newBuilder().addInterceptor(interceptor).build()
 
     suspend fun getAccessToken(authCode: String): MALOAuth {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val formBody: RequestBody = FormBody.Builder()
                 .add("client_id", CLIENT_ID)
                 .add("code", authCode)
@@ -59,7 +61,7 @@ class MyAnimeListApi(
     }
 
     suspend fun getCurrentUser(): String {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val request = Request.Builder()
                 .url("$BASE_API_URL/users/@me")
                 .get()
@@ -74,7 +76,7 @@ class MyAnimeListApi(
     }
 
     suspend fun search(query: String): List<TrackSearch> {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val url = "$BASE_API_URL/manga".toUri().buildUpon()
                 // MAL API throws a 400 when the query is over 64 characters...
                 .appendQueryParameter("q", query.take(64))
@@ -93,7 +95,7 @@ class MyAnimeListApi(
     }
 
     suspend fun getMangaDetails(id: Int): TrackSearch {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val url = "$BASE_API_URL/manga".toUri().buildUpon()
                 .appendPath(id.toString())
                 .appendQueryParameter("fields", SEARCH_FIELDS)
@@ -108,7 +110,7 @@ class MyAnimeListApi(
     }
 
     suspend fun updateItem(track: Track): Track {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val formBodyBuilder = FormBody.Builder()
                 .add("status", track.toMyAnimeListStatus() ?: "reading")
                 .add("is_rereading", (track.status == MyAnimeList.REREADING).toString())
@@ -150,15 +152,15 @@ class MyAnimeListApi(
     }
 
     suspend fun deleteItem(track: DomainTrack) {
-        withIOContext {
+        withContext(Dispatchers.IO) {
             authClient
                 .newCall(DELETE(mangaUrl(track.remoteId).toString()))
-                .awaitSuccess()
+                .awaitSuccess().close()
         }
     }
 
     suspend fun findListItem(track: Track): Track? {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val uri = "$BASE_API_URL/manga".toUri().buildUpon()
                 .appendPath(track.remote_id.toString())
                 .appendQueryParameter("fields", "num_chapters,my_list_status{start_date,finish_date}")
@@ -176,7 +178,7 @@ class MyAnimeListApi(
     }
 
     suspend fun findListItems(query: String, offset: Int = 0): List<TrackSearch> {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val myListSearchResult = getListPage(offset)
 
             val matches = myListSearchResult.data
@@ -231,7 +233,7 @@ class MyAnimeListApi(
     // SY <--
 
     private suspend fun getListPage(offset: Int): MALSearchResult {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val urlBuilder = "$BASE_API_URL/users/@me/mangalist".toUri().buildUpon()
                 .appendQueryParameter("fields", SEARCH_FIELDS)
                 .appendQueryParameter("limit", LIST_PAGINATION_AMOUNT.toString())
@@ -263,7 +265,7 @@ class MyAnimeListApi(
     }
 
     private fun parseSearchItem(searchItem: MALManga): TrackSearch {
-        return TrackSearch.create(trackId).apply {
+        return TrackSearch.create(trackerId).apply {
             remote_id = searchItem.id
             title = searchItem.title
             summary = searchItem.synopsis
@@ -285,7 +287,13 @@ class MyAnimeListApi(
     }
 
     private fun parseDate(isoDate: String): Long {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(isoDate)?.time ?: 0L
+        val pattern = when (isoDate.length) {
+            10 -> "yyyy-MM-dd"
+            7 -> "yyyy-MM"
+            4 -> "yyyy"
+            else -> throw IllegalArgumentException("Unsupported date format: \"$isoDate\"")
+        }
+        return SimpleDateFormat(pattern, Locale.US).parse(isoDate)?.time ?: 0L
     }
 
     private fun convertToIsoDate(epochTime: Long): String? {

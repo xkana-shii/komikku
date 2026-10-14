@@ -7,12 +7,12 @@ import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.annotation.FloatRange
+import androidx.appcompat.R
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.alpha
 import androidx.core.graphics.blue
 import androidx.core.graphics.green
 import androidx.core.graphics.red
-import eu.kanade.tachiyomi.source.R
 import eu.kanade.tachiyomi.util.system.dpToPx
 import exh.util.SourceTagsUtil
 import tachiyomi.core.common.i18n.stringResource

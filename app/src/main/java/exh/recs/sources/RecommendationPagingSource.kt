@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
+import eu.kanade.tachiyomi.source.sourcesMapOrNull
 import exh.md.similar.MangaDexSimilarPagingSource
 import exh.source.COMICK_IDS
 import exh.source.MANGADEX_IDS
@@ -31,9 +32,9 @@ import uy.kohesive.injekt.injectLazy
 abstract class RecommendationPagingSource(
     protected val manga: Manga,
     // KMK -->
-    source: RecommendationSource = RecommendationSource(),
+    private val source: RecommendationSource = RecommendationSource(),
     // KMK <--
-) : BaseSourcePagingSource(source) {
+) : BaseSourcePagingSource({ source }, Injekt.get()) {
     // Display name
     abstract val name: String
 
@@ -47,6 +48,11 @@ abstract class RecommendationPagingSource(
      * If null, the user will be prompted to choose a source via SmartSearch when clicking on a recommendation.
      */
     open val associatedSourceId: Long? = null
+
+    /**
+     * Convenience overload for callers that fetch recommendations outside of [load].
+     */
+    suspend fun requestNextPage(currentPage: Int): MangasPage = requestNextPage(source, currentPage)
 
     companion object {
         internal fun createSources(
@@ -122,7 +128,7 @@ abstract class TrackerRecommendationPagingSource(
     abstract suspend fun getRecsBySearch(search: String): List<SManga>
     abstract suspend fun getRecsById(id: String): List<SManga>
 
-    override suspend fun requestNextPage(currentPage: Int): MangasPage {
+    override suspend fun requestNextPage(source: Source, currentPage: Int): MangasPage {
         val tracks = getTracks.await(manga.id)
 
         val recs = try {
@@ -150,18 +156,27 @@ abstract class TrackerRecommendationPagingSource(
 // KMK -->
 class RecommendationSource(
     override val id: Long = RECOMMENDS_SOURCE,
-    sourceManager: SourceManager = Injekt.get(),
+    private val sourceManager: SourceManager = Injekt.get(),
 ) : Source {
-    private val delegate by lazy {
-        sourceManager.get(id)
-    }
+    // Source exposes synchronous properties and there is no suspending call site here, so resolve
+    // the wrapped source from the already-loaded snapshot instead of blocking on the source scan.
+    // It is null while the sources are still loading; the properties below then use their defaults.
+    private val loadedSource: Source?
+        get() = sourceManager.sourcesMapOrNull?.get(id)
+
+    override val name: String
+        get() = loadedSource?.name ?: "Recommends Source"
+    override val lang: String
+        get() = loadedSource?.lang ?: "all"
+    override val supportsLatest: Boolean
+        get() = loadedSource?.supportsLatest ?: false
 
     fun isComickSource(): Boolean = id in COMICK_IDS
     fun isMangaDexSource(): Boolean = id in MANGADEX_IDS
 
-    override val name: String by lazy { delegate?.name ?: "Recommends Source" }
-    override val lang: String by lazy { delegate?.lang ?: "all" }
-    override val supportsLatest by lazy { delegate?.supportsLatest ?: false }
+    // Suspend paths keep awaiting the source manager so they aren't weakened when the snapshot is null.
+    private suspend fun awaitSource(): Source =
+        sourceManager.get(id) ?: throw UnsupportedOperationException()
 
     override suspend fun getMangaUpdate(
         manga: SManga,
@@ -169,24 +184,16 @@ class RecommendationSource(
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate =
-        delegate?.getMangaUpdate(manga, chapters, fetchDetails, fetchChapters)
-            ?: throw UnsupportedOperationException()
+        awaitSource().getMangaUpdate(manga, chapters, fetchDetails, fetchChapters)
 
-    override suspend fun getPageList(chapter: SChapter) =
-        delegate?.getPageList(chapter)
-            ?: throw UnsupportedOperationException()
+    override suspend fun getPageList(chapter: SChapter) = awaitSource().getPageList(chapter)
 
-    override suspend fun getPopularManga(page: Int) =
-        delegate?.getPopularManga(page)
-            ?: throw UnsupportedOperationException()
-    override suspend fun getLatestUpdates(page: Int) =
-        delegate?.getLatestUpdates(page)
-            ?: throw UnsupportedOperationException()
+    override suspend fun getPopularManga(page: Int) = awaitSource().getPopularManga(page)
+    override suspend fun getLatestUpdates(page: Int) = awaitSource().getLatestUpdates(page)
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList) =
-        delegate?.getSearchManga(page, query, filters)
-            ?: throw UnsupportedOperationException()
+        awaitSource().getSearchManga(page, query, filters)
     override fun getFilterList() =
-        delegate?.getFilterList()
+        loadedSource?.getFilterList()
             ?: throw UnsupportedOperationException()
 }
 

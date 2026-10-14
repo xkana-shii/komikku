@@ -1,5 +1,8 @@
 package eu.kanade.domain.sync
 
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.sync.models.SyncSettings
 import eu.kanade.tachiyomi.data.sync.SyncManager
 import eu.kanade.tachiyomi.data.sync.models.SyncTriggerOptions
@@ -7,31 +10,64 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import java.util.UUID
 
+@Inject
+@SingleIn(AppScope::class)
 class SyncPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
-    fun clientHost() = preferenceStore.getString("connection_sync_client_host", "https://sync.tachiyomi.org")
-    fun clientAPIKey() = preferenceStore.getString("connection_sync_client_api_key", "")
-    fun lastSyncTimestamp() = preferenceStore.getLong(Preference.appStateKey("last_sync_timestamp"), 0L)
+    val clientHost = preferenceStore.getString("connection_sync_client_host", "https://sync.tachiyomi.org")
+    val clientAPIKey = preferenceStore.getString("connection_sync_client_api_key", "")
+    val lastSyncTimestamp = preferenceStore.getLong(Preference.appStateKey("last_sync_timestamp"), 0L)
 
-    fun lastSyncEtag() = preferenceStore.getString("sync_etag", "")
+    val lastSyncEtag = preferenceStore.getString(Preference.appStateKey("sync_etag"), "")
 
-    fun syncInterval() = preferenceStore.getInt("sync_interval", 0)
-    fun syncService() = preferenceStore.getInt("sync_service", 0)
+    // SY -->
+    // SyncYomi protocol v2 state
+    val syncCursor = preferenceStore.getLong(Preference.appStateKey("sync_cursor"), 0L)
+
+    /** Epoch seconds of the start of the last successful sync; the next delta starts here. */
+    val lastPushedAt = preferenceStore.getLong(Preference.appStateKey("sync_last_pushed_at"), 0L)
+
+    /** Epoch millis of the last sync that carried the complete library. */
+    val lastFullSync = preferenceStore.getLong(Preference.appStateKey("sync_last_full_sync"), 0L)
+    val fullSyncRequested = preferenceStore.getBoolean(
+        Preference.appStateKey("sync_full_requested"),
+        false,
+    )
+    val serverSupportsV2 = preferenceStore.getBoolean(
+        Preference.appStateKey("sync_server_supports_v2"),
+        false,
+    )
+    val v2ProbedHost = preferenceStore.getString(Preference.appStateKey("sync_v2_probed_host"), "")
+    val pendingDeletedCategoryUids = preferenceStore.getStringSet(
+        Preference.appStateKey("sync_pending_deleted_category_uids"),
+        emptySet(),
+    )
+    // KUN -->
+    /** Chapter keys a source dropped, kept until the server acknowledges the tombstone. */
+    // KUN <--
+    val pendingDeletedChapterKeys = preferenceStore.getStringSet(
+        Preference.appStateKey("sync_pending_deleted_chapter_keys"),
+        emptySet(),
+    )
+    // SY <--
+
+    val syncInterval = preferenceStore.getInt("sync_interval", 0)
+    val syncService = preferenceStore.getInt("sync_service", 0)
 
     // KMK -->
-    fun webDavUrl() = preferenceStore.getString("connection_webdav_url", "")
-    fun webDavUsername() = preferenceStore.getString("connection_webdav_username", "")
-    fun webDavPassword() = preferenceStore.getString("connection_webdav_password", "")
-    fun webDavFolder() = preferenceStore.getString("connection_webdav_folder", "komikku")
+    val webDavUrl = preferenceStore.getString("connection_webdav_url", "")
+    val webDavUsername = preferenceStore.getString("connection_webdav_username", "")
+    val webDavPassword = preferenceStore.getString("connection_webdav_password", "")
+    val webDavFolder = preferenceStore.getString("connection_webdav_folder", "komikku")
     // KMK <--
 
-    fun googleDriveAccessToken() = preferenceStore.getString(
+    val googleDriveAccessToken = preferenceStore.getString(
         Preference.appStateKey("connection_google_drive_access_token"),
         "",
     )
 
-    fun googleDriveRefreshToken() = preferenceStore.getString(
+    val googleDriveRefreshToken = preferenceStore.getString(
         Preference.appStateKey("connection_google_drive_refresh_token"),
         "",
     )
@@ -50,8 +86,86 @@ class SyncPreferences(
     }
 
     fun isSyncEnabled(): Boolean {
-        return syncService().get() != SyncManager.SyncService.NONE.value
+        return syncService.get() != SyncManager.SyncService.NONE.value
     }
+
+    // KUN -->
+    /**
+     * Only the SyncYomi service consumes these tombstones, and only once the server is known to
+     * speak protocol v2. Recording them for Google Drive, WebDAV or an old v1 SyncYomi server would
+     * let the sets grow without bound and then flush a stale backlog once the user switches to a v2
+     * server, potentially deleting live categories or chapters.
+     *
+     * [serverSupportsV2] is the persisted flag that SyncYomiSyncService sets when the capability
+     * probe succeeds; it is only meaningful for the host it was probed against, so require a match.
+     */
+    private fun isSyncYomiV2(): Boolean {
+        return syncService.get() == SyncManager.SyncService.SYNCYOMI.value &&
+            v2ProbedHost.get() == clientHost.get() &&
+            serverSupportsV2.get()
+    }
+
+    /** Serialises the read-modify-write of the tombstone sets so concurrent edits are not lost. */
+    private val tombstoneLock = Any()
+    // KUN <--
+
+    // SY -->
+    /**
+     * Remembers a deleted category so the next SyncYomi v2 request can send it as a tombstone.
+     */
+    fun rememberDeletedCategory(uid: Long) {
+        // KUN -->
+        if (uid == 0L || !isSyncYomiV2()) return
+        synchronized(tombstoneLock) {
+            pendingDeletedCategoryUids.set(pendingDeletedCategoryUids.get() + uid.toString())
+        }
+        // KUN <--
+    }
+
+    // KUN -->
+    /**
+     * Forgets category tombstones for categories that are seen live again, so a live category is
+     * never deleted on the server.
+     */
+    fun forgetDeletedCategory(uids: Collection<Long>) {
+        if (uids.isEmpty()) return
+        val keys = uids.mapTo(mutableSetOf()) { it.toString() }
+        synchronized(tombstoneLock) {
+            val pending = pendingDeletedCategoryUids.get()
+            val remaining = pending - keys
+            if (remaining.size != pending.size) pendingDeletedCategoryUids.set(remaining)
+        }
+    }
+    // KUN <--
+    // KUN -->
+    /**
+     * Remembers the chapters a source dropped, so the next SyncYomi v2 request can tombstone them.
+     */
+    // KUN <--
+    fun rememberDeletedChapters(keys: Collection<String>) {
+        // KUN -->
+        if (keys.isEmpty() || !isSyncYomiV2()) return
+        synchronized(tombstoneLock) {
+            pendingDeletedChapterKeys.set(pendingDeletedChapterKeys.get() + keys)
+        }
+        // KUN <--
+    }
+
+    // KUN -->
+    /**
+     * Forgets chapters a source re-added before they were sent, so a live chapter is never tombstoned.
+     */
+    // KUN <--
+    fun forgetDeletedChapters(keys: Collection<String>) {
+        // KUN -->
+        synchronized(tombstoneLock) {
+            val pending = pendingDeletedChapterKeys.get()
+            val remaining = pending - keys.toSet()
+            if (remaining.size != pending.size) pendingDeletedChapterKeys.set(remaining)
+        }
+        // KUN <--
+    }
+    // SY <--
 
     fun getSyncSettings(): SyncSettings {
         return SyncSettings(
@@ -112,7 +226,7 @@ class SyncPreferences(
     }
 
     // KMK -->
-    fun showSyncingProgressBanner() = preferenceStore.getBoolean(
+    val showSyncingProgressBanner = preferenceStore.getBoolean(
         Preference.appStateKey("pref_show_syncing_progress_banner_key"),
         true,
     )

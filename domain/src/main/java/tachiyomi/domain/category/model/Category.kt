@@ -10,6 +10,11 @@ data class Category(
     // KMK -->
     val hidden: Boolean,
     // KMK <--
+    // SY -->
+    val version: Long = 0,
+    val uid: Long = 0,
+    val lastModifiedAt: Long = 0,
+    // SY <--
 ) : Serializable {
 
     val isSystemCategory: Boolean = id == UNCATEGORIZED_ID

@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.coroutines.coroutineScope
@@ -49,11 +50,13 @@ internal class ComickPagingSource(
     private val json by injectLazy<Json>()
     private val thumbnailBaseUrl = "https://meo.comick.pictures/"
 
-    override suspend fun requestNextPage(currentPage: Int): MangasPage {
+    override suspend fun requestNextPage(source: Source, currentPage: Int): MangasPage {
         val mangasPage = coroutineScope {
             val headers = Headers.Builder().apply {
                 add("Referer", "api.comick.fun/")
-                add("User-Agent", "Tachiyomi ${System.getProperty("http.agent")}")
+                // KUN -->
+                add("User-Agent", "Komikun ${System.getProperty("http.agent")}")
+                // KUN <--
             }
 
             // Comick extension populates the URL field with: '/comic/{hid}#'

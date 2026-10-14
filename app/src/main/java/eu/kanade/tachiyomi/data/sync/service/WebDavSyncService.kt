@@ -16,15 +16,12 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import okhttp3.ConnectionPool
 import okhttp3.Credentials
 import okhttp3.Headers
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.apache.http.HttpStatus
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class WebDavSyncService(
@@ -32,15 +29,18 @@ class WebDavSyncService(
     json: Json,
     syncPreferences: SyncPreferences,
     private val notifier: SyncNotifier,
-    private val protoBuf: ProtoBuf = Injekt.get(),
+    // KUN -->
+    // Metro DI: the shared ProtoBuf singleton replaces the old `Injekt.get()` default.
+    private val protoBuf: ProtoBuf = ProtoBuf,
+    // KUN <--
 ) : SyncService(context, json, syncPreferences) {
 
     private class WebDavException(message: String?) : Exception(message)
 
-    private val url: String = syncPreferences.webDavUrl().get().trim()
-    private val folder: String = syncPreferences.webDavFolder().get().trim('/')
-    private val username: String = syncPreferences.webDavUsername().get().trim()
-    private val password: String = syncPreferences.webDavPassword().get()
+    private val url: String = syncPreferences.webDavUrl.get().trim()
+    private val folder: String = syncPreferences.webDavFolder.get().trim('/')
+    private val username: String = syncPreferences.webDavUsername.get().trim()
+    private val password: String = syncPreferences.webDavPassword.get()
     private val credentials: String = Credentials.basic(username, password)
 
     private fun buildWebDavFileUrl(fileName: String = "backup.proto"): String {
@@ -99,7 +99,7 @@ class WebDavSyncService(
         return success
     }
 
-    override suspend fun doSync(syncData: SyncData): Backup? {
+    override suspend fun doSync(syncData: SyncData, full: Boolean): SyncResult {
         ensureFolderExists()
         try {
             val (remoteData, etag) = pullSyncData()
@@ -114,18 +114,23 @@ class WebDavSyncService(
             }
 
             pushSyncData(finalSyncData, etag)
-            return finalSyncData.backup
+            // KUN -->
+            // WebDAV has no delta protocol, so it always uploads (and restores) the whole library.
+            return SyncResult(finalSyncData.backup, changed = remoteData != null, protocolV2 = false)
+            // KUN <--
         } catch (e: Exception) {
             xLogE("WebDAV sync error:", e)
             notifier.showSyncError(e.message)
-            return null
+            // KUN -->
+            return SyncResult(null, changed = false, protocolV2 = false)
+            // KUN <--
         }
     }
 
     private suspend fun pullSyncData(): Pair<SyncData?, String> {
         if (!validateSettings()) return Pair(null, "")
 
-        val lastETag = syncPreferences.lastSyncEtag().get()
+        val lastETag = syncPreferences.lastSyncEtag.get()
         val headersBuilder = Headers.Builder().add("Authorization", credentials)
         if (lastETag.isNotEmpty()) headersBuilder.add("If-None-Match", lastETag)
 
@@ -160,10 +165,19 @@ class WebDavSyncService(
 
         if (!validateSettings()) return
 
-        val byteArray = protoBuf.encodeToByteArray(Backup.serializer(), backup)
-        if (byteArray.isEmpty()) throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
-
-        val body = byteArray.toRequestBody("application/octet-stream".toMediaType())
+        // KUN -->
+        // Stream the backup instead of materialising the whole library in one byte array, like the
+        // other sync services. BackupRequestBody keeps WebDAV's raw (non-gzip) protobuf encoding and
+        // turns an OutOfMemoryError while writing into an IOException.
+        val body = try {
+            BackupRequestBody(backup, protoBuf)
+        } catch (e: OutOfMemoryError) {
+            throw IOException("Not enough memory to sync this library", e)
+        }
+        if (body.metaBytes.isEmpty() && backup.backupManga.isEmpty()) {
+            throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
+        }
+        // KUN <--
         val headersBuilder = Headers.Builder().add("Authorization", credentials)
         if (eTag.isNotEmpty()) headersBuilder.add("If-Match", eTag)
 
@@ -174,7 +188,7 @@ class WebDavSyncService(
         when {
             response.isSuccessful -> {
                 val newETag = response.headers["ETag"]?.trim('"') ?: ""
-                if (newETag.isNotEmpty()) syncPreferences.lastSyncEtag().set(newETag)
+                if (newETag.isNotEmpty()) syncPreferences.lastSyncEtag.set(newETag)
                 xLogI("WebDAV sync completed")
             }
             response.code == HttpStatus.SC_PRECONDITION_FAILED -> {

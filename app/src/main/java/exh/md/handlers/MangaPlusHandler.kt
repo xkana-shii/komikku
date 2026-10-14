@@ -15,15 +15,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import uy.kohesive.injekt.injectLazy
 import java.util.UUID
 
-class MangaPlusHandler(currentClient: OkHttpClient) {
-    val json: Json by injectLazy()
-
+class MangaPlusHandler(currentClient: OkHttpClient, val json: Json) {
     val headers = Headers.Builder()
         .add("Origin", WEB_URL)
         .add("Referer", WEB_URL)
+        .add("User-Agent", USER_AGENT)
         .add("SESSION-TOKEN", UUID.randomUUID().toString()).build()
 
     val client: OkHttpClient = currentClient.newBuilder()
@@ -105,6 +103,8 @@ class MangaPlusHandler(currentClient: OkHttpClient) {
 
     companion object {
         private const val WEB_URL = "https://mangaplus.shueisha.co.jp"
+        private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
         private const val API_URL = "https://jumpg-webapi.tokyo-cdn.com/api"
     }
 }

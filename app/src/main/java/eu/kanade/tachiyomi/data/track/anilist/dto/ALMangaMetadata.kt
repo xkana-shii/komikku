@@ -22,3 +22,40 @@ data class ALMangaMetadataMedia(
     val description: String?,
     val staff: ALStaff,
 )
+
+@Serializable
+data class ALItemTitle(
+    val userPreferred: String,
+)
+
+@Serializable
+data class ItemCover(
+    val large: String,
+)
+
+@Serializable
+data class ALStaff(
+    val edges: List<ALEdge>,
+)
+
+@Serializable
+data class ALEdge(
+    val role: String,
+    val node: ALStaffNode,
+)
+
+@Serializable
+data class ALStaffNode(
+    val name: ALStaffName,
+)
+
+@Serializable
+data class ALStaffName(
+    val userPreferred: String?,
+    val native: String?,
+    val full: String?,
+) {
+    operator fun invoke(): String? {
+        return userPreferred ?: full ?: native
+    }
+}

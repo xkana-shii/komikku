@@ -1,5 +1,8 @@
 package tachiyomi.domain.library.service
 
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
@@ -10,58 +13,60 @@ import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.manga.model.Manga
 
+@Inject
+@SingleIn(AppScope::class)
 class LibraryPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
 
-    fun displayMode() = preferenceStore.getObjectFromString(
+    val displayMode = preferenceStore.getObjectFromString(
         "pref_display_mode_library",
         LibraryDisplayMode.default,
         LibraryDisplayMode.Serializer::serialize,
         LibraryDisplayMode.Serializer::deserialize,
     )
 
-    fun sortingMode() = preferenceStore.getObjectFromString(
+    val sortingMode = preferenceStore.getObjectFromString(
         "library_sorting_mode",
         LibrarySort.default,
         LibrarySort.Serializer::serialize,
         LibrarySort.Serializer::deserialize,
     )
 
-    fun randomSortSeed() = preferenceStore.getInt("library_random_sort_seed", 0)
+    val randomSortSeed = preferenceStore.getInt("library_random_sort_seed", 0)
 
-    fun portraitColumns() = preferenceStore.getInt("pref_library_columns_portrait_key", 0)
+    val portraitColumns = preferenceStore.getInt("pref_library_columns_portrait_key", 0)
 
-    fun landscapeColumns() = preferenceStore.getInt("pref_library_columns_landscape_key", 0)
+    val landscapeColumns = preferenceStore.getInt("pref_library_columns_landscape_key", 0)
 
-    fun lastUpdatedTimestamp() = preferenceStore.getLong(Preference.appStateKey("library_update_last_timestamp"), 0L)
-    fun autoUpdateInterval() = preferenceStore.getInt("pref_library_update_interval_key", 0)
+    val lastUpdatedTimestamp = preferenceStore.getLong(Preference.appStateKey("library_update_last_timestamp"), 0L)
+    val autoUpdateInterval = preferenceStore.getInt("pref_library_update_interval_key", 0)
 
     // KMK -->
-    fun showUpdatingProgressBanner() = preferenceStore.getBoolean(
+    val showUpdatingProgressBanner = preferenceStore.getBoolean(
         Preference.appStateKey("pref_show_updating_progress_banner_key"),
         true,
     )
     // KMK <--
 
-    fun coverRatios() = preferenceStore.getStringSet(
+    val coverRatios = preferenceStore.getStringSet(
         Preference.appStateKey("pref_library_cover_ratios_key"),
         emptySet(),
     )
 
-    fun coverColors() = preferenceStore.getStringSet(
+    val coverColors = preferenceStore.getStringSet(
         Preference.appStateKey("pref_library_cover_colors_key"),
         emptySet(),
     )
     // KMK <--
 
-    fun autoUpdateDeviceRestrictions() = preferenceStore.getStringSet(
+    val autoUpdateDeviceRestrictions = preferenceStore.getStringSet(
         "library_update_restriction",
         setOf(
             DEVICE_ONLY_ON_WIFI,
         ),
     )
-    fun autoUpdateMangaRestrictions() = preferenceStore.getStringSet(
+    val autoUpdateMangaRestrictions = preferenceStore.getStringSet(
         "library_update_manga_restriction",
         setOf(
             MANGA_HAS_UNREAD,
@@ -71,65 +76,65 @@ class LibraryPreferences(
         ),
     )
 
-    fun autoUpdateMetadata() = preferenceStore.getBoolean("auto_update_metadata", false)
+    val autoUpdateMetadata = preferenceStore.getBoolean("auto_update_metadata", false)
 
     // KMK -->
-    fun fetchMetadataOnAdd() = preferenceStore.getBoolean("fetch_metadata_on_add", false)
-    fun fetchChaptersOnAdd() = preferenceStore.getBoolean("fetch_chapters_on_add", false)
+    val fetchMetadataOnAdd = preferenceStore.getBoolean("fetch_metadata_on_add", false)
+    val fetchChaptersOnAdd = preferenceStore.getBoolean("fetch_chapters_on_add", false)
     // KMK <--
 
-    fun showContinueReadingButton() = preferenceStore.getBoolean(
+    val showContinueReadingButton = preferenceStore.getBoolean(
         "display_continue_reading_button",
         false,
     )
 
-    fun markDuplicateReadChapterAsRead() = preferenceStore.getStringSet("mark_duplicate_read_chapter_read", emptySet())
+    val markDuplicateReadChapterAsRead = preferenceStore.getStringSet("mark_duplicate_read_chapter_read", emptySet())
 
     // region Filter
 
-    fun filterDownloaded() = preferenceStore.getEnum(
+    val filterDownloaded = preferenceStore.getEnum(
         "pref_filter_library_downloaded_v2",
         TriState.DISABLED,
     )
 
-    fun filterUnread() = preferenceStore.getEnum("pref_filter_library_unread_v2", TriState.DISABLED)
+    val filterUnread = preferenceStore.getEnum("pref_filter_library_unread_v2", TriState.DISABLED)
 
-    fun filterStarted() = preferenceStore.getEnum(
+    val filterStarted = preferenceStore.getEnum(
         "pref_filter_library_started_v2",
         TriState.DISABLED,
     )
 
-    fun filterBookmarked() = preferenceStore.getEnum(
+    val filterBookmarked = preferenceStore.getEnum(
         "pref_filter_library_bookmarked_v2",
         TriState.DISABLED,
     )
 
-    fun filterCompleted() = preferenceStore.getEnum(
+    val filterCompleted = preferenceStore.getEnum(
         "pref_filter_library_completed_v2",
         TriState.DISABLED,
     )
 
-    fun filterIntervalCustom() = preferenceStore.getEnum(
+    val filterIntervalCustom = preferenceStore.getEnum(
         "pref_filter_library_interval_custom",
         TriState.DISABLED,
     )
 
     // SY -->
-    fun filterLewd() = preferenceStore.getEnum(
+    val filterLewd = preferenceStore.getEnum(
         "pref_filter_library_lewd_v2",
         TriState.DISABLED,
     )
     // SY <--
 
     // KMK -->
-    fun filterCategories() = preferenceStore.getBoolean(
+    val filterCategories = preferenceStore.getBoolean(
         "pref_filter_library_categories",
         false,
     )
 
-    fun filterCategoriesInclude() = preferenceStore.getStringSet(FILTER_LIBRARY_CATEGORIES_INCLUDE_PREF_KEY, emptySet())
+    val filterCategoriesInclude = preferenceStore.getStringSet(FILTER_LIBRARY_CATEGORIES_INCLUDE_PREF_KEY, emptySet())
 
-    fun filterCategoriesExclude() = preferenceStore.getStringSet(FILTER_LIBRARY_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
+    val filterCategoriesExclude = preferenceStore.getStringSet(FILTER_LIBRARY_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
     // KMK <--
 
     fun filterTracking(id: Int) = preferenceStore.getEnum(
@@ -141,115 +146,115 @@ class LibraryPreferences(
 
     // region Badges
 
-    fun downloadBadge() = preferenceStore.getBoolean("display_download_badge", false)
+    val downloadBadge = preferenceStore.getBoolean("display_download_badge", false)
 
-    fun unreadBadge() = preferenceStore.getBoolean("display_unread_badge", true)
+    val unreadBadge = preferenceStore.getBoolean("display_unread_badge", true)
 
-    fun localBadge() = preferenceStore.getBoolean("display_local_badge", true)
+    val localBadge = preferenceStore.getBoolean("display_local_badge", true)
 
-    fun languageBadge() = preferenceStore.getBoolean("display_language_badge", true)
+    val languageBadge = preferenceStore.getBoolean("display_language_badge", true)
 
     // KMK -->
-    fun sourceBadge() = preferenceStore.getBoolean("display_source_badge", true)
+    val sourceBadge = preferenceStore.getBoolean("display_source_badge", true)
 
-    fun useLangIcon() = preferenceStore.getBoolean("display_language_text", true)
+    val useLangIcon = preferenceStore.getBoolean("display_language_text", true)
     // KMK <--
 
-    fun newShowUpdatesCount() = preferenceStore.getBoolean("library_show_updates_count", true)
-    fun newUpdatesCount() = preferenceStore.getInt(Preference.appStateKey("library_unseen_updates_count"), 0)
+    val newShowUpdatesCount = preferenceStore.getBoolean("library_show_updates_count", true)
+    val newUpdatesCount = preferenceStore.getInt(Preference.appStateKey("library_unseen_updates_count"), 0)
 
     // endregion
 
     // region Category
 
-    fun defaultCategory() = preferenceStore.getInt(DEFAULT_CATEGORY_PREF_KEY, -1)
+    val defaultCategory = preferenceStore.getInt(DEFAULT_CATEGORY_PREF_KEY, -1)
 
-    fun lastUsedCategory() = preferenceStore.getInt(Preference.appStateKey("last_used_category"), 0)
+    val lastUsedCategory = preferenceStore.getInt(Preference.appStateKey("last_used_category"), 0)
 
-    fun categoryTabs() = preferenceStore.getBoolean("display_category_tabs", true)
+    val categoryTabs = preferenceStore.getBoolean("display_category_tabs", true)
 
-    fun categoryNumberOfItems() = preferenceStore.getBoolean("display_number_of_items", false)
+    val categoryNumberOfItems = preferenceStore.getBoolean("display_number_of_items", false)
 
-    fun categorizedDisplaySettings() = preferenceStore.getBoolean("categorized_display", false)
+    val categorizedDisplaySettings = preferenceStore.getBoolean("categorized_display", false)
 
     // KMK -->
-    fun showHiddenCategories() = preferenceStore.getBoolean("hide_hidden_categories", false)
+    val showHiddenCategories = preferenceStore.getBoolean("hide_hidden_categories", false)
     // KMK <--
 
-    fun updateCategories() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_PREF_KEY, emptySet())
+    val updateCategories = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_PREF_KEY, emptySet())
 
-    fun updateCategoriesExclude() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
+    val updateCategoriesExclude = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
 
     // endregion
 
     // region Chapter
 
-    fun filterChapterByRead() = preferenceStore.getLong(
+    val filterChapterByRead = preferenceStore.getLong(
         "default_chapter_filter_by_read",
         Manga.SHOW_ALL,
     )
 
-    fun filterChapterByDownloaded() = preferenceStore.getLong(
+    val filterChapterByDownloaded = preferenceStore.getLong(
         "default_chapter_filter_by_downloaded",
         Manga.SHOW_ALL,
     )
 
-    fun filterChapterByBookmarked() = preferenceStore.getLong(
+    val filterChapterByBookmarked = preferenceStore.getLong(
         "default_chapter_filter_by_bookmarked",
         Manga.SHOW_ALL,
     )
 
     // and upload date
-    fun sortChapterBySourceOrNumber() = preferenceStore.getLong(
+    val sortChapterBySourceOrNumber = preferenceStore.getLong(
         "default_chapter_sort_by_source_or_number",
         Manga.CHAPTER_SORTING_SOURCE,
     )
 
-    fun displayChapterByNameOrNumber() = preferenceStore.getLong(
+    val displayChapterByNameOrNumber = preferenceStore.getLong(
         "default_chapter_display_by_name_or_number",
         Manga.CHAPTER_DISPLAY_NAME,
     )
 
-    fun sortChapterByAscendingOrDescending() = preferenceStore.getLong(
+    val sortChapterByAscendingOrDescending = preferenceStore.getLong(
         "default_chapter_sort_by_ascending_or_descending",
         Manga.CHAPTER_SORT_DESC,
     )
 
     fun setChapterSettingsDefault(manga: Manga) {
-        filterChapterByRead().set(manga.unreadFilterRaw)
-        filterChapterByDownloaded().set(manga.downloadedFilterRaw)
-        filterChapterByBookmarked().set(manga.bookmarkedFilterRaw)
-        sortChapterBySourceOrNumber().set(manga.sorting)
-        displayChapterByNameOrNumber().set(manga.displayMode)
-        sortChapterByAscendingOrDescending().set(
+        filterChapterByRead.set(manga.unreadFilterRaw)
+        filterChapterByDownloaded.set(manga.downloadedFilterRaw)
+        filterChapterByBookmarked.set(manga.bookmarkedFilterRaw)
+        sortChapterBySourceOrNumber.set(manga.sorting)
+        displayChapterByNameOrNumber.set(manga.displayMode)
+        sortChapterByAscendingOrDescending.set(
             if (manga.sortDescending()) Manga.CHAPTER_SORT_DESC else Manga.CHAPTER_SORT_ASC,
         )
     }
 
-    fun autoClearChapterCache() = preferenceStore.getBoolean("auto_clear_chapter_cache", false)
+    val autoClearChapterCache = preferenceStore.getBoolean("auto_clear_chapter_cache", false)
 
-    fun hideMissingChapters() = preferenceStore.getBoolean("pref_hide_missing_chapter_indicators", false)
+    val hideMissingChapters = preferenceStore.getBoolean("pref_hide_missing_chapter_indicators", false)
 
     // KMK -->
-    fun showEmptyCategoriesSearch() = preferenceStore.getBoolean("show_empty_categories_search", false)
+    val showEmptyCategoriesSearch = preferenceStore.getBoolean("show_empty_categories_search", false)
     // KMK <--
     // endregion
 
     // region Swipe Actions
 
-    fun swipeToStartAction() = preferenceStore.getEnum(
+    val swipeToStartAction = preferenceStore.getEnum(
         "pref_chapter_swipe_end_action",
         ChapterSwipeAction.ToggleBookmark,
     )
 
-    fun swipeToEndAction() = preferenceStore.getEnum(
+    val swipeToEndAction = preferenceStore.getEnum(
         "pref_chapter_swipe_start_action",
         ChapterSwipeAction.ToggleRead,
     )
 
-    fun updateMangaTitles() = preferenceStore.getBoolean("pref_update_library_manga_titles", false)
+    val updateMangaTitles = preferenceStore.getBoolean("pref_update_library_manga_titles", false)
 
-    fun disallowNonAsciiFilenames() = preferenceStore.getBoolean("disallow_non_ascii_filenames", false)
+    val disallowNonAsciiFilenames = preferenceStore.getBoolean("disallow_non_ascii_filenames", false)
 
     // endregion
 
@@ -262,11 +267,11 @@ class LibraryPreferences(
 
     // SY -->
 
-    fun sortTagsForLibrary() = preferenceStore.getStringSet("sort_tags_for_library", mutableSetOf())
+    val sortTagsForLibrary = preferenceStore.getStringSet("sort_tags_for_library", mutableSetOf())
 
-    fun groupLibraryUpdateType() = preferenceStore.getEnum("group_library_update_type", GroupLibraryMode.GLOBAL)
+    val groupLibraryUpdateType = preferenceStore.getEnum("group_library_update_type", GroupLibraryMode.GLOBAL)
 
-    fun groupLibraryBy() = preferenceStore.getInt("group_library_by", LibraryGroup.BY_DEFAULT)
+    val groupLibraryBy = preferenceStore.getInt("group_library_by", LibraryGroup.BY_DEFAULT)
 
     // SY <--
 

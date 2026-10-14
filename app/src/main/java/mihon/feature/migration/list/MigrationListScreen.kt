@@ -10,9 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.browse.migration.search.MigrateSearchScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -48,8 +48,17 @@ class MigrationListScreen(
         // KMK -->
         val singleEntryNoSmartSearch = mangaIds.size == 1 && !isSmartSearchSingleEntry
         // KMK <--
-        val screenModel = rememberScreenModel { MigrationListScreenModel(mangaIds, extraSearchQuery, /* KMK --> */ singleEntryNoSmartSearch /* KMK <-- */) }
-        val state by screenModel.state.collectAsState()
+        val viewModel =
+            assistedMetroViewModel<MigrationListViewModel, MigrationListViewModel.Factory> {
+                create(
+                    mangaIds = mangaIds,
+                    extraSearchQuery = extraSearchQuery,
+                    // KMK -->
+                    runManually = singleEntryNoSmartSearch,
+                    // KMK <--
+                )
+            }
+        val state by viewModel.state.collectAsState()
         val context = LocalContext.current
 
         // KMK -->
@@ -65,7 +74,7 @@ class MigrationListScreen(
 
         LaunchedEffect(matchOverride) {
             val (current, target) = matchOverride ?: return@LaunchedEffect
-            screenModel.useMangaForMigration(
+            viewModel.useMangaForMigration(
                 current = current,
                 target = target,
                 onMissingChapters = {
@@ -75,8 +84,8 @@ class MigrationListScreen(
             matchOverride = null
         }
 
-        LaunchedEffect(screenModel) {
-            screenModel.navigateBackEvent.collect {
+        LaunchedEffect(viewModel) {
+            viewModel.navigateBackEvent.collect {
                 // KMK -->
                 /* If this screen is called from single manga migration, replace the MangaScreen in the backstack
                    with the newly migrated manga to reflect the changes properly.
@@ -114,52 +123,52 @@ class MigrationListScreen(
             onSearchManually = { migrationItem ->
                 navigator push MigrateSearchScreen(migrationItem.manga.id)
             },
-            onSkip = { screenModel.removeManga(it) },
-            onMigrate = { screenModel.migrateNow(mangaId = it, replace = true) },
-            onCopy = { screenModel.migrateNow(mangaId = it, replace = false) },
-            openMigrationDialog = screenModel::showMigrateDialog,
+            onSkip = { viewModel.removeManga(it) },
+            onMigrate = { viewModel.migrateNow(mangaId = it, replace = true) },
+            onCopy = { viewModel.migrateNow(mangaId = it, replace = false) },
+            openMigrationDialog = viewModel::showMigrateDialog,
             // KMK -->
-            onCancel = { screenModel.cancelManga(it) },
-            openOptionsDialog = screenModel::openOptionsDialog,
+            onCancel = { viewModel.cancelManga(it) },
+            openOptionsDialog = viewModel::openOptionsDialog,
             // KMK <--
         )
 
         when (val dialog = state.dialog) {
-            is MigrationListScreenModel.Dialog.Migrate -> {
+            is MigrationListViewModel.Dialog.Migrate -> {
                 MigrationMangaDialog(
-                    onDismissRequest = screenModel::dismissDialog,
+                    onDismissRequest = viewModel::dismissDialog,
                     copy = dialog.copy,
                     totalCount = dialog.totalCount,
                     skippedCount = dialog.skippedCount,
                     onMigrate = {
                         if (dialog.copy) {
-                            screenModel.copyMangas()
+                            viewModel.copyMangas()
                         } else {
-                            screenModel.migrateMangas()
+                            viewModel.migrateMangas()
                         }
                     },
                 )
             }
-            is MigrationListScreenModel.Dialog.Progress -> {
+            is MigrationListViewModel.Dialog.Progress -> {
                 MigrationProgressDialog(
                     progress = dialog.progress,
-                    exitMigration = screenModel::cancelMigrate,
+                    exitMigration = viewModel::cancelMigrate,
                 )
             }
-            MigrationListScreenModel.Dialog.Exit -> {
+            MigrationListViewModel.Dialog.Exit -> {
                 MigrationExitDialog(
-                    onDismissRequest = screenModel::dismissDialog,
+                    onDismissRequest = viewModel::dismissDialog,
                     exitMigration = navigator::pop,
                 )
             }
             // KMK -->
-            MigrationListScreenModel.Dialog.Options -> {
+            MigrationListViewModel.Dialog.Options -> {
                 MigrationConfigScreenSheet(
-                    preferences = screenModel.preferences,
-                    onDismissRequest = screenModel::dismissDialog,
+                    preferences = viewModel.preferences,
+                    onDismissRequest = viewModel::dismissDialog,
                     onStartMigration = { _ ->
-                        screenModel.dismissDialog()
-                        screenModel.updateOptions()
+                        viewModel.dismissDialog()
+                        viewModel.updateOptions()
                     },
                     fullSettings = false,
                 )
@@ -169,7 +178,7 @@ class MigrationListScreen(
         }
 
         BackHandler(true) {
-            screenModel.showExitDialog()
+            viewModel.showExitDialog()
         }
     }
 }

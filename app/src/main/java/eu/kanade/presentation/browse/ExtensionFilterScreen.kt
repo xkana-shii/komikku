@@ -23,8 +23,6 @@ import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterState
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
@@ -115,7 +113,7 @@ private fun ExtensionFilterContentPreview() {
     ExtensionFilterContent(
         contentPadding = PaddingValues(),
         state = ExtensionFilterState.Success(
-            languages = persistentListOf(
+            languages = listOf(
                 "all",
                 "other",
                 "af",
@@ -230,7 +228,7 @@ private fun ExtensionFilterContentPreview() {
                 "zh",
                 "zu",
             ),
-            enabledLanguages = persistentSetOf("en"),
+            enabledLanguages = setOf("en"),
         ),
         onClickLang = {},
     )

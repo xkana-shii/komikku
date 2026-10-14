@@ -3,9 +3,18 @@ package tachiyomi.domain.source.repository
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearchUpdate
+import tachiyomi.domain.source.model.FeedWithSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 
 interface FeedSavedSearchRepository {
+
+    // KUN -->
+    /**
+     * Every feed together with the saved search it points at, if any (the backup/restore view of
+     * the `selectAllFeedWithSavedSearch` join).
+     */
+    suspend fun getAllWithSavedSearch(): List<FeedWithSavedSearch>
+    // KUN <--
 
     suspend fun getGlobal(): List<FeedSavedSearch>
 

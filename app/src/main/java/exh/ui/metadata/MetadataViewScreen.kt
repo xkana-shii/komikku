@@ -20,9 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.presentation.util.Screen
@@ -45,16 +45,18 @@ class MetadataViewScreen(
 ) : Screen() {
     @Composable
     override fun Content() {
-        val screenModel = rememberScreenModel { MetadataViewScreenModel(mangaId, sourceId) }
+        val viewModel = assistedMetroViewModel<MetadataViewViewModel, MetadataViewViewModel.Factory> {
+            create(mangaId = mangaId, sourceId = sourceId)
+        }
         val navigator = LocalNavigator.currentOrThrow
 
-        val state by screenModel.state.collectAsState()
+        val state by viewModel.state.collectAsState()
 
         @Composable
         fun content() = Scaffold(
             topBar = { scrollBehavior ->
                 AppBar(
-                    title = screenModel.manga.collectAsState().value?.title,
+                    title = viewModel.manga.collectAsState().value?.title,
                     navigateUp = navigator::pop,
                     scrollBehavior = scrollBehavior,
                 )
@@ -113,7 +115,7 @@ class MetadataViewScreen(
 
         // KMK -->
         TachiyomiTheme(
-            seedColor = seedColor?.let { Color(seedColor) }.takeIf { screenModel.themeCoverBased },
+            seedColor = seedColor?.let { Color(seedColor) }.takeIf { viewModel.themeCoverBased },
         ) {
             // KMK <--
             content()

@@ -1,10 +1,12 @@
 package eu.kanade.tachiyomi.source
 
+import android.content.Context
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import exh.source.EH_PACKAGE
 import exh.source.LOCAL_SOURCE_PACKAGE
 import exh.source.isEhBasedSource
+import mihon.app.di.appGraph
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.presentation.core.icons.FlagEmoji
 import tachiyomi.source.local.isLocal
@@ -17,7 +19,7 @@ fun Source.getNameForMangaInfo(
     // SY <--
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
-    val enabledLanguages = preferences.enabledLanguages().get()
+    val enabledLanguages = preferences.enabledLanguages.get()
         .filterNot { it in listOf("all", "other") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
@@ -83,12 +85,12 @@ private fun getMergedSourcesString(
 fun Source.isLocalOrStub(): Boolean = isLocal() || this is StubSource
 
 // KMK -->
-fun Source.isIncognitoModeEnabled(incognitoExtensions: Set<String>? = null): Boolean {
+suspend fun Source.isIncognitoModeEnabled(incognitoExtensions: Set<String>? = null): Boolean {
     val extensionPackage = when {
         isLocal() -> LOCAL_SOURCE_PACKAGE
         isEhBasedSource() -> EH_PACKAGE
         else -> Injekt.get<ExtensionManager>().getExtensionPackage(id)
     }
-    return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions().get())
+    return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions.get())
 }
 // KMK <--

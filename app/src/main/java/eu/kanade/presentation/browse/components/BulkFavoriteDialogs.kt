@@ -1,8 +1,6 @@
 package eu.kanade.presentation.browse.components
 
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,11 +13,13 @@ import cafe.adriel.voyager.navigator.Navigator
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.manga.DuplicateMangaDialog
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel.Dialog
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel.Dialog
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Checklist
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -27,16 +27,16 @@ import tachiyomi.presentation.core.i18n.stringResource
 /**
  * Compose to shows the bulk favorite dialogs.
  *
- * @param bulkFavoriteScreenModel the screen model.
+ * @param bulkFavoriteViewModel the screen model.
  * @param dialog the dialog to show.
  */
 @Composable
 fun Screen.BulkFavoriteDialogs(
-    bulkFavoriteScreenModel: BulkFavoriteScreenModel,
+    bulkFavoriteViewModel: BulkFavoriteViewModel,
     dialog: Dialog?,
 ) {
     val navigator = LocalNavigator.current
-    val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+    val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
 
     when (dialog) {
         /* Bulk-favorite actions */
@@ -44,9 +44,9 @@ fun Screen.BulkFavoriteDialogs(
             ChangeMangasCategoryDialog(
                 dialog = dialog,
                 navigator = navigator,
-                onDismiss = bulkFavoriteScreenModel::dismissDialog,
+                onDismiss = bulkFavoriteViewModel::dismissDialog,
                 onConfirm = { include, exclude ->
-                    bulkFavoriteScreenModel.setMangasCategories(dialog.mangas, include, exclude)
+                    bulkFavoriteViewModel.setMangasCategories(dialog.mangas, include, exclude)
                 },
             )
 
@@ -54,12 +54,12 @@ fun Screen.BulkFavoriteDialogs(
             BulkAllowDuplicateDialog(
                 dialog = dialog,
                 navigator = navigator,
-                onDismiss = bulkFavoriteScreenModel::dismissDialog,
-                stopRunning = bulkFavoriteScreenModel::stopRunning,
-                addFavorite = bulkFavoriteScreenModel::addFavorite,
-                showMigrateDialog = bulkFavoriteScreenModel::showMigrateDialog,
-                addFavoriteDuplicate = bulkFavoriteScreenModel::addFavoriteDuplicate,
-                removeDuplicateSelectedManga = bulkFavoriteScreenModel::removeDuplicateSelectedManga,
+                onDismiss = bulkFavoriteViewModel::dismissDialog,
+                stopRunning = bulkFavoriteViewModel::stopRunning,
+                addFavorite = bulkFavoriteViewModel::addFavorite,
+                showMigrateDialog = bulkFavoriteViewModel::showMigrateDialog,
+                addFavoriteDuplicate = bulkFavoriteViewModel::addFavoriteDuplicate,
+                removeDuplicateSelectedManga = bulkFavoriteViewModel::removeDuplicateSelectedManga,
             )
 
         /* Single-favorite actions for screens originally don't have it */
@@ -67,18 +67,18 @@ fun Screen.BulkFavoriteDialogs(
             AddDuplicateMangaDialog(
                 dialog = dialog,
                 navigator = navigator,
-                onDismiss = bulkFavoriteScreenModel::dismissDialog,
-                stopRunning = bulkFavoriteScreenModel::stopRunning,
-                toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
-                addFavorite = bulkFavoriteScreenModel::addFavorite,
-                showMigrateDialog = bulkFavoriteScreenModel::showMigrateDialog,
+                onDismiss = bulkFavoriteViewModel::dismissDialog,
+                stopRunning = bulkFavoriteViewModel::stopRunning,
+                toggleSelectionMode = bulkFavoriteViewModel::toggleSelectionMode,
+                addFavorite = bulkFavoriteViewModel::addFavorite,
+                showMigrateDialog = bulkFavoriteViewModel::showMigrateDialog,
             )
 
         is Dialog.RemoveManga ->
             RemoveMangaDialog(
                 dialog = dialog,
-                onDismiss = bulkFavoriteScreenModel::dismissDialog,
-                changeMangaFavorite = bulkFavoriteScreenModel::changeMangaFavorite,
+                onDismiss = bulkFavoriteViewModel::dismissDialog,
+                changeMangaFavorite = bulkFavoriteViewModel::changeMangaFavorite,
             )
 
         is Dialog.Migrate ->
@@ -86,10 +86,10 @@ fun Screen.BulkFavoriteDialogs(
                 dialog = dialog,
                 navigator = navigator,
                 state = bulkFavoriteState,
-                onDismiss = bulkFavoriteScreenModel::dismissDialog,
-                stopRunning = bulkFavoriteScreenModel::stopRunning,
-                toggleSelection = bulkFavoriteScreenModel::toggleSelection,
-                addFavorite = bulkFavoriteScreenModel::addFavorite,
+                onDismiss = bulkFavoriteViewModel::dismissDialog,
+                stopRunning = bulkFavoriteViewModel::stopRunning,
+                toggleSelection = bulkFavoriteViewModel::toggleSelection,
+                addFavorite = bulkFavoriteViewModel::addFavorite,
             )
 
         else -> {}
@@ -100,7 +100,7 @@ fun Screen.BulkFavoriteDialogs(
 private fun Screen.ShowMigrateDialog(
     dialog: Dialog.Migrate,
     navigator: Navigator?,
-    state: BulkFavoriteScreenModel.State,
+    state: BulkFavoriteViewModel.State,
     onDismiss: () -> Unit,
     stopRunning: () -> Unit,
     toggleSelection: (Manga, toSelectedState: Boolean) -> Unit,
@@ -233,7 +233,7 @@ fun bulkSelectionButton(
     } else {
         AppBar.Action(
             title = title,
-            icon = Icons.Outlined.Checklist,
+            icon = MaterialSymbols.Rounded.Checklist,
             onClick = toggleSelectionMode,
         )
     }

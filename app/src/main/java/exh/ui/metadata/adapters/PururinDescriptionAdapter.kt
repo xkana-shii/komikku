@@ -14,7 +14,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.databinding.DescriptionAdapterPuBinding
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel.State
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.dpToPx
 import exh.metadata.metadata.PururinSearchMetadata
@@ -25,6 +25,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import kotlin.math.round
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 @Composable
 fun PururinDescription(state: State.Success, openMetadataViewer: () -> Unit) {
@@ -86,7 +87,7 @@ fun PururinDescription(state: State.Success, openMetadataViewer: () -> Unit) {
             binding.ratingBar.supportSecondaryProgressTintList = ColorStateList.valueOf(ratingBarSecondaryColor)
             binding.rating.setTextColor(textColor)
 
-            binding.moreInfo.bindDrawable(context, R.drawable.ic_info_24dp, iconColor)
+            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info, iconColor)
             binding.moreInfo.text = context.stringResource(SYMR.strings.more_info)
             binding.moreInfo.setTextColor(iconColor)
             // KMK <--

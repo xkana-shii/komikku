@@ -1,23 +1,31 @@
 package tachiyomi.data.manga
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import tachiyomi.domain.manga.model.FavoriteEntry
 import tachiyomi.domain.manga.model.FavoriteEntryAlternative
 import tachiyomi.domain.manga.repository.FavoritesEntryRepository
 
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class FavoritesEntryRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : FavoritesEntryRepository {
     override suspend fun deleteAll() {
-        handler.await { eh_favoritesQueries.deleteAll() }
+        database.eh_favoritesQueries.deleteAll()
     }
 
     override suspend fun insertAll(favoriteEntries: List<FavoriteEntry>) {
-        handler.await(true) {
+        database.transaction {
             favoriteEntries.forEach {
-                eh_favoritesQueries.insertEhFavorites(
+                database.eh_favoritesQueries.insertEhFavorites(
                     title = it.title,
                     gid = it.gid,
                     token = it.token,
@@ -28,19 +36,19 @@ class FavoritesEntryRepositoryImpl(
     }
 
     override suspend fun selectAll(): List<FavoriteEntry> {
-        return handler.awaitList { eh_favoritesQueries.selectAll(::mapFavoriteEntry) }
+        return database.eh_favoritesQueries
+            .selectAll(::mapFavoriteEntry)
+            .awaitAsList()
     }
 
     override suspend fun addAlternative(favoriteEntryAlternative: FavoriteEntryAlternative) {
         try {
-            handler.await {
-                eh_favoritesQueries.addAlternative(
-                    otherGid = favoriteEntryAlternative.otherGid,
-                    otherToken = favoriteEntryAlternative.otherToken,
-                    gid = favoriteEntryAlternative.gid,
-                    token = favoriteEntryAlternative.token,
-                )
-            }
+            database.eh_favoritesQueries.addAlternative(
+                otherGid = favoriteEntryAlternative.otherGid,
+                otherToken = favoriteEntryAlternative.otherToken,
+                gid = favoriteEntryAlternative.gid,
+                token = favoriteEntryAlternative.token,
+            )
         } catch (e: Exception) {
             logcat(LogPriority.INFO, e)
         }

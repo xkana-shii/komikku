@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,13 +22,18 @@ import androidx.compose.ui.text.font.FontWeight
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.util.isTabletUi
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import mihon.feature.upcoming.components.UpcomingItem
 import mihon.feature.upcoming.components.calendar.Calendar
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Help
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.Verified
 import tachiyomi.core.common.Constants
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
@@ -42,12 +44,11 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
-import java.time.LocalDate
-import java.time.YearMonth
+import tachiyomi.presentation.core.theme.active
 
 @Composable
 fun UpcomingScreenContent(
-    state: UpcomingScreenModel.State,
+    state: UpcomingViewModel.State,
     setSelectedYearMonth: (YearMonth) -> Unit,
     onClickUpcoming: (manga: Manga) -> Unit,
     // KMK -->
@@ -55,6 +56,8 @@ fun UpcomingScreenContent(
     hideUpdatingMangas: () -> Unit,
     isPredictReleaseDate: Boolean,
     // KMK <--
+    onClickFilter: () -> Unit,
+    hasActiveFilters: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -83,6 +86,8 @@ fun UpcomingScreenContent(
                 hideUpdatingMangas = hideUpdatingMangas,
                 isPredictReleaseDate = isPredictReleaseDate,
                 // KMK <--
+                hasFilters = hasActiveFilters,
+                onClickFilter = onClickFilter,
             )
         },
         modifier = modifier,
@@ -133,6 +138,8 @@ private fun UpcomingToolbar(
     hideUpdatingMangas: () -> Unit,
     isPredictReleaseDate: Boolean,
     // KMK <--
+    hasFilters: Boolean,
+    onClickFilter: () -> Unit,
 ) {
     val navigator = LocalNavigator.currentOrThrow
     val uriHandler = LocalUriHandler.current
@@ -158,19 +165,28 @@ private fun UpcomingToolbar(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.NewReleases,
+                        imageVector = MaterialSymbols.Rounded.Verified,
                         contentDescription = stringResource(MR.strings.pref_library_update_smart_update),
                         tint = if (isShowingUpdatingMangas) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                     )
                 }
             }
             // KMK <--
-            IconButton(onClick = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
-                    contentDescription = stringResource(MR.strings.upcoming_guide),
-                )
-            }
+            AppBarActions(
+                listOf(
+                    AppBar.Action(
+                        title = stringResource(MR.strings.action_filter),
+                        icon = MaterialSymbols.Rounded.FilterList,
+                        iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                        onClick = onClickFilter,
+                    ),
+                    AppBar.Action(
+                        title = stringResource(MR.strings.upcoming_guide),
+                        icon = MaterialSymbols.AutoMirroredRounded.Help,
+                        onClick = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) },
+                    ),
+                ),
+            )
         },
     )
 }
@@ -208,8 +224,8 @@ internal fun DateHeading(
 @Composable
 private fun UpcomingScreenSmallImpl(
     listState: LazyListState,
-    items: ImmutableList<UpcomingUIModel>,
-    events: ImmutableMap<LocalDate, Int>,
+    items: List<UpcomingUIModel>,
+    events: Map<LocalDate, Int>,
     paddingValues: PaddingValues,
     selectedYearMonth: YearMonth,
     setSelectedYearMonth: (YearMonth) -> Unit,
@@ -263,8 +279,8 @@ private fun UpcomingScreenSmallImpl(
 @Composable
 private fun UpcomingScreenLargeImpl(
     listState: LazyListState,
-    items: ImmutableList<UpcomingUIModel>,
-    events: ImmutableMap<LocalDate, Int>,
+    items: List<UpcomingUIModel>,
+    events: Map<LocalDate, Int>,
     paddingValues: PaddingValues,
     selectedYearMonth: YearMonth,
     setSelectedYearMonth: (YearMonth) -> Unit,

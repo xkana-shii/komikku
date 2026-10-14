@@ -1,11 +1,17 @@
 package eu.kanade.tachiyomi.network
 
 import android.content.Context
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import exh.log.EHLogLevel
+import exh.pref.DelegateSourcePreferences
+import kotlinx.coroutines.CoroutineScope
 import logcat.LogPriority
+import mihon.core.metro.AppCoroutineScope
 import okhttp3.Cache
 import okhttp3.Headers
 import okhttp3.OkHttpClient
@@ -15,16 +21,27 @@ import okio.IOException
 import tachiyomi.core.common.util.system.logcat
 import java.io.File
 import java.io.RandomAccessFile
-import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.seconds
 
-/* SY --> */ open /* SY <-- */ class NetworkHelper(
+@Inject
+@SingleIn(AppScope::class)
+/* SY --> */
+open /* SY <-- */ class NetworkHelper(
+    @AppCoroutineScope private val scope: CoroutineScope,
     private val context: Context,
     private val preferences: NetworkPreferences,
+    // KMK -->
+    val delegateSourcePreferences: DelegateSourcePreferences,
+    // KMK <--
 ) {
 
     /* SY --> */ open /* SY <-- */val cookieJar = AndroidCookieJar()
+
+    // KMK -->
+    private val delegatedSourcesEnabled = delegateSourcePreferences.delegateSources.get()
+    // KMK <--
 
     /**
      * Timeout in unit of seconds.
@@ -39,9 +56,9 @@ import kotlin.random.Random
         val builder = OkHttpClient.Builder()
             .cookieJar(cookieJar)
             // KMK -->
-            .connectTimeout(connectTimeout, TimeUnit.SECONDS)
-            .readTimeout(readTimeout, TimeUnit.SECONDS)
-            .callTimeout(callTimeout, TimeUnit.SECONDS)
+            .connectTimeout(connectTimeout.seconds)
+            .readTimeout(readTimeout.seconds)
+            .callTimeout(callTimeout.seconds)
             // KMK <--
             .cache(
                 Cache(
@@ -61,7 +78,7 @@ import kotlin.random.Random
             builder.addNetworkInterceptor(httpLoggingInterceptor)
         }
 
-        when (preferences.dohProvider().get()) {
+        when (preferences.dohProvider.get()) {
             PREF_DOH_CLOUDFLARE -> builder.dohCloudflare()
             PREF_DOH_GOOGLE -> builder.dohGoogle()
             PREF_DOH_ADGUARD -> builder.dohAdGuard()
@@ -81,8 +98,32 @@ import kotlin.random.Random
     /* SY --> */ open /* SY <-- */ val client /* KMK --> */ by lazy /* KMK <-- */ {
         clientBuilder()
             .addInterceptor(
-                CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
+                CloudflareInterceptor(context, cookieJar, scope, ::defaultUserAgentProvider),
             )
+            // KMK -->
+            // FIXME (KMK): Dirty hack to fetch MangaDex covers
+            .addInterceptor { chain ->
+                val originalRequest = chain.request()
+                val url = originalRequest.url
+
+                if (!delegatedSourcesEnabled ||
+                    url.host != "uploads.mangadex.org" ||
+                    !url.encodedPath.startsWith("/covers/")
+                ) {
+                    return@addInterceptor chain.proceed(originalRequest)
+                }
+
+                val newRequest = originalRequest
+                    .newBuilder()
+                    .header("Referer", "https://mangadex.org/")
+                    .header("Origin", "https://mangadex.org")
+                    .header("sec-fetch-dest", "image")
+                    .header("sec-fetch-mode", "no-cors")
+                    .build()
+
+                chain.proceed(newRequest)
+            }
+            // KMK <--
             .build()
     }
 
@@ -96,7 +137,7 @@ import kotlin.random.Random
         callTimeout: Long = 120,
     ) = clientBuilder(connectTimeout, readTimeout, callTimeout)
         .addInterceptor(
-            CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
+            CloudflareInterceptor(context, cookieJar, scope, ::defaultUserAgentProvider),
         )
         .build()
 
@@ -195,7 +236,7 @@ import kotlin.random.Random
     open /* SY <-- */val cloudflareClient: OkHttpClient
         get() = client
 
-    fun defaultUserAgentProvider() = preferences.defaultUserAgent().get().trim()
+    fun defaultUserAgentProvider() = preferences.defaultUserAgent.get().trim()
 
     companion object {
         // KMK -->

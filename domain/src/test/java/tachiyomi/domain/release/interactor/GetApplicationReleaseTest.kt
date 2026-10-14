@@ -2,39 +2,27 @@ package tachiyomi.domain.release.interactor
 
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.core.common.preference.Preference
-import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.release.model.Release
 import tachiyomi.domain.release.service.ReleaseService
-import java.time.Instant
 
 class GetApplicationReleaseTest {
 
     private lateinit var getApplicationRelease: GetApplicationRelease
     private lateinit var releaseService: ReleaseService
-    private lateinit var preference: Preference<Long>
 
     @BeforeEach
     fun beforeEach() {
-        val preferenceStore = mockk<PreferenceStore>()
-        preference = mockk()
-        every { preferenceStore.getLong(any(), any()) } returns preference
         releaseService = mockk()
 
-        getApplicationRelease = GetApplicationRelease(releaseService, preferenceStore)
+        getApplicationRelease = GetApplicationRelease(releaseService)
     }
 
     @Test
-    fun `When has update but is preview expect new update`() = runTest {
-        every { preference.get() } returns 0
-        every { preference.set(any()) }.answers { }
-
+    fun `When has update but is nightly expect new update`() = runTest {
         val releases = listOf(
             Release(
                 "r2000",
@@ -49,7 +37,7 @@ class GetApplicationReleaseTest {
         val result = getApplicationRelease.await(
             GetApplicationRelease.Arguments(
                 isFoss = false,
-                isPreview = true,
+                isNightly = true,
                 commitCount = 1000,
                 versionName = "",
                 repository = "test",
@@ -62,9 +50,6 @@ class GetApplicationReleaseTest {
 
     @Test
     fun `When has update expect new update`() = runTest {
-        every { preference.get() } returns 0
-        every { preference.set(any()) }.answers { }
-
         val releases =
             listOf(
                 Release(
@@ -80,7 +65,7 @@ class GetApplicationReleaseTest {
         val result = getApplicationRelease.await(
             GetApplicationRelease.Arguments(
                 isFoss = false,
-                isPreview = false,
+                isNightly = false,
                 commitCount = 0,
                 versionName = "v1.0.0",
                 repository = "test",
@@ -92,10 +77,62 @@ class GetApplicationReleaseTest {
     }
 
     @Test
-    fun `When has no update expect no new update`() = runTest {
-        every { preference.get() } returns 0
-        every { preference.set(any()) }.answers { }
+    fun `When update is a prerelease expect new update`() = runTest {
+        val releases = listOf(
+            Release(
+                "v2.0.0",
+                "info",
+                "http://example.com/release_link",
+                "http://example.com/release_link.apk",
+                preRelease = true,
+            ),
+        )
 
+        coEvery { releaseService.releaseNotes(any()) } returns releases
+
+        val result = getApplicationRelease.await(
+            GetApplicationRelease.Arguments(
+                isFoss = false,
+                isNightly = false,
+                commitCount = 0,
+                versionName = "v1.0.0",
+                repository = "test",
+            ),
+        )
+
+        // KMK: bleeding-edge fork offers prereleases, since there is no stable channel
+        result shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+    }
+
+    @Test
+    fun `When other tag family has update expect no new update`() = runTest {
+        val releases = listOf(
+            Release(
+                "v2.0.0",
+                "info",
+                "http://example.com/release_link",
+                "http://example.com/release_link.apk",
+            ),
+        )
+
+        coEvery { releaseService.releaseNotes(any()) } returns releases
+
+        // A nightly build must ignore "v*" releases (they ship a different apk)
+        val result = getApplicationRelease.await(
+            GetApplicationRelease.Arguments(
+                isFoss = false,
+                isNightly = true,
+                commitCount = 1000,
+                versionName = "",
+                repository = "test",
+            ),
+        )
+
+        result shouldBe GetApplicationRelease.Result.NoNewUpdate
+    }
+
+    @Test
+    fun `When has no update expect no new update`() = runTest {
         val releases = listOf(
             Release(
                 "v1.0.0",
@@ -110,44 +147,13 @@ class GetApplicationReleaseTest {
         val result = getApplicationRelease.await(
             GetApplicationRelease.Arguments(
                 isFoss = false,
-                isPreview = false,
+                isNightly = false,
                 commitCount = 0,
                 versionName = "v2.0.0",
                 repository = "test",
             ),
         )
 
-        result shouldBe GetApplicationRelease.Result.NoNewUpdate
-    }
-
-    @Test
-    fun `When now is before two days expect no new update`() = runTest {
-        every { preference.get() } returns Instant.now().toEpochMilli()
-        every { preference.set(any()) }.answers { }
-
-        val releases = listOf(
-            Release(
-                "v2.0.0",
-                "info",
-                "http://example.com/release_link",
-                "http://example.com/release_link.apk",
-            ),
-        )
-
-        coEvery { releaseService.releaseNotes(any()) } returns releases
-
-        val result = getApplicationRelease.await(
-            GetApplicationRelease.Arguments(
-                isFoss = false,
-                isPreview = false,
-                commitCount = 0,
-                versionName = "v1.0.0",
-                repository = "test",
-            ),
-        )
-
-        coVerify(exactly = 0) { releaseService.latest(any()) }
-        coVerify(exactly = 0) { releaseService.releaseNotes(any()) }
         result shouldBe GetApplicationRelease.Result.NoNewUpdate
     }
 }

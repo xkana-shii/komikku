@@ -3,7 +3,7 @@ package exh.debug
 import android.app.Application
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.backup.models.Backup
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.source.AndroidSourceManager
 import eu.kanade.tachiyomi.util.system.workManager
@@ -17,13 +17,13 @@ import exh.util.ThrottleManager
 import exh.util.jobScheduler
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.protobuf.schema.ProtoBufSchemaGenerator
+import mihon.app.di.appGraph
+import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import mihon.core.migration.MigrationJobFactory
 import mihon.core.migration.MigrationStrategyFactory
 import mihon.core.migration.Migrator
-import mihon.core.migration.migrations.migrations
 import mihon.domain.source.interactor.UpdateMangaFromRemote
-import tachiyomi.data.DatabaseHandler
 import tachiyomi.domain.manga.interactor.GetAllManga
 import tachiyomi.domain.manga.interactor.GetExhFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetFavorites
@@ -39,7 +39,6 @@ import java.util.UUID
 @Suppress("unused")
 object DebugFunctions {
     private val app: Application by injectLazy()
-    private val handler: DatabaseHandler by injectLazy()
     private val sourceManager: SourceManager by injectLazy()
     private val updateMangaFromRemote: UpdateMangaFromRemote by injectLazy()
     private val getFavorites: GetFavorites by injectLazy()
@@ -48,21 +47,22 @@ object DebugFunctions {
     private val getExhFavoriteMangaWithMetadata: GetExhFavoriteMangaWithMetadata by injectLazy()
     private val getSearchMetadata: GetSearchMetadata by injectLazy()
     private val getAllManga: GetAllManga by injectLazy()
+    private val migrations: Set<Migration> by injectLazy()
 
     fun forceUpgradeMigration(): Boolean {
-        val migrationContext = MigrationContext(dryrun = false)
+        val migrationContext = MigrationContext(dryrun = false, previousVersion = 1)
         val migrationJobFactory = MigrationJobFactory(migrationContext, Migrator.scope)
         val migrationStrategyFactory = MigrationStrategyFactory(migrationJobFactory) {}
         val strategy = migrationStrategyFactory.create(1, BuildConfig.VERSION_CODE)
-        return runBlocking { strategy(migrations).await() }
+        return runBlocking { strategy(migrations.toList()).await() }
     }
 
     fun forceSetupJobs(): Boolean {
-        val migrationContext = MigrationContext(dryrun = false)
+        val migrationContext = MigrationContext(dryrun = false, previousVersion = 0)
         val migrationJobFactory = MigrationJobFactory(migrationContext, Migrator.scope)
         val migrationStrategyFactory = MigrationStrategyFactory(migrationJobFactory) {}
         val strategy = migrationStrategyFactory.create(0, BuildConfig.VERSION_CODE)
-        return runBlocking { strategy(migrations).await() }
+        return runBlocking { strategy(migrations.toList()).await() }
     }
 
     fun resetAgedFlagInExhManga() {
@@ -133,7 +133,7 @@ object DebugFunctions {
     }
 
     fun addAllMangaInDatabaseToLibrary() {
-        runBlocking { handler.await { ehQueries.addAllMangaInDatabaseToLibrary() } }
+        runBlocking { app.appGraph.debugRepository.addAllMangaToLibrary() }
     }
 
     fun countMangaInDatabaseInLibrary() = runBlocking { getFavorites.await().size }
@@ -145,30 +145,41 @@ object DebugFunctions {
     fun countMetadataInDatabase() = runBlocking { getSearchMetadata.await().size }
 
     fun countMangaInLibraryWithMissingMetadata() = runBlocking {
-        runBlocking { getAllManga.await() }.count {
+        getAllManga.await().count {
             it.favorite && getSearchMetadata.await(it.id) == null
         }
     }
 
-    fun clearSavedSearches() = runBlocking { handler.await { saved_searchQueries.deleteAll() } }
+    fun clearSavedSearches() = runBlocking { app.appGraph.savedSearchRepository.deleteAll() }
 
-    fun listAllSources() = sourceManager.getAll().joinToString("\n") {
-        "${it.id}: ${it.name} (${it.lang.uppercase()})"
+    // These are synchronous debug entry points; sources are loaded when debugging from the app.
+    fun listAllSources() = runBlocking {
+        sourceManager.getAll().joinToString("\n") {
+            "${it.id}: ${it.name} (${it.lang.uppercase()})"
+        }
     }
 
-    fun listAllSourcesClassName() = sourceManager.getAll().joinToString("\n") {
-        "${it::class.qualifiedName}: ${it.name} (${it.lang.uppercase()})"
+    fun listAllSourcesClassName() = runBlocking {
+        sourceManager.getAll().joinToString("\n") {
+            "${it::class.qualifiedName}: ${it.name} (${it.lang.uppercase()})"
+        }
     }
 
-    fun listVisibleSources() = sourceManager.getVisibleSources().joinToString("\n") {
-        "${it.id}: ${it.name} (${it.lang.uppercase()})"
+    fun listVisibleSources() = runBlocking {
+        sourceManager.getVisibleSources().joinToString("\n") {
+            "${it.id}: ${it.name} (${it.lang.uppercase()})"
+        }
     }
 
-    fun listAllHttpSources() = sourceManager.getOnlineSources().joinToString("\n") {
-        "${it.id}: ${it.name} (${it.lang.uppercase()})"
+    fun listAllHttpSources() = runBlocking {
+        sourceManager.getOnlineSources().joinToString("\n") {
+            "${it.id}: ${it.name} (${it.lang.uppercase()})"
+        }
     }
-    fun listVisibleHttpSources() = sourceManager.getVisibleOnlineSources().joinToString("\n") {
-        "${it.id}: ${it.name} (${it.lang.uppercase()})"
+    fun listVisibleHttpSources() = runBlocking {
+        sourceManager.getVisibleOnlineSources().joinToString("\n") {
+            "${it.id}: ${it.name} (${it.lang.uppercase()})"
+        }
     }
 
     fun convertAllEhentaiGalleriesToExhentai() = convertSources(EH_SOURCE_ID, EXH_SOURCE_ID)
@@ -215,7 +226,7 @@ object DebugFunctions {
 
     private fun convertSources(from: Long, to: Long) {
         runBlocking {
-            handler.await { ehQueries.migrateSource(to, from) }
+            app.appGraph.sourceMigrationRepository.migrateSource(to, from)
         }
     }
 
@@ -298,17 +309,17 @@ object DebugFunctions {
     }*/
 
     fun fixReaderViewerBackupBug() {
-        runBlocking { handler.await { ehQueries.fixReaderViewerBackupBug() } }
+        runBlocking { app.appGraph.debugRepository.fixReaderViewerBackupBug() }
     }
 
     fun resetReaderViewerForAllManga() {
-        runBlocking { handler.await { ehQueries.resetReaderViewerForAllManga() } }
+        runBlocking { app.appGraph.debugRepository.resetReaderViewerForAllManga() }
     }
 
     fun migrateLangNhentaiToMultiLangSource() {
         val sources = nHentaiSourceIds - NHENTAI_SOURCE_ID
 
-        runBlocking { handler.await { ehQueries.migrateAllNhentaiToOtherLang(NHENTAI_SOURCE_ID, sources) } }
+        runBlocking { app.appGraph.debugRepository.migrateAllNhentaiToOtherLang(NHENTAI_SOURCE_ID, sources) }
     }
 
     fun exportProtobufScheme() = ProtoBufSchemaGenerator.generateSchemaText(Backup.serializer().descriptor)
@@ -320,6 +331,6 @@ object DebugFunctions {
 
     fun killLibraryJobs() {
         val context = Injekt.get<Application>()
-        LibraryUpdateJob.stop(context)
+        runBlocking { LibraryUpdateWorker.stop(context) }
     }
 }

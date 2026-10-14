@@ -3,9 +3,6 @@ package eu.kanade.presentation.browse.components
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -14,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Delete
+import mihon.icons.materialsymbols.rounded.DragHandle
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
@@ -37,7 +37,7 @@ fun ReorderableCollectionItemScope.FeedOrderListItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Outlined.DragHandle,
+                imageVector = MaterialSymbols.Rounded.DragHandle,
                 contentDescription = null,
                 modifier = Modifier
                     .padding(MaterialTheme.padding.medium)
@@ -49,7 +49,7 @@ fun ReorderableCollectionItemScope.FeedOrderListItem(
             )
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Outlined.Delete,
+                    imageVector = MaterialSymbols.Rounded.Delete,
                     contentDescription = stringResource(MR.strings.action_delete),
                 )
             }

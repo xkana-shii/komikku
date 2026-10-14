@@ -1,8 +1,8 @@
 plugins {
     id("mihon.library")
-    kotlin("android")
     kotlin("plugin.serialization")
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.metro)
 }
 
 android {
@@ -18,6 +18,7 @@ android {
                 packageName.set("tachiyomi.data")
                 dialect(libs.sqldelight.dialects.sql)
                 schemaOutputDirectory.set(project.file("./src/main/sqldelight"))
+                generateAsync.set(true)
             }
         }
     }
@@ -33,10 +34,19 @@ dependencies {
     implementation(projects.sourceApi)
     implementation(projects.domain)
     implementation(projects.core.common)
+    implementation(projects.core.metro)
+
+    implementation(libs.metro.runtime)
 
     implementation(kotlinx.serialization.json)
     implementation(kotlinx.serialization.json.okio)
     implementation(kotlinx.serialization.protobuf)
 
+    implementation(kotlinx.datetime)
+
     api(libs.bundles.sqldelight)
+
+    testImplementation(libs.bundles.test)
+    testImplementation(libs.sqldelight.sqlite.driver)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -38,7 +39,6 @@ import coil3.transform.RoundedCornersTransformation
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.SpinnerAdapter
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
@@ -65,6 +65,7 @@ import exh.util.trimOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.app.di.appGraph
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
@@ -74,8 +75,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.source.local.isLocal
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun EditMangaDialog(
@@ -95,12 +94,13 @@ fun EditMangaDialog(
     ) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var binding by remember {
         mutableStateOf<EditMangaDialogBinding?>(null)
     }
     val showTrackerSelectionDialogue = remember { mutableStateOf(false) }
-    val getTracks = remember { Injekt.get<GetTracks>() }
-    val trackerManager = remember { Injekt.get<TrackerManager>() }
+    val getTracks = remember { context.appGraph.getTracks }
+    val trackerManager = remember { context.appGraph.trackerManager }
     val tracks = remember { mutableStateOf(emptyList<Pair<Track, Tracker>>()) }
 
     // KMK -->
@@ -247,6 +247,7 @@ private fun onViewCreated(
 ) {
     loadCover(
         manga,
+        context,
         binding,
         // KMK -->
         coverRatio,
@@ -345,7 +346,7 @@ private fun onViewCreated(
             manga.ogThumbnailUrl?.let {
                 it.chop(40) + if (it.length > 46) "." + it.substringAfterLast(".").chop(6) else ""
             },
-            "file:///storage/emulated/0/Pictures/Komikku/Cover.jpg",
+            "file:///storage/emulated/0/Pictures/Komikun/Cover.jpg",
         )
         // KMK <--
         binding.thumbnailUrl.hint =
@@ -456,13 +457,14 @@ private fun resetTags(
 
 private fun loadCover(
     manga: Manga,
+    context: Context,
     binding: EditMangaDialogBinding,
     // KMK -->
     coverRatio: MutableFloatState,
     // KMK <--
 ) {
     // KMK -->
-    if (Injekt.get<UiPreferences>().usePanoramaCoverAlways().get() && coverRatio.floatValue <= RatioSwitchToPanorama) {
+    if (context.appGraph.uiPreferences.usePanoramaCoverAlways.get() && coverRatio.floatValue <= RatioSwitchToPanorama) {
         binding.mangaCover.visibility = View.GONE
         binding.mangaCoverPanorama.visibility = View.VISIBLE
         binding.mangaCoverPanorama.load(manga) {

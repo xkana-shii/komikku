@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,12 +36,14 @@ import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.components.AnimatedFloatingSearchBox
 import eu.kanade.presentation.components.SOURCE_SEARCH_BOX_HEIGHT
 import eu.kanade.presentation.util.animateItemFastScroll
-import eu.kanade.tachiyomi.ui.browse.source.SourcesScreenModel
-import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel.Listing
+import eu.kanade.tachiyomi.ui.browse.source.SourcesViewModel
+import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import exh.source.EH_SOURCE_ID
 import exh.source.EXH_SOURCE_ID
-import kotlinx.collections.immutable.ImmutableList
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Keep
+import mihon.icons.materialsymbols.roundedfilled.Keep
 import tachiyomi.domain.source.model.Pin
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
@@ -63,7 +63,7 @@ import tachiyomi.source.local.isLocal
 
 @Composable
 fun SourcesScreen(
-    state: SourcesScreenModel.State,
+    state: SourcesViewModel.State,
     contentPadding: PaddingValues,
     onClickItem: (Source, Listing) -> Unit,
     onClickPin: (Source) -> Unit,
@@ -233,7 +233,7 @@ private fun SourcePinButton(
     isPinned: Boolean,
     onClick: () -> Unit,
 ) {
-    val icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin
+    val icon = if (isPinned) MaterialSymbols.RoundedFilled.Keep else MaterialSymbols.Rounded.Keep
     val tint = if (isPinned) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -342,7 +342,7 @@ sealed interface SourceUiModel {
 @Composable
 fun SourceCategoriesDialog(
     source: Source,
-    categories: ImmutableList<String>,
+    categories: List<String>,
     onClickCategories: (List<String>) -> Unit,
     onDismissRequest: () -> Unit,
 ) {

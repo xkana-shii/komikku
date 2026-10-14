@@ -19,21 +19,28 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
+import com.cheonjaeung.compose.grid.SimpleGridCells
+import com.cheonjaeung.compose.grid.VerticalGrid
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
-import io.woong.compose.grid.SimpleGridCells
-import io.woong.compose.grid.VerticalGrid
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.minus
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.plus
+import kotlinx.datetime.plusMonth
+import kotlinx.datetime.toJavaDayOfWeek
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearMonth
 import mihon.core.designsystem.utils.isExpandedWidthWindow
 import mihon.core.designsystem.utils.isMediumWidthWindow
 import tachiyomi.presentation.core.components.material.padding
 import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.YearMonth
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
+import kotlin.time.Clock
 
 private val FontSize = 16.sp
 private const val DAYS_OF_WEEK = 7
@@ -41,7 +48,7 @@ private const val DAYS_OF_WEEK = 7
 @Composable
 fun Calendar(
     selectedYearMonth: YearMonth,
-    events: ImmutableMap<LocalDate, Int>,
+    events: Map<LocalDate, Int>,
     setSelectedYearMonth: (YearMonth) -> Unit,
     onClickDay: (day: LocalDate) -> Unit,
     modifier: Modifier = Modifier,
@@ -53,8 +60,8 @@ fun Calendar(
     ) {
         CalenderHeader(
             yearMonth = selectedYearMonth,
-            onPreviousClick = { setSelectedYearMonth(selectedYearMonth.minusMonths(1L)) },
-            onNextClick = { setSelectedYearMonth(selectedYearMonth.plusMonths(1L)) },
+            onPreviousClick = { setSelectedYearMonth(selectedYearMonth.minusMonth()) },
+            onNextClick = { setSelectedYearMonth(selectedYearMonth.plusMonth()) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = MaterialTheme.padding.small)
@@ -71,18 +78,18 @@ fun Calendar(
 @Composable
 private fun CalendarGrid(
     selectedYearMonth: YearMonth,
-    events: ImmutableMap<LocalDate, Int>,
+    events: Map<LocalDate, Int>,
     onClickDay: (day: LocalDate) -> Unit,
 ) {
     val localeFirstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek.value
     val weekDays = remember {
         (0 until DAYS_OF_WEEK)
             .map { DayOfWeek.of((localeFirstDayOfWeek - 1 + it) % DAYS_OF_WEEK + 1) }
-            .toImmutableList()
+            .toList()
     }
 
-    val emptyFieldCount = weekDays.indexOf(selectedYearMonth.atDay(1).dayOfWeek)
-    val daysInMonth = selectedYearMonth.lengthOfMonth()
+    val emptyFieldCount = weekDays.indexOf(selectedYearMonth.firstDay.dayOfWeek.toJavaDayOfWeek())
+    val daysInMonth = selectedYearMonth.numberOfDays
 
     VerticalGrid(
         columns = SimpleGridCells.Fixed(DAYS_OF_WEEK),
@@ -105,7 +112,7 @@ private fun CalendarGrid(
         }
         repeat(emptyFieldCount) { Box { } }
         repeat(daysInMonth) { dayIndex ->
-            val localDate = selectedYearMonth.atDay(dayIndex + 1)
+            val localDate = LocalDate(selectedYearMonth.year, selectedYearMonth.month, dayIndex + 1)
             CalendarDay(
                 date = localDate,
                 onDayClick = { onClickDay(localDate) },
@@ -121,12 +128,13 @@ private fun CalendarGrid(
 fun CalendarDayPreview() {
     TachiyomiPreviewTheme {
         Surface {
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
             Calendar(
-                selectedYearMonth = YearMonth.now(),
-                events = persistentMapOf(
-                    LocalDate.now() to 3,
-                    LocalDate.now().plusDays(1) to 1,
-                    LocalDate.now().minusDays(15) to 1,
+                selectedYearMonth = today.yearMonth,
+                events = mapOf(
+                    today to 3,
+                    today.plus(1, DateTimeUnit.DAY) to 1,
+                    today.minus(15, DateTimeUnit.DAY) to 1,
                 ),
                 setSelectedYearMonth = {},
                 onClickDay = {},

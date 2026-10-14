@@ -1,5 +1,6 @@
 package eu.kanade.domain.source.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import exh.source.BlacklistedSources
@@ -9,6 +10,7 @@ import tachiyomi.domain.source.model.Source
 import tachiyomi.domain.source.repository.SourceRepository
 import java.util.SortedMap
 
+@Inject
 class GetLanguagesWithSources(
     private val repository: SourceRepository,
     private val preferences: SourcePreferences,
@@ -16,8 +18,8 @@ class GetLanguagesWithSources(
 
     fun subscribe(): Flow<SortedMap<String, List<Source>>> {
         return combine(
-            preferences.enabledLanguages().changes(),
-            preferences.disabledSources().changes(),
+            preferences.enabledLanguages.changes(),
+            preferences.disabledSources.changes(),
             repository.getOnlineSources(),
         ) { enabledLanguage, disabledSource, onlineSources ->
             val sortedSources = onlineSources.filterNot { it.id in BlacklistedSources.HIDDEN_SOURCES }.sortedWith(

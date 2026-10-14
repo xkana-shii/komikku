@@ -16,15 +16,31 @@ interface CategoryRepository {
 
     fun getCategoriesByMangaIdAsFlow(mangaId: Long): Flow<List<Category>>
 
+    suspend fun getCategoriesByMangaIds(mangaIds: List<Long>): Map<Long, List<Category>>
+
     // SY -->
-    suspend fun insert(category: Category): Long
+    suspend fun insert(category: Category): Long?
+
+    /**
+     * Restores [categories] from a backup or sync delta, matching existing entries by uid (or name),
+     * updating them in place and inserting the rest. Returns the categories as they now stand.
+     */
+    suspend fun restoreCategories(categories: List<Category>, isSync: Boolean): List<Category>
     // SY <--
 
+    suspend fun updateName(categoryId: Long, name: String)
+
+    suspend fun updateFlags(categoryId: Long, flags: Long)
+
+    suspend fun updateAllFlags(flags: Long?)
+
+    suspend fun updateAllOrders(orderedIds: List<Long>)
+
+    // KMK -->
     suspend fun updatePartial(update: CategoryUpdate)
 
     suspend fun updatePartial(updates: List<CategoryUpdate>)
-
-    suspend fun updateAllFlags(flags: Long?)
+    // KMK <--
 
     suspend fun delete(categoryId: Long)
 }

@@ -1,6 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.loader
 
-import android.app.Application
+import android.content.Context
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -15,17 +15,20 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mihon.core.archive.ArchiveReader
 import tachiyomi.core.common.util.system.ImageUtil
-import uy.kohesive.injekt.injectLazy
 import java.io.File
 
 /**
  * Loader used to load a chapter from an archive file.
  */
-internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader() {
+internal class ArchivePageLoader(
+    private val reader: ArchiveReader,
+    // SY -->
+    private val context: Context,
+    private val readerPreferences: ReaderPreferences,
+    // SY <--
+) : PageLoader() {
     // SY -->
     private val mutex = Mutex()
-    private val context: Application by injectLazy()
-    private val readerPreferences: ReaderPreferences by injectLazy()
     private val tmpDir = File(context.externalCacheDir, "reader_${reader.archiveHashCode}").also {
         it.deleteRecursively()
     }
@@ -36,7 +39,7 @@ internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader
                 error("Incorrect archive password")
             }
         }
-        if (readerPreferences.archiveReaderMode().get() == ReaderPreferences.ArchiveReaderMode.CACHE_TO_DISK) {
+        if (readerPreferences.archiveReaderMode.get() == ReaderPreferences.ArchiveReaderMode.CACHE_TO_DISK) {
             tmpDir.mkdirs()
             reader.useEntries { entries ->
                 entries
@@ -61,7 +64,7 @@ internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader
 
     override suspend fun getPages(): List<ReaderPage> = reader.useEntries { entries ->
         // SY -->
-        if (readerPreferences.archiveReaderMode().get() == ReaderPreferences.ArchiveReaderMode.CACHE_TO_DISK) {
+        if (readerPreferences.archiveReaderMode.get() == ReaderPreferences.ArchiveReaderMode.CACHE_TO_DISK) {
             return DirectoryPageLoader(UniFile.fromFile(tmpDir)!!).getPages()
         }
         // SY <--
@@ -71,7 +74,7 @@ internal class ArchivePageLoader(private val reader: ArchiveReader) : PageLoader
             .mapIndexed { i, entry ->
                 // SY -->
                 val imageBytesDeferred: Deferred<ByteArray>? =
-                    when (readerPreferences.archiveReaderMode().get()) {
+                    when (readerPreferences.archiveReaderMode.get()) {
                         ReaderPreferences.ArchiveReaderMode.LOAD_INTO_MEMORY -> {
                             CoroutineScope(Dispatchers.IO).async {
                                 mutex.withLock {

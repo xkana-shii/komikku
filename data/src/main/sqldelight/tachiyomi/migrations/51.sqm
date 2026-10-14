@@ -1,0 +1,12 @@
+-- A sync restore inserts categories with is_syncing = 1 and must keep the backup's last_modified_at
+-- rather than stamping it, or the next delta echoes the stamp back to the server and the store is
+-- rewritten on a sync where the user changed nothing.
+DROP TRIGGER IF EXISTS insert_category_uid;
+CREATE TRIGGER insert_category_uid AFTER INSERT ON category
+WHEN new.is_syncing = 0
+BEGIN
+    UPDATE category
+    SET uid = CASE WHEN uid = 0 THEN abs(random()) ELSE uid END,
+        last_modified_at = CASE WHEN last_modified_at = 0 THEN strftime('%s', 'now') ELSE last_modified_at END
+    WHERE id = new.id;
+END;

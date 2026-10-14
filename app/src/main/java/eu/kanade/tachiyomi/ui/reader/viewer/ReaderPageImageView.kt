@@ -11,6 +11,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import androidx.annotation.AttrRes
 import androidx.annotation.CallSuper
@@ -18,11 +19,11 @@ import androidx.annotation.StyleRes
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.os.postDelayed
 import androidx.core.view.isVisible
-import coil3.BitmapImage
 import coil3.asDrawable
 import coil3.dispose
 import coil3.imageLoader
 import coil3.request.CachePolicy
+import coil3.request.Disposable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
@@ -34,24 +35,24 @@ import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView.EASE_IN_OUT
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView.EASE_OUT_QUAD
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView.SCALE_TYPE_CENTER_INSIDE
 import com.github.chrisbanes.photoview.PhotoView
-import eu.kanade.domain.base.BasePreferences
+import eu.kanade.tachiyomi.data.coil.ImageDecoder
 import eu.kanade.tachiyomi.data.coil.cropBorders
-import eu.kanade.tachiyomi.data.coil.customDecoder
+import eu.kanade.tachiyomi.data.coil.webtoonStrips
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.LandscapeZoomScaleType
+import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonStripImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonSubsamplingImageView
 import eu.kanade.tachiyomi.util.system.animatorDurationScale
 import eu.kanade.tachiyomi.util.view.isVisibleOnScreen
+import mihon.app.di.appGraph
 import okio.BufferedSource
 import tachiyomi.core.common.util.system.ImageUtil
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * A wrapper view for showing page image.
  *
  * Animated image will be drawn by [PhotoView] while [SubsamplingScaleImageView] will take non-animated image.
  *
- * @param isWebtoon if true, [WebtoonSubsamplingImageView] will be used instead of [SubsamplingScaleImageView]
+ * @param isWebtoon if true, [WebtoonStripImageView] will be used instead of [SubsamplingScaleImageView]
  * and [AppCompatImageView] will be used instead of [PhotoView]
  */
 open class ReaderPageImageView @JvmOverloads constructor(
@@ -62,11 +63,15 @@ open class ReaderPageImageView @JvmOverloads constructor(
     private val isWebtoon: Boolean = false,
 ) : FrameLayout(context, attrs, defStyleAttrs, defStyleRes) {
 
+    // KMK -->
     private val alwaysDecodeLongStripWithSSIV by lazy {
-        Injekt.get<BasePreferences>().alwaysDecodeLongStripWithSSIV().get()
+        context.appGraph.readerPreferences.alwaysDecodeLongStripWithSSIV.get()
     }
+    // KMK <--
 
     private var pageView: View? = null
+
+    private var stripRequest: Disposable? = null
 
     private var config: Config? = null
 
@@ -169,18 +174,31 @@ open class ReaderPageImageView @JvmOverloads constructor(
         if (isAnimated) {
             prepareAnimatedImageView()
             setAnimatedImage(source, config)
+        } else if (
+            // KMK -->
+            // The SSIV escape hatch keeps the old webtoon path when enabled
+            isWebtoon && !alwaysDecodeLongStripWithSSIV
+            // KMK <--
+        ) {
+            prepareStripImageView()
+            setStripImage(source, config)
         } else {
             prepareNonAnimatedImageView()
             setNonAnimatedImage(source, config)
         }
     }
 
-    fun recycle() = pageView?.let {
-        when (it) {
-            is SubsamplingScaleImageView -> it.recycle()
-            is AppCompatImageView -> it.dispose()
+    fun recycle() {
+        stripRequest?.dispose()
+        stripRequest = null
+        pageView?.let {
+            when (it) {
+                is SubsamplingScaleImageView -> it.recycle()
+                is AppCompatImageView -> it.dispose()
+                is WebtoonStripImageView -> it.recycle()
+            }
+            it.isVisible = false
         }
-        it.isVisible = false
     }
 
     /**
@@ -269,12 +287,16 @@ open class ReaderPageImageView @JvmOverloads constructor(
         if (pageView is SubsamplingScaleImageView) return
         removeView(pageView)
 
+        // KUN -->
+        // Keep the touch-ignoring view for the webtoon SSIV escape hatch
+        // KUN <--
+        // SY -->
         pageView = if (isWebtoon) {
             WebtoonSubsamplingImageView(context)
         } else {
             SubsamplingScaleImageView(context)
         }.apply {
-            setMaxTileSize(ImageUtil.hardwareBitmapThreshold)
+            // SY <--
             setDoubleTapZoomStyle(SubsamplingScaleImageView.ZOOM_FOCUS_CENTER)
             setPanLimit(SubsamplingScaleImageView.PAN_LIMIT_INSIDE)
             setMinimumTileDpi(180)
@@ -345,41 +367,58 @@ open class ReaderPageImageView @JvmOverloads constructor(
                 isVisible = true
             }
             is BufferedSource -> {
-                if (!isWebtoon || alwaysDecodeLongStripWithSSIV) {
-                    setHardwareConfig(ImageUtil.canUseHardwareBitmap(data))
-                    setImage(ImageSource.inputStream(data.inputStream()))
-                    isVisible = true
-                    return@apply
-                }
-
-                ImageRequest.Builder(context)
-                    .data(data)
-                    .memoryCachePolicy(CachePolicy.DISABLED)
-                    .diskCachePolicy(CachePolicy.DISABLED)
-                    .target(
-                        onSuccess = { result ->
-                            val image = result as BitmapImage
-                            setImage(ImageSource.bitmap(image.bitmap))
-                            isVisible = true
-                        },
-                    )
-                    .listener(
-                        onError = { _, result ->
-                            onImageLoadError(result.throwable)
-                        },
-                    )
-                    .size(ViewSizeResolver(this@ReaderPageImageView))
-                    .precision(Precision.INEXACT)
-                    .cropBorders(config.cropBorders)
-                    .customDecoder(true)
-                    .crossfade(false)
-                    .build()
-                    .let(context.imageLoader::enqueue)
+                setImage(ImageSource.inputStream(data.inputStream()))
+                isVisible = true
             }
             else -> {
                 throw IllegalArgumentException("Not implemented for class ${data::class.simpleName}")
             }
         }
+    }
+
+    private fun prepareStripImageView() {
+        if (pageView is WebtoonStripImageView) return
+        removeView(pageView)
+
+        pageView = WebtoonStripImageView(context)
+        addView(pageView, MATCH_PARENT, WRAP_CONTENT)
+    }
+
+    private fun setStripImage(data: BufferedSource, config: Config) {
+        val view = pageView as? WebtoonStripImageView ?: return
+        view.onReload = { requestStrips(view, data, config, isReload = true) }
+        requestStrips(view, data, config, isReload = false)
+    }
+
+    private fun requestStrips(view: WebtoonStripImageView, data: BufferedSource, config: Config, isReload: Boolean) {
+        // A recycled view is reused for another page, where a request still running for the old one must not land
+        stripRequest?.dispose()
+        stripRequest = ImageRequest.Builder(context)
+            // Peeking leaves the data whole for decoding again after the strips were freed off screen
+            .data(data.peek())
+            .memoryCachePolicy(CachePolicy.DISABLED)
+            .diskCachePolicy(CachePolicy.DISABLED)
+            .target(
+                onSuccess = { result ->
+                    view.setImage(result as ImageDecoder.StripsImage)
+                    if (!isReload) {
+                        view.isVisible = true
+                        onImageLoaded()
+                    }
+                },
+            )
+            .listener(
+                onError = { _, result ->
+                    onImageLoadError(result.throwable)
+                },
+            )
+            .size(ViewSizeResolver(this))
+            .precision(Precision.INEXACT)
+            .cropBorders(config.cropBorders)
+            .webtoonStrips(true)
+            .crossfade(false)
+            .build()
+            .let(context.imageLoader::enqueue)
     }
 
     private fun prepareAnimatedImageView() {
