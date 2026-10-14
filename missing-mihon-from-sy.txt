@@ -1,4 +1,4 @@
-6cd34614f607c51a62eed68d98996990969e5909 | 2020-05-02 | More extreme method for enforcing WebView availability
+﻿6cd34614f607c51a62eed68d98996990969e5909 | 2020-05-02 | More extreme method for enforcing WebView availability
 ce0090f0cab2619703ff903ad80a188bc62e5214 | 2020-05-03 | Bunch of crash fixes
 bd45cc2024df11d1d878705dfd4e2bf777b9d004 | 2020-05-03 | Only alert once for backup/restore progress notifications
 dabca5f09e0d393d2ea77e483c72561341385cb0 | 2020-05-03 | Lighter weight method of rounding cover art
@@ -2742,3 +2742,405 @@ a2f3ec94aa2a079cbcbcf54aaaa5f1d1f1a8a4e4 | 2026-04-25 | Reapply "Update android.
 8e0c911f93e60db35dcbe2a9103ac6ea0d803e29 | 2026-04-27 | Update sqldelight-androidx-driver and remove transaction management (#3270)
 9678b8fd796dd3998db1a651bbe7e2101da54754 | 2026-04-28 | Update Gradle to v9.5.0 (#3274)
 b4a3ec0b32c123637b5fe5f394b2a2ca58368c19 | 2026-05-12 | Fix chapters and categories not being added to database
+3b94df6108d14f66b6be29bac676af02394c8e91 | 2026-05-22 | Update dependency org.junit.jupiter:junit-jupiter to v6.1.0 (#3335)
+d39156683247211eecc76079be09d233b75a62ac | 2026-06-02 | Update GitHub Actions to v6.0.3 (#3374)
+4951f0bddd2ea2a535cea92ad34eaf8c57f3fa6f | 2026-06-02 | Update markdown to v0.41.0 (#3194)
+748211c19b0a284d87612f63c3419e0ecab0cb8e | 2026-06-03 | Add missing `outlineVariant` color to Nord theme (#3184)
+b446d2a6b1844f24b2d4912ba8be8b4648549f41 | 2026-06-03 |  Change extension repo to extension store and add support for newer extension index format (#3349)
+a330258f6a26a57ceca9a318270b5db3b4653e24 | 2026-06-04 | Add vertical chapter navigator for long strip mode (#3377)
+cd27b1075093736d242a9cf6f226380b7faf58b4 | 2026-06-04 | Drop kotlinx-collections-immutable usage (#3380)
+95bc599ac0b3581743fc62aba64d40a55913daaa | 2026-06-04 | Add paddings to vertical chapter navigator
+c612a6ca8d3decb81580059e2d134fa01f5c6cb3 | 2026-06-05 | Extract badge data separately when forming LibraryItem (#3382)
+35f6a607b8a11ed6a94665303bc8d373e8fa373a | 2026-06-10 | Use our fork of sqldelight-androidx-driver (#3396)
+5f1d76a73a7b821542d46c96935def9158e7ff1f | 2026-06-10 | Change the term "Obsolete" to "Orphaned" for extensions (#3383)
+509eee5dfb81266ea7056587f695910506248a8a | 2026-06-12 | Use app scoped CoroutineScope (#3403)
+4b9974e20a88c3acc3be229089c0eada71b71a47 | 2026-06-13 | Use duration overload for time related methods
+6ae79d255dbb581c06cd0d637e1e255ac81d54f2 | 2026-06-13 | Address various redundant constructs
+1a030420b19bfb577204f7f32799715d8e1a9bc1 | 2026-06-13 | Supress UnstableApiUsage in settings.gradle.kts
+430b13bb81c8f51331109fa3ff35296f8bde9d27 | 2026-06-14 | Adapt network implementation for TachiyomiX 1.6 (#3248)
+4c37f4c764afc47e0be6c63b1389b54f240b03f5 | 2026-06-14 | Adapt source implementation for TachiyomiX 1.6  (#3243)
+f00cac265f6723738c42a236d87cfaae6968b1ea | 2026-06-14 | Remove text limit of manga notes (#3410)
+94cab02c1ef0d6c7483a05b059f94a2771e37cf6 | 2026-06-15 | Adapt model implementation for TachiyomiX 1.6 (#3412)
+5896d2c9392784602107470498086e764c1e621e | 2026-06-16 | Fix compatibility with older backups
+eb80ab410ea4209fbad15e5ee05cd1e326f0fa66 | 2026-06-16 | Ensure memo is correctly passed around when transforming classes
+5880f4b0bd02e9a7eadf687f5f4dc9c596f0aa59 | 2026-06-16 | Ensure chapter order is retained when passed to `source.getMangaUpdate`
+518d2ab7dffa45c0777c80436334e7d0e4958cb1 | 2026-06-16 | Update kotest.assertions to v6.2.0 (#3415)
+16376f509c4994b49ab7b23760b7d76a1acaed93 | 2026-06-16 | Update GitHub Actions (major) (#3004)
+672ff416c5d1b3036003a99d12b519f3fc518747 | 2026-06-16 | Update actions/setup-java to v5.3.0 (#3420)
+381eb07ec90a310cf5e28189599fb515f44087d2 | 2026-06-16 | Update google.services to v4.5.0 (#3422)
+6552ffe3158f8127ca265f8621ad326be9e173cb | 2026-06-17 | Sign APK with AGP
+50d0e8ae0a9120348a3375a0ca7c14f0bebc7e04 | 2026-06-18 | Only try to read signing data in release workflow (#3431)
+ee6a9876ec2260be4b4c04831dc24f3b53f819ea | 2026-06-18 | Fix uploaded apk reference in build workflow (#3435)
+80541831bb02f893f4ff56670a738b25452ea17d | 2026-06-18 | Revert "Use app scoped CoroutineScope (#3403)"
+d4ad76d576e510a22554558f6befce487b97c2a8 | 2026-06-19 | Update kotest.assertions to v6.2.1 (#3437)
+5f80403c5d734c80c344a34a93a3f10765c1cda5 | 2026-06-19 | Update GitHub Actions to v7 (#3438)
+53724fd5611d09a73095f7e58baa393109caba52 | 2026-06-20 | Update softprops/action-gh-release action to v3.0.1 (#3444)
+903add50c97dc9697b930f2cc57b75eb28ff9f99 | 2026-06-21 | Address gradle 9.6 deprecations (#3452)
+5f5a03411277bdd60dbac1f8b0ef686c4844b4f7 | 2026-06-22 | Allow extension stores to have separate extension list file (#3454)
+b3e190c6275e77a4bf924adb8dc97119f3b0edc6 | 2026-06-22 | Refactor baseline profiles generation and regenerate (#3434)
+1cb38a1c3399e47fcb0eec39043d8925acd10e21 | 2026-06-22 | Bump version code
+c397d657d10dfd9f0e2329359f693a5f3f8540e6 | 2026-06-23 | Remove BrotliInterceptor from default client (#3458)
+06497622f648f360797af71b4dffac714d50cb88 | 2026-06-23 | Batch database operations during backup restore for improved performance (#3267)
+a1b5ea811a5b926901f4cb629e5ccee57bbd237e | 2026-06-23 | Tweak Catppuccin color scheme for clarity (#3436)
+bc7f7e70a1de65f1f966e2e31f97457f8ac16ce6 | 2026-06-24 | Prevent random `FileNotFoundException` when reading chapters (#3154)
+f23170bfaa366c2a1869910534efba52edf24c3c | 2026-06-23 | Update app shortcuts to use app icon color scheme (#2835)
+176a5409b24989e1398c7af54bb73ddb0922fd28 | 2026-06-23 | Add option to open app settings from system settings (#3180)
+735cea35f9a52c98a470d02f43de1dba2036655c | 2026-06-24 | Ensure all tachiyomix required dependencies are present (#3465)
+91ccc0ca401a66c28aa64c75fc65a96ac38816ba | 2026-06-26 | Update actions/setup-java action to v5.4.0 (#3470)
+6c6a07c0c05f35e36b3bc84239cf91edbec95d67 | 2026-06-26 | Ensure app shortcuts use correct color scheme on preview builds (#3473)
+19f1d00fcbef6ab7783066ff9ae8e377f696b231 | 2026-06-27 | Release v0.20.0
+d8c3440d3793573c1ea52b85d00a6ced03983668 | 2026-06-30 | Support resumable image downloads if supported by source (#3167)
+3fd76e4f93d27f5f4d64a460abec739acf90ab4b | 2026-07-02 | Fix Shikimori URL (#3497)
+d0f373df22e3e5a6aac8bbec7787cf3f5012ebf6 | 2026-07-02 | Update dependency org.junit.jupiter:junit-jupiter to v6.1.1 (#3492)
+dfed97edc80cef01df7e13dd3ccdc27280fcf534 | 2026-07-03 | Address compose and xmlutil deprecations (#3507)
+db095c87aab346dc58f19033f55fde3f8ce62f29 | 2026-07-03 | Use Shikimori's GraphQL API where possible (#3499)
+77580cd55fe2c96bda7df8dad7ea1583033a2596 | 2026-07-04 | Invalidate download cache after backup restore (#3096)
+76cc04c8f401393cd7499b97416c6cdbf1984ea1 | 2026-07-03 | Fix crash when putting app in background while on notes screen (#3515)
+27284a40ab0b7b9ac362e0bbc5484d738424d92e | 2026-07-03 | Fix crash trying to select text in notes screen (#3516)
+94b3b5eaa2688aed0b1fcc29f92ee06110bdd73a | 2026-07-04 | Revert "Fix crash when putting app in background while on notes screen (#3515)"
+c3bf7a78c074079a605ed7de86d8b7f58bea183b | 2026-07-05 | Fix crash when putting app in background (#3523)
+b8e5f22c0142861b5ee09e384e4ec244f8d7440f | 2026-07-05 | Add proguard rules to keep Serializable writeReplace and readResolve
+3b078331a027e054c1297fd6e1465da18ba27c37 | 2026-07-06 | Fix support for non-system SAF providers (#3530)
+aa46039e6c47971520ba1100805ec8b0093c525a | 2026-07-07 | Add Hikka tracker support (#1386)
+88a9d44bb7c4c987dbfc8d5824bf7a87846f062f | 2026-07-07 | Fix chapter's `memo` field not being updated for existing chapters (#3538)
+17aed02e56cc9d5a11a48fdbfdee93e0d071e57a | 2026-07-07 | Hikka: Set PLAN_TO_READ for manga with no progress (#3534)
+d0c79399b905f8b6c8bd4603859992f3da5370fa | 2026-07-07 | Show usernames for each tracker in settings (#3533)
+0787678c1274f573e1072ba7e013d0a7aae19d47 | 2026-07-07 | Don't use GMS to detect if GMS is available (#3525)
+41f4579c742059075d695356c5b5484546662719 | 2026-07-07 | Add MangaBaka tracker support (#3047)
+68f293be45d50ae0ed82c13fec125de3faebdaad | 2026-07-08 | Update actions/setup-java action to v5.5.0 (#3543)
+26abad0be0b444246dffc7cccc5b21ec3dca3512 | 2026-07-08 | Update dependency io.kotest:kotest-assertions-core to v6.2.2 (#3544)
+66b390c62abc62aa5411ecec5cbde8f3229b5016 | 2026-07-08 | Fix app not reading `tachiyomix.extensionLib` extension metadata (#3545)
+a313c747f3f02aa4118698f5b5a0d3c177be6308 | 2026-07-08 | Fix reader navigator slider steps not updating after changing chapter (#3549)
+ab58a9952e55485d81193f13ffc262725d8cae32 | 2026-07-08 | Fix Hikka search failing due to unclosed response & show toast on remote-removed titles (#3548)
+44780e74b5579dbb23a648f7e1b5c6cda6454d9f | 2026-07-09 | Add vertical chapter navigator for paged reader with height adjustment option (#3531)
+75f506836cab153458297452000bb526b1cc63a2 | 2026-07-09 | Fix app not reading `tachiyomix.extensionLib` extension metadata 2 (#3559)
+91e967128df697e3c853a8876954eedd7dc9eefe | 2026-07-09 | Regenerate baseline profiles
+aa434285b2c6cb273b246a70219a5f076a44dd8c | 2026-07-09 | Remove flag to disable code shrinking
+4a66b8b5df5b64b7a55e6f80a98dea559dce1dca | 2026-07-10 | Fix HTTP Error 416 not being handled properly for resumable downloads
+3d3bd49d1c9e5395045b737f7b9d766a20b36e8b | 2026-07-10 | Disable resumable image downloads
+a8d3e397794aa7ecf51e1a8a85f9c247c14b1430 | 2026-07-10 | Release v0.20.1
+b2ca6bc5f34f6f5883151017148cb8e38257fde4 | 2026-07-10 | Revert "Disable resumable image downloads"
+217b20123ce9bfe690e5e63d6447304e67790e13 | 2026-07-09 | Update dependency com.google.firebase:firebase-bom to v34.16.0 (#3562)
+b4635c41a8dd5e30edf480b0c9bdc80d0fda0520 | 2026-07-10 | Fixed app bars remaining visible after changing pages by tapping in the paged reader after using the chapter navigator slider (#3567)
+cb2617dee00d127c73c6339cc794db7483de5996 | 2026-07-11 | Add fastlane metadata (#3564)
+d171768cff753dd41da0d0a85c3647fb3f10fe7e | 2026-07-11 | Add Vietnamese translation for fastlane metadata (#3576)
+526d79a975d3cafca37d90093170136c0345a093 | 2026-07-12 | Fix MangaBaka User-Agent using raw StringResource (#3578)
+ef1e7ba907f9dd89bf4aa5b16142daa9e4d28a00 | 2026-07-12 | Update dependency org.junit.jupiter:junit-jupiter to v6.1.2 (#3582)
+e9b7c760a16735ac9f54e163776652915f41619d | 2026-07-14 | Update dependency org.conscrypt:conscrypt-android to v2.6.1 (#3587)
+31a4d6ba39f213a6612ba1804ab03c0188eb4c33 | 2026-07-14 | Update softprops/action-gh-release action to v3.0.2 (#3588)
+c3b99aea0723bc9b34a4c71afb2b12d654c09ef7 | 2026-07-15 | Migrate to AndroidX ViewModel from Voyager ScreenModel (#3594)
+98bb731b4ddbba9743debeb4442e9346bac48d68 | 2026-07-16 | Remove non cancellable call when trying to init reader
+493140c7ff2e048eb09856d37834f18fbd3f6de0 | 2026-07-16 | Detect Shizuku with permission check (#3565)
+5ce7d00eb8145eb4072a77ba1d304072aaaa0518 | 2026-07-19 | Update actions/setup-java action to v5.6.0 (#3602)
+98705910e72cb72fa1792e6152a39f777a8a05ac | 2026-07-19 | Fix crash caused by inaccessible view model classes during creation (#3609)
+47aa9190d48c634ea89c39fc104cdff34fadcbb4 | 2026-07-21 | Add MangaBaka to README list of trackers (#3615) [skip ci]
+6981185f4ba1cf92ad1f84e7721b670ce1c36716 | 2026-07-21 | Fix incorrect progress when resuming resumable image downloads (#3616)
+2d2cf0879f2fb8cd4312b0ab5bc7f2033eb90db3 | 2026-07-21 | Update actions/checkout action to v7.0.1 (#3620)
+e454cf8e9d6edc6027bc54741112fd5ce09ec79a | 2026-07-21 | Always use Private installer to update Private extensions (#3614)
+628cb58862f724a0874a9a116963a5b87eac9c52 | 2026-07-21 | Update dependency io.kotest:kotest-assertions-core to v6.2.3 (#3622)
+e7ec672c8b4d52c734311177544fae5406781e16 | 2026-07-22 | Rework library search to use an AST-based approach (#3554)
+47d7c0f2ea3349c586008db4da3ae1fd571d28ab | 2026-07-23 | Optimize imports across all modules (#3635)
+9c3cc1ca5f0011c4b3638d8f5272080d219bfb2e | 2026-07-23 | Convert :source-api and :source-local to android library module (#3636)
+4ac9f3474bfcab393389b2b040319acbe7085d31 | 2026-07-25 | Fix extension installation with shizuku (#3630)
+069e5c91aca3256082a157fbdcd19737735c8cd0 | 2026-07-25 | Collect data on device preferred abi
+45b1e781eb92f6904f5084b7eb02084586da1ec1 | 2026-07-25 | Add Tokyo Night theme (#3502)
+54ae69eaa2e35c84817e937d88e8106c50bcaca5 | 2026-07-28 | Remove workarounds for patched compose bugs (#3651)
+d15a05602a8cb623000faf8bb30903d0cb0f00aa | 2026-07-30 | Check for app and extension update on every cold start (#3658)
+2ccb0ca1633fc76625465e1952c0003bba30770d | 2026-07-30 | Update dependency org.jsoup:jsoup to v1.23.1 (#3664)
+7aaa891aef2f394d5d2688cb19b55751f3502243 | 2026-07-30 | Improve app update prompt flow experience (#3669)
+4296d056b5ab1a85e2861c21709996bf8a405a11 | 2026-07-30 | Regenerate baseline profiles
+c114028a331fcf2ade8f270c0ca7c17f057947f9 | 2026-08-01 | Fix backup restore dropping library entries (#3667)
+f63dc799f0c0b93243f3f916b25a6b2658b73fe3 | 2026-08-01 | Update actions/setup-java action to v5.7.0 (#3673)
+7d4e1476ba416a66536e61b9cf5c661224676d2d | 2026-08-01 | Update dependency com.google.firebase:firebase-bom to v34.17.0 (#3670)
+0648e2eaafdc037d447cfad4924be1b362c1b7b3 | 2026-08-01 | Release v0.20.2
+6d69903a561b3b9445578eb9b2479f064f4926e8 | 2026-08-02 | Replace java.time APIs with kotlin(x).(date)time (#3001)
+1d8a2b05dd311e79e3567fae8bd7e8169d0df1d9 | 2026-08-02 | Add category filters for Updates tab (#3589)
+d7f3ceef5c75294306d0d9495e9ebc5ffca96302 | 2026-08-02 | Ensure R8 keeps methods called externally by Shizuku (#3676)
+55be95dd5df7ac985bbc68ea62a5a525611a732f | 2026-08-02 | Improve WebView spoofing (#3678)
+f80c91081f32aca1662435674fa5aa5c96852705 | 2026-08-03 | Update gradle/actions action to v6.3.0 (#3681)
+f7a1ecd25163b05b847cd81fd324cb87e8bc796e | 2026-08-03 | Fix reader loading indefinitely in some scenarios (#3686)
+a73271aefa2aece37efcd766c429103c2a71e896 | 2026-08-04 | Add category filters to Upcoming calendar (#3607)
+e287f0878983bae371d604cb334ff8504ea13ca2 | 2026-08-04 | Fix MAL error when list entries have partial dates (#3573)
+81e0754c0da69341299857d79626954e021db5a7 | 2026-08-04 | Release v0.20.3
+8fceb737a4dd9b83c9c3e0290431a62fb3418bd6 | 2026-08-04 | Respect verbose logging preference in crash log dumps (#3682)
+71deefb6fd193724d1048e0c53f59ccc3e07b955 | 2026-08-04 | Update broken repo images (#3692) [skip ci]
+3d20bcc6b690c4bf90a4adfe1aa84f248065a373 | 2026-08-04 | Fix relative date display (#3696)
+21c63579678be4cfe19ba0982d8a158fe300f278 | 2026-08-05 | Replace CategoryUpdate with dedicated update queries (#3693)
+df6507256acce8e7f3660783a3db6dbd1a31b6b5 | 2026-08-05 | Release v0.20.4
+68aa4b003f282e37f2842108131bd5155ab66376 | 2026-08-06 | Don't recheck for updates on configuration change (#3708)
+f9156aa17aa8bffcb284004ca962e6ce10f5c039 | 2026-08-07 | Fix Mangabaka dates drifting in negative timezones (#3711)
+ed274e26fd39e4aa6ee2c9fa2ac2dd8eb3f246f0 | 2026-08-07 | Update dependency org.junit.jupiter:junit-jupiter to v6.1.3 (#3715)
+6c0058d2302259fb92d7398da0e19605b2e49771 | 2026-08-08 | Make SourcesViewModel collect sources only while subscribed (#3721)
+a494ebd79193f8743c4c4cfcd6acc8070c066be9 | 2026-08-08 | Make HistoryViewModel collect history only while subscribed (#3728)
+77a1a5afbdcd9aa7286cc0732ea459906b59f1b2 | 2026-08-08 | Make ExtensionsViewModel collect extensions only while subscribed (#3729)
+cd1f4269454c92e2cd28c3c676e98383badea678 | 2026-08-12 | Fix wrong MangaBaka scores for step sizes > 1 (#3740)
+437dd872250a9b8e635911710ead93106fb5c8bc | 2026-08-12 | [skip ci] Fix PR reference in Changelog (#3741)
+a0a3adf8643c4aaebd852323d8506f9f5eb54f8b | 2026-08-12 | Update dependency io.kotest:kotest-assertions-core to v6.2.4 (#3744)
+5c3ae37d52393551d11d5c0c63d73a9cb4b6c184 | 2026-08-14 | Add high quality WebGPU renderer (#3388)
+77e88a2159ceb18bca993e7e13818ef6a6438c4b | 2026-08-14 | Update dependency de.stefan-oltmann:kim to v0.35.0 (#3757)
+b393088cfa75efdd826c8037e1dfac4e3b129954 | 2026-08-15 | Rename preview build type to nightly and label FOSS builds (#3760)
+55675e7f8038ebc71588f15602a4792c11bbea8e | 2026-08-14 | Update dependency de.stefan-oltmann:kim to v0.36.0 (#3758)
+b1a9a0592653b3a3db55bc8fdfab03fa523fcde1 | 2026-08-15 | Make UpdatesViewModel collect updates only while subscribed (#3761)
+d00efa4bfccb4c901dfd472f8d8e67e7018caf14 | 2026-08-15 | Make LibraryViewModel collect library only while subscribed (#3762)
+b1efee47f52a1fa2640e6c5c493140b1e90052c5 | 2026-08-15 | Replace StateViewModel with explicit backing fields (#3763)
+abdecb3cb427cdeeae45f6a4d4470fc825e956b4 | 2026-08-15 | Show updates and upcoming filter icon as active for categories (#3772)
+a81b7bce9aec7477cf26da0347314a70bb622e90 | 2026-08-15 | Add `id:` prefix search for rest of third-party trackers (#3776)
+4d5b0ea906f686288cd5eda1b49514e8b4abc3ee | 2026-08-16 | Update dependency ca.mpreg:imagedecoder to v9 (#3777)
+7e78849ed0880f332d2f050702055ef3daf8096d | 2026-08-16 | Update dependency de.stefan-oltmann:kim to v0.37.0 (#3774)
+00fb597ae9dd94a06de003775945c814a89bed7d | 2026-08-16 | Drop legacy decoder (#3786)
+5fa5f7e159aa9833c85f1d2f5706f14f3bfe3374 | 2026-08-16 | Load extensions off the main thread (#3788)
+b2015d1ef3f954614ae4dccbb79c85a8df0e08fd | 2026-08-17 | Migrate to Metro DI (#3608)
+2b532ea0c406f4eff14a5074cec720fe97459ed8 | 2026-08-17 | Translations update from Hosted Weblate (#3701)
+3e98c15b748de772044d65f3e65eb69ceae43218 | 2026-08-17 | Remove duplicate in strings.xml
+8586d81e632f0e78e33769fbbfe45b3fe1e7340b | 2026-08-17 | Update spotless to v8.10.0 (#3798)
+c613b52503d30029583fb876e3f0b06b211aed53 | 2026-08-17 | Add score info to MangaUpdates search results (#3795)
+f75f2598a3f42c1cd91eb09a7b1dfa1462d508b3 | 2026-08-17 | Fix fit height to in new renderer and bump webgpuviewer (#3801)
+3cc0d2c324a2ef3c3d7b89b671e357a83a4e73fe | 2026-08-17 | Trim MAL & MB `id:` query before lookup (#3793)
+9fe2c2e1063ebc1fc80f2555ef1e890c83d8d8b0 | 2026-08-20 | Update Gradle to v9.7.1 (#3814)
+dee3daf145e6529edf77cf4e33de2d9413bd63d5 | 2026-08-20 | Update dependency com.google.firebase.crashlytics to v3.0.8 (#3819)
+598f634afb5f98c0cc800df2b5c689108fac48d0 | 2026-08-20 | Update dependency com.google.firebase:firebase-bom to v34.18.0 (#3820)
+4b5a0539e5a894912a2c1ce5dd277ba61af37e0e | 2026-08-20 | Update dependency com.mikepenz:aboutlibraries-compose-m3 to v15.1.0 (#3822)
+01bfaa99ade3c0ed12b0894bfb0bb6c0c9bdbb98 | 2026-08-20 | Add support for using the user's chosen Kitsu rating scales (#3818)
+0974e787adad22e572887ed2ef83b7d31ebeffc4 | 2026-08-20 | Use Shikimori's update endpoint (#3810)
+497e2662565c2727113125493a324465b9bc56ff | 2026-08-20 | Fix page loading for webgpuviewer and bump version (#3823)
+31d3c23717dbdc49793910977eb423c55f52191b | 2026-08-22 | Migrate to Kitsu's GraphQL API (#3792)
+645824618088b9540123bc1aa3d291915a3e299b | 2026-08-21 | Update dependency org.conscrypt:conscrypt-android to v2.6.3 (#3832)
+9ec479266bb6055b30275cadd4d3ffa567a11663 | 2026-08-21 | Update aboutLibraries to v15.1.1 (#3831)
+a2c24ff0429ad2502b612c9ab1f2b09966629f73 | 2026-08-22 | Use upstream scaffold (#3834)
+46c8f07c128ddbf146d00122fba8e424a8013173 | 2026-08-23 | Limit vertical divider height in global search toolbar (#3839)
+270b78ba952d5483e9ad4e16621e58510d1e036b | 2026-08-23 | Wait for extensions to load before the list is propagated (#3841)
+e3813028bd0d3862905b21f9a7fa924c52be8046 | 2026-08-23 | Bump webgpuviewer, fix animated images background color (#3843)
+ac249e3668a57f24782a49218834064459ba2d09 | 2026-08-23 | Exit early in CloudflareInterceptor when cloudflare challenge is interactive (#3842)
+0854bde12ee777778a5927599860716e35720540 | 2026-08-26 | Bump webgpuviewer, imagedecoder, fixes (#3852)
+3f56685e0ccb62b7ff8073d9438b7aef14f18ebc | 2026-08-26 | Update android.gradle to v9.3.2 (#3853)
+deb7b33118616d37536f1e5ef2ef85c8b5db0799 | 2026-08-26 | Update dependency org.jsoup:jsoup to v1.23.2 (#3854)
+7847cad0f4e62e67372f566ead033aa2252dad61 | 2026-08-28 | Update coil to v3.6.0 (#3860)
+2776e3eddaf87cc33fdb309a3cfba7d347b8facc | 2026-08-28 | Update dependency androidx.baselineprofile to v1.5.0-rc02 (#3856)
+6cfce8d42570191e648805b152be4bea93c78ca8 | 2026-08-28 | Update actions/setup-java action to v6 (#3861)
+1512ca63d76f104fb887d4c34e5d13212f0ed9e3 | 2026-08-28 | Update dependency com.materialkolor:material-kolor to v5.0.1 (#3864)
+161617b95dec648f77eb2d2a41b5ae17c7ab30f8 | 2026-08-28 | Update dependency de.stefan-oltmann:kim to v0.38.1 (#3862)
+7b41ebf8fe2e43792fdc2c136d6c10aa00bee7ca | 2026-08-28 | Update spotless to v8.10.1 (#3865)
+ff3dedb6d814e612dddc902b12b0b5d2116947b5 | 2026-08-28 | Update dependency androidx.glance:glance-appwidget to v1.2.0 (#3867)
+c1d1f6b1611863893d40637ccb99166a806fd078 | 2026-08-28 | Update aboutLibraries to v15.2.0 (#3866)
+5fadea61e75433a9db9fbd21eb90eec1199b53da | 2026-08-28 | Make the source manager surface suspend (#3869)
+bb24e904a9209b36e9d11168d200ae4151675369 | 2026-08-28 | Bump webgpuviewer, fix navigation directions and long strip bounds (#3870)
+b695940114cc62e5d21b64efbf6bddf17408a681 | 2026-08-29 | Switch to Material Symbols and use Valkyrie for ImageVector generation (#3873)
+7f342ca076fd23a3b52da750e10641f50d0c95a6 | 2026-08-29 | Use built-in DelegateLastClassLoader for extensions (#3874)
+34a33ed4f8707ac49afd1e6faf877e1061cb5414 | 2026-08-30 | Use filled icon for library continue reading button
+baad5c59bb736e0a81b296ee33bdf2c9353761b6 | 2026-08-30 | Clean up some missed unused imports (#3876)
+056d9baeeba6b7f53c0638b3d30da72e71c159fa | 2026-08-31 | Migrate composeGrid to new group ID (#3877)
+21af65b10012f23e53dba9d01fd2474fcb810f7c | 2026-09-04 | Fix unhelpful generic 401 error on AniList expiry (#3888)
+f3125ab8976283e0074a874ff098ff0c49f18367 | 2026-09-04 | Bump webgpuviewer (#3886)
+3acd7eaca935a5091d1ca6c66113c5fa6b01447b | 2026-09-04 | Update coil to v3.6.2 (#3889)
+5e99306e5f420e9c72faeb87cae3023d39b12476 | 2026-09-06 | Minor tracking refactors (#3900)
+a82baac3ef7ecf60b184906d4bf791ecdce8e766 | 2026-09-06 | Fixed crash caused by incorrect handling of kitsu score type from login (#3887)
+5b69dbad81b4f253189ac1eb2aa0dd3b3308eea1 | 2026-09-06 | Fix default category and manga sometimes not having their category restored (#3891)
+f7cd820f2f8307ccba8796de9ad49bbdbe52a439 | 2026-09-06 | Update dependency org.conscrypt:conscrypt-android to v2.7.0 (#3897)
+3a64c8d65cf9fe44346a5994642db440c73aa70a | 2026-09-06 | Update dependency com.squareup.okio:okio to v3.18.2 (#3894)
+aebf11a74954fd82f81b8bce9f8ac4fc89fa6127 | 2026-09-08 | Make tracker utils package-internal (#3908)
+2810dd14c40bb5b95b146826d019afd674d57227 | 2026-09-09 | Update dependency com.mohamedrejeb.richeditor:richeditor-compose to v1.2.0 (#3896)
+6c0fa3a0434571cfbbbcf6310a71317b889633a2 | 2026-09-09 | Update spotless to v8.10.2 (#3895)
+3f845c12c823022654a54733a1e086a9bf420cf0 | 2026-09-09 | Update android.gradle to v9.4.0 (#3893)
+44a9d96e90dd69c9f4b311c64032ba10681af70f | 2026-09-09 | Update dependency de.stefan-oltmann:kim to v0.39.1 (#3890)
+d0ee5140441d6cde71a319c3a00525aca9f4351e | 2026-09-09 | Update GitHub Actions (#3892)
+e32231eeaa34551eeb50e9f7728fffa44024c07b | 2026-09-09 | Update dependency com.google.firebase:firebase-bom to v34.19.0 (#3915)
+35bb84705e9d787e1aede440a57cd899a18fb018 | 2026-09-10 | Fix GPU texture leak when a decoded page is no longer usable (#3872)
+0ce6f22cf5cecc4b3e6c0ef02fc218ac57232f78 | 2026-09-09 | Update kotlin monorepo to v2.4.20 (#3917)
+a5260487d385f4074170efeae14ce0374768a7d6 | 2026-09-09 | Update metro to v1.4.3 (#3918)
+5f87f7e0548cc6741ea0d3c66b144eb88f7b0a78 | 2026-09-10 | Update dependency androidx.sqlite:sqlite-bundled to v2.7.1 (#3916)
+1e054ea14d551f5f16c8dd892bfb5962be2426d2 | 2026-09-10 | Fix inverted MAL OAuth expiry check logic (#3927)
+d17ad1e00211789d5317892bad1e975978702930 | 2026-09-11 | Bump webgpuviewer (#3933)
+9f480564c20643beccd805e5984fe2381b83fcfd | 2026-09-12 | Update dependency androidx.baselineprofile to v1.5.0 (#3934)
+5de262675a5f0cd0cfdc7ac301a7c65a1a9a1c0c | 2026-09-12 | Update dependency io.kotest:kotest-assertions-core to v6.2.5 (#3935)
+918cfb3dda7c53a5b04971dd3600915f5a92b5e3 | 2026-09-12 | Update dependency androidx.benchmark:benchmark-macro-junit4 to v1.5.0 (#3936)
+2292554d9762827e48544f6a88721e0007388ccd | 2026-09-12 | Update dependency de.stefan-oltmann:kim to v0.40.0 (#3937)
+802958b1eae74d39cd1309581d26c17462b8ad90 | 2026-09-12 | Bump compileSdk to 37.1
+737fdbfbf0e4d401e0c5331c507267ae20e1ad24 | 2026-09-12 | Switch to upstream FlexibleAdapter
+f7da5c856a0906c79cbbe251e9eeb1a798c53451 | 2026-09-12 | Switch to upstream sqldelight-androidx-driver
+d435dd92170df4081c27c85dcf25f37b63d462ed | 2026-09-12 | Switch to upstream Injekt
+6c6eff3ab81f3ce15ebe41beacb16e48c483793b | 2026-09-12 | Update markdown to v0.45.0 (#3806)
+855918bbf4cfc893656eaf8a045519a0d1f52023 | 2026-09-12 | Update dependency androidx.compose:compose-bom-alpha to v2026.09.00 (#3752)
+6ef6e818146a536eb581405d19399551ddb2461a | 2026-09-12 | Update dependency com.google.android.material:material to v1.14.0 (#3226)
+60e74b8d8f14bd2761799f4fb0ae4d124becbea2 | 2026-09-12 | Don't try to create slider state when slider can't or won't be rendered (#3941)
+2d1a8bbeff996ef6615c904e019ca9794e8d2096 | 2026-09-12 | Tighten AniList rate limit (#3942)
+7418f4e7bc716a3e5f7dd991e744fb0f6fbcc97c | 2026-09-13 | Bump webgpuviewer (#3949)
+cbafe9bf3f274b5655415b539ba0e45f31ec2015 | 2026-09-14 | Translations update from Hosted Weblate (#3938)
+0fbaa1ecece412808dfd2bb1ef4ce963bcf8f937 | 2026-09-14 | Replace extension NSFW flag with content warning app-wide (#3951)
+a5cd541bdf3068cd8d5c5499adf896f2fec7ab82 | 2026-09-14 | webgpuviewer: Fix menu hiding when navigating in long strip (#3956)
+0e0bc6972a2516d2ed2b5acac089ade708cf285b | 2026-09-14 | Allow user to load installed extensions regardless of content warning (#3952)
+e6d8efe6f8fc591826ee6d9a4a046447625e8135 | 2026-09-14 | Expose installed extensions that failed to load (#3953)
+fdc2d40a1da27bdd0c98a537e157037cf0a80b99 | 2026-09-14 | Reload extensions when relevant settings are updated (#3954)
+b2cda03e3af23035b7d71629703b8ebc89f14eec | 2026-09-14 | Use modern OpenDocument for backup file selection (#3948)
+1c43addeca7510db550a131c825bfb2e6a9f6f71 | 2026-09-15 | Resolve Injekt dependencies directly from the Metro graph (#3965)
+a7179805ad1e7b3c3a0a4098560d04fed24b2701 | 2026-09-16 | Use & write Year, Month, Day info in ComicInfo (#3967)
+1e142c4255cf8e734a6202a8ccb072071eadd540 | 2026-09-16 | Fix padded year & 31-clamped month in local source (#3970)
+51efde975b6f2fb4880126758cf3a0ff5d8d9062 | 2026-09-16 | Translations update from Hosted Weblate (#3950)
+5848ffb4c484506d8123ef6fa9ecbbda166a330a | 2026-09-17 | Update metro to v1.4.4 (#3973)
+385d076d4369535c2839193cd29e2b32741989b1 | 2026-09-19 | Translations update from Hosted Weblate (#3972)
+504ec2afaea49cf8bb8dab03164f2feca8ffb3b6 | 2026-09-19 | Update android.gradle to v9.4.1 (#3982)
+01e3f8c60557d89b6cd9d28c11f41d676d0ab5d9 | 2026-09-19 | Add refresh button to tracker for new profile info (#3828)
+71cd94a31dba31d20b0f4e3d453d3288612bf957 | 2026-09-19 | Update dependency ubuntu to v26 (#3986)
+424bbc53b85c19acd3c3b7c03ec6f73f516f25bc | 2026-09-19 | Update coil to v3.6.3 (#3979)
+debab6c261c806792a44dcb3caa9203c77eb1b25 | 2026-09-20 | Enable Gradle Tooling parallelism explicitly
+c69b14c975f6353fe576f5d8109e8df6579c8f25 | 2026-09-20 | Bump compileSdk to 37.2
+12fbb13df5da7031575f60e151905da4a512bbd8 | 2026-09-20 | Enable Gradle configuration cache
+427e105840262e1aa381108bfca1dc1bf9bba493 | 2026-09-20 | Enable Gradle isolated projects
+2b9cb4ca5a5b70b6279a9a970cc96757e77e0b0b | 2026-09-20 | Refactor GenerateLocalesConfigTask to run when string files updates
+2c979d2d32c06e6be70a3940aecaafc7ba5e4626 | 2026-09-20 | Enable `android.nonTransitiveRClass`
+0de91a9c532b1c1aafa4a8b01c3294b66567a45c | 2026-09-20 | Remove redundant dimens.xm in :app
+61680580ddd51f07cec396fe3b9287a5c4443d32 | 2026-09-20 | Simplify build flags setup with distribution profile
+93a163f96ee550934aa7fd66d660294fe9972d13 | 2026-09-20 | Only upload Crashlytics mapping file when building for release
+73fef961e96c3846961ca79c101ad4040961462f | 2026-09-20 | Update dependency me.zhanghai.android.libarchive:library to v1.1.7 (#3983)
+57666e92078dd52d2569d95c24937a024cfce42c | 2026-09-20 | Update sqldelight to v2.4.0 (#3985)
+449c4e08e76deb06ac9ec520efafe3f8d6e181ec | 2026-09-20 | Translations update from Hosted Weblate (#3987)
+f52d890e7f8a3c418ddab41f41d4b577bce0dc06 | 2026-09-22 | Fix library search when clicking source name in manga info screen (#4002)
+532575e29e196ed59a5457fd4b4c6af5e0740287 | 2026-09-26 | Fixed entries being incorrectly marked as duplicates when tracked with some trackers (#4008)
+c67a33f3d4b176a274abdaec8610d0a38b0af41d | 2026-09-27 | Remove unused sync scaffold
+a4abb6292bd73b6b2ab407d08573a009a603332a | 2026-09-27 | Split the universal update queries into case-specific ones
+306befb214c497c4ebd162d3d613fc0528a0c72d | 2026-09-27 | Restrict raw database access to the data module
+f8fff318ba0fa3b59a2c8254d6a8ff0d85a890ad | 2026-09-27 | Build manga and chapter updates with a lambda and track assigned fields
+986f46c09ac2870e9f6d30e9e67bf08022b276e3 | 2026-09-27 | Merge manga favorite related fields into favorite_at
+4df0e6b168b5ee237928aa24b41d76247627800e | 2026-09-27 | Keep category orders unique while reordering
+6ee529c5aa5872231984666bf1e63402c56c6ce1 | 2026-09-27 | Apply chapter sync in one transaction
+0044cc73ec308d00e16cceb4afa7b6be26b9cfdf | 2026-09-27 | Fix stored stub sources not loading and being rewritten on every reload
+fc5592ff7576688a1e4f0a28daba1371ad254f08 | 2026-09-27 | Don't bring back extension stores removed during a refresh
+8bfa495f34db1eace681b39bf2328421b5a89331 | 2026-09-27 | Assign category positions inside the database
+553762fae8d47e40ef910e73d55c58bfbd8a057b | 2026-09-27 | Fix reading history being double counted
+2b4b8472bb7c9a112f3f99d31e4a15e48f6c5b7a | 2026-09-27 | Open a requested chapter in the reader even if its scanlator is excluded by filter
+9a77baedcc700ddca619c622cd441460e78ebc1a | 2026-09-27 | Update an existing track in place instead of replacing it
+4b48a84ec9f78ae8f5df3f2db718334a6ec076b3 | 2026-09-27 | Keep a stored track's remote entry when restoring
+b74e010bfed05d00219188f004366f3576f1d114 | 2026-09-27 | Order updates by fetch date in the queries themselves
+ed17ece4e36e2c9001a3c45697e9c40b69f5ba5e | 2026-09-27 | Return an entry's categories in display order
+0938411053be8632fa1f6143a5ac8acf22abee4c | 2026-09-27 | Install and update extensions only from a store whose signing key matches
+2d86a70ce28098e8d9fcccd9e13122e8edf8667f | 2026-09-27 | Offer updates for extensions that aren't loaded
+4f33486aa4a644e4ebe373c681dba94f291a8ace | 2026-09-27 | Clean up extension update checking
+09edf7dc8d1e970fc5c29638c56fd91a8662b6ae | 2026-09-28 | Keep an installed extension's store current as stores change
+087e38ad4749632dbedad7124649b5593d618e13 | 2026-09-28 | Update dependency androidx.compose:compose-bom-alpha to v2026.09.01 (#4009)
+ba4c04fe74294b53c1a0bd7d3eac3dfff5b8ea5b | 2026-09-28 | Update dependency androidx.core:core to v1.19.1 (#4010)
+3542143b407f6e9f80b4ee7806a56c08788b172d | 2026-09-28 | Update dependency androidx.webkit:webkit to v1.17.1 (#4011)
+f835398094c6cef7574d7d18d781d4fb83fa9471 | 2026-09-28 | Update metro to v1.4.5 (#4012)
+9b4c3115dbfc6b9d77873c5cffa980294fd2a66c | 2026-09-28 | Update spotless to v8.10.3 (#4013)
+7f4c55176f6ef1bcf0bb1b9ea49b6630f632fc12 | 2026-09-28 | Update dependency androidx.annotation:annotation to v1.11.0 (#4014)
+9b5e0ae735047eb44a6c3d960a52e4dfc8f91027 | 2026-09-28 | Show an extension's store and install failures in the extension list (#3955)
+7451c228e638c85f3b03a9e336477460268414e5 | 2026-09-28 | Update Gradle to v9.8.0 (#4016)
+59fdf7e7fa668a3a3803519431687ef87468f96e | 2026-09-28 | Update dependency androidx.work:work-runtime to v2.12.0 (#4015)
+ec614bb4c3b7d5fe48824d4910adf274e5a6149e | 2026-09-28 | Use Apollo GraphQL for Trackers with GraphQL APIs (#3827)
+93cc07511628961e5e8b6c57053f5f7f511a63d3 | 2026-09-28 | Tweak database table and view schema (#3805)
+2d1d2e4cabc404461b3346b31b71c16cbca3be7b | 2026-09-28 | Rework database queries for the new schema (#4022)
+65d7110e1eeba8086231afc57a589fe923edca42 | 2026-09-28 | Remove libvips based imagedecoder and add progressive rendering (#4023)
+866d045c7aba343fd739c57d15c81ff6df59e796 | 2026-09-28 | Update gradle/actions action to v6.4.0 (#4024)
+972c9d43da5eb6273f74d01fa48b778343818cc4 | 2026-10-01 | Bump versionCode to 33
+98ba6930547310ca847c6757942602b0e2e498fb | 2026-10-01 | Bump webgpuviewer (#4029)
+f2464a1ba65b7f81651de2c477282636cd1268da | 2026-10-01 | Add an option to disable the MD5 suffix in chapter names (#3966)
+6dfa10ffac4a4f9ae135246f98c5b71ccc6f1891 | 2026-10-01 | Ensure tachiyomix public API is not removed by R8
+01d302febd89fa1edb10306de4b5d582d446d9fc | 2026-10-01 | Let DownloadJob own the downloader lifecycle
+38e93086c8d62f98ed676b1c3e47d2a78c9376a4 | 2026-10-01 | Configure database connections like Room
+9409740d7e7cc9842057f08a93f56dc4c9181924 | 2026-10-01 | Let SliderPreference collect its own preference
+9abc83076926a1616522fc95b87fbc9cfab343e9 | 2026-10-02 | Rename `Preference.enabled` to `visible` to correctly reflect usage
+db45dda525f6934ad092bb3b2cba5d707b5db50f | 2026-10-02 | Make CoroutineWorker supertypes have Worker suffix
+a4780e4edb4a380011a4f726474fa2e3c9e104e7 | 2026-10-03 | Use Dispatchers.IO.limitedParallelism in SearchViewModel to prevent thread leak (#4036)
+4c88f02646aa1a358611e5b3b37ef7a62909b8d9 | 2026-10-03 | Fix race condition when updating search items in SearchViewModel (#4037)
+a7a8cc8343c6debe4e0ba719275b2c36815b703d | 2026-10-04 | Update dependency com.mohamedrejeb.richeditor:richeditor-compose to v1.2.1 (#4030)
+f35bc341ae4d2dc895bc00666507b9e4fd428387 | 2026-10-04 | Update dependency com.cheonjaeung.compose.grid:grid to v2.9.0 (#4041)
+d1c5c12bdd59e68c850958ffa8cb321189e99627 | 2026-10-04 | Fix webtoon reader leaving a gap after zooming in a resized window
+f82a7a68f42add8970e43916cf4d8e28e8847c33 | 2026-10-04 | Build download error notifications fresh each time
+7aacaa349019ff42b8b05403d8beebe94c8f6dfc | 2026-10-04 | Keep the paused download notification after the worker stops
+f027de8c2e7c37ec1f06f1925c6a83c27e7a7ac0 | 2026-10-03 | Look up library item sources and download counts once per library update
+a5d584eeb0fe46d8461a1ac523fa152ae3d285bf | 2026-10-04 | Sanitize the scanlator in chapter download folder names
+6490c41e63f2ad9f0d879e81077a8cacb35f2c91 | 2026-10-04 | Wait for a canceled downloader job to finish before starting another
+61cd786e7f38c210e6a9ce4f95cafd7689ff982b | 2026-10-04 | Use WAL on every device
+730e43fd1472e8314268910580273fb7373530e5 | 2026-10-04 | Download a source's next chapter while the current one finishes
+1f85a5a8db100bbcda9e6d2ab113b021b59d5f78 | 2026-10-04 | Share one cover load between rows that show it at the same time
+fb8e640d69969f74cd2ff18abf701c6176f95f4b | 2026-10-04 | Look up queued and downloaded chapters once per chapter list
+9a6dea804dcc32590cb5e568ce68b32192a1f8ab | 2026-10-04 | Stop polling queued downloads for their page list
+7ff97761b9e6bb6ad7ef22ff53a09faa280b9b76 | 2026-10-04 | Make MangaViewModel collect the entry only while subscribed
+940272f75a228938ff9f122a382ad2bae52f7ce3 | 2026-10-05 | Load tracks in the library only for tracker filters and sorting
+5df78e305e9d48f5b0663a8ddd5d128e3d5d7828 | 2026-10-05 | Read the library's last read time without joining history to chapters
+179bfaca72ff314418187634b5da1e0ee4e52f30 | 2026-10-05 | Load all tracks in one query for statistics
+6a329386c26f7939efb90add09fb94e8a99fbcda | 2026-10-05 | Build a chapter's folder name variants from parts computed once
+06d61281168e39229e63bce5cccec640fe224efd | 2026-10-07 | Let R8 shrink and optimize app code
+1e471a414cc085bc4ef471d3de7d6576be3dc22c | 2026-10-07 | Stop updates showing a finished chapter as still downloading
+5910a51eb4c9fda5e0f69a3367e2efc332567081 | 2026-10-07 | Keep the names of uninstalled sources across backup restores
+76b146f3d4dc8acbee81a352e99e6b4c48bc5974 | 2026-10-07 | Show the updates widget's empty and locked text
+6d4ed6cb229e6347a0b2f14e2a3ab8fcf4295049 | 2026-10-07 | Use the backport class loader for extensions before Android 17
+a6ee4bc596d397cbf30ff5b27651f5a77156d711 | 2026-10-07 | Fix library range selection crash across categories
+fd4f73c9081b8d13a38797e8349efc0c511e46bb | 2026-10-07 | Show a screen while the app migrates after an update
+ab7ee00c48ba1d514ecf73bfeb1e35e1faf23fa3 | 2026-10-07 | Fix tap navigation staying off after a cancelled button press (#3655)
+dd46413e1017c145df660f0ac714fe30bff69d0e | 2026-10-09 | List MangaBaka first among trackers
+a80027ff36d61661b24e16beb1c964f5bffbf12a | 2026-10-09 | Update icons and move remaining to Material Symbols (#4057)
+d1e71ab58ff21cf992be5e8be65754ea55149985 | 2026-10-09 | Bump webgpuviewer (#4051)
+e998904fb6b7b2f58a653a9095873df25cacdbb2 | 2026-10-10 | Update GitHub Actions (#4059)
+8d3915356984f0f28059a74ffec426c7e0d835f0 | 2026-10-10 | Update androidx.paging to v3.5.2 (#4058)
+7f2b4962b75531ad3e904af023c171f31d59c765 | 2026-10-10 | Update dependency com.google.firebase:firebase-bom to v35 (#4066)
+24bd3c95a5145c34e485d6a167fbd69624aeecff | 2026-10-10 | Update Gradle to v9.8.1 (#4060)
+2f5b9c164115df01ba127e43eb65724154046a1c | 2026-10-10 | Update kotlin monorepo to v2.4.21 (#4061)
+5b3505bf5fda03d2bcbde366bc60c819bc3bb033 | 2026-10-10 | Update sqldelight to v2.4.1 (#4064)
+157679bba57aca393be4202ec3731067bbcb54a9 | 2026-10-10 | Update spotless to v8.10.4 (#4063)
+0c1be369b0fbb5413f3bc1c71914e4810a670db0 | 2026-10-10 | Ask to add an entry to the library before editing its cover (#2265)
+36ec043a5c28220cdd880dfd47dcb2f80fab8cc3 | 2026-10-10 | Delete downloads of duplicates read along with a chapter (#3030)
+8c0419657bb6ca2651b170404f6e17f883c8a825 | 2026-10-10 | Always update library entries that were never initialized (#3179)
+40f552981adb8efbbc579b075eb8da93fc658968 | 2026-10-10 | Don't match every library entry as a duplicate of a blank title (#3308)
+785f4fd1edd911193ffad018d695b05caaaebad5 | 2026-10-10 | Keep downloads in excluded categories when marking them read (#3558)
+d3f10772f277633d89de85a81ddb569ec6997398 | 2026-10-10 | Include the local source in global search (#3784)
+287cbbb98651cd36586a4e52bc8d0f6662c485d0 | 2026-10-10 | Keep the last update time on an empty Updates screen (#3790)
+f28b2d887e794c4d73442f988933d92dedfba3bd | 2026-10-10 | Cancel queued downloads of chapters the source removed (#3845)
+88d4071ccef38971efbe35f75420650b836d3209 | 2026-10-10 | Don't let the stored download index overwrite a startup rescan (#3968)
+be44a81fb6ee31c4dbb794ea33facfd7967b6773 | 2026-10-10 | Keep listing local chapters when one archive can't be read (#3997)
+adc9ee74eccd51de6eb94ebaf17b81cea55ce6a7 | 2026-10-10 | Respect hidden missing chapter indicators in chapter headers (#4039)
+e9234f205d2af5da68472bbfb8914d0d42b7de26 | 2026-10-10 | Match setting group headings in settings search (#4044)
+8972882a3467314e24a22c16c222717d5477c79f | 2026-10-10 | Use plain icon buttons for extension actions
+44c1e1915df4835c0e2d563aab9b48ae0030e892 | 2026-10-10 | Store every date in the database as an Instant
+292381662adf4e91523c39132e2f206d03ea3e35 | 2026-10-10 | Follow weekday and monthly release patterns for next update and back it up
+6c1b0702ba0b4d71763ce1fd9963523ccf7625c2 | 2026-10-10 | Use the beta Compose BOM
+e42e01049d6ba9dbc12c762e90d972a1b4f0813e | 2026-10-04 | Recognize volumes and use neighbouring chapters for chapter numbers
+e21414b2294e7d010b7c3d0a34eb926df7fbc3e4 | 2026-10-10 | Drop the legacy chapter model and narrow last page read to an Int
+f921ec07a6e81ef85ffac2ef09d043fa8eb75d6a | 2026-09-22 | Use an app scoped CoroutineScope
+611578313e0dd3317a3dee683fbca97f69238444 | 2026-10-10 | Index a finished download found on disk instead of downloading it again
+a82d27c3a6958a0390bcc49b08530a2dbf6353a1 | 2026-10-10 | Keep the chapter selection when new chapters download after a refresh
+f9c5fa901175c4f6e7fddef48d1144814688deaa | 2026-10-10 | Log app scope failures instead of crashing outside debug builds
+c46317f099e6c14c19dce69dfab9482ea8089048 | 2026-10-10 | Move blocking work off the main thread and fix threading races (#4068)
+c0c090999951e546ca1e42a9ba0a0c920d1439d0 | 2026-10-10 | Fix Kitsu showing novels in search results (#4069)
+3e5d593e28b45c9a70fea8d02abb8348d613b140 | 2026-10-11 | Implement parallel page loading and preloading in reader (#2986)
+b15af71b9425f3bf74e957e1f29980039ef347a2 | 2026-10-11 | Load installed extension and source icons through Coil
+260e31cd2c777ea29f04501825e65b9e6aa236cf | 2026-10-11 | Improve performance across screens (#4071)
+8066b8dfc95a4c66c8d574fc078f101ac332910f | 2026-10-11 | Read extension stores once at startup
+ba16158b1399a80f521618a789c68b609546316d | 2026-10-11 | Show download progress and open the manga screen with less work
+f02bf5ba7e66fbb612d4b1354baefd7e19ecd62e | 2026-10-11 | Queue many chapters without probing each one on disk
+b454c1b4699fbd8edb23faabedf849e8244acc48 | 2026-10-11 | Keep the migration screen up for at least a second
+fc20410ceb949d380003460141d2a8001178abb9 | 2026-10-11 | Allow skipping an app update version
+ba44815254826cb3fccf73036bdfc0f0af4796c9 | 2026-10-11 | Count early, late and backdated releases when predicting next update
+e562a9b4f86ee153d843d593fcd9303e7b0fedf5 | 2026-10-11 | Show a wavy progress ring while a chapter downloads
+d58130a5fc82047a95663b74f48d9415f4690e96 | 2026-10-11 | Check for app updates every 6 hours while the app is open
+bce1f71958751ce2396e3d793c34b5c74ccd798b | 2026-10-11 | Update changelog
+dd4e9f00f11921c6948d0866f315b6853ae72fc7 | 2026-10-11 | Show a confirmation dialog when unfavoriting manga from the manga screen (#4073)
+35bd0a4b35df3ab8acc9cf9a94b7a8b68efa1720 | 2026-10-11 | Fixed long strip side padding being counted in zoom bounds  (#4072)
+039138ce99fd18a56ae662aa22a7bcdb3e937a47 | 2026-10-11 | Add Comick Tracker (#4056)
+b5856135c59c573f3708e9b900a2aebf132a5e83 | 2026-10-12 | Fix webtoon scroll stutter between pages
+8912ef5b5c75742637ec17c6e577306523dbb2c6 | 2026-10-12 | Regenerate baseline profiles
+143a060ac9dbbe1f574d0b4f6e9f76baf4135f59 | 2026-10-12 | Release v0.21.0
+8457fb91e057065efbaf98fdfff986a6135bf2b9 | 2026-10-12 | Fix chapter refresh failing in locales with non-ASCII digits
+abb126ad204e2d6123d0bca2ffb0f73fe15ec617 | 2026-10-12 | Fix startup crash on some Samsung Android 9 to 11 devices
+c279291e29255db76272b62e9750851b0d18a418 | 2026-10-12 | Fix manga screen FAB going under the taskbar on tablets
+07b9fb695c95b06efe46fd9409e1b663724f0e91 | 2026-10-12 | Fix extension installer crash when cancelling off the main thread
+6dffca15931ee55dee301ce47d587d51327330ac | 2026-10-12 | Keep a missing date added as is when merging it into favorite_at
+649fc83ffaa6f3b63b816f0038fb0b6b8430bcc9 | 2026-10-12 | Keep the app alive when a WebView renderer dies
+ae749bb4f8536502a6ba1ef11f8be7ab39959ffd | 2026-10-12 | Only cancel the install of the extension being cancelled
+a999e49f2f99958d0fa3d3a213702edccbf6442c | 2026-10-12 | Index duplicate entries so moving their chapters doesn't take hours
+9dbb7148c52ed5f707e216c193306898ada7654d | 2026-10-12 | Show failed migrations instead of waiting on them forever
+010ac71a845e3e5d6597477f376bd26b325f3317 | 2026-10-12 | Revert "Always update uninitialized library entries (#3179)"
+51b61a36e8633d458e329859a9e025cf6b02528f | 2026-10-12 | Keep the pager on its page when chapters are added before layout
+66e736222df7cefb41a433e31d4ab9474090b4b8 | 2026-10-12 | Release v0.21.1
+1ca9b0efb817b54948436e19906de9a5a2dca6b2 | 2026-10-12 | Don't send full Doubles to Comick for progress (#4090)
+ea2b73ad78a6c1d2d00e76034a5a11876da3db8e | 2026-10-12 | Guard the database update against duplicates and damaged indexes
+43de88c7186116d7ecc94e9343d313f0a7dca5c8 | 2026-10-12 | Update navigationevent to stop back gestures crashing closed screens
+7ae858e6023fdc729e3f99c40f529e7f46d66c3d | 2026-10-12 | Solve Cloudflare challenges of non-GET requests on the site's root
+ee59394542728ffa27fdec6417439809a8697678 | 2026-10-12 | Fix tracker start date being shifted by the UTC offset (#4049)
+3156b4a1c44e276b5ebd90410fcef27f7ebe5931 | 2026-10-12 | Insert split pages only into the chapter they belong to
+c9e1b6e96e167dfde720c62782bb42e28efa4fa3 | 2026-10-12 | Show invalid filters from extensions instead of crashing
+2df48e19a129aa4fcc7f444cd0d15c5eea52d324 | 2026-10-12 | Fail the install when nothing can confirm it instead of crashing
+c371d6331d25b0e5f47c73d4596c4e9aa7cd15e1 | 2026-10-12 | Ignore long strip taps confirmed after the reader is gone
+f0f1e4de5a13c1e66ef8c49158731bd2f808b0a0 | 2026-10-12 | Fix some downloads not being recognized
+5a5ff22c375b77a7557e4fcddf6e377ef94f8b9b | 2026-10-12 | Fix concurrent Cloudflare challenges each opening a WebView
+771ba33a33b6b07675625ece8211d1584f247ac8 | 2026-10-12 | Stream entries when creating and restoring backups
+3100dceddd177ea5444abff86d3f563fb75b55ce | 2026-10-13 | Release v0.21.2
+446f6df82c390ab760802c2fce3b677bce3f31c1 | 2026-10-13 | Update androidx.paging to v3.5.3 (#4099)
