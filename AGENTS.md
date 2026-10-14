@@ -208,9 +208,11 @@ Gradle `-P` flags (`buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`):
 **Workflows** (`.github/workflows/`):
 - `build_pull_request.yml` – PR validation: dependency review → wrapper validation → `spotlessCheck` → `assembleNightly` → `testDebugUnitTest` → APK signing (authorized forks)
 - `build_push.yml` – push to `master`: full build + signing
-- `build_release.yml` – release builds from `v*` tags
-- `build_nightly.yml` – manual nightly builder
+- `build_nightly.yml` – **the release path**: manual dispatch on `master` → signed `assembleNightly -Pdist=ci` → a prerelease tagged `r<commit-count>` (5 APKs). See the `nightly-release` skill.
+- `build_release.yml` – optional `v*`-tag stable build; **dormant** (this fork ships nightlies only)
 - `build_benchmark.yml` – manual benchmark builder
+
+**Releases are nightlies.** There is no stable channel and the version numbers carry no meaning: the nightly `versionName` is `1.14.1-<commit-count>` (the commit count is the version), `versionCode` stays `83`, and the in-app updater matches the `r<count>` tags and offers an update when the release count exceeds the installed build's `COMMIT_COUNT`. `CI_SETUP.md` documents the setup and the `nightly-release` skill documents cutting one.
 
 ---
 

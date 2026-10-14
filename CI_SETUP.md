@@ -28,7 +28,9 @@ current state in this repo.
    green without them.
 4. [ ] Leave Actions workflow permissions at "Read repository contents".
 5. [ ] No environments / no Actions variables required.
-6. [ ] Test: same-repo PR → push to `master` → `Nightly Builder` → `v*` tag release.
+6. [ ] Test: same-repo PR → push to `master` → `Nightly Builder`. The nightly is
+   **the release path** here; the `v*` tag release is optional and normally unused
+   (see [§4](#4-which-workflows-are-active-disabled-and-why)).
 
 ---
 
@@ -236,8 +238,8 @@ Do not add these unless you deliberately re-purpose those workflows.
 |----------|--------|-------|
 | `build_pull_request.yml` (PR build check) | **Keep** | Safe: uses `pull_request` (not `pull_request_target`). Fork PRs build unsigned with no secrets; same-repo PRs use the secrets when present. |
 | `build_push.yml` (CI) | **Keep** | Runs on `master` pushes. Runs `spotlessCheck`, `assembleNightly`, unit tests, and the SQLDelight migration gate. |
-| `build_nightly.yml` (Nightly Builder) | **Keep** (optional) | Manual, `master`-only. Auto-tags `r<count>` and publishes a **non-draft prerelease** with 5 APKs. Requires the 4 signing secrets. |
-| `build_release.yml` (Release Builder) | **Keep** | `v*` tag → non-draft prerelease, 5 APKs, AGP signing. Needs a Crashlytics-capable config for `-Pdist=github` (or telemetry off). |
+| `build_nightly.yml` (Nightly Builder) | **Keep — the release path** | Manual, `master`-only. Auto-tags `r<count>` and publishes a **non-draft prerelease** with 5 APKs. Requires the 4 signing secrets. This is how releases are cut here. |
+| `build_release.yml` (Release Builder) | **Keep** (dormant) | `v*` tag → non-draft prerelease, 5 APKs, AGP signing. Only fires on `v*` tags; this fork ships nightlies, not stable releases, so it is normally unused. Needs a Crashlytics-capable config for `-Pdist=github` (or telemetry off). |
 | `build_benchmark.yml` (Benchmark Builder) | **Keep** (optional) | Manual benchmark build; needs only the 4 signing secrets. Niche. |
 | `pr_label.yml` (Label PRs) | **Keep** (low value) | Labels Weblate-authored PRs `translations`. Harmless, safe. |
 | `build_dispatch_preview.yml.disabled` | **Disabled** | Cross-repo dispatch to upstream `komikku-app/komikku-preview` with `BOT_PAT` — cannot work on the fork. |
@@ -281,7 +283,7 @@ first. Then walk through these in order.
 2. Expected: same chain as the PR job, ending in the sign + rename + upload.
 3. Expected artifact: **`Komikku-master-r<count>.apk`** and `mapping-<sha>`.
 
-### 5.3 Nightly (exercises `build_nightly.yml`)
+### 5.3 Nightly (`build_nightly.yml`) — **the release path**
 
 1. **Actions → Nightly Builder → Run workflow**, choose branch **`master`**.
    (The `build-app` job only runs when `github.ref == 'refs/heads/master'`.)
@@ -293,7 +295,7 @@ first. Then walk through these in order.
 4. Visit **Releases** to confirm it, then delete it (and the auto-tag) if it was
    just a smoke test.
 
-### 5.4 Tag release (exercises `build_release.yml`)
+### 5.4 Tag release (`build_release.yml`) — optional / normally unused
 
 1. Tag `master` and push the tag:
    ```bash

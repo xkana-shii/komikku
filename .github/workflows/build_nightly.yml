@@ -97,7 +97,7 @@ jobs:
           echo "BUILD_TYPE_NAME=$build_type_name" >> $GITHUB_OUTPUT
 
       - name: Create Tag '${{ steps.prepare_env.outputs.TAG_NAME }}'
-        if: ${{ github.ref }} == "refs/heads/master"
+        if: github.ref == 'refs/heads/master'
         run: |
           git tag "${{ steps.prepare_env.outputs.TAG_NAME }}"
           git push origin "${{ steps.prepare_env.outputs.TAG_NAME }}"
