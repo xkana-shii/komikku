@@ -353,13 +353,13 @@ class PagerPageHolder(
 
     private fun decodeImage(imageSource: BufferedSource): Bitmap? {
         return try {
-            // KMK --> migrated off the dropped legacy decoder to the mpreg decoder
+            // KUN --> migrated off the dropped legacy decoder to the mpreg decoder
             val res = ImageDecoder.open(imageSource.inputStream()).use { it.decodeNext() }
             createBitmap(res.width, res.height).also { bitmap ->
                 res.image.rewind()
                 bitmap.copyPixelsFromBuffer(res.image)
             }.also { res.close() }
-            // KMK <--
+            // KUN <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Cannot decode image" }
             null

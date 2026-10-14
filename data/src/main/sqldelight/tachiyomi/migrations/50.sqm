@@ -11,7 +11,6 @@ SELECT
     coalesce(C.readCount, 0) AS readCount,
     coalesce(C.latestUpload, 0) AS latestUpload,
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
-    -- KMK -->
     -- Joining history to every chapter is the slowest part of the query, and only entries with excluded
     -- scanlators need the chapters to leave theirs out
     coalesce(
@@ -32,7 +31,6 @@ SELECT
         END,
         0
     ) AS lastRead,
-    -- KMK <--
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     -- KMK -->
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,

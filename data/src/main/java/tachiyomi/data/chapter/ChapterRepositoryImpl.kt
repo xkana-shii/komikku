@@ -89,7 +89,6 @@ class ChapterRepositoryImpl(
         }
     }
 
-    // KMK -->
     override suspend fun updateFromRemote(
         removedIds: List<Long>,
         added: List<Chapter>,
@@ -106,8 +105,10 @@ class ChapterRepositoryImpl(
                     database.chapterQueries.getChaptersByMangaId(
                         mangaId,
                         false.toLong(),
+                        // KMK -->
                         Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                         Manga.CHAPTER_SHOW_BOOKMARKED,
+                        // KMK <--
                         ChapterMapper::mapChapter,
                     )
                         .awaitAsList()
@@ -118,6 +119,7 @@ class ChapterRepositoryImpl(
             val stored = added
                 .filter { existing.add(it.mangaId to it.url) }
                 .mapNotNull { chapter ->
+                    // KUN -->
                     // A concurrent sync may have inserted this chapter between the query above and here:
                     // `DO NOTHING` returns no row, so skip it rather than aborting the transaction
                     val lastInsertId = database.chapterQueries.insert(
@@ -133,10 +135,13 @@ class ChapterRepositoryImpl(
                         userBookmark = chapter.bookmark,
                         userLastPageRead = chapter.lastPageRead,
                         stateDateFetch = chapter.dateFetch,
+                        // SY -->
                         lastModifiedAt = chapter.lastModifiedAt,
                         version = chapter.version,
                         isSyncing = 0L,
+                        // SY <--
                     ).awaitAsOneOrNull() ?: return@mapNotNull null
+                    // KUN <--
                     chapter.copy(id = lastInsertId)
                 }
 
@@ -155,7 +160,6 @@ class ChapterRepositoryImpl(
             stored
         }
     }
-    // KMK <--
 
     private suspend fun partialUpdate(vararg chapterUpdates: ChapterUpdate) {
         database.transaction {

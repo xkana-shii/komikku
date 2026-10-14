@@ -64,10 +64,10 @@ class MangaCoverFetcher(
     private val getSource: suspend () -> HttpSource?,
     private val callFactoryLazy: Lazy<Call.Factory>,
     private val imageLoader: ImageLoader,
-    // KMK -->
+    // KUN -->
     private val uiPreferences: UiPreferences,
     private val coverCache: CoverCache,
-    // KMK <--
+    // KUN <--
 ) : Fetcher {
 
     // KMK -->

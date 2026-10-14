@@ -35,9 +35,9 @@ import kotlin.math.sqrt
 class ImageDecoder(
     private val resources: ImageSource,
     private val options: Options,
-    // KMK -->
+    // KUN -->
     private val context: Context,
-    // KMK <--
+    // KUN <--
 ) : Decoder {
     /**
      * Wraps a raw [ImageDecoder.Frame] as a Coil [Image] for callers that want
@@ -209,9 +209,9 @@ class ImageDecoder(
     }
 
     class Factory(
-        // KMK -->
+        // KUN -->
         private val context: Context,
-        // KMK <--
+        // KUN <--
     ) : Decoder.Factory {
         override fun create(result: SourceFetchResult, options: Options, imageLoader: ImageLoader): Decoder? {
             return if (options.newDecoder || options.webtoonStrips || isApplicable(result.source.source())) {
