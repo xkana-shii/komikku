@@ -414,7 +414,6 @@ class LibraryViewModel(
             displayedCategories = groupedFavorites.keys.toImmutableList(),
             itemsByCategoryId = categoryCache.itemsByCategoryId,
             itemsBySubcategoryId = categoryCache.itemsBySubcategoryId,
-            countsByCategoryId = categoryCache.countsByCategoryId,
             subcategoriesByParent = subcategoriesByParent,
             // KMK <--
         )
@@ -464,7 +463,6 @@ class LibraryViewModel(
             displayedCategories = library?.displayedCategories.orEmpty(),
             itemsByCategoryId = library?.itemsByCategoryId.orEmpty(),
             itemsBySubcategoryId = library?.itemsBySubcategoryId.orEmpty(),
-            countsByCategoryId = library?.countsByCategoryId.orEmpty(),
             subcategoriesByParent = library?.subcategoriesByParent.orEmpty(),
             // KMK <--
             // SY -->
@@ -527,7 +525,6 @@ class LibraryViewModel(
         val displayedCategories: List<Category>,
         val itemsByCategoryId: Map<Long, List<LibraryItem>>,
         val itemsBySubcategoryId: Map<Long, List<LibraryItem>>,
-        val countsByCategoryId: Map<Long, Int>,
         val subcategoriesByParent: Map<Long, List<Category>>,
         // KMK <--
     )
@@ -1557,18 +1554,23 @@ class LibraryViewModel(
     fun search(query: String?) {
         searchQuery.update { query }
     }
+    // KMK --> Navigation never invalidates the prepared library pipeline.
     fun updateActiveCategoryIndex(index: Int) {
-        val categoryId = state.value.displayedCategories.getOrNull(index)?.id
-        // KMK --> Preserve a selected subcategory across recomposition on the
-        // same parent tab, but leave it when the user navigates to another tab.
+        val categories = state.value.displayedCategories
+        if (categories.isEmpty()) return
+        val boundedIndex = index.coerceIn(0, categories.lastIndex)
+        val categoryId = categories[boundedIndex].id
+        val next = ActiveCategory(index = boundedIndex, id = categoryId)
+        if (next == activeCategory.value) return
         if (categoryId != activeCategory.value.id) {
             activeSubCategoryId.value = null
         }
-        activeCategory.update { ActiveCategory(index = index, id = categoryId) }
-
-        val lastIndex = state.value.displayedCategories.lastIndex.coerceAtLeast(0)
-        libraryPreferences.lastUsedCategory().set(index.coerceIn(0, lastIndex))
+        activeCategory.value = next
+        if (libraryPreferences.lastUsedCategory().get() != boundedIndex) {
+            libraryPreferences.lastUsedCategory().set(boundedIndex)
+        }
     }
+    // KMK <--
 
     // KMK -->
     fun selectSubcategory(subcategoryId: Long?) {
@@ -1861,7 +1863,6 @@ class LibraryViewModel(
         val displayedCategories: List<Category> = emptyList(),
         private val itemsByCategoryId: Map<Long, List<LibraryItem>> = emptyMap(),
         private val itemsBySubcategoryId: Map<Long, List<LibraryItem>> = emptyMap(),
-        private val countsByCategoryId: Map<Long, Int> = emptyMap(),
         val subcategoriesByParent: Map<Long, List<Category>> = emptyMap(),
         // KMK <--
         // SY -->
@@ -1941,7 +1942,7 @@ class LibraryViewModel(
             return activeSubCategoryId
                 ?.takeIf { category.id == activeCategoryId && groupType == LibraryGroup.BY_DEFAULT }
                 ?.let { itemsBySubcategoryId[it]?.size ?: 0 }
-                ?: countsByCategoryId[category.id]
+                ?: itemsByCategoryId[category.id]?.size
             // KMK <--
         }
 

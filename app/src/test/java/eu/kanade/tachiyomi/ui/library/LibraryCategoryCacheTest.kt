@@ -21,7 +21,7 @@ class LibraryCategoryCacheTest {
 
         cache.itemsByCategoryId[1] shouldContainExactly listOf("three", "one", "two")
         cache.itemsBySubcategoryId[11] shouldContainExactly listOf("three", "two")
-        cache.countsByCategoryId[1] shouldBe 3
+        cache.itemsByCategoryId[1]?.size shouldBe 3
     }
 
     @Test

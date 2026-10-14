@@ -1,12 +1,9 @@
 package eu.kanade.presentation.library.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -18,7 +15,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.dp
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import kotlinx.coroutines.delay
@@ -33,7 +29,6 @@ import kotlin.time.Duration.Companion.seconds
 fun LibraryContent(
     categories: List<Category>,
     // KMK -->
-    activeCategoryIndex: Int,
     subcategoriesByParent: Map<Long, List<Category>>,
     activeSubCategoryId: Long?,
     onSelectSubcategory: (Long?) -> Unit,
@@ -63,22 +58,19 @@ fun LibraryContent(
             end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
         ),
     ) {
-        val pagerState = rememberPagerState(currentPage) { categories.size }
+        // KMK --> SY initializes from a bounded index; navigation stays owned by the pager.
+        val initialPage = currentPage.coerceIn(0, categories.lastIndex.coerceAtLeast(0))
+        val pagerState = rememberPagerState(initialPage) { categories.size }
+        // KMK <--
 
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
 
         if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
             LaunchedEffect(categories) {
-                // KMK -->
-                val targetPage = when {
-                    categories.isEmpty() -> 0
-                    activeCategoryIndex != pagerState.currentPage -> activeCategoryIndex.coerceAtMost(categories.size - 1)
-                    pagerState.currentPage >= categories.size -> categories.size - 1
-                    else -> pagerState.currentPage
-                }
-                if (targetPage != pagerState.currentPage) {
-                    pagerState.scrollToPage(targetPage)
+                // KMK --> Match SY: only repair a page that no longer exists.
+                if (categories.size <= pagerState.currentPage) {
+                    pagerState.scrollToPage(categories.size - 1)
                 }
                 // KMK <--
             }
@@ -93,31 +85,6 @@ fun LibraryContent(
                 },
             )
         }
-
-        // KMK --> Keep the parent tab stable and make the selected child a
-        // local filter. This avoids turning every subcategory into a top
-        // level pager page and lets direct-parent manga remain visible via All.
-        val currentCategory = categories.getOrNull(pagerState.currentPage.coerceAtMost(categories.lastIndex))
-        val subcategories = currentCategory?.let { subcategoriesByParent[it.id] }.orEmpty()
-        if (showPageTabs && subcategoriesByParent.isNotEmpty()) {
-            // Keep the pager's vertical bounds stable while swiping between a parent that has
-            // subcategories and one that does not. A changing pager height forces every visible
-            // grid item to be measured again in the middle of the animation.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp),
-            ) {
-                if (subcategories.isNotEmpty()) {
-                    LibrarySubcategoryTabs(
-                        subcategories = subcategories,
-                        selectedSubcategoryId = activeSubCategoryId,
-                        onSelectSubcategory = onSelectSubcategory,
-                    )
-                }
-            }
-        }
-        // KMK <--
 
         PullRefresh(
             refreshing = isRefreshing,
@@ -135,6 +102,19 @@ fun LibraryContent(
         ) {
             LibraryPager(
                 state = pagerState,
+                // KMK --> Child navigation belongs to its page, outside the parent tab layout.
+                pageHeader = { category ->
+                    if (showPageTabs) {
+                        LibrarySubcategoryTabs(
+                            subcategories = subcategoriesByParent[category.id].orEmpty(),
+                            selectedSubcategoryId = activeSubCategoryId.takeIf {
+                                category.id == categories.getOrNull(currentPage)?.id
+                            },
+                            onSelectSubcategory = onSelectSubcategory,
+                        )
+                    }
+                },
+                // KMK <--
                 contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
                 hasActiveFilters = hasActiveFilters,
                 selection = selection,
@@ -156,8 +136,11 @@ fun LibraryContent(
             )
         }
 
-        LaunchedEffect(pagerState.currentPage) {
-            onChangeCurrentPage(pagerState.currentPage)
+        // KMK --> Preserve the source child view throughout the animation. Tab highlighting
+        // still follows currentPage as in SY; persist selection only when navigation settles.
+        LaunchedEffect(pagerState.settledPage, categories) {
+            if (categories.isNotEmpty()) onChangeCurrentPage(pagerState.settledPage)
         }
+        // KMK <--
     }
 }

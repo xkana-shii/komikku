@@ -7,7 +7,6 @@ import tachiyomi.domain.category.model.Category
 internal data class LibraryCategoryCache<T>(
     val itemsByCategoryId: Map<Long, List<T>>,
     val itemsBySubcategoryId: Map<Long, List<T>>,
-    val countsByCategoryId: Map<Long, Int>,
 )
 
 internal fun <T> buildLibraryCategoryCache(
@@ -29,7 +28,6 @@ internal fun <T> buildLibraryCategoryCache(
     return LibraryCategoryCache(
         itemsByCategoryId = itemsByCategory,
         itemsBySubcategoryId = itemsBySubcategory,
-        countsByCategoryId = itemsByCategory.mapValues { (_, items) -> items.size },
     )
 }
 // KMK <--

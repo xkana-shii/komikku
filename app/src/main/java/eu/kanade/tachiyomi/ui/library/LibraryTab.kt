@@ -305,7 +305,6 @@ data object LibraryTab : Tab {
                     LibraryContent(
                         categories = state.displayedCategories,
                         // KMK -->
-                        activeCategoryIndex = state.coercedActiveCategoryIndex,
                         subcategoriesByParent = state.subcategoriesByParent,
                         activeSubCategoryId = state.activeSubCategoryId,
                         onSelectSubcategory = viewModel::selectSubcategory,
