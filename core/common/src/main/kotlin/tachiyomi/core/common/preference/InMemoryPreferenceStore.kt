@@ -1,12 +1,18 @@
 package tachiyomi.core.common.preference
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * Local-copy implementation of PreferenceStore mostly for test and preview purposes
@@ -15,74 +21,52 @@ class InMemoryPreferenceStore(
     initialPreferences: Sequence<InMemoryPreference<*>> = sequenceOf(),
 ) : PreferenceStore {
 
-    private val preferences: Map<String, Preference<*>> =
-        initialPreferences.toList().associateBy { it.key() }
-
-    override fun getString(key: String, defaultValue: String): Preference<String> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: String? = preferences[key]?.get() as? String
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
+    // KMK --> Shared backing values and one key observer per collector, matching Android.
+    private val values = ConcurrentHashMap<String, Any>().apply {
+        initialPreferences.forEach { pref -> if (pref.isSet()) put(pref.key(), pref.get() as Any) }
     }
-
-    override fun getLong(key: String, defaultValue: Long): Preference<Long> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: Long? = preferences[key]?.get() as? Long
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
-    }
-
-    override fun getInt(key: String, defaultValue: Int): Preference<Int> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: Int? = preferences[key]?.get() as? Int
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
-    }
-
-    override fun getFloat(key: String, defaultValue: Float): Preference<Float> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: Float? = preferences[key]?.get() as? Float
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
-    }
-
-    override fun getBoolean(key: String, defaultValue: Boolean): Preference<Boolean> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: Boolean? = preferences[key]?.get() as? Boolean
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
-    }
-
-    override fun getStringSet(key: String, defaultValue: Set<String>): Preference<Set<String>> {
-        TODO("Not yet implemented")
-    }
+    private val listeners = CopyOnWriteArraySet<(String?) -> Unit>()
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T> getObjectFromString(
-        key: String,
-        defaultValue: T,
-        serializer: (T) -> String,
-        deserializer: (String) -> T,
-    ): Preference<T> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: T? = preferences[key]?.get() as? T
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
+    private fun <T> preference(key: String, default: T): Preference<T> = object : Preference<T> {
+        override fun key() = key
+        override fun defaultValue() = default
+        override fun get(): T = values[key] as? T ?: default
+        override fun isSet() = values.containsKey(key)
+        override fun set(value: T) {
+            values[key] = value as Any
+            listeners.forEach { it(key) }
+        }
+        override fun delete() {
+            values.remove(key)
+            listeners.forEach { it(key) }
+        }
+        override fun changes(): Flow<T> = keyChanges { it == key }.map { get() }
+        override fun stateIn(scope: CoroutineScope) = changes().stateIn(scope, SharingStarted.Eagerly, get())
     }
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T> getObjectFromInt(
-        key: String,
-        defaultValue: T,
-        serializer: (T) -> Int,
-        deserializer: (Int) -> T,
-    ): Preference<T> {
-        val default = InMemoryPreference(key, null, defaultValue)
-        val data: T? = preferences[key]?.get() as? T
-        return if (data == null) default else InMemoryPreference(key, data, defaultValue)
-    }
+    override fun getString(key: String, defaultValue: String) = preference(key, defaultValue)
+    override fun getLong(key: String, defaultValue: Long) = preference(key, defaultValue)
+    override fun getInt(key: String, defaultValue: Int) = preference(key, defaultValue)
+    override fun getFloat(key: String, defaultValue: Float) = preference(key, defaultValue)
+    override fun getBoolean(key: String, defaultValue: Boolean) = preference(key, defaultValue)
+    override fun getStringSet(key: String, defaultValue: Set<String>) = preference(key, defaultValue)
+    override fun <T> getObjectFromString(key: String, defaultValue: T, serializer: (T) -> String, deserializer: (String) -> T) =
+        preference(key, defaultValue)
+    override fun <T> getObjectFromInt(key: String, defaultValue: T, serializer: (T) -> Int, deserializer: (Int) -> T) =
+        preference(key, defaultValue)
 
-    // KMK --> This preview store has no shared mutable backing store.
-    override fun keyChanges(predicate: (String) -> Boolean): Flow<String?> = flowOf(null)
+    override fun keyChanges(predicate: (String) -> Boolean): Flow<String?> = callbackFlow {
+        val listener: (String?) -> Unit = { key ->
+            if (key == null || predicate(key)) trySend(key)
+        }
+        listeners.add(listener)
+        trySend(null)
+        awaitClose { listeners.remove(listener) }
+    }.buffer(Channel.UNLIMITED)
+
+    override fun getAll(): Map<String, *> = values.toMap()
     // KMK <--
-
-    override fun getAll(): Map<String, *> {
-        return preferences
-    }
 
     class InMemoryPreference<T>(
         private val key: String,

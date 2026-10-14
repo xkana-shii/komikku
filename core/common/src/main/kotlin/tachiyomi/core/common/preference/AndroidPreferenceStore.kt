@@ -3,9 +3,10 @@ package tachiyomi.core.common.preference
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.conflate
 import tachiyomi.core.common.preference.AndroidPreference.BooleanPrimitive
 import tachiyomi.core.common.preference.AndroidPreference.FloatPrimitive
 import tachiyomi.core.common.preference.AndroidPreference.IntPrimitive
@@ -22,18 +23,18 @@ class AndroidPreferenceStore(
 
     private val keyFlow = sharedPreferences.keyFlow
 
-    // KMK --> One listener, installed before the initial snapshot signal. Conflation is safe:
-    // consumers read a complete snapshot, rather than applying individual key deltas.
+    // KMK --> Preserve individual keys; dropping/conflating them would lose override updates.
+    // Register before requesting the initial snapshot, and unregister with the collector.
     override fun keyChanges(predicate: (String) -> Boolean) = callbackFlow<String?> {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == null || predicate(key)) {
-                trySend(null)
+                trySend(key)
             }
         }
         sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
         trySend(null)
         awaitClose { sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener) }
-    }.conflate()
+    }.buffer(Channel.UNLIMITED)
     // KMK <--
 
     override fun getString(key: String, defaultValue: String): Preference<String> {

@@ -1,7 +1,7 @@
 package tachiyomi.domain.library.service
 
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.collections.immutable.persistentHashMapOf
+import kotlinx.coroutines.flow.flow
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
@@ -121,27 +121,48 @@ class LibraryPreferences(
         "",
     )
 
-    fun smartScanlatorMergeSettings() = preferenceStore.keyChanges {
-        it == "pref_smart_scanlator_merge" || it.startsWith("pref_smart_scanlator_merge_override_")
-    }.map {
-        val all = preferenceStore.getAll()
-        SmartMergeSettings(
-            enabled = all["pref_smart_scanlator_merge"] as? Boolean ?: false,
-            overrides = all.entries.mapNotNull { (key, value) ->
-                val id = key.removePrefix("pref_smart_scanlator_merge_override_").toLongOrNull()
-                val enabled = when (value) {
-                    "enabled" -> true
-                    "disabled" -> false
-                    else -> null
+    fun smartScanlatorMergeSettings() = flow {
+        val globalKey = "pref_smart_scanlator_merge"
+        val prefix = "pref_smart_scanlator_merge_override_"
+        var enabled = false
+        var overrides = persistentHashMapOf<Long, Boolean>()
+        var initialized = false
+        preferenceStore.keyChanges { it == globalKey || it.startsWith(prefix) }.collect { key ->
+            val previous = overrides
+            val previousEnabled = enabled
+            if (key == null || !initialized) {
+                val all = preferenceStore.getAll()
+                enabled = all[globalKey] as? Boolean ?: false
+                overrides = persistentHashMapOf<Long, Boolean>().builder().apply {
+                    all.forEach { (name, value) ->
+                        if (name.startsWith(prefix)) {
+                            val id = name.removePrefix(prefix).toLongOrNull()
+                            val setting = parseSmartMergeOverride(value)
+                            if (id != null && setting != null) put(id, setting)
+                        }
+                    }
+                }.build()
+            } else if (key == globalKey) {
+                enabled = smartScanlatorMerge().get()
+            } else {
+                val id = key.removePrefix(prefix).toLongOrNull()
+                if (id != null) {
+                    val setting = parseSmartMergeOverride(smartScanlatorMergeOverride(id).get())
+                    overrides = if (setting == null) overrides.removing(id) else overrides.putting(id, setting)
                 }
-                if (key.startsWith("pref_smart_scanlator_merge_override_") && id != null && enabled != null) {
-                    id to enabled
-                } else {
-                    null
-                }
-            }.toMap(),
-        )
-    }.distinctUntilChanged()
+            }
+            if (!initialized || enabled != previousEnabled || overrides !== previous) {
+                emit(SmartMergeSettings(enabled, overrides))
+            }
+            initialized = true
+        }
+    }
+
+    private fun parseSmartMergeOverride(value: Any?): Boolean? = when (value) {
+        "enabled" -> true
+        "disabled" -> false
+        else -> null
+    }
 
     fun smartScanlatorMergeEnabled(mangaId: Long): Boolean {
         return when (smartScanlatorMergeOverride(mangaId).get()) {

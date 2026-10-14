@@ -24,6 +24,8 @@ class LibraryVisibilityPreferencesTest {
                 reads++
                 values.toMap()
             }
+            every { getString(any(), any()) } answers { values[firstArg<String>()] as? String ?: secondArg() }
+            every { getBoolean(any(), any()) } answers { values[firstArg<String>()] as? Boolean ?: secondArg() }
             every { registerOnSharedPreferenceChangeListener(any()) } answers {
                 listeners.add(firstArg())
                 Unit
@@ -54,15 +56,18 @@ class LibraryVisibilityPreferencesTest {
         }
         testScheduler.runCurrent()
         (1L..1000L).all(emissions.last()::enabledFor) shouldBe true
+        reads shouldBe initialReads
         values.remove("pref_smart_scanlator_merge_override_42")
         notify("pref_smart_scanlator_merge_override_42")
         testScheduler.runCurrent()
         emissions.last().enabledFor(42) shouldBe false
+        reads shouldBe initialReads
         values.clear()
         values["pref_smart_scanlator_merge"] = true
         notify(null)
         testScheduler.runCurrent()
         emissions.last().enabledFor(42) shouldBe true
+        reads shouldBe initialReads + 1
         job.cancel()
         testScheduler.runCurrent()
         listeners.size shouldBe 0

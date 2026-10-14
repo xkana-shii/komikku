@@ -25,6 +25,9 @@ dependencies {
 
     implementation(platform(kotlinx.coroutines.bom))
     implementation(kotlinx.bundles.coroutines)
+    // KMK --> Persistent preference snapshots share unchanged entries.
+    implementation(kotlinx.immutables)
+    // KMK <--
     implementation(kotlinx.bundles.serialization)
 
     implementation(libs.unifile)
