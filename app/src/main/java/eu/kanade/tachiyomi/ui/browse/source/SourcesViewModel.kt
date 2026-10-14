@@ -17,7 +17,7 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.source.service.SourcePreferences.DataSaver
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.SourceUiModel
-import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
+import eu.kanade.tachiyomi.ui.browse.DebouncedSearchQuery
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -68,11 +67,10 @@ class SourcesViewModel(
 
     private val dialog = MutableStateFlow<Dialog?>(null)
     // KMK -->
-    private val searchQuery = MutableStateFlow<String?>(null)
+    private val searchQuery = DebouncedSearchQuery()
     private val nsfwOnly = MutableStateFlow(false)
-    private val filters = combine(searchQuery, nsfwOnly, ::Pair)
+    private val filters = combine(searchQuery.debounced, nsfwOnly, ::Pair)
         .distinctUntilChanged()
-        .debounce(SEARCH_DEBOUNCE_MILLIS)
     // KMK <--
 
     private val sourceItems = combine(
@@ -96,11 +94,20 @@ class SourcesViewModel(
 
     val state: StateFlow<State> = combine(
         sourceItems,
+        // KMK --> Never debounce the value rendered by the controlled search field.
+        searchQuery.value,
+        // KMK <--
         dialog,
         // SY -->
         sourcePreferences.dataSaver().changes(),
-    ) { state, dialog, dataSaver ->
-        state.copy(dialog = dialog, dataSaverEnabled = dataSaver != DataSaver.NONE)
+    ) { state, searchQuery, dialog, dataSaver ->
+        state.copy(
+            dialog = dialog,
+            dataSaverEnabled = dataSaver != DataSaver.NONE,
+            // KMK -->
+            searchQuery = searchQuery,
+            // KMK <--
+        )
         // SY <--
     }
         .flowOn(Dispatchers.IO)
@@ -180,7 +187,6 @@ class SourcesViewModel(
             showLatest = showLatest,
             // SY <--
             // KMK -->
-            searchQuery = searchQuery,
             nsfwOnly = nsfwOnly,
             // KMK <--
         )
@@ -218,7 +224,7 @@ class SourcesViewModel(
 
     // KMK -->
     fun search(query: String?) {
-        searchQuery.update { query }
+        searchQuery.update(query)
     }
 
     fun toggleNsfwOnly() {

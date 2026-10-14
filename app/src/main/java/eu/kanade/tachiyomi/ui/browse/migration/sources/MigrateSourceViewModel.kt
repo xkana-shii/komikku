@@ -7,7 +7,7 @@ import eu.kanade.domain.source.interactor.GetSourcesWithFavoriteCount
 import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.model.installedExtension
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
+import eu.kanade.tachiyomi.ui.browse.DebouncedSearchQuery
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -19,11 +19,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import logcat.LogPriority
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.system.logcat
@@ -41,9 +39,9 @@ class MigrateSourceViewModel(
     val channel = _channel.receiveAsFlow()
 
     // KMK -->
-    private val searchQuery = MutableStateFlow<String?>(null)
+    private val searchQuery = DebouncedSearchQuery()
     private val sources = combine(
-        searchQuery.debounce(SEARCH_DEBOUNCE_MILLIS),
+        searchQuery.debounced,
         getSourcesWithFavoriteCount.subscribe(),
     ) { searchQuery, sourceCounts ->
         val queryFilter: (String?) -> ((Pair<Source, Long>) -> Boolean) = { query ->
@@ -69,16 +67,19 @@ class MigrateSourceViewModel(
 
     val state: StateFlow<State> = combine(
         sources,
+        // KMK --> Never debounce the value rendered by the controlled search field.
+        searchQuery.value,
+        // KMK <--
         preferences.migrationSortingMode().changes(),
         preferences.migrationSortingDirection().changes(),
-    ) { sources, sortingMode, sortingDirection ->
+    ) { sources, searchQuery, sortingMode, sortingDirection ->
         State(
             isLoading = false,
             items = sources,
             sortingMode = sortingMode,
             sortingDirection = sortingDirection,
             // KMK -->
-            searchQuery = searchQuery.value,
+            searchQuery = searchQuery,
             // KMK <--
         )
     }
@@ -105,7 +106,7 @@ class MigrateSourceViewModel(
 
     // KMK -->
     fun search(query: String?) {
-        searchQuery.update { query }
+        searchQuery.update(query)
     }
     // KMK <--
 
