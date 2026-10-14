@@ -19,6 +19,7 @@ class GetVisibleChaptersByMangaIds(
     suspend fun await(
         mangas: Collection<Manga>,
         applyFilter: Boolean = true,
+        smartMergeEnabled: (Long) -> Boolean = libraryPreferences::smartScanlatorMergeEnabled,
     ): Map<Long, List<Chapter>> {
         val regularMangaIds = mangas
             .filterNot { it.source == MERGED_SOURCE_ID }
@@ -37,7 +38,7 @@ class GetVisibleChaptersByMangaIds(
             }
             manga.id to chapters.filterChapterVisibility(
                 manga = manga,
-                smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+                smartScanlatorMergeEnabled = smartMergeEnabled(manga.id),
             )
         }
     }

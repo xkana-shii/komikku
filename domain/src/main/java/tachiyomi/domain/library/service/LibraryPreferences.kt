@@ -1,5 +1,7 @@
 package tachiyomi.domain.library.service
 
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
@@ -118,6 +120,28 @@ class LibraryPreferences(
         "pref_smart_scanlator_merge_override_$mangaId",
         "",
     )
+
+    fun smartScanlatorMergeSettings() = preferenceStore.keyChanges {
+        it == "pref_smart_scanlator_merge" || it.startsWith("pref_smart_scanlator_merge_override_")
+    }.map {
+        val all = preferenceStore.getAll()
+        SmartMergeSettings(
+            enabled = all["pref_smart_scanlator_merge"] as? Boolean ?: false,
+            overrides = all.entries.mapNotNull { (key, value) ->
+                val id = key.removePrefix("pref_smart_scanlator_merge_override_").toLongOrNull()
+                val enabled = when (value) {
+                    "enabled" -> true
+                    "disabled" -> false
+                    else -> null
+                }
+                if (key.startsWith("pref_smart_scanlator_merge_override_") && id != null && enabled != null) {
+                    id to enabled
+                } else {
+                    null
+                }
+            }.toMap(),
+        )
+    }.distinctUntilChanged()
 
     fun smartScanlatorMergeEnabled(mangaId: Long): Boolean {
         return when (smartScanlatorMergeOverride(mangaId).get()) {
@@ -361,3 +385,9 @@ class LibraryPreferences(
         )
     }
 }
+
+// KMK -->
+data class SmartMergeSettings(val enabled: Boolean, val overrides: Map<Long, Boolean>) {
+    fun enabledFor(mangaId: Long): Boolean = overrides[mangaId] ?: enabled
+}
+// KMK <--

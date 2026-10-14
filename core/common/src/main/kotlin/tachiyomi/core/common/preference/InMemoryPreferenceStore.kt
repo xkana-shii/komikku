@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -74,6 +75,10 @@ class InMemoryPreferenceStore(
         val data: T? = preferences[key]?.get() as? T
         return if (data == null) default else InMemoryPreference(key, data, defaultValue)
     }
+
+    // KMK --> This preview store has no shared mutable backing store.
+    override fun keyChanges(predicate: (String) -> Boolean): Flow<String?> = flowOf(null)
+    // KMK <--
 
     override fun getAll(): Map<String, *> {
         return preferences

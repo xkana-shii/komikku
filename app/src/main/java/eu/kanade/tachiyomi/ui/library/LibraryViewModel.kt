@@ -73,8 +73,10 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -912,50 +914,43 @@ class LibraryViewModel(
         }
     }
 
-    private fun getFavoritesFlow(): Flow<List<LibraryItem>> {
-        return getLibraryManga.subscribe()
-            .withSourceUpdates(sourceManager)
-            .flatMapLatest { libraryManga ->
-                val visibilityChanges = combine(
-                    listOf(
-                        libraryPreferences.smartScanlatorMerge().changes().map { },
-                    ) + libraryManga.map { manga ->
-                        libraryPreferences.smartScanlatorMergeOverride(manga.id).changes().map { }
-                    },
-                ) { }
-                combine(
-                    getLibraryItemPreferencesFlow(),
-                    downloadCache.changes,
-                    visibilityChanges,
-                ) { preferences, _, _ ->
-                    libraryManga.toLibraryItems(preferences)
+    // KMK --> Restore the pre-1.23.2 separation of database preparation from badges.
+    private fun getFavoritesFlow(): Flow<List<LibraryItem>> = flow {
+        val visibilityCache = LibraryVisibilityCache()
+        var previousItems = emptyMap<Long, LibraryItem>()
+        val visibleLibrary = combine(
+            getLibraryManga.subscribe(),
+            libraryPreferences.smartScanlatorMergeSettings(),
+        ) { manga, settings ->
+            visibilityCache.prepare(manga, settings) { missing, snapshot ->
+                // Bound chapter materialization during a global setting change. Retain counts,
+                // not all chapters for the entire library, between batches.
+                buildMap {
+                    missing.chunked(256).forEach { batch ->
+                        getVisibleChaptersByMangaIds.await(batch, smartMergeEnabled = snapshot::enabledFor)
+                            .forEach { (id, chapters) -> put(id, chapters.visibleChapterStats()) }
+                    }
                 }
             }
-    }
-
-    // KMK -->
-    private suspend fun List<LibraryManga>.toLibraryItems(preferences: ItemPreferences): List<LibraryItem> {
-        val affectedManga = filter { manga ->
-            manga.manga.blacklistedChapters.isNotEmpty() ||
-                libraryPreferences.smartScanlatorMergeEnabled(manga.id)
         }
-        val affectedMangaIds = affectedManga.mapTo(mutableSetOf()) { it.id }
-        val visibleChapters = getVisibleChaptersByMangaIds.await(affectedManga.map(LibraryManga::manga))
+        emitAll(
+            combine(
+                visibleLibrary.withSourceUpdates(sourceManager),
+                getLibraryItemPreferencesFlow(),
+                downloadCache.changes,
+            ) { libraryManga, preferences, _ ->
+                libraryManga.toLibraryItems(preferences, previousItems).also { items -> previousItems = items.associateBy(LibraryItem::id) }
+            }.distinctUntilChanged(),
+        )
+    }
+    // KMK <--
 
-        return map { manga ->
-            val visibleStats = when {
-                manga.id !in affectedMangaIds -> null
-                else -> visibleChapters[manga.id].orEmpty()
-            }
-                ?.visibleChapterStats()
-            val visibleManga = visibleStats?.let { stats ->
-                manga.copy(
-                    totalChapters = stats.total,
-                    readCount = stats.read,
-                    bookmarkCount = stats.bookmarked,
-                    bookmarkReadCount = stats.bookmarkedRead,
-                )
-            } ?: manga
+    // KMK --> Visibility has already been prepared; download/display changes never query chapters.
+    private suspend fun List<LibraryManga>.toLibraryItems(
+        preferences: ItemPreferences,
+        previousItems: Map<Long, LibraryItem>,
+    ): List<LibraryItem> {
+        return map { visibleManga ->
             // Display mode based on user preference: take it from global library setting or category
             val source = sourceManager.getOrStub(visibleManga.manga.source)
             val downloadCount = if (visibleManga.manga.source == MERGED_SOURCE_ID) {
@@ -964,36 +959,33 @@ class LibraryViewModel(
             } else {
                 downloadManager.getDownloadCount(visibleManga.manga).toLong()
             }
-            LibraryItem(
+            val badges = libraryBadges(
+                downloadCount = downloadCount,
+                unreadCount = visibleManga.unreadCount,
+                isLocal = visibleManga.manga.isLocal(),
+                downloadBadge = preferences.downloadBadge,
+                unreadBadge = preferences.unreadBadge,
+                localBadge = preferences.localBadge,
+                languageBadge = preferences.languageBadge,
+                sourceLanguage = source.lang,
+            )
+            val badgeSource = if (preferences.sourceBadge) {
+                DomainSource(source.id, source.lang, source.name, supportsLatest = false, isStub = source is StubSource)
+            } else {
+                null
+            }
+            previousItems[visibleManga.id]?.takeIf {
+                it.libraryManga == visibleManga && it.downloadCount == downloadCount &&
+                    it.unreadCount == visibleManga.unreadCount && it.isLocal == visibleManga.manga.isLocal() &&
+                    it.badges == badges && it.source == badgeSource && it.useLangIcon == preferences.useLangIcon
+            } ?: LibraryItem(
                 libraryManga = visibleManga,
                 downloadCount = downloadCount,
                 unreadCount = visibleManga.unreadCount,
                 isLocal = visibleManga.manga.isLocal(),
-                badges = libraryBadges(
-                    downloadCount = downloadCount,
-                    unreadCount = visibleManga.unreadCount,
-                    isLocal = visibleManga.manga.isLocal(),
-                    downloadBadge = preferences.downloadBadge,
-                    unreadBadge = preferences.unreadBadge,
-                    localBadge = preferences.localBadge,
-                    languageBadge = preferences.languageBadge,
-                    sourceLanguage = source.lang,
-                ),
-                // KMK <--
-                // KMK -->
+                badges = badges,
                 useLangIcon = preferences.useLangIcon,
-                source = if (preferences.sourceBadge) {
-                    DomainSource(
-                        source.id,
-                        source.lang,
-                        source.name,
-                        supportsLatest = false,
-                        isStub = source is StubSource,
-                    )
-                } else {
-                    null
-                },
-                // KMK <--
+                source = badgeSource,
             )
         }
     }

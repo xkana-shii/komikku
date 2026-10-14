@@ -1,6 +1,12 @@
 package tachiyomi.core.common.preference
 
+import kotlinx.coroutines.flow.Flow
+
 interface PreferenceStore {
+
+    // KMK --> Null means initial snapshot or all keys invalidated.
+    fun keyChanges(predicate: (String) -> Boolean): Flow<String?>
+    // KMK <--
 
     fun getString(key: String, defaultValue: String = ""): Preference<String>
 
