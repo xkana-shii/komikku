@@ -15,6 +15,13 @@
       "remote": "tachiyomiSY",
       "branch": "master",
       "github": "jobobby04/TachiyomiSY"
+    },
+    {
+      "name": "komikku",
+      "remote": "komikku",
+      "branch": "master",
+      "github": "komikku-app/komikku",
+      "since": "2026-10-08"
     }
   ]
 }

@@ -1,6 +1,6 @@
 """Unit tests for update_cherrypick_log.py (stdlib only, no git repository needed).
 
-Run: python3 -m unittest discover -s .claude/skills/cherrypick-log -p 'test_*.py'
+Run: python3 -m unittest discover -s .agents/skills/cherrypick-log -p 'test_*.py'
 """
 
 import sys

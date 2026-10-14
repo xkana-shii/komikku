@@ -16,14 +16,14 @@ script's `mark` command, so the table can't be corrupted.
 
 ```bash
 # 1. Fetch upstreams and regenerate cherrypick_log.md (safe to run any time)
-python3 .claude/skills/cherrypick-log/update_cherrypick_log.py
+python3 .agents/skills/cherrypick-log/update_cherrypick_log.py
 
 # 2. In Claude Code, let the AI review the uncertain rows
 /cherrypick-log review the ? rows
 
 # 3. Pick commits, then mark them yourself (or edit the Status / Notes cells by hand)
-python3 .claude/skills/cherrypick-log/update_cherrypick_log.py mark 1a2b3c4d --status O
-python3 .claude/skills/cherrypick-log/update_cherrypick_log.py mark 5e6f7a8b --status X --note "SY-only release bump"
+python3 .agents/skills/cherrypick-log/update_cherrypick_log.py mark 1a2b3c4d --status O
+python3 .agents/skills/cherrypick-log/update_cherrypick_log.py mark 5e6f7a8b --status X --note "SY-only release bump"
 ```
 
 The upstream remotes named in `config.json` must exist. In Komikku these are `git remote add mihon https://github.com/mihonapp/mihon`
@@ -156,13 +156,19 @@ templates). Their note is `AI checked <date>: omitted - version bump only (<file
 | `output` | Output Markdown path, relative to the repo root (or absolute) |
 | `exclude_identity_regex` | Case-insensitive regex matched against author, committer and co-authors (Komikku: `renovate`). Empty = exclude nothing |
 | `main_upstream` | `{name, remote, branch, github}` of the main upstream. Its commits set the order of the list. Required |
-| `additional_upstreams` | List of one or more `{name, remote, branch, github}`. Their commits are paired with, and interleaved into, the main upstream's. Names must be unique |
+| `additional_upstreams` | List of one or more `{name, remote, branch, github, since?}`. Their commits are paired with, and interleaved into, the main upstream's. Names must be unique. The optional per-upstream `since` (`YYYY-MM-DD`) overrides the global one for that upstream |
+
+A **base / merge upstream** (in this fork: `komikku`, the project it is forked from) is listed as an
+additional upstream too. Its commits are *merged* into `master`, not cherry-picked, so the generator
+marks them `O` automatically once their hash is reachable from the target branch. Give it its own
+`since` close to the current base commit — otherwise every Komikku commit back to the global `since`
+would be listed — and advance that `since` whenever you sync the base forward.
 
 Tuning constants (similarity threshold, date limits, minimum title words) are at the top of the script.
 
 ## Using this in another project
 
-1. Copy the whole `.claude/skills/cherrypick-log/` folder.
+1. Copy the whole `.agents/skills/cherrypick-log/` folder.
 2. Edit `config.json`: the `main_upstream`, one or more `additional_upstreams` (remote, branch, GitHub `owner/repo`),
    target branch, start date (`since`, specific to that repo), excluded identities and output.
 3. Add the remotes (`git remote add <name> <url>`) and run the script.
@@ -174,7 +180,7 @@ with `git cherry-pick -x` (`cherry picked from commit …`) or `owner/repo#N` re
 ## Tests
 
 ```bash
-python3 -m unittest discover -s .claude/skills/cherrypick-log -p 'test_*.py'
+python3 -m unittest discover -s .agents/skills/cherrypick-log -p 'test_*.py'
 ```
 
 The tests in `test_update_cherrypick_log.py` cover revert-chain flags (including when a chain gets longer and the older `X` omissions), releasing

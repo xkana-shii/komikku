@@ -5,7 +5,7 @@ description: Update and review cherrypick_log.md, the todo list of upstream comm
 
 # Cherry-pick log: update + AI review
 
-Everything for this tool lives in this folder (`.claude/skills/cherrypick-log/`):
+Everything for this tool lives in this folder (`.agents/skills/cherrypick-log/`):
 
 | File | Role |
 |------|------|
@@ -25,8 +25,8 @@ an `AI checked` note or a status set by hand (see README "Revert chains"). The A
 ## 1. Update the list
 
 ```bash
-python3 .claude/skills/cherrypick-log/update_cherrypick_log.py          # fetch + regenerate
-python3 .claude/skills/cherrypick-log/update_cherrypick_log.py update --no-fetch   # offline
+python3 .agents/skills/cherrypick-log/update_cherrypick_log.py          # fetch + regenerate
+python3 .agents/skills/cherrypick-log/update_cherrypick_log.py update --no-fetch   # offline
 ```
 
 Report the summary line (commits / new / status changes / gone) and the summary table at the top
@@ -35,7 +35,7 @@ of `cherrypick_log.md`. If the user only asked to update, stop here.
 ## 2. Get the rows to review
 
 ```bash
-P=.claude/skills/cherrypick-log/update_cherrypick_log.py
+P=.agents/skills/cherrypick-log/update_cherrypick_log.py
 python3 $P uncertain --json                      # '?' rows not yet AI-reviewed
 python3 $P uncertain --json --repo mihon --limit 20
 python3 $P uncertain --json --include-empty --repo mihon --limit 30   # only when the user asks
