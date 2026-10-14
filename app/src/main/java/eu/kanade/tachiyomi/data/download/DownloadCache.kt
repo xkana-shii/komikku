@@ -7,6 +7,8 @@ import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.util.storage.size
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentHashMapOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -75,6 +79,17 @@ class DownloadCache(
 
     // KMK -->
     private val downloadPreferences: DownloadPreferences = Injekt.get()
+    // KMK <--
+
+    // KMK --> Cumulative versions survive StateFlow conflation without dropping changed folders.
+    data class FolderKey(val source: Long, val directory: String)
+    data class ChangeVersions(
+        val generation: Long = 0,
+        val folders: PersistentMap<FolderKey, Long> = persistentHashMapOf(),
+    )
+    private val _changeVersions = MutableStateFlow(ChangeVersions())
+    val changeVersions = _changeVersions.asStateFlow()
+    fun folderKey(manga: Manga) = FolderKey(manga.source, provider.getMangaDirName(manga.ogTitle))
     // KMK <--
 
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
@@ -252,7 +267,9 @@ class DownloadCache(
             mangaDir.chapterDirs += chapterDirName
         }
 
-        notifyChanges()
+        // KMK -->
+        notifyChanges(folderKey(manga))
+        // KMK <--
     }
 
     /**
@@ -278,7 +295,9 @@ class DownloadCache(
             }
         }
 
-        notifyChanges()
+        // KMK -->
+        notifyChanges(folderKey(manga))
+        // KMK <--
     }
 
     // SY -->
@@ -292,6 +311,9 @@ class DownloadCache(
                 }
             }
         }
+        // KMK -->
+        notifyChanges(folderKey(manga))
+        // KMK <--
     }
 
     // SY <--
@@ -321,7 +343,9 @@ class DownloadCache(
             }
         }
 
-        notifyChanges()
+        // KMK -->
+        notifyChanges(folderKey(manga))
+        // KMK <--
     }
 
     /**
@@ -338,7 +362,9 @@ class DownloadCache(
             }
         }
 
-        notifyChanges()
+        // KMK -->
+        notifyChanges(folderKey(manga))
+        // KMK <--
     }
 
     /**
@@ -373,7 +399,9 @@ class DownloadCache(
             }
         }
 
+        // KMK -->
         notifyChanges()
+        // KMK <--
     }
 
     suspend fun removeSource(source: Source) {
@@ -503,7 +531,16 @@ class DownloadCache(
         // SY <--
     }
 
-    private fun notifyChanges() {
+    // KMK --> Unknown filesystem/index changes reset all versions; known folders stay local.
+    private fun notifyChanges(folder: FolderKey? = null) {
+        _changeVersions.update { current ->
+            if (folder == null) {
+                ChangeVersions(generation = current.generation + 1)
+            } else {
+                current.copy(folders = current.folders.putting(folder, (current.folders[folder] ?: 0) + 1))
+            }
+        }
+        // KMK <--
         scope.launchNonCancellable {
             _changes.send(Unit)
         }

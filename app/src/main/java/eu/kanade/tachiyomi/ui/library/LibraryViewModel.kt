@@ -917,7 +917,8 @@ class LibraryViewModel(
     // KMK --> Restore the pre-1.23.2 separation of database preparation from badges.
     private fun getFavoritesFlow(): Flow<List<LibraryItem>> = flow {
         val visibilityCache = LibraryVisibilityCache()
-        var previousItems = emptyMap<Long, LibraryItem>()
+        val items = LibraryItemCache<ItemInput, LibraryItem>()
+        val mergedMembers = mutableMapOf<Long, Pair<Long, List<Manga>>>()
         val visibleLibrary = combine(
             getLibraryManga.subscribe(),
             libraryPreferences.smartScanlatorMergeSettings(),
@@ -937,9 +938,12 @@ class LibraryViewModel(
             combine(
                 visibleLibrary.withSourceUpdates(sourceManager),
                 getLibraryItemPreferencesFlow(),
-                downloadCache.changes,
-            ) { libraryManga, preferences, _ ->
-                libraryManga.toLibraryItems(preferences, previousItems).also { items -> previousItems = items.associateBy(LibraryItem::id) }
+                downloadCache.changeVersions,
+            ) { libraryManga, preferences, downloads ->
+                val ids = libraryManga.mapTo(HashSet()) { it.id }
+                items.retain(ids)
+                mergedMembers.keys.retainAll(ids)
+                libraryManga.toLibraryItems(preferences, downloads, items, mergedMembers)
             }.distinctUntilChanged(),
         )
     }
@@ -948,47 +952,72 @@ class LibraryViewModel(
     // KMK --> Visibility has already been prepared; download/display changes never query chapters.
     private suspend fun List<LibraryManga>.toLibraryItems(
         preferences: ItemPreferences,
-        previousItems: Map<Long, LibraryItem>,
+        downloads: DownloadCache.ChangeVersions,
+        items: LibraryItemCache<ItemInput, LibraryItem>,
+        mergedMembers: MutableMap<Long, Pair<Long, List<Manga>>>,
     ): List<LibraryItem> {
         return map { visibleManga ->
             // Display mode based on user preference: take it from global library setting or category
             val source = sourceManager.getOrStub(visibleManga.manga.source)
-            val downloadCount = if (visibleManga.manga.source == MERGED_SOURCE_ID) {
-                getMergedMangaById.await(visibleManga.manga.id)
-                    .sumOf { downloadManager.getDownloadCount(it) }.toLong()
+            val members = if (visibleManga.manga.source == MERGED_SOURCE_ID) {
+                mergedMembers[visibleManga.id]?.takeIf { it.first == visibleManga.visibilityRevision }?.second
+                    ?: getMergedMangaById.await(visibleManga.id).also {
+                        mergedMembers[visibleManga.id] = visibleManga.visibilityRevision to it
+                    }
             } else {
-                downloadManager.getDownloadCount(visibleManga.manga).toLong()
+                listOf(visibleManga.manga)
             }
-            val badges = libraryBadges(
-                downloadCount = downloadCount,
-                unreadCount = visibleManga.unreadCount,
-                isLocal = visibleManga.manga.isLocal(),
-                downloadBadge = preferences.downloadBadge,
-                unreadBadge = preferences.unreadBadge,
-                localBadge = preferences.localBadge,
-                languageBadge = preferences.languageBadge,
-                sourceLanguage = source.lang,
+            val downloadRevision = members.sumOf { downloads.folders[downloadCache.folderKey(it)] ?: 0L }
+            val input = ItemInput(
+                visibleManga,
+                preferences,
+                downloads.generation,
+                downloadRevision,
+                source.lang,
+                source.name,
+                source is StubSource,
             )
-            val badgeSource = if (preferences.sourceBadge) {
-                DomainSource(source.id, source.lang, source.name, supportsLatest = false, isStub = source is StubSource)
-            } else {
-                null
+            items.get(visibleManga.id, input) {
+                val downloadCount = members.sumOf { downloadManager.getDownloadCount(it) }.toLong()
+                val badges = libraryBadges(
+                    downloadCount = downloadCount,
+                    unreadCount = visibleManga.unreadCount,
+                    isLocal = visibleManga.manga.isLocal(),
+                    downloadBadge = preferences.downloadBadge,
+                    unreadBadge = preferences.unreadBadge,
+                    localBadge = preferences.localBadge,
+                    languageBadge = preferences.languageBadge,
+                    sourceLanguage = source.lang,
+                )
+                val badgeSource = if (preferences.sourceBadge) {
+                    DomainSource(source.id, source.lang, source.name, supportsLatest = false, isStub = source is StubSource)
+                } else {
+                    null
+                }
+                LibraryItem(
+                    libraryManga = visibleManga,
+                    downloadCount = downloadCount,
+                    unreadCount = visibleManga.unreadCount,
+                    isLocal = visibleManga.manga.isLocal(),
+                    badges = badges,
+                    useLangIcon = preferences.useLangIcon,
+                    source = badgeSource,
+                )
             }
-            previousItems[visibleManga.id]?.takeIf {
-                it.libraryManga == visibleManga && it.downloadCount == downloadCount &&
-                    it.unreadCount == visibleManga.unreadCount && it.isLocal == visibleManga.manga.isLocal() &&
-                    it.badges == badges && it.source == badgeSource && it.useLangIcon == preferences.useLangIcon
-            } ?: LibraryItem(
-                libraryManga = visibleManga,
-                downloadCount = downloadCount,
-                unreadCount = visibleManga.unreadCount,
-                isLocal = visibleManga.manga.isLocal(),
-                badges = badges,
-                useLangIcon = preferences.useLangIcon,
-                source = badgeSource,
-            )
         }
     }
+    // KMK <--
+
+    // KMK --> Only changed inputs reconstruct an item or read its download count.
+    private data class ItemInput(
+        val manga: LibraryManga,
+        val preferences: ItemPreferences,
+        val downloadGeneration: Long,
+        val downloadRevision: Long,
+        val language: String,
+        val sourceName: String,
+        val isStub: Boolean,
+    )
     // KMK <--
 
     /**
