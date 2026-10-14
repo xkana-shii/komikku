@@ -80,6 +80,90 @@ class MangaChapterStatsTest {
     }
 
     @Test
+    fun `visibility revisions isolate writes and propagate to merged parents`() = runBlocking<Unit> {
+        seedLibrary(4)
+        insertChapter(1, "alpha", false, false)
+        suspend fun revisions() = db.libraryViewQueries.library(MangaMapper::mapLibraryManga).awaitAsList()
+            .associate { it.id to it.visibilityRevision }
+        suspend fun assertChanged(sql: String, expected: Set<Long>) {
+            val before = revisions()
+            driver.execute(null, sql, 0).await()
+            val after = revisions()
+            after.keys.filter { after[it] != before[it] }.toSet() shouldBe expected
+        }
+        val affected = setOf(1L, 4L)
+        listOf(
+            "remote_scanlator = 'beta'",
+            "remote_chapter_number = 2.0",
+            "remote_url = '/changed'",
+            "user_read = 1",
+            "user_bookmark = 1",
+            "user_bookmark_color = 2",
+        ).forEach { assertChanged("UPDATE chapter SET $it WHERE manga_id = 1", affected) }
+        assertChanged("UPDATE chapter SET user_last_page_read = 17 WHERE manga_id = 1", emptySet())
+        assertChanged("UPDATE manga SET remote_title = 'new title' WHERE id = 3", emptySet())
+        assertChanged("UPDATE manga SET remote_title = 'child renamed' WHERE id = 1", setOf(4L))
+        assertChanged("UPDATE manga SET source_id = 2 WHERE id = 1", affected)
+        assertChanged("INSERT INTO excluded_scanlator(manga_id, scanlator) VALUES(1, 'beta')", affected)
+        assertChanged("UPDATE excluded_scanlator SET scanlator = 'gamma' WHERE manga_id = 1", affected)
+        assertChanged("DELETE FROM excluded_scanlator WHERE manga_id = 1", affected)
+        assertChanged("UPDATE merged SET chapter_priority = 42 WHERE manga_id = 1", setOf(4L))
+        assertChanged("UPDATE manga SET user_blacklisted_chapters = 'url:/changed' WHERE id = 1", affected)
+        assertChanged("UPDATE manga SET user_scanlator_priority = 'beta' WHERE id = 1", affected)
+        assertChanged("UPDATE manga SET user_scanlator_range_rules = '1:2:beta' WHERE id = 1", affected)
+        // Sync/restore writes cannot bypass revisions through state_is_syncing.
+        assertChanged("UPDATE chapter SET state_is_syncing = 1, remote_scanlator = 'restore' WHERE manga_id = 1", affected)
+        assertChanged("UPDATE chapter SET manga_id = 3 WHERE manga_id = 1", setOf(1L, 3L, 4L))
+        assertChanged("DELETE FROM chapter WHERE manga_id = 3", setOf(3L))
+        val beforeInsert = revisions()
+        insertChapter(3, "alpha", false, false)
+        val afterInsert = revisions()
+        afterInsert.keys.filter { beforeInsert[it] != afterInsert[it] }.toSet() shouldBe setOf(3L)
+        val deletedRevision = afterInsert.getValue(3L)
+        driver.execute(null, "DELETE FROM manga WHERE id = 3", 0).await()
+        revisions().containsKey(3) shouldBe false
+        // A restore can recreate an explicit database ID without giving a stale cache entry its old token.
+        driver.execute(
+            null,
+            """
+            INSERT INTO manga(
+                id, source_id, remote_url, remote_title, remote_status, user_favorite_at,
+                state_initialized, user_reader_flags, user_chapter_flags,
+                state_cover_last_modified, state_date_added
+            ) VALUES(3, 1, '/restored', 'Restored', 0, 1, 1, 0, 0, 0, 0)
+            """.trimIndent(),
+            0,
+        ).await()
+        (revisions().getValue(3L) > deletedRevision) shouldBe true
+    }
+
+    @Test
+    fun `visibility revision migration upgrades an existing database`() = runBlocking<Unit> {
+        listOf(
+            "visibility_chapter_insert",
+            "visibility_chapter_delete",
+            "visibility_chapter_update",
+            "visibility_excluded_insert",
+            "visibility_excluded_delete",
+            "visibility_excluded_update",
+            "visibility_merged_insert",
+            "visibility_merged_delete",
+            "visibility_merged_update",
+            "visibility_manga_insert",
+            "visibility_manga_update",
+            "visibility_merged_member_title",
+        ).forEach { driver.execute(null, "DROP TRIGGER $it", 0).await() }
+        driver.execute(null, "DROP TABLE library_visibility_revision", 0).await()
+        driver.execute(null, "DROP TABLE library_visibility_generation", 0).await()
+
+        Database.Schema.migrate(driver, oldVersion = 56, newVersion = Database.Schema.version).await()
+
+        val mangaId = insertManga(favorite = true)
+        val library = db.libraryViewQueries.library(MangaMapper::mapLibraryManga).awaitAsList()
+        (library.single { it.id == mangaId }.visibilityRevision > 0) shouldBe true
+    }
+
+    @Test
     fun `library matches a live recount with and without cached rows`() = runBlocking<Unit> {
         val rng = Random(20260725)
         seedLibrary(count = 12)

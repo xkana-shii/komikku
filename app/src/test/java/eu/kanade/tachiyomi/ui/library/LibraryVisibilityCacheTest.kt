@@ -11,6 +11,36 @@ import tachiyomi.domain.manga.model.Manga
 // KMK -->
 class LibraryVisibilityCacheTest {
     @Test
+    fun `20129 rows retain stats across snapshots and load only changed revisions`() = runTest {
+        val cache = LibraryVisibilityCache()
+        val settings = SmartMergeSettings(true, emptyMap())
+        val data = (1L..20129L).map(::manga)
+        val loaded = mutableListOf<Long>()
+        suspend fun prepare(rows: List<LibraryManga>) = cache.prepare(rows, settings) { missing, _ ->
+            loaded.addAll(missing.map(Manga::id))
+            missing.associate { it.id to VisibleChapterStats(4, 2, 1, 1) }
+        }
+        val first = prepare(data)
+        loaded.size shouldBe 20129
+        loaded.clear()
+        val equalSnapshot = prepare(data.map { it.copy() })
+        loaded.size shouldBe 0
+        (first[100] === equalSnapshot[100]) shouldBe true
+        var changed = data.map { if (it.id == 42L) it.copy(visibilityRevision = 1) else it }
+        prepare(changed)
+        loaded shouldBe listOf(42L)
+        loaded.clear()
+        repeat(100) { prepare(changed) }
+        loaded.size shouldBe 0
+        changed = changed.filterNot { it.id == 42L }
+        prepare(changed)
+        loaded.size shouldBe 0
+        prepare(changed.map { if (it.id <= 1000) it.copy(visibilityRevision = 2) else it })
+        loaded.size shouldBe 999
+        println("20129 entries: equal snapshot=0 loads, single revision=1, 100 navigation reads=0, bulk=999")
+    }
+
+    @Test
     fun `20129 manga query only effective preference changes and reuse unchanged entries`() = runTest {
         val mangas = (1L..20129L).map(::manga)
         val cache = LibraryVisibilityCache()
@@ -47,7 +77,7 @@ class LibraryVisibilityCacheTest {
         }
         prepare(data).single().readCount shouldBe 0
         read = 1
-        prepare(listOf(data.single().copy())).single().readCount shouldBe 1
+        prepare(listOf(data.single().copy(visibilityRevision = 1))).single().readCount shouldBe 1
         prepare(emptyList()).size shouldBe 0
         prepare(data).single().bookmarkReadCount shouldBe 1
     }

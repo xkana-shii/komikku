@@ -1,0 +1,134 @@
+-- KMK --> Monotonic tokens survive delete/reinsert and equal-count chapter edits.
+CREATE TABLE library_visibility_revision(
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    revision INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga(id) ON DELETE CASCADE
+);
+
+CREATE TABLE library_visibility_generation(
+    id INTEGER NOT NULL PRIMARY KEY CHECK(id = 1),
+    revision INTEGER NOT NULL
+);
+
+INSERT INTO library_visibility_generation(id, revision) VALUES(1, 0);
+
+CREATE TRIGGER visibility_chapter_insert
+AFTER INSERT ON chapter
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (new.manga_id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (new.manga_id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_chapter_delete
+AFTER DELETE ON chapter
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (old.manga_id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (old.manga_id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_chapter_update
+AFTER UPDATE OF manga_id, remote_url, remote_name, remote_scanlator, remote_chapter_number, remote_order, user_read, user_bookmark, user_bookmark_color, state_date_fetch, remote_date_upload ON chapter
+WHEN old.manga_id IS NOT new.manga_id OR old.remote_url IS NOT new.remote_url OR old.remote_name IS NOT new.remote_name OR old.remote_scanlator IS NOT new.remote_scanlator OR old.remote_chapter_number IS NOT new.remote_chapter_number OR old.remote_order IS NOT new.remote_order OR old.user_read IS NOT new.user_read OR old.user_bookmark IS NOT new.user_bookmark OR old.user_bookmark_color IS NOT new.user_bookmark_color OR old.state_date_fetch IS NOT new.state_date_fetch OR old.remote_date_upload IS NOT new.remote_date_upload
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (old.manga_id, new.manga_id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (old.manga_id, new.manga_id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_excluded_insert
+AFTER INSERT ON excluded_scanlator
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (new.manga_id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (new.manga_id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_merged_insert
+AFTER INSERT ON merged
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (new.merge_id)
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_excluded_delete
+AFTER DELETE ON excluded_scanlator
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (old.manga_id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (old.manga_id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_merged_delete
+AFTER DELETE ON merged
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (old.merge_id)
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_excluded_update
+AFTER UPDATE ON excluded_scanlator
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (old.manga_id, new.manga_id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (old.manga_id, new.manga_id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_merged_update
+AFTER UPDATE ON merged
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (old.merge_id, new.merge_id)
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_manga_insert
+AFTER INSERT ON manga
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (new.id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (new.id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_manga_update
+AFTER UPDATE OF source_id, remote_url, user_chapter_flags, user_filtered_scanlators, user_scanlator_priority, user_blacklisted_chapters, user_scanlator_range_rules ON manga
+WHEN old.source_id IS NOT new.source_id OR old.remote_url IS NOT new.remote_url OR old.user_chapter_flags IS NOT new.user_chapter_flags OR old.user_filtered_scanlators IS NOT new.user_filtered_scanlators OR old.user_scanlator_priority IS NOT new.user_scanlator_priority OR old.user_blacklisted_chapters IS NOT new.user_blacklisted_chapters OR old.user_scanlator_range_rules IS NOT new.user_scanlator_range_rules
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (new.id)
+    OR id IN (SELECT merge_id FROM merged WHERE manga_id IN (new.id))
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+CREATE TRIGGER visibility_merged_member_title
+AFTER UPDATE OF remote_title ON manga
+WHEN old.remote_title IS NOT new.remote_title
+BEGIN
+    UPDATE library_visibility_generation SET revision = revision + 1 WHERE id = 1;
+    INSERT INTO library_visibility_revision(manga_id, revision)
+    SELECT id, (SELECT revision FROM library_visibility_generation WHERE id = 1) FROM manga WHERE id IN (SELECT merge_id FROM merged WHERE manga_id = new.id)
+    ON CONFLICT(manga_id) DO UPDATE SET revision = excluded.revision;
+END;
+
+-- KMK <--

@@ -120,7 +120,10 @@ SELECT
     coalesce(C.lastRead, S.last_read, 0) AS lastRead,
     coalesce(C.bookmarkCount, S.bookmark_count, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, S.bookmark_read_count, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories
+    coalesce(MC.categories, '0') AS categories,
+    -- KMK -->
+    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
+    -- KMK <--
 FROM manga M
 LEFT JOIN manga_chapter_stats S
 ON S.manga_id = M.id
@@ -180,7 +183,10 @@ SELECT
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories
+    coalesce(MC.categories, '0') AS categories,
+    -- KMK -->
+    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
+    -- KMK <--
 FROM manga M
 LEFT JOIN (
     SELECT
@@ -235,7 +241,10 @@ SELECT
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories
+    coalesce(MC.categories, '0') AS categories,
+    -- KMK -->
+    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
+    -- KMK <--
 FROM manga M
 LEFT JOIN (
     SELECT
@@ -291,7 +300,10 @@ SELECT
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories
+    coalesce(MC.categories, '0') AS categories,
+    -- KMK -->
+    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
+    -- KMK <--
 FROM manga M
 LEFT JOIN (
     SELECT
