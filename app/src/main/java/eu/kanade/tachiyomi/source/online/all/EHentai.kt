@@ -70,6 +70,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import mihon.app.di.appGraph
 import okhttp3.CacheControl
 import okhttp3.Headers
 import okhttp3.HttpUrl
@@ -88,7 +89,6 @@ import org.jsoup.nodes.TextNode
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
 import tachiyomi.core.common.util.lang.withIOContext
-import uy.kohesive.injekt.injectLazy
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URLEncoder
@@ -136,8 +136,8 @@ class EHentai(
     }
     // KMK <--
 
-    private val exhPreferences: ExhPreferences by injectLazy()
-    private val updateHelper: EHentaiUpdateHelper by injectLazy()
+    private val exhPreferences: ExhPreferences get() = context.appGraph.exhPreferences
+    private val updateHelper: EHentaiUpdateHelper get() = context.appGraph.ehEntaiUpdateHelper
 
     /**
      * Gallery list entry
@@ -514,7 +514,7 @@ class EHentai(
     }
 
     private fun <T : MangasPage> T.checkValid(): MangasPage =
-        if (exh && mangas.isEmpty() && exhPreferences.igneousVal().get().equals("mystery", true)) {
+        if (exh && mangas.isEmpty() && exhPreferences.igneousVal.get().equals("mystery", true)) {
             throw Exception(
                 "Invalid igneous cookie, try re-logging or finding a correct one to input in the login menu",
             )
@@ -908,30 +908,30 @@ class EHentai(
     }
 
     fun spPref() = if (exh) {
-        exhPreferences.exhSettingsProfile()
+        exhPreferences.exhSettingsProfile
     } else {
-        exhPreferences.ehSettingsProfile()
+        exhPreferences.ehSettingsProfile
     }
 
     private fun rawCookies(sp: Int): Map<String, String> {
         val cookies: MutableMap<String, String> = mutableMapOf()
-        if (exhPreferences.enableExhentai().get()) {
-            cookies[EhLoginActivity.MEMBER_ID_COOKIE] = exhPreferences.memberIdVal().get()
-            cookies[EhLoginActivity.PASS_HASH_COOKIE] = exhPreferences.passHashVal().get()
-            cookies[EhLoginActivity.IGNEOUS_COOKIE] = exhPreferences.igneousVal().get()
+        if (exhPreferences.enableExhentai.get()) {
+            cookies[EhLoginActivity.MEMBER_ID_COOKIE] = exhPreferences.memberIdVal.get()
+            cookies[EhLoginActivity.PASS_HASH_COOKIE] = exhPreferences.passHashVal.get()
+            cookies[EhLoginActivity.IGNEOUS_COOKIE] = exhPreferences.igneousVal.get()
             cookies["sp"] = sp.toString()
 
-            val sessionKey = exhPreferences.exhSettingsKey().get()
+            val sessionKey = exhPreferences.exhSettingsKey.get()
             if (sessionKey.isNotBlank()) {
                 cookies["sk"] = sessionKey
             }
 
-            val sessionCookie = exhPreferences.exhSessionCookie().get()
+            val sessionCookie = exhPreferences.exhSessionCookie.get()
             if (sessionCookie.isNotBlank()) {
                 cookies["s"] = sessionCookie
             }
 
-            val hathPerksCookie = exhPreferences.exhHathPerksCookies().get()
+            val hathPerksCookie = exhPreferences.exhHathPerksCookies.get()
             if (hathPerksCookie.isNotBlank()) {
                 cookies["hath_perks"] = hathPerksCookie
             }
@@ -1002,7 +1002,7 @@ class EHentai(
             ToplistOptions(),
             Filter.Separator(),
             AutoCompleteTags(),
-            Watched(isEnabled = exhPreferences.exhWatchedListDefaultState().get()),
+            Watched(isEnabled = exhPreferences.exhWatchedListDefaultState.get()),
             GenreGroup(),
             AdvancedGroup(),
             ReverseFilter(),

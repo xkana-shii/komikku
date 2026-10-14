@@ -11,6 +11,9 @@ object CategoryMapper {
         // KMK -->
         hidden: Long,
         // KMK <--
+        version: Long,
+        uid: Long,
+        lastModifiedAt: Long,
     ): Category {
         return Category(
             id = id,
@@ -20,6 +23,11 @@ object CategoryMapper {
             // KMK -->
             hidden = hidden == 1L,
             // KMK <--
+            // SY -->
+            version = version,
+            uid = uid,
+            lastModifiedAt = lastModifiedAt,
+            // SY <--
         )
     }
 }

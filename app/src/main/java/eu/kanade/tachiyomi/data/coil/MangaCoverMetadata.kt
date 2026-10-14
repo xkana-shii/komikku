@@ -4,11 +4,10 @@ import android.graphics.BitmapFactory
 import androidx.palette.graphics.Palette
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverMetadata.setRatioAndColors
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import okio.BufferedSource
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.MangaCover
-import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -17,11 +16,8 @@ import java.util.concurrent.ConcurrentHashMap
  * @author Jays2Kings
  */
 object MangaCoverMetadata {
-    private val preferences by injectLazy<LibraryPreferences>()
-    private val coverCache by injectLazy<CoverCache>()
-
-    fun load() {
-        val ratios = preferences.coverRatios().get()
+    fun load(preferences: LibraryPreferences) {
+        val ratios = preferences.coverRatios.get()
         MangaCover.coverRatioMap = ConcurrentHashMap(
             ratios.mapNotNull {
                 val splits = it.split("|")
@@ -34,7 +30,7 @@ object MangaCoverMetadata {
                 }
             }.toMap(),
         )
-        val colors = preferences.coverColors().get()
+        val colors = preferences.coverColors.get()
         MangaCover.dominantCoverColorMap = ConcurrentHashMap(
             colors.mapNotNull {
                 val splits = it.split("|")
@@ -70,12 +66,13 @@ object MangaCoverMetadata {
      * @param force if true then it will always re-calculate ratio & color for favorite mangas.
      *
      * This is only for loading color first time it appears on Library/Browse. Any new colors caused by loading new
-     * cover when open a manga detail or change cover will be updated separately on [MangaScreenModel.setPaletteColor].
+     * cover when open a manga detail or change cover will be updated separately on [MangaViewModel.setPaletteColor].
      *
      * @author Jays2Kings, cuong-tran
      */
     fun setRatioAndColors(
         mangaCover: MangaCover,
+        coverCache: CoverCache,
         bufferedSource: BufferedSource? = null,
         ogFile: File? = null,
         onlyDominantColor: Boolean = true,
@@ -153,11 +150,11 @@ object MangaCoverMetadata {
         MangaCover.dominantCoverColorMap.remove(mangaId)
     }
 
-    fun savePrefs() {
+    fun savePrefs(preferences: LibraryPreferences) {
         val mapCopy = MangaCover.coverRatioMap.toMap()
-        preferences.coverRatios().set(mapCopy.map { "${it.key}|${it.value}" }.toSet())
+        preferences.coverRatios.set(mapCopy.map { "${it.key}|${it.value}" }.toSet())
         val mapColorCopy = MangaCover.dominantCoverColorMap.toMap()
-        preferences.coverColors().set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
+        preferences.coverColors.set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
     }
 
     private const val SUB_SAMPLE = 4

@@ -12,13 +12,13 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.tachiyomi.ui.category.sources.SourceCategoryScreen
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.authenticate
-import kotlinx.collections.immutable.persistentListOf
+import mihon.app.di.appGraph
 import mihon.domain.extension.interactor.GetExtensionStoreCountAsFlow
+import mihon.domain.extension.model.ContentWarning
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -26,8 +26,6 @@ import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object SettingsBrowseScreen : SearchableSettings {
     @Suppress("unused")
@@ -42,51 +40,51 @@ object SettingsBrowseScreen : SearchableSettings {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
-        val getExtensionStoreCountAsFlow = remember { Injekt.get<GetExtensionStoreCountAsFlow>() }
+        val sourcePreferences = remember { context.appGraph.sourcePreferences }
+        val getExtensionStoreCountAsFlow = remember { context.appGraph.getExtensionStoreCountAsFlow }
 
         val reposCount by getExtensionStoreCountAsFlow().collectAsState(0)
 
         // SY -->
         val scope = rememberCoroutineScope()
-        val hideFeedTab by remember { Injekt.get<UiPreferences>().hideFeedTab().asState(scope) }
-        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val hideFeedTab by remember { context.appGraph.uiPreferences.hideFeedTab.asState(scope) }
+        val uiPreferences = remember { context.appGraph.uiPreferences }
         // SY <--
         // KMK -->
-        val relatedMangasInOverflow by uiPreferences.expandRelatedMangas().collectAsState()
+        val relatedMangasInOverflow by uiPreferences.expandRelatedMangas.collectAsState()
         // KMK <--
         return listOf(
             // SY -->
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.label_sources),
-                preferenceItems = persistentListOf(
+                preferenceItems = listOf(
                     // KMK -->
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.relatedMangas(),
+                        preference = sourcePreferences.relatedMangas,
                         title = stringResource(KMR.strings.pref_source_related_mangas),
                         subtitle = stringResource(KMR.strings.pref_source_related_mangas_summary),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = uiPreferences.expandRelatedMangas(),
+                        preference = uiPreferences.expandRelatedMangas,
                         title = stringResource(KMR.strings.pref_expand_related_mangas),
                         subtitle = stringResource(KMR.strings.pref_expand_related_mangas_summary),
-                        enabled = sourcePreferences.relatedMangas().get(),
+                        visible = sourcePreferences.relatedMangas.get(),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = uiPreferences.relatedMangasInOverflow(),
-                        enabled = !relatedMangasInOverflow,
+                        preference = uiPreferences.relatedMangasInOverflow,
+                        visible = !relatedMangasInOverflow,
                         title = stringResource(KMR.strings.put_related_mangas_in_overflow),
                         subtitle = stringResource(KMR.strings.put_related_mangas_in_overflow_summary),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = uiPreferences.showHomeOnRelatedMangas(),
+                        preference = uiPreferences.showHomeOnRelatedMangas,
                         title = stringResource(KMR.strings.pref_show_home_on_related_mangas),
                         subtitle = stringResource(KMR.strings.pref_show_home_on_related_mangas_summary),
-                        enabled = sourcePreferences.relatedMangas().get(),
+                        visible = sourcePreferences.relatedMangas.get(),
                     ),
                     // KMK <--
                     run {
-                        val count by sourcePreferences.sourcesTabCategories().collectAsState()
+                        val count by sourcePreferences.sourcesTabCategories.collectAsState()
                         Preference.PreferenceItem.TextPreference(
                             title = stringResource(MR.strings.action_edit_categories),
                             subtitle = pluralStringResource(MR.plurals.num_categories, count.size, count.size),
@@ -96,17 +94,17 @@ object SettingsBrowseScreen : SearchableSettings {
                         )
                     },
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.sourcesTabCategoriesFilter(),
+                        preference = sourcePreferences.sourcesTabCategoriesFilter,
                         title = stringResource(SYMR.strings.pref_source_source_filtering),
                         subtitle = stringResource(SYMR.strings.pref_source_source_filtering_summery),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = uiPreferences.useNewSourceNavigation(),
+                        preference = uiPreferences.useNewSourceNavigation,
                         title = stringResource(SYMR.strings.pref_source_navigation),
                         subtitle = stringResource(SYMR.strings.pref_source_navigation_summery),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.allowLocalSourceHiddenFolders(),
+                        preference = sourcePreferences.allowLocalSourceHiddenFolders,
                         title = stringResource(SYMR.strings.pref_local_source_hidden_folders),
                         subtitle = stringResource(SYMR.strings.pref_local_source_hidden_folders_summery),
                     ),
@@ -114,20 +112,20 @@ object SettingsBrowseScreen : SearchableSettings {
             ),
             Preference.PreferenceGroup(
                 title = stringResource(SYMR.strings.feed),
-                preferenceItems = persistentListOf(
+                preferenceItems = listOf(
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = uiPreferences.hideFeedTab(),
+                        preference = uiPreferences.hideFeedTab,
                         title = stringResource(SYMR.strings.pref_hide_feed),
                     ),
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = uiPreferences.feedTabInFront(),
+                        preference = uiPreferences.feedTabInFront,
                         title = stringResource(SYMR.strings.pref_feed_position),
                         subtitle = stringResource(SYMR.strings.pref_feed_position_summery),
-                        enabled = hideFeedTab.not(),
+                        visible = hideFeedTab.not(),
                     ),
                     // KMK -->
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.hideInLibraryFeedItems(),
+                        preference = sourcePreferences.hideInLibraryFeedItems,
                         title = stringResource(MR.strings.pref_hide_in_library_items),
                     ),
                     // KMK <--
@@ -136,9 +134,9 @@ object SettingsBrowseScreen : SearchableSettings {
             // SY <--
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.label_sources),
-                preferenceItems = persistentListOf(
+                preferenceItems = listOf(
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.hideInLibraryItems(),
+                        preference = sourcePreferences.hideInLibraryItems,
                         title = stringResource(MR.strings.pref_hide_in_library_items),
                     ),
                     Preference.PreferenceItem.TextPreference(
@@ -151,19 +149,51 @@ object SettingsBrowseScreen : SearchableSettings {
                 ),
             ),
             Preference.PreferenceGroup(
-                title = stringResource(MR.strings.pref_category_nsfw_content),
-                preferenceItems = persistentListOf(
-                    Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.showNsfwSource(),
-                        title = stringResource(MR.strings.pref_show_nsfw_source),
-                        subtitle = stringResource(MR.strings.requires_app_restart),
-                        onValueChanged = {
-                            (context as FragmentActivity).authenticate(
-                                title = context.stringResource(MR.strings.pref_category_nsfw_content),
-                            )
+                title = stringResource(MR.strings.pref_category_extensions),
+                preferenceItems = listOf(
+                    Preference.PreferenceItem.MultiSelectListPreference(
+                        preference = sourcePreferences.enabledContentWarnings,
+                        entries = mapOf(
+                            ContentWarning.SAFE to stringResource(MR.strings.ext_content_warning_safe),
+                            ContentWarning.MIXED to stringResource(MR.strings.ext_content_warning_mixed),
+                            ContentWarning.NSFW to stringResource(MR.strings.ext_content_warning_nsfw),
+                        ),
+                        title = stringResource(MR.strings.pref_allowed_content_warnings),
+                        subtitleProvider = { value, entries ->
+                            remember(value, entries) {
+                                entries.filterKeys { it in value }.values.joinToString()
+                            }
+                                .takeUnless { it.isBlank() }
+                                ?: stringResource(MR.strings.none)
+                        },
+                        onValueChanged = { newValue ->
+                            val added = newValue - sourcePreferences.enabledContentWarnings.get()
+                            if (added.any { it != ContentWarning.SAFE }) {
+                                (context as FragmentActivity).authenticate(
+                                    title = context.stringResource(MR.strings.pref_allowed_content_warnings),
+                                )
+                            } else {
+                                true
+                            }
                         },
                     ),
-                    Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.parental_controls_info)),
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = sourcePreferences.applyContentWarningsToInstalled,
+                        title = stringResource(MR.strings.pref_apply_content_warnings_to_installed),
+                        subtitle = stringResource(MR.strings.pref_apply_content_warnings_to_installed_summary),
+                        onValueChanged = { newValue ->
+                            if (newValue) {
+                                true
+                            } else {
+                                (context as FragmentActivity).authenticate(
+                                    title = context.stringResource(
+                                        MR.strings.pref_apply_content_warnings_to_installed,
+                                    ),
+                                )
+                            }
+                        },
+                    ),
+                    Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.content_warnings_info)),
                 ),
             ),
         )

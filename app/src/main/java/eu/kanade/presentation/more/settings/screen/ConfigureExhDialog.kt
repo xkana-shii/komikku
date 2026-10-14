@@ -13,24 +13,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.DialogProperties
 import eu.kanade.tachiyomi.util.system.toast
 import exh.log.xLogE
-import exh.source.ExhPreferences
 import exh.uconfig.EHConfigurator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import mihon.app.di.appGraph
 import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun ConfigureExhDialog(run: Boolean, onRunning: () -> Unit) {
+    val context = LocalContext.current
     val exhPreferences = remember {
-        Injekt.get<ExhPreferences>()
+        context.appGraph.exhPreferences
     }
     var warnDialogOpen by remember { mutableStateOf(false) }
     var configureDialogOpen by remember { mutableStateOf(false) }
@@ -38,7 +37,7 @@ fun ConfigureExhDialog(run: Boolean, onRunning: () -> Unit) {
 
     LaunchedEffect(run) {
         if (run) {
-            if (exhPreferences.exhShowSettingsUploadWarning().get()) {
+            if (exhPreferences.exhShowSettingsUploadWarning.get()) {
                 warnDialogOpen = true
             } else {
                 configureDialogOpen = true
@@ -57,7 +56,7 @@ fun ConfigureExhDialog(run: Boolean, onRunning: () -> Unit) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        exhPreferences.exhShowSettingsUploadWarning().set(false)
+                        exhPreferences.exhShowSettingsUploadWarning.set(false)
                         configureDialogOpen = true
                         warnDialogOpen = false
                     },
@@ -79,7 +78,11 @@ fun ConfigureExhDialog(run: Boolean, onRunning: () -> Unit) {
             withContext(Dispatchers.IO + NonCancellable) {
                 try {
                     delay(0.2.seconds)
-                    EHConfigurator(context).configureAll()
+                    EHConfigurator(
+                        context = context,
+                        exhPreferences = context.appGraph.exhPreferences,
+                        sourceManager = context.appGraph.sourceManager,
+                    ).configureAll()
                     launchUI {
                         context.toast(SYMR.strings.eh_settings_successfully_uploaded)
                     }

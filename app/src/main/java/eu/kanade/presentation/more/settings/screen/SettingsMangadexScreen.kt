@@ -1,5 +1,6 @@
 package eu.kanade.presentation.more.settings.screen
 
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PeopleAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
@@ -19,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -34,14 +34,21 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.BasePreferenceWidget
 import eu.kanade.presentation.more.settings.widget.PrefsHorizontalPadding
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.source.online.all.MangaDex
+import eu.kanade.tachiyomi.source.sourcesMapOrNull
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.workManager
 import exh.md.utils.MdConstants
 import exh.md.utils.MdUtil
-import kotlinx.collections.immutable.toImmutableMap
+import exh.source.BlacklistedSources
+import exh.source.getMainSource
+import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Group
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -62,16 +69,37 @@ object SettingsMangadexScreen : SearchableSettings {
     @Composable
     override fun getTitleRes() = SYMR.strings.pref_category_mangadex
 
-    override fun isEnabled(): Boolean = MdUtil.getEnabledMangaDexs(Injekt.get()).isNotEmpty()
+    override fun isEnabled(): Boolean {
+        val graph = Injekt.get<Context>().appGraph
+        // KUN -->
+        // SearchableSettings.isEnabled() is synchronous (it runs while the settings list composes)
+        // and has no coroutine scope. Read the already-loaded source snapshot instead of blocking the
+        // main thread on the extension/package scan. This mirrors MdUtil.getEnabledMangaDexs().
+        val sources = graph.sourceManager.sourcesMapOrNull
+        // Safe default: while the snapshot is not ready, keep the entry enabled. The screen's
+        // MangaDex produceState resolves the real state once sources load.
+        if (sources == null) return true
+        val languages = graph.sourcePreferences.enabledLanguages.get()
+        val disabledSourceIds = graph.sourcePreferences.disabledSources.get()
+        return sources.values
+            .filter { it.id !in BlacklistedSources.HIDDEN_SOURCES }
+            .mapNotNull { it.getMainSource<MangaDex>() }
+            .any { it.lang in languages && it.id.toString() !in disabledSourceIds }
+        // KUN <--
+    }
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val sourcePreferences: SourcePreferences = remember { Injekt.get() }
-        val trackPreferences: TrackPreferences = remember { Injekt.get() }
-        val mdex = remember { MdUtil.getEnabledMangaDex(sourcePreferences) } ?: return emptyList()
+        val context = LocalContext.current
+        val sourcePreferences: SourcePreferences = remember { context.appGraph.sourcePreferences }
+        val trackPreferences: TrackPreferences = remember { context.appGraph.trackPreferences }
+        val mdex by produceState<MangaDex?>(initialValue = null) {
+            value = MdUtil.getEnabledMangaDex(sourcePreferences, context.appGraph.sourceManager)
+        }
+        if (mdex == null) return emptyList()
 
         return listOf(
-            loginPreference(mdex, trackPreferences),
+            loginPreference(mdex!!, trackPreferences),
             preferredMangaDexId(sourcePreferences),
             syncMangaDexIntoThis(sourcePreferences),
             syncLibraryToMangaDex(),
@@ -143,7 +171,7 @@ object SettingsMangadexScreen : SearchableSettings {
                     title = mdex.name + " Login",
                     widget = {
                         Icon(
-                            imageVector = Icons.Outlined.PeopleAlt,
+                            imageVector = MaterialSymbols.Rounded.Group,
                             contentDescription = null,
                             modifier = Modifier
                                 .padding(start = 12.dp, end = PrefsHorizontalPadding)
@@ -177,11 +205,15 @@ object SettingsMangadexScreen : SearchableSettings {
     fun preferredMangaDexId(
         sourcePreferences: SourcePreferences,
     ): Preference.PreferenceItem.ListPreference<String> {
+        val sourceManager = LocalContext.current.appGraph.sourceManager
+        val enabledMangaDexs by produceState(initialValue = emptyList<MangaDex>()) {
+            value = MdUtil.getEnabledMangaDexs(sourcePreferences, sourceManager)
+        }
         return Preference.PreferenceItem.ListPreference(
-            preference = sourcePreferences.preferredMangaDexId(),
-            entries = MdUtil.getEnabledMangaDexs(sourcePreferences)
+            preference = sourcePreferences.preferredMangaDexId,
+            entries = enabledMangaDexs
                 .associate { it.id.toString() to it.toString() }
-                .toImmutableMap(),
+                .toMap(),
             title = stringResource(SYMR.strings.mangadex_preffered_source),
             subtitle = stringResource(SYMR.strings.mangadex_preffered_source_summary),
         )
@@ -252,19 +284,22 @@ object SettingsMangadexScreen : SearchableSettings {
     @Composable
     fun syncMangaDexIntoThis(sourcePreferences: SourcePreferences): Preference.PreferenceItem.TextPreference {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
         var dialogOpen by remember { mutableStateOf(false) }
         if (dialogOpen) {
             SyncMangaDexDialog(
                 onDismissRequest = { dialogOpen = false },
                 onSelectionConfirmed = { items ->
                     dialogOpen = false
-                    sourcePreferences.mangadexSyncToLibraryIndexes().set(
+                    sourcePreferences.mangadexSyncToLibraryIndexes.set(
                         List(items.size) { index -> (index + 1).toString() }.toSet(),
                     )
-                    LibraryUpdateJob.startNow(
-                        context,
-                        target = LibraryUpdateJob.Target.SYNC_FOLLOWS,
-                    )
+                    scope.launch {
+                        LibraryUpdateWorker.startNow(
+                            context,
+                            target = LibraryUpdateWorker.Target.SYNC_FOLLOWS,
+                        )
+                    }
                 },
             )
         }
@@ -278,14 +313,17 @@ object SettingsMangadexScreen : SearchableSettings {
     @Composable
     fun syncLibraryToMangaDex(): Preference.PreferenceItem.TextPreference {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
         return Preference.PreferenceItem.TextPreference(
             title = stringResource(SYMR.strings.mangadex_push_favorites_to_mangadex),
             subtitle = stringResource(SYMR.strings.mangadex_push_favorites_to_mangadex_summary),
             onClick = {
-                LibraryUpdateJob.startNow(
-                    context,
-                    target = LibraryUpdateJob.Target.PUSH_FAVORITES,
-                )
+                scope.launch {
+                    LibraryUpdateWorker.startNow(
+                        context,
+                        target = LibraryUpdateWorker.Target.PUSH_FAVORITES,
+                    )
+                }
             },
         )
     }

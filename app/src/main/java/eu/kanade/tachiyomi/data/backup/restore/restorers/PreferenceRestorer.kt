@@ -1,8 +1,9 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import android.content.Context
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
+import eu.kanade.tachiyomi.data.backup.create.BackupCreateWorker
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
@@ -12,7 +13,7 @@ import eu.kanade.tachiyomi.data.backup.models.IntPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.LongPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringSetPreferenceValue
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
 import eu.kanade.tachiyomi.source.sourcePreferences
 import exh.EXHMigrations
@@ -24,13 +25,12 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
+@Inject
 class PreferenceRestorer(
     private val context: Context,
-    private val getCategories: GetCategories = Injekt.get(),
-    private val preferenceStore: PreferenceStore = Injekt.get(),
+    private val getCategories: GetCategories,
+    private val preferenceStore: PreferenceStore,
 ) {
     suspend fun restoreApp(
         preferences: List<BackupPreference>,
@@ -42,8 +42,8 @@ class PreferenceRestorer(
             backupCategories,
         )
 
-        LibraryUpdateJob.setupTask(context)
-        BackupCreateJob.setupTask(context)
+        LibraryUpdateWorker.setupTask(context)
+        BackupCreateWorker.setupTask(context)
         // KMK -->
         AppUpdateJob.setupTask(context)
         // KMK <--
@@ -51,7 +51,7 @@ class PreferenceRestorer(
 
     suspend fun restoreSource(preferences: List<BackupSourcePreferences>) {
         preferences.forEach {
-            val sourcePrefs = AndroidPreferenceStore(context, sourcePreferences(it.sourceKey))
+            val sourcePrefs = AndroidPreferenceStore(sourcePreferences(it.sourceKey))
             restorePreferences(it.prefs, sourcePrefs)
         }
     }

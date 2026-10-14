@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,18 +38,19 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.connections.ConnectionsService
 import eu.kanade.tachiyomi.ui.setting.connections.DiscordLoginScreen
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.persistentListOf
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.roundedfilled.Visibility
+import mihon.icons.materialsymbols.roundedfilled.VisibilityOff
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object SettingsConnectionScreen : SearchableSettings {
     @Suppress("unused")
@@ -66,7 +63,8 @@ object SettingsConnectionScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val navigator = LocalNavigator.currentOrThrow
-        val connectionsManager = remember { Injekt.get<ConnectionsManager>() }
+        val context = LocalContext.current
+        val connectionsManager = remember { context.appGraph.connectionsManager }
 
         var dialog by remember { mutableStateOf<Any?>(null) }
         dialog?.run {
@@ -86,7 +84,7 @@ object SettingsConnectionScreen : SearchableSettings {
         return listOf(
             Preference.PreferenceGroup(
                 title = stringResource(KMR.strings.special_services),
-                preferenceItems = persistentListOf(
+                preferenceItems = listOf(
                     Preference.PreferenceItem.ConnectionPreference(
                         title = stringResource(connectionsManager.discord.nameStrRes()),
                         subtitle = stringResource(KMR.strings.pref_discord_configuration).takeIf { isLoggedIn },
@@ -132,7 +130,7 @@ object SettingsConnectionScreen : SearchableSettings {
                     )
                     IconButton(onClick = onDismissRequest) {
                         Icon(
-                            imageVector = Icons.Outlined.Close,
+                            imageVector = MaterialSymbols.Rounded.Close,
                             contentDescription = stringResource(MR.strings.action_close),
                         )
                     }
@@ -160,9 +158,9 @@ object SettingsConnectionScreen : SearchableSettings {
                             IconButton(onClick = { hidePassword = !hidePassword }) {
                                 Icon(
                                     imageVector = if (hidePassword) {
-                                        Icons.Filled.Visibility
+                                        MaterialSymbols.RoundedFilled.Visibility
                                     } else {
-                                        Icons.Filled.VisibilityOff
+                                        MaterialSymbols.RoundedFilled.VisibilityOff
                                     },
                                     contentDescription = null,
                                 )

@@ -1,20 +1,18 @@
 package eu.kanade.tachiyomi.ui.browse.extension
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined._18UpRating
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.browse.ExtensionScreen
@@ -25,36 +23,40 @@ import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.ui.browse.extension.details.ExtensionDetailsScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.isPackageInstalled
-import kotlinx.collections.immutable.persistentListOf
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.`18UpRating`
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun extensionsTab(
-    extensionsScreenModel: ExtensionsScreenModel,
+    extensionsViewModel: ExtensionsViewModel,
 ): TabContent {
     val navigator = LocalNavigator.currentOrThrow
     val context = LocalContext.current
 
-    val state by extensionsScreenModel.state.collectAsState()
-    var privateExtensionToUninstall by remember { mutableStateOf<Extension?>(null) }
+    val updatesCount by extensionsViewModel.updatesCount.collectAsStateWithLifecycle()
+    // KMK -->
+    val nsfwOnly by extensionsViewModel.nsfwOnly.collectAsStateWithLifecycle()
+    // KMK <--
+    var privateExtensionToUninstall by remember { mutableStateOf<Extension.Installed?>(null) }
 
     return TabContent(
         titleRes = MR.strings.label_extensions,
-        badgeNumber = state.updates.takeIf { it > 0 },
+        badgeNumber = updatesCount.takeIf { it > 0 },
         searchEnabled = true,
-        actions = persistentListOf(
+        actions = listOf(
             // KMK -->
             AppBar.Action(
                 title = stringResource(KMR.strings.action_toggle_nsfw_only),
-                icon = Icons.Outlined._18UpRating,
-                iconTint = if (state.nsfwOnly) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                onClick = { extensionsScreenModel.toggleNsfwOnly() },
+                icon = MaterialSymbols.Rounded.`18UpRating`,
+                iconTint = if (nsfwOnly) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                onClick = { extensionsViewModel.toggleNsfwOnly() },
             ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.action_webview_refresh),
-                onClick = extensionsScreenModel::findAvailableExtensions,
+                onClick = extensionsViewModel::findAvailableExtensions,
             ),
             // KMK <--
             AppBar.OverflowAction(
@@ -67,8 +69,10 @@ fun extensionsTab(
             ),
         ),
         content = { contentPadding, _ ->
+            val state by extensionsViewModel.state.collectAsStateWithLifecycle()
+
             BackHandler(enabled = state.searchQuery != null) {
-                extensionsScreenModel.search(null)
+                extensionsViewModel.search(null)
             }
             ExtensionScreen(
                 state = state,
@@ -76,18 +80,18 @@ fun extensionsTab(
                 searchQuery = state.searchQuery,
                 onLongClickItem = { extension ->
                     when (extension) {
-                        is Extension.Available -> extensionsScreenModel.installExtension(extension)
-                        else -> {
+                        is Extension.Available -> extensionsViewModel.installExtension(extension)
+                        is Extension.Installed -> {
                             if (context.isPackageInstalled(extension.pkgName)) {
-                                extensionsScreenModel.uninstallExtension(extension)
+                                extensionsViewModel.uninstallExtension(extension)
                             } else {
                                 privateExtensionToUninstall = extension
                             }
                         }
                     }
                 },
-                onClickItemCancel = extensionsScreenModel::cancelInstallUpdateExtension,
-                onClickUpdateAll = extensionsScreenModel::updateAllExtensions,
+                onClickItemCancel = extensionsViewModel::cancelInstallUpdateExtension,
+                onClickUpdateAll = extensionsViewModel::updateAllExtensions,
                 onOpenWebView = { extension ->
                     extension.sources.getOrNull(0)?.let {
                         navigator.push(
@@ -99,19 +103,19 @@ fun extensionsTab(
                         )
                     }
                 },
-                onInstallExtension = extensionsScreenModel::installExtension,
+                onInstallExtension = extensionsViewModel::installExtension,
                 onOpenExtension = { navigator.push(ExtensionDetailsScreen(it.pkgName)) },
-                onTrustExtension = { extensionsScreenModel.trustExtension(it) },
-                onUninstallExtension = { extensionsScreenModel.uninstallExtension(it) },
-                onUpdateExtension = extensionsScreenModel::updateExtension,
-                onRefresh = extensionsScreenModel::findAvailableExtensions,
+                onTrustExtension = { extensionsViewModel.trustExtension(it) },
+                onUninstallExtension = { extensionsViewModel.uninstallExtension(it) },
+                onUpdateExtension = extensionsViewModel::updateExtension,
+                onRefresh = extensionsViewModel::findAvailableExtensions,
             )
 
             privateExtensionToUninstall?.let { extension ->
                 ExtensionUninstallConfirmation(
                     extensionName = extension.name,
                     onClickConfirm = {
-                        extensionsScreenModel.uninstallExtension(extension)
+                        extensionsViewModel.uninstallExtension(extension)
                     },
                     onDismissRequest = {
                         privateExtensionToUninstall = null

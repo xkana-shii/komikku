@@ -1,0 +1,1063 @@
+-- KMK: Adapted from Mihon's "Merge manga favorite related fields into favorite_at" and
+-- "Tweak database table and view schema" (#3805), preserving Komikku/SyncYomi's
+-- version/is_syncing/last_modified_at columns, triggers and extra tables.
+
+-- ---------------------------------------------------------------------------------------------------------
+-- drop dependents
+-- ---------------------------------------------------------------------------------------------------------
+
+DROP VIEW historyView;
+DROP VIEW libraryView;
+DROP VIEW updatesView;
+DROP VIEW libraryUpdateErrorView;
+
+-- SY -->
+DROP TRIGGER IF EXISTS update_last_modified_at_mangas;
+DROP TRIGGER IF EXISTS update_manga_version;
+DROP TRIGGER IF EXISTS update_last_modified_at_chapters;
+DROP TRIGGER IF EXISTS update_chapter_and_manga_version;
+DROP TRIGGER IF EXISTS update_category_version;
+DROP TRIGGER IF EXISTS insert_category_uid;
+DROP TRIGGER IF EXISTS system_category_delete_trigger;
+DROP TRIGGER IF EXISTS update_last_modified_at_mangas_categories;
+DROP TRIGGER IF EXISTS insert_manga_category_update_version;
+DROP TRIGGER IF EXISTS delete_manga_category_update_version;
+DROP TRIGGER IF EXISTS update_last_favorited_at_mangas;
+-- SY <--
+
+DROP INDEX library_favorite_index;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- damaged indexes
+-- ---------------------------------------------------------------------------------------------------------
+
+-- Some databases hold rows their unique constraints should have rejected, which a damaged index explains. A
+-- write to a table also writes its indexes and fails on a damaged one, and a read through one can miss rows,
+-- so each table changed in place below is first copied from its rows alone, leaving its indexes behind.
+CREATE TABLE mangas_copy AS
+SELECT
+    _id, source, url, artist, author, description, genre, title, status, thumbnail_url, favorite, last_update,
+    next_update, initialized, viewer, chapter_flags, cover_last_modified, date_added, filtered_scanlators,
+    update_strategy, calculate_interval, last_modified_at, favorite_modified_at, version, is_syncing, notes, memo
+FROM mangas NOT INDEXED;
+DROP TABLE mangas;
+ALTER TABLE mangas_copy RENAME TO mangas;
+
+CREATE TABLE chapters_copy AS
+SELECT
+    _id, manga_id, url, name, scanlator, read, bookmark, last_page_read, chapter_number, source_order, date_fetch,
+    date_upload, last_modified_at, version, is_syncing, memo
+FROM chapters NOT INDEXED;
+DROP TABLE chapters;
+ALTER TABLE chapters_copy RENAME TO chapters;
+
+CREATE TABLE history_copy AS
+SELECT _id, chapter_id, last_read, time_read
+FROM history NOT INDEXED;
+DROP TABLE history;
+ALTER TABLE history_copy RENAME TO history;
+
+CREATE TABLE mangas_categories_copy AS
+SELECT _id, manga_id, category_id, last_modified_at
+FROM mangas_categories NOT INDEXED;
+DROP TABLE mangas_categories;
+ALTER TABLE mangas_categories_copy RENAME TO mangas_categories;
+
+CREATE TABLE manga_sync_copy AS
+SELECT
+    _id, manga_id, sync_id, remote_id, library_id, title, last_chapter_read, total_chapters, status, score,
+    remote_url, start_date, finish_date, private
+FROM manga_sync NOT INDEXED;
+DROP TABLE manga_sync;
+ALTER TABLE manga_sync_copy RENAME TO manga_sync;
+
+CREATE TABLE excluded_scanlators_copy AS
+SELECT manga_id, scanlator
+FROM excluded_scanlators NOT INDEXED;
+DROP TABLE excluded_scanlators;
+ALTER TABLE excluded_scanlators_copy RENAME TO excluded_scanlators;
+
+-- Merging duplicate chapters looks their history up by chapter
+CREATE INDEX history_chapter_id_index ON history(chapter_id);
+
+-- KUN -->
+-- Komikku/SY extra tables that are read and rewritten below, so they are copied from their rows alone the
+-- same way: a damaged index would make a write fail or a read miss a row.
+CREATE TABLE search_metadata_copy AS
+SELECT manga_id, uploader, extra, indexed_extra, extra_version
+FROM search_metadata NOT INDEXED;
+DROP TABLE search_metadata;
+ALTER TABLE search_metadata_copy RENAME TO search_metadata;
+
+CREATE TABLE search_tags_copy AS
+SELECT _id, manga_id, namespace, name, type
+FROM search_tags NOT INDEXED;
+DROP TABLE search_tags;
+ALTER TABLE search_tags_copy RENAME TO search_tags;
+
+CREATE TABLE search_titles_copy AS
+SELECT _id, manga_id, title, type
+FROM search_titles NOT INDEXED;
+DROP TABLE search_titles;
+ALTER TABLE search_titles_copy RENAME TO search_titles;
+
+CREATE TABLE merged_copy AS
+SELECT
+    _id, info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority, download_chapters,
+    merge_id, merge_url, manga_id, manga_url, manga_source
+FROM merged NOT INDEXED;
+DROP TABLE merged;
+ALTER TABLE merged_copy RENAME TO merged;
+-- KUN <--
+
+-- ---------------------------------------------------------------------------------------------------------
+-- orphans
+-- ---------------------------------------------------------------------------------------------------------
+
+-- Rows pointing at an entry, chapter or category that no longer exists were written while foreign keys weren't
+-- enforced. Nothing can reach them, and copied over they'd fail the foreign key check that ends the migration.
+DELETE FROM chapters WHERE manga_id NOT IN (SELECT _id FROM mangas);
+DELETE FROM history WHERE chapter_id NOT IN (SELECT _id FROM chapters);
+DELETE FROM mangas_categories
+WHERE manga_id NOT IN (SELECT _id FROM mangas) OR category_id NOT IN (SELECT _id FROM categories);
+DELETE FROM manga_sync WHERE manga_id NOT IN (SELECT _id FROM mangas);
+DELETE FROM excluded_scanlators WHERE manga_id NOT IN (SELECT _id FROM mangas);
+-- KUN -->
+-- Komikku/SY extra tables that are rebuilt with a foreign key to `manga` further down, so the same
+-- leftovers would fail their copy just as well.
+DELETE FROM search_metadata WHERE manga_id NOT IN (SELECT _id FROM mangas);
+DELETE FROM search_tags WHERE manga_id NOT IN (SELECT _id FROM mangas);
+DELETE FROM search_titles WHERE manga_id NOT IN (SELECT _id FROM mangas);
+DELETE FROM libraryUpdateError WHERE manga_id NOT IN (SELECT _id FROM mangas);
+DELETE FROM merged
+WHERE manga_id NOT IN (SELECT _id FROM mangas) OR merge_id NOT IN (SELECT _id FROM mangas);
+-- KUN <--
+
+-- ---------------------------------------------------------------------------------------------------------
+-- favorite related fields merged into favorite_at
+-- ---------------------------------------------------------------------------------------------------------
+
+ALTER TABLE mangas ADD COLUMN favorite_at INTEGER;
+
+-- favorite_modified_at is no fallback for a missing date_added: every manga update rewrote it
+UPDATE mangas
+SET favorite_at = CASE
+    WHEN favorite = 1 THEN coalesce(date_added, 0)
+    ELSE NULL
+END;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - manga
+-- ---------------------------------------------------------------------------------------------------------
+
+-- Entries sharing a source and url are merged into one, since the new table won't hold both.
+-- KMK -->
+-- Scratch table. Dropped before the migration finishes; DROP IF EXISTS keeps it re-runnable.
+DROP TABLE IF EXISTS duplicate_mangas;
+CREATE TABLE duplicate_mangas AS
+SELECT
+    _id,
+    first_value(_id) OVER (PARTITION BY source, url ORDER BY favorite_at IS NOT NULL DESC, _id ASC) AS keep_id,
+    row_number() OVER (PARTITION BY source, url ORDER BY favorite_at IS NOT NULL DESC, _id ASC) AS precedence,
+    favorite_at IS NOT NULL AS favorite
+FROM mangas
+WHERE (source, url) IN (
+    SELECT source, url
+    FROM mangas
+    GROUP BY source, url
+    HAVING count(*) > 1
+);
+
+-- Moving the chapters looks each one's entry up here, which without an index scans the whole table per chapter
+CREATE INDEX duplicate_mangas_id_index ON duplicate_mangas(_id);
+-- KMK <--
+
+UPDATE mangas
+SET favorite_at = merged.favorite_at,
+    initialized = merged.initialized,
+    artist = merged.artist,
+    author = merged.author,
+    description = merged.description,
+    genre = merged.genre,
+    thumbnail_url = merged.thumbnail_url,
+    status = merged.status,
+    viewer = merged.viewer,
+    chapter_flags = merged.chapter_flags,
+    notes = merged.notes,
+    memo = merged.memo,
+    last_update = merged.last_update,
+    cover_last_modified = merged.cover_last_modified,
+    last_modified_at = merged.last_modified_at,
+    version = merged.version
+FROM (
+    SELECT DISTINCT
+        D.keep_id,
+        coalesce(
+            min(nullif(M.favorite_at, 0)) OVER (PARTITION BY D.keep_id),
+            min(M.favorite_at) OVER (PARTITION BY D.keep_id)
+        ) AS favorite_at,
+        max(M.initialized) OVER (PARTITION BY D.keep_id) AS initialized,
+        first_value(M.artist) OVER (PARTITION BY D.keep_id ORDER BY M.artist IS NULL, D.precedence) AS artist,
+        first_value(M.author) OVER (PARTITION BY D.keep_id ORDER BY M.author IS NULL, D.precedence) AS author,
+        first_value(M.description) OVER (PARTITION BY D.keep_id ORDER BY M.description IS NULL, D.precedence) AS description,
+        first_value(M.genre) OVER (PARTITION BY D.keep_id ORDER BY M.genre IS NULL, D.precedence) AS genre,
+        first_value(M.thumbnail_url) OVER (PARTITION BY D.keep_id ORDER BY M.thumbnail_url IS NULL, D.precedence) AS thumbnail_url,
+        first_value(M.status) OVER (PARTITION BY D.keep_id ORDER BY M.status = 0, D.precedence) AS status,
+        first_value(M.viewer) OVER (PARTITION BY D.keep_id ORDER BY M.viewer = 0, D.precedence) AS viewer,
+        first_value(M.chapter_flags) OVER (PARTITION BY D.keep_id ORDER BY M.chapter_flags = 0, D.precedence) AS chapter_flags,
+        first_value(M.notes) OVER (PARTITION BY D.keep_id ORDER BY M.notes = '', D.precedence) AS notes,
+        first_value(M.memo) OVER (PARTITION BY D.keep_id ORDER BY M.memo = '{}', D.precedence) AS memo,
+        max(M.last_update) OVER (PARTITION BY D.keep_id) AS last_update,
+        max(M.cover_last_modified) OVER (PARTITION BY D.keep_id) AS cover_last_modified,
+        max(M.last_modified_at) OVER (PARTITION BY D.keep_id) AS last_modified_at,
+        max(M.version) OVER (PARTITION BY D.keep_id) AS version
+    FROM duplicate_mangas D
+    JOIN mangas M
+    ON M._id = D._id
+) AS merged
+WHERE mangas._id = merged.keep_id;
+
+-- KUN -->
+-- Extra tables without a surrogate key are simply re-pointed onto the surviving entry. Those with a
+-- unique manga_id (`search_metadata` is keyed by it, `libraryUpdateError` has a unique column) can hold
+-- one row per entry at most: the entry's own row is kept when it has one, otherwise the best-ranked
+-- copy is kept, and the rest are dropped before the re-point so it cannot collide. The comparison has
+-- to be against the best-ranked copy *that has a row*, or a group whose only row sits on a later copy
+-- would drop every row instead of keeping one.
+DELETE FROM search_metadata
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id)
+AND (
+    EXISTS (
+        SELECT 1 FROM search_metadata SM2
+        WHERE SM2.manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = search_metadata.manga_id)
+    )
+    OR (SELECT precedence FROM duplicate_mangas WHERE _id = search_metadata.manga_id) <> (
+        SELECT min(D2.precedence)
+        FROM duplicate_mangas D2
+        WHERE D2.keep_id = (SELECT keep_id FROM duplicate_mangas D3 WHERE D3._id = search_metadata.manga_id)
+        AND D2._id <> D2.keep_id
+        AND EXISTS (SELECT 1 FROM search_metadata SM3 WHERE SM3.manga_id = D2._id)
+    )
+);
+DELETE FROM libraryUpdateError
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id)
+AND (
+    EXISTS (
+        SELECT 1 FROM libraryUpdateError LUE2
+        WHERE LUE2.manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = libraryUpdateError.manga_id)
+    )
+    OR (SELECT precedence FROM duplicate_mangas WHERE _id = libraryUpdateError.manga_id) <> (
+        SELECT min(D2.precedence)
+        FROM duplicate_mangas D2
+        WHERE D2.keep_id = (SELECT keep_id FROM duplicate_mangas D3 WHERE D3._id = libraryUpdateError.manga_id)
+        AND D2._id <> D2.keep_id
+        AND EXISTS (SELECT 1 FROM libraryUpdateError LUE3 WHERE LUE3.manga_id = D2._id)
+    )
+);
+
+UPDATE search_metadata
+SET manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = search_metadata.manga_id)
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+UPDATE search_tags
+SET manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = search_tags.manga_id)
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+UPDATE search_titles
+SET manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = search_titles.manga_id)
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+UPDATE libraryUpdateError
+SET manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = libraryUpdateError.manga_id)
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+-- KUN <--
+
+DELETE FROM mangas
+WHERE _id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+
+CREATE TABLE manga(
+    id INTEGER NOT NULL PRIMARY KEY,
+    source_id INTEGER NOT NULL,
+    remote_url TEXT NOT NULL,
+    remote_title TEXT NOT NULL,
+    remote_author TEXT,
+    remote_artist TEXT,
+    remote_description TEXT,
+    remote_genre TEXT,
+    remote_status INTEGER NOT NULL,
+    remote_cover TEXT,
+    remote_update_strategy INTEGER NOT NULL,
+    remote_memo BLOB NOT NULL,
+    user_favorite_at INTEGER,
+    user_notes TEXT NOT NULL,
+    user_reader_flags INTEGER NOT NULL,
+    user_chapter_flags INTEGER NOT NULL,
+    state_chapter_last_update INTEGER,
+    state_chapter_next_update INTEGER,
+    state_chapter_fetch_interval INTEGER NOT NULL,
+    state_cover_last_modified INTEGER NOT NULL,
+    state_initialized INTEGER NOT NULL,
+    -- SY -->
+    last_modified_at INTEGER NOT NULL DEFAULT 0,
+    version INTEGER NOT NULL DEFAULT 0,
+    is_syncing INTEGER NOT NULL DEFAULT 0,
+    -- SY <--
+    UNIQUE(source_id, remote_url)
+);
+
+INSERT INTO manga(
+    id, source_id, remote_url, remote_title, remote_author, remote_artist, remote_description,
+    remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
+    user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
+    state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
+    state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing
+)
+SELECT
+    _id, source, url, title, author, artist, description,
+    genre, status, thumbnail_url, update_strategy, memo,
+    favorite_at, notes, viewer, chapter_flags,
+    last_update, next_update, calculate_interval,
+    cover_last_modified, initialized, last_modified_at, version, is_syncing
+FROM mangas;
+
+DROP TABLE mangas;
+
+CREATE INDEX manga_user_favorite_at_index ON manga(user_favorite_at) WHERE user_favorite_at IS NOT NULL;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - chapter
+-- ---------------------------------------------------------------------------------------------------------
+
+-- KMK -->
+-- The entries merged in the manga group brought their chapters with them, so those chapters have to be
+-- re-pointed to the surviving entry before the duplicate chapters are folded, or the copy into the new
+-- `chapter` table carries a manga_id that no longer exists (upstream 17.sqm does this here as well).
+UPDATE chapters
+SET manga_id = (SELECT keep_id FROM duplicate_mangas WHERE _id = chapters.manga_id)
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+
+-- Scratch table. Dropped before the migration finishes; DROP IF EXISTS keeps it re-runnable.
+DROP TABLE IF EXISTS duplicate_chapters;
+CREATE TABLE duplicate_chapters AS
+SELECT
+    _id,
+    first_value(_id) OVER (PARTITION BY manga_id, url ORDER BY has_history DESC, _id ASC) AS keep_id
+FROM (
+    SELECT
+        _id,
+        manga_id,
+        url,
+        EXISTS(SELECT 1 FROM history WHERE history.chapter_id = chapters._id) AS has_history
+    FROM chapters
+    WHERE (manga_id, url) IN (
+        SELECT manga_id, url
+        FROM chapters
+        GROUP BY manga_id, url
+        HAVING count(*) > 1
+    )
+);
+-- KMK <--
+
+UPDATE chapters
+SET read = merged.read,
+    bookmark = merged.bookmark,
+    last_page_read = merged.last_page_read,
+    date_fetch = merged.date_fetch,
+    date_upload = merged.date_upload,
+    last_modified_at = merged.last_modified_at,
+    version = merged.version
+FROM (
+    SELECT
+        D.keep_id,
+        max(C.read) AS read,
+        max(C.bookmark) AS bookmark,
+        max(C.last_page_read) AS last_page_read,
+        coalesce(min(nullif(C.date_fetch, 0)), 0) AS date_fetch,
+        max(C.date_upload) AS date_upload,
+        max(C.last_modified_at) AS last_modified_at,
+        max(C.version) AS version
+    FROM duplicate_chapters D
+    JOIN chapters C
+    ON C._id = D._id
+    GROUP BY D.keep_id
+) AS merged
+WHERE chapters._id = merged.keep_id;
+
+UPDATE history
+SET last_read = merged.last_read,
+    time_read = merged.time_read
+FROM (
+    SELECT
+        D.keep_id,
+        max(H.last_read) AS last_read,
+        sum(H.time_read) AS time_read
+    FROM duplicate_chapters D
+    JOIN history H
+    ON H.chapter_id = D._id
+    GROUP BY D.keep_id
+) AS merged
+WHERE history.chapter_id = merged.keep_id;
+
+DELETE FROM history
+WHERE chapter_id IN (SELECT _id FROM duplicate_chapters WHERE _id != keep_id);
+
+DELETE FROM chapters
+WHERE _id IN (SELECT _id FROM duplicate_chapters WHERE _id != keep_id);
+
+DROP TABLE duplicate_chapters;
+
+CREATE TABLE chapter(
+    id INTEGER NOT NULL PRIMARY KEY,
+    manga_id INTEGER NOT NULL,
+    remote_url TEXT NOT NULL,
+    remote_name TEXT NOT NULL,
+    remote_scanlator TEXT,
+    remote_chapter_number REAL NOT NULL,
+    remote_date_upload INTEGER NOT NULL,
+    remote_order INTEGER NOT NULL,
+    remote_memo BLOB NOT NULL,
+    user_read INTEGER NOT NULL,
+    user_bookmark INTEGER NOT NULL,
+    user_last_page_read INTEGER NOT NULL,
+    state_date_fetch INTEGER NOT NULL,
+    -- SY -->
+    last_modified_at INTEGER NOT NULL DEFAULT 0,
+    version INTEGER NOT NULL DEFAULT 0,
+    is_syncing INTEGER NOT NULL DEFAULT 0,
+    -- SY <--
+    UNIQUE(manga_id, remote_url),
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+INSERT INTO chapter(
+    id, manga_id, remote_url, remote_name, remote_scanlator, remote_chapter_number, remote_date_upload,
+    remote_order, remote_memo, user_read, user_bookmark, user_last_page_read, state_date_fetch,
+    last_modified_at, version, is_syncing
+)
+SELECT
+    _id, manga_id, url, name, scanlator, chapter_number, date_upload,
+    source_order, memo, read, bookmark, last_page_read, date_fetch,
+    last_modified_at, version, is_syncing
+FROM chapters;
+
+DROP TABLE chapters;
+
+CREATE INDEX chapter_state_date_fetch_index ON chapter(state_date_fetch);
+CREATE INDEX chapter_unread_state_date_fetch_index ON chapter(state_date_fetch) WHERE user_read = 0;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - category
+-- ---------------------------------------------------------------------------------------------------------
+
+CREATE TABLE category(
+    id INTEGER NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    `order` INTEGER NOT NULL UNIQUE,
+    flags INTEGER NOT NULL,
+    -- KMK -->
+    hidden INTEGER NOT NULL DEFAULT 0,
+    -- KMK <--
+    -- SY -->
+    version INTEGER NOT NULL DEFAULT 0,
+    uid INTEGER NOT NULL DEFAULT 0,
+    last_modified_at INTEGER NOT NULL DEFAULT 0,
+    is_syncing INTEGER NOT NULL DEFAULT 0
+    -- SY <--
+);
+
+INSERT INTO category(id, name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing)
+SELECT
+    _id,
+    name,
+    CASE
+        WHEN _id <= 0 THEN -1
+        ELSE row_number() OVER (PARTITION BY (_id <= 0) ORDER BY sort, _id) - 1
+    END,
+    flags,
+    hidden,
+    version,
+    uid,
+    last_modified_at,
+    is_syncing
+FROM categories;
+
+DROP TABLE categories;
+
+CREATE TRIGGER IF NOT EXISTS system_category_delete_trigger BEFORE DELETE
+ON category
+BEGIN SELECT CASE
+    WHEN old.id <= 0 THEN
+        RAISE(ABORT, "System category can't be deleted")
+    END;
+END;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - manga_category
+-- ---------------------------------------------------------------------------------------------------------
+
+CREATE TABLE manga_category(
+    manga_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
+    -- SY -->
+    last_modified_at INTEGER NOT NULL DEFAULT 0,
+    -- SY <--
+    UNIQUE(manga_id, category_id),
+    FOREIGN KEY(category_id) REFERENCES category (id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+-- KMK -->
+-- The pair is the row's identity now, so copies that only differ in their timestamp have to collapse
+-- into one; the most recent timestamp wins, and the column stays populated for sync. A survivor that
+-- is in the library only inherits memberships from copies that are themselves in the library, since a
+-- copy outside it can still hold the categories it had before it was removed (Mihon's 17.sqm filter).
+INSERT INTO manga_category(manga_id, category_id, last_modified_at)
+SELECT coalesce(D.keep_id, MC.manga_id), MC.category_id, max(MC.last_modified_at)
+FROM mangas_categories MC
+LEFT JOIN duplicate_mangas D
+ON D._id = MC.manga_id
+LEFT JOIN manga K
+ON K.id = D.keep_id
+WHERE D._id IS NULL OR D.favorite OR K.user_favorite_at IS NULL
+GROUP BY coalesce(D.keep_id, MC.manga_id), MC.category_id;
+-- KMK <--
+
+DROP TABLE mangas_categories;
+
+CREATE INDEX manga_category_category_id_index ON manga_category(category_id);
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - history
+-- ---------------------------------------------------------------------------------------------------------
+
+ALTER TABLE history RENAME TO history_temp;
+
+CREATE TABLE history(
+    id INTEGER NOT NULL PRIMARY KEY,
+    manga_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL UNIQUE,
+    read_at INTEGER,
+    read_duration INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(chapter_id) REFERENCES chapter (id)
+    ON DELETE CASCADE
+);
+
+-- Some databases hold more than one row for a chapter despite the old unique constraint, and the new one
+-- rejects them, so they merge the way the history of duplicate chapters does above.
+INSERT INTO history(id, manga_id, chapter_id, read_at, read_duration)
+SELECT min(H._id), C.manga_id, H.chapter_id, max(H.last_read), sum(H.time_read)
+FROM history_temp H
+JOIN chapter C
+ON C.id = H.chapter_id
+GROUP BY H.chapter_id;
+
+DROP TABLE history_temp;
+
+CREATE INDEX history_manga_id_index ON history(manga_id);
+CREATE INDEX history_read_at_index ON history(read_at);
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - excluded_scanlator
+-- ---------------------------------------------------------------------------------------------------------
+
+CREATE TABLE excluded_scanlator(
+    manga_id INTEGER NOT NULL,
+    scanlator TEXT NOT NULL,
+    UNIQUE(manga_id, scanlator),
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+INSERT INTO excluded_scanlator(manga_id, scanlator)
+SELECT DISTINCT coalesce(D.keep_id, ES.manga_id), ES.scanlator
+FROM excluded_scanlators ES
+LEFT JOIN duplicate_mangas D
+ON D._id = ES.manga_id;
+
+DROP TABLE excluded_scanlators;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - manga_track
+-- ---------------------------------------------------------------------------------------------------------
+
+-- KMK -->
+-- Scratch table. Dropped before the migration finishes; DROP IF EXISTS keeps it re-runnable.
+-- A surviving entry that merged can leave two rows for the same tracker, and an entry that didn't merge
+-- can still hold two despite the old unique constraint. The new one rejects both, so the one to keep is
+-- chosen first: one on a copy in the library, then the one furthest read, then the one on the copy ranked
+-- first, then the oldest. The LEFT JOIN also brings in tracks of entries that never merged.
+DROP TABLE IF EXISTS duplicate_tracks;
+CREATE TABLE duplicate_tracks AS
+SELECT
+    T._id,
+    first_value(T._id) OVER (
+        PARTITION BY coalesce(D.keep_id, T.manga_id), T.sync_id
+        ORDER BY D.favorite DESC, T.last_chapter_read DESC, D.precedence ASC, T._id ASC
+    ) AS keep_track_id
+FROM manga_sync T
+LEFT JOIN duplicate_mangas D
+ON D._id = T.manga_id;
+-- KMK <--
+
+DELETE FROM manga_sync
+WHERE _id IN (SELECT _id FROM duplicate_tracks WHERE _id != keep_track_id);
+
+DROP TABLE duplicate_tracks;
+
+CREATE TABLE manga_track(
+    id INTEGER NOT NULL PRIMARY KEY,
+    manga_id INTEGER NOT NULL,
+    tracker_id INTEGER NOT NULL,
+    remote_id INTEGER NOT NULL,
+    remote_url TEXT NOT NULL,
+    library_id INTEGER,
+    title TEXT NOT NULL,
+    last_chapter_read REAL NOT NULL,
+    total_chapters INTEGER NOT NULL,
+    status INTEGER NOT NULL,
+    score REAL NOT NULL,
+    start_date INTEGER NOT NULL,
+    finish_date INTEGER NOT NULL,
+    private INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (manga_id, tracker_id),
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+INSERT INTO manga_track(
+    id, manga_id, tracker_id, remote_id, remote_url, library_id, title, last_chapter_read,
+    total_chapters, status, score, start_date, finish_date, private
+)
+SELECT
+    T._id, coalesce(D.keep_id, T.manga_id), T.sync_id, T.remote_id, T.remote_url, T.library_id,
+    T.title, T.last_chapter_read, T.total_chapters, T.status, T.score, T.start_date,
+    T.finish_date, T.private
+FROM manga_sync T
+LEFT JOIN duplicate_mangas D
+ON D._id = T.manga_id;
+
+-- KUN -->
+-- `merged` is Komikku/SY-only. It has no unique key of its own, but both of its references still have
+-- to follow the merge so that no row keeps pointing at a deleted entry once the keys are enforced again
+-- (the table is rebuilt further down, after `duplicate_mangas` is gone).
+UPDATE merged
+SET manga_id = coalesce((SELECT keep_id FROM duplicate_mangas WHERE _id = merged.manga_id), manga_id),
+    merge_id = coalesce((SELECT keep_id FROM duplicate_mangas WHERE _id = merged.merge_id), merge_id)
+WHERE manga_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id)
+   OR merge_id IN (SELECT _id FROM duplicate_mangas WHERE _id != keep_id);
+-- KUN <--
+
+DROP TABLE duplicate_mangas;
+
+DROP TABLE manga_sync;
+
+CREATE INDEX manga_track_tracker_id_remote_id_index ON manga_track(tracker_id, remote_id);
+
+-- ---------------------------------------------------------------------------------------------------------
+-- table - source
+-- ---------------------------------------------------------------------------------------------------------
+
+CREATE TABLE source(
+    id INTEGER NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    language TEXT NOT NULL
+);
+
+INSERT INTO source(id, name, language)
+SELECT _id, name, lang
+FROM sources;
+
+DROP TABLE sources;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Komikku/SY extra tables rebuilt against the new manga table
+-- ---------------------------------------------------------------------------------------------------------
+
+ALTER TABLE search_metadata RENAME TO search_metadata_temp;
+CREATE TABLE search_metadata (
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    uploader TEXT,
+    extra TEXT NOT NULL,
+    indexed_extra TEXT,
+    extra_version INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+INSERT INTO search_metadata(manga_id, uploader, extra, indexed_extra, extra_version)
+SELECT manga_id, uploader, extra, indexed_extra, extra_version
+FROM search_metadata_temp;
+DROP TABLE search_metadata_temp;
+CREATE INDEX search_metadata_uploader_index ON search_metadata(uploader);
+CREATE INDEX search_metadata_indexed_extra_index ON search_metadata(indexed_extra);
+
+ALTER TABLE search_tags RENAME TO search_tags_temp;
+CREATE TABLE search_tags (
+    _id INTEGER NOT NULL PRIMARY KEY,
+    manga_id INTEGER NOT NULL,
+    namespace TEXT,
+    name TEXT NOT NULL,
+    type INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+INSERT INTO search_tags(_id, manga_id, namespace, name, type)
+SELECT _id, manga_id, namespace, name, type
+FROM search_tags_temp;
+DROP TABLE search_tags_temp;
+CREATE INDEX search_tags_manga_id_index ON search_tags(manga_id);
+CREATE INDEX search_tags_namespace_name_index ON search_tags(namespace, name);
+
+ALTER TABLE search_titles RENAME TO search_titles_temp;
+CREATE TABLE search_titles (
+    _id INTEGER NOT NULL PRIMARY KEY,
+    manga_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    type INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+INSERT INTO search_titles(_id, manga_id, title, type)
+SELECT _id, manga_id, title, type
+FROM search_titles_temp;
+DROP TABLE search_titles_temp;
+CREATE INDEX search_titles_manga_id_index ON search_titles(manga_id);
+CREATE INDEX search_titles_title_index ON search_titles(title);
+
+ALTER TABLE merged RENAME TO merged_temp;
+CREATE TABLE merged(
+    _id INTEGER NOT NULL PRIMARY KEY,
+    info_manga INTEGER NOT NULL,
+    get_chapter_updates INTEGER NOT NULL,
+    chapter_sort_mode INTEGER NOT NULL,
+    chapter_priority INTEGER NOT NULL,
+    download_chapters INTEGER NOT NULL,
+    merge_id INTEGER NOT NULL,
+    merge_url TEXT NOT NULL,
+    manga_id INTEGER,
+    manga_url TEXT NOT NULL,
+    manga_source INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE SET NULL,
+    FOREIGN KEY(merge_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+INSERT INTO merged(
+    _id, info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority, download_chapters,
+    merge_id, merge_url, manga_id, manga_url, manga_source
+)
+SELECT
+    _id, info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority, download_chapters,
+    merge_id, merge_url, manga_id, manga_url, manga_source
+FROM merged_temp;
+DROP TABLE merged_temp;
+CREATE INDEX merged_merge_id_index ON merged(merge_id);
+
+-- ---------------------------------------------------------------------------------------------------------
+-- SY triggers
+-- ---------------------------------------------------------------------------------------------------------
+
+CREATE TRIGGER update_last_modified_at_mangas
+AFTER UPDATE ON manga
+FOR EACH ROW
+WHEN new.is_syncing = 0 AND old.is_syncing = 0
+BEGIN
+  UPDATE manga
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
+BEGIN
+    UPDATE manga SET version = version + 1
+    WHERE id = new.id AND new.is_syncing = 0 AND (
+        new.remote_url != old.remote_url OR
+        new.remote_description != old.remote_description OR
+        new.user_favorite_at IS NOT old.user_favorite_at
+    );
+END;
+
+CREATE TRIGGER update_last_modified_at_chapters
+AFTER UPDATE ON chapter
+FOR EACH ROW
+WHEN new.is_syncing = 0 AND old.is_syncing = 0
+BEGIN
+  UPDATE chapter
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapter
+WHEN new.is_syncing = 0 AND (
+    new.user_read != old.user_read OR
+    new.user_bookmark != old.user_bookmark OR
+    new.user_last_page_read != old.user_last_page_read
+)
+BEGIN
+    UPDATE chapter SET version = version + 1
+    WHERE id = new.id;
+END;
+
+CREATE TRIGGER update_category_version AFTER UPDATE ON category
+WHEN new.is_syncing = 0 AND (
+    new.name != old.name OR
+    new.`order` != old.`order` OR
+    new.flags != old.flags
+    OR new.hidden != old.hidden
+)
+BEGIN
+    UPDATE category
+    SET version = version + 1,
+        last_modified_at = strftime('%s', 'now')
+    WHERE id = new.id;
+END;
+
+CREATE TRIGGER insert_category_uid AFTER INSERT ON category
+BEGIN
+    UPDATE category
+    SET uid = CASE WHEN uid = 0 THEN abs(random()) ELSE uid END,
+        last_modified_at = CASE WHEN last_modified_at = 0 THEN strftime('%s', 'now') ELSE last_modified_at END
+    WHERE id = new.id;
+END;
+
+CREATE TRIGGER update_last_modified_at_mangas_categories
+AFTER UPDATE ON manga_category
+FOR EACH ROW
+BEGIN
+  UPDATE manga_category
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE manga_id = new.manga_id AND category_id = new.category_id;
+END;
+
+CREATE TRIGGER insert_manga_category_update_version AFTER INSERT ON manga_category
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = new.manga_id AND (SELECT is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+
+CREATE TRIGGER delete_manga_category_update_version AFTER DELETE ON manga_category
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = old.manga_id AND (SELECT is_syncing FROM manga WHERE id = old.manga_id) = 0;
+END;
+
+-- ---------------------------------------------------------------------------------------------------------
+-- views
+-- ---------------------------------------------------------------------------------------------------------
+
+CREATE VIEW historyView AS
+SELECT
+    history.id AS id,
+    manga.id AS mangaId,
+    chapter.id AS chapterId,
+    manga.remote_title AS title,
+    manga.remote_cover AS thumbnailUrl,
+    manga.source_id AS sourceId,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_chapter_number AS chapterNumber,
+    manga.user_chapter_flags AS chapterFlags,
+    chapter.user_read AS read,
+    chapter.user_last_page_read AS lastPageRead,
+    coalesce(C.total, 0) AS totalCount,
+    coalesce(C.readCount, 0) AS readCount,
+    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkReadCount,
+    history.read_at AS readAt,
+    history.read_duration AS readDuration,
+    max_read.read_at AS maxReadAt,
+    max_read.chapter_id AS maxReadAtChapterId
+FROM manga
+JOIN chapter
+ON manga.id = chapter.manga_id
+JOIN history
+ON chapter.id = history.chapter_id
+JOIN (
+    SELECT manga_id, chapter_id, MAX(read_at) AS read_at
+    FROM history
+    GROUP BY manga_id
+) AS max_read
+ON chapter.manga_id = max_read.manga_id
+LEFT JOIN(
+    SELECT
+        chapter.manga_id,
+        count(*) AS total,
+        sum(user_read) AS readCount,
+        sum(user_bookmark) AS bookmarkCount,
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        excluded_scanlator.scanlator AS ex_scanlator
+    FROM chapter
+    LEFT JOIN excluded_scanlator
+    ON chapter.manga_id = excluded_scanlator.manga_id
+    AND chapter.remote_scanlator = excluded_scanlator.scanlator
+    WHERE ex_scanlator IS NULL
+    GROUP BY chapter.manga_id
+) AS C
+ON manga.id = C.manga_id;
+
+CREATE VIEW libraryView AS
+SELECT
+    M.*,
+    coalesce(C.total, 0) AS totalCount,
+    coalesce(C.readCount, 0) AS readCount,
+    coalesce(C.latestUpload, 0) AS latestUpload,
+    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
+    coalesce(C.lastRead, 0) AS lastRead,
+    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(MC.categories, '0') AS categories
+FROM manga M
+LEFT JOIN (
+    SELECT
+        chapter.manga_id,
+        count(*) AS total,
+        sum(user_read) AS readCount,
+        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
+        coalesce(max(history.read_at), 0) AS lastRead,
+        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
+        sum(user_bookmark) AS bookmarkCount,
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        excluded_scanlator.scanlator AS ex_scanlator
+    FROM chapter
+    LEFT JOIN excluded_scanlator
+    ON chapter.manga_id = excluded_scanlator.manga_id
+    AND chapter.remote_scanlator = excluded_scanlator.scanlator
+    LEFT JOIN history
+    ON chapter.id = history.chapter_id
+    WHERE ex_scanlator IS NULL
+    GROUP BY chapter.manga_id
+) AS C
+ON M.id = C.manga_id
+LEFT JOIN (
+    SELECT manga_id, group_concat(category_id) AS categories
+    FROM manga_category
+    GROUP BY manga_id
+) AS MC
+ON MC.manga_id = M.id
+WHERE M.source_id <> 6969
+UNION
+SELECT
+    M.*,
+    coalesce(C.total, 0) AS totalCount,
+    coalesce(C.readCount, 0) AS readCount,
+    coalesce(C.latestUpload, 0) AS latestUpload,
+    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
+    coalesce(C.lastRead, 0) AS lastRead,
+    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    coalesce(MC.categories, '0') AS categories
+FROM manga M
+LEFT JOIN (
+    SELECT merged.manga_id,merged.merge_id
+    FROM merged
+    GROUP BY merged.merge_id
+) AS ME
+ON ME.merge_id = M.id
+LEFT JOIN(
+    SELECT
+        ME.merge_id,
+        count(*) AS total,
+        sum(user_read) AS readCount,
+        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
+        coalesce(max(history.read_at), 0) AS lastRead,
+        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
+        sum(user_bookmark) AS bookmarkCount,
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        excluded_scanlator.scanlator AS ex_scanlator
+    FROM chapter
+    LEFT JOIN excluded_scanlator
+    ON chapter.manga_id = excluded_scanlator.manga_id
+    AND chapter.remote_scanlator = excluded_scanlator.scanlator
+    LEFT JOIN history
+    ON chapter.id = history.chapter_id
+    LEFT JOIN merged ME
+    ON ME.manga_id = chapter.manga_id
+    WHERE ex_scanlator IS NULL
+    GROUP BY ME.merge_id
+) AS C
+ON M.id = C.merge_id
+LEFT JOIN (
+    SELECT manga_id, group_concat(category_id) AS categories
+    FROM manga_category
+    GROUP BY manga_id
+) AS MC
+ON MC.manga_id = M.id
+WHERE M.source_id = 6969;
+
+CREATE VIEW updatesView AS
+SELECT
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    chapter.id AS chapterId,
+    chapter.remote_name AS chapterName,
+    chapter.remote_scanlator AS scanlator,
+    chapter.remote_url AS chapterUrl,
+    chapter.user_read AS read,
+    chapter.user_bookmark AS bookmark,
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_date_upload AS dateUpload,
+    chapter.state_date_fetch AS dateFetch,
+    excluded_scanlator.scanlator AS excludedScanlator
+FROM manga JOIN chapter
+ON manga.id = chapter.manga_id
+LEFT JOIN excluded_scanlator
+ON manga.id = excluded_scanlator.manga_id
+AND chapter.remote_scanlator = excluded_scanlator.scanlator
+WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id <> 6969
+AND chapter.state_date_fetch > manga.user_favorite_at
+UNION
+SELECT
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    chapter.id AS chapterId,
+    chapter.remote_name AS chapterName,
+    chapter.remote_scanlator AS scanlator,
+    chapter.remote_url AS chapterUrl,
+    chapter.user_read AS read,
+    chapter.user_bookmark AS bookmark,
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_date_upload AS dateUpload,
+    chapter.state_date_fetch AS dateFetch,
+    excluded_scanlator.scanlator AS excludedScanlator
+FROM manga
+LEFT JOIN (
+    SELECT merged.manga_id,merged.merge_id
+    FROM merged
+    GROUP BY merged.merge_id
+) AS ME
+ON ME.merge_id = manga.id
+JOIN chapter
+ON ME.manga_id = chapter.manga_id
+LEFT JOIN excluded_scanlator
+ON manga.id = excluded_scanlator.manga_id
+AND chapter.remote_scanlator = excluded_scanlator.scanlator
+WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id = 6969
+AND chapter.state_date_fetch > manga.user_favorite_at
+ORDER BY dateFetch DESC;
+
+CREATE VIEW libraryUpdateErrorView AS
+SELECT
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    manga.source_id AS mangaSource,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.remote_cover AS mangaThumbnail,
+    manga.state_cover_last_modified AS coverLastModified,
+    libraryUpdateError._id AS errorId,
+    libraryUpdateError.message_id AS messageId,
+    libraryUpdateError.last_update AS lastUpdate
+FROM manga JOIN libraryUpdateError
+ON manga.id = libraryUpdateError.manga_id
+WHERE user_favorite_at IS NOT NULL
+ORDER BY lastUpdate DESC;

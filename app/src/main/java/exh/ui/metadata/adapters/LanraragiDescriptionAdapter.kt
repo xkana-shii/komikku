@@ -8,12 +8,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.databinding.DescriptionAdapterLaBinding
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel.State
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import exh.metadata.metadata.LanraragiSearchMetadata
 import exh.ui.metadata.adapters.MetadataUIUtil.bindDrawable
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.i18n.sy.SYMR
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 @Composable
 fun LanraragiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
@@ -37,7 +38,7 @@ fun LanraragiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
             )
             binding.pages.bindDrawable(context, R.drawable.ic_baseline_menu_book_24)
 
-            binding.moreInfo.bindDrawable(context, R.drawable.ic_info_24dp)
+            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info)
 
             listOf(
                 binding.pages,

@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.hippo.unifile.UniFile
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.BackupRestoreStatus
@@ -18,20 +19,18 @@ import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.displayablePath
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import java.io.File
-import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
-class BackupNotifier(private val context: Context) {
-
-    private val preferences: SecurityPreferences by injectLazy()
-
+@Inject
+class BackupNotifier(
+    private val context: Context,
+    private val preferences: SecurityPreferences,
+) {
     // KMK -->
-    private val backupRestoreStatus: BackupRestoreStatus = Injekt.get()
+    @Inject private lateinit var backupRestoreStatus: BackupRestoreStatus
     // KMK <--
-
     private val progressNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_BACKUP_RESTORE_PROGRESS,
     ) {
@@ -92,7 +91,7 @@ class BackupNotifier(private val context: Context) {
 
             clearActions()
             addAction(
-                R.drawable.ic_share_24dp,
+                MaterialSymbolsR.drawable.rounded_share,
                 context.stringResource(MR.strings.action_share),
                 NotificationReceiver.shareBackupPendingActivity(context, file.uri),
             )
@@ -101,6 +100,11 @@ class BackupNotifier(private val context: Context) {
         }
     }
 
+    // SY -->
+    // SY serialises restore progress notifications with @Synchronized; Komikku's override is a
+    // suspend function, where that annotation is not applicable, so the notification is left
+    // unsynchronised here (only the single restore worker updates it).
+    // SY <--
     suspend fun showRestoreProgress(
         content: String = "",
         progress: Int = 0,
@@ -115,7 +119,7 @@ class BackupNotifier(private val context: Context) {
             }
             setContentTitle(contentTitle)
 
-            if (!preferences.hideNotificationContent().get()) {
+            if (!preferences.hideNotificationContent.get()) {
                 setContentText(content)
             }
 
@@ -127,7 +131,7 @@ class BackupNotifier(private val context: Context) {
 
             clearActions()
             addAction(
-                R.drawable.ic_close_24dp,
+                MaterialSymbolsR.drawable.rounded_close,
                 context.stringResource(MR.strings.action_cancel),
                 NotificationReceiver.cancelRestorePendingBroadcast(context, Notifications.ID_RESTORE_PROGRESS),
             )
@@ -170,10 +174,8 @@ class BackupNotifier(private val context: Context) {
 
         val timeString = context.stringResource(
             MR.strings.restore_duration,
-            TimeUnit.MILLISECONDS.toMinutes(time),
-            TimeUnit.MILLISECONDS.toSeconds(time) - TimeUnit.MINUTES.toSeconds(
-                TimeUnit.MILLISECONDS.toMinutes(time),
-            ),
+            time.milliseconds.inWholeMinutes,
+            time.milliseconds.inWholeSeconds - (time.milliseconds.inWholeMinutes * 60),
         )
 
         with(completeNotificationBuilder) {
@@ -195,7 +197,7 @@ class BackupNotifier(private val context: Context) {
                 val errorLogIntent = NotificationReceiver.openErrorLogPendingActivity(context, uri)
                 setContentIntent(errorLogIntent)
                 addAction(
-                    R.drawable.ic_folder_24dp,
+                    MaterialSymbolsR.drawable.rounded_filled_folder,
                     context.stringResource(MR.strings.action_show_errors),
                     errorLogIntent,
                 )

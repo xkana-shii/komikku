@@ -14,6 +14,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
+import dev.zacsweers.metro.Inject
+import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.source.online.all.EHentai
@@ -31,6 +33,9 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.json.Json
+import mihon.app.di.AppGraph
+import mihon.app.di.appGraph
+import mihon.core.metro.metroGraph
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -44,28 +49,40 @@ import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.InsertFlatMetadata
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
-    private val exhPreferences: ExhPreferences by injectLazy()
-    private val libraryPreferences: LibraryPreferences by injectLazy()
-    private val sourceManager: SourceManager by injectLazy()
-    private val updateHelper: EHentaiUpdateHelper by injectLazy()
-    private val updateMangaFromRemote: UpdateMangaFromRemote by injectLazy()
-    private val getChaptersByMangaId: GetChaptersByMangaId by injectLazy()
-    private val getFlatMetadataById: GetFlatMetadataById by injectLazy()
-    private val insertFlatMetadata: InsertFlatMetadata by injectLazy()
-    private val getExhFavoriteMangaWithMetadata: GetExhFavoriteMangaWithMetadata by injectLazy()
+    private val graph: AppGraph = context.metroGraph()
 
-    private val updateNotifier by lazy { EHentaiUpdateNotifier(context) }
-    private val libraryUpdateNotifier by lazy { LibraryUpdateNotifier(context) }
+    @Inject private lateinit var exhPreferences: ExhPreferences
+
+    @Inject private lateinit var libraryPreferences: LibraryPreferences
+
+    @Inject private lateinit var sourceManager: SourceManager
+
+    @Inject private lateinit var updateHelper: EHentaiUpdateHelper
+
+    @Inject private lateinit var updateMangaFromRemote: UpdateMangaFromRemote
+
+    @Inject private lateinit var getChaptersByMangaId: GetChaptersByMangaId
+
+    @Inject private lateinit var getFlatMetadataById: GetFlatMetadataById
+
+    @Inject private lateinit var insertFlatMetadata: InsertFlatMetadata
+
+    @Inject private lateinit var getExhFavoriteMangaWithMetadata: GetExhFavoriteMangaWithMetadata
+
+    @Inject private lateinit var securityPreferences: SecurityPreferences
+
+    private val updateNotifier by lazy { EHentaiUpdateNotifier(context, securityPreferences) }
+
+    @Inject private lateinit var libraryUpdateNotifier: LibraryUpdateNotifier
 
     override suspend fun doWork(): Result {
+        graph.inject(this)
         return try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P &&
                 requiresWifiConnection(exhPreferences) &&
@@ -125,7 +142,7 @@ class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerPara
             }
 
             val chapter = getChaptersByMangaId.await(manga.id).minByOrNull {
-                it.dateUpload
+                it.dateUpload ?: Instant.DISTANT_FUTURE
             }
 
             UpdateEntry(manga, raisedMeta, chapter)
@@ -205,10 +222,10 @@ class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerPara
                     updateHelper.findAcceptedRootAndDiscardOthers(manga.source, chapters)
 
                 if (new.isNotEmpty() && manga.id == acceptedRoot.manga.id) {
-                    libraryPreferences.newUpdatesCount().getAndSet { it + new.size }
+                    libraryPreferences.newUpdatesCount.getAndSet { it + new.size }
                     updatedManga += acceptedRoot.manga to new.toTypedArray()
                 } else if (exhNew.isNotEmpty() && updatedManga.none { it.first.id == acceptedRoot.manga.id }) {
-                    libraryPreferences.newUpdatesCount().getAndSet { it + exhNew.size }
+                    libraryPreferences.newUpdatesCount.getAndSet { it + exhNew.size }
                     updatedManga += acceptedRoot.manga to exhNew.toTypedArray()
                 }
 
@@ -217,7 +234,7 @@ class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerPara
                 updatedThisIteration++
             }
         } finally {
-            exhPreferences.exhAutoUpdateStats().set(
+            exhPreferences.exhAutoUpdateStats.set(
                 Json.encodeToString(
                     EHentaiUpdaterStats(
                         startTime,
@@ -283,10 +300,10 @@ class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerPara
         }
 
         fun scheduleBackground(context: Context, prefInterval: Int? = null, prefRestrictions: Set<String>? = null) {
-            val exhPreferences = Injekt.get<ExhPreferences>()
-            val interval = prefInterval ?: exhPreferences.exhAutoUpdateFrequency().get()
+            val exhPreferences = context.appGraph.exhPreferences
+            val interval = prefInterval ?: exhPreferences.exhAutoUpdateFrequency.get()
             if (interval > 0) {
-                val restrictions = prefRestrictions ?: exhPreferences.exhAutoUpdateRequirements().get()
+                val restrictions = prefRestrictions ?: exhPreferences.exhAutoUpdateRequirements.get()
                 val networkType = if (DEVICE_NETWORK_NOT_METERED in restrictions) {
                     NetworkType.UNMETERED
                 } else {
@@ -333,7 +350,7 @@ class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerPara
     }
 
     private fun requiresWifiConnection(exhPreferences: ExhPreferences): Boolean {
-        val restrictions = exhPreferences.exhAutoUpdateRequirements().get()
+        val restrictions = exhPreferences.exhAutoUpdateRequirements.get()
         return DEVICE_ONLY_ON_WIFI in restrictions
     }
 }

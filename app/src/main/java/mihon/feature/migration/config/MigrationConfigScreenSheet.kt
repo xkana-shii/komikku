@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,6 +32,9 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.AdaptiveSheet
 import mihon.domain.migration.models.MigrationFlag
 import mihon.feature.common.utils.getLabel
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Check
+import mihon.icons.materialsymbols.roundedfilled.Warning
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.preference.toggle
@@ -58,7 +58,7 @@ fun MigrationConfigScreenSheet(
     // KMK <--
 ) {
     var extraSearchQuery by rememberSaveable { mutableStateOf("") }
-    val migrationFlags by preferences.migrationFlags().collectAsState()
+    val migrationFlags by preferences.migrationFlags.collectAsState()
     AdaptiveSheet(onDismissRequest = onDismissRequest) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -91,7 +91,7 @@ fun MigrationConfigScreenSheet(
                             FilterChip(
                                 selected = selected,
                                 onClick = {
-                                    preferences.migrationFlags().getAndSet { currentFlags ->
+                                    preferences.migrationFlags.getAndSet { currentFlags ->
                                         if (flag in currentFlags) {
                                             currentFlags - flag
                                         } else {
@@ -103,7 +103,7 @@ fun MigrationConfigScreenSheet(
                                 leadingIcon = {
                                     if (selected) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Check,
+                                            imageVector = MaterialSymbols.Rounded.Check,
                                             contentDescription = null,
                                         )
                                     }
@@ -117,7 +117,7 @@ fun MigrationConfigScreenSheet(
                     subtitle = null,
                     checked = removeDownloads,
                     onClick = {
-                        preferences.migrationFlags().getAndSet {
+                        preferences.migrationFlags.getAndSet {
                             // KMK -->
                             if (MigrationFlag.REMOVE_DOWNLOAD in it) {
                                 // KMK <--
@@ -151,19 +151,19 @@ fun MigrationConfigScreenSheet(
                 MigrationSheetSwitchItem(
                     title = stringResource(MR.strings.migrationConfigScreen_hideUnmatchedTitle),
                     subtitle = null,
-                    preference = preferences.migrationHideUnmatched(),
+                    preference = preferences.migrationHideUnmatched,
                 )
                 MigrationSheetSwitchItem(
                     title = stringResource(MR.strings.migrationConfigScreen_hideWithoutUpdatesTitle),
                     subtitle = stringResource(MR.strings.migrationConfigScreen_hideWithoutUpdatesSubtitle),
-                    preference = preferences.migrationHideWithoutUpdates(),
+                    preference = preferences.migrationHideWithoutUpdates,
                 )
                 // KMK -->
                 if (fullSettings) {
                     // KMK <--
                     MigrationSheetDividerItem()
                     // KMK -->
-                    val migrationSmartSearchSingleEntryPref = preferences.migrationSmartSearchSingleEntry()
+                    val migrationSmartSearchSingleEntryPref = preferences.migrationSmartSearchSingleEntry
                     val isSmartSearchSingleEntry by migrationSmartSearchSingleEntryPref.collectAsState()
                     if (isSingleEntry) {
                         MigrationSheetSwitchItem(
@@ -178,12 +178,12 @@ fun MigrationConfigScreenSheet(
                         MigrationSheetSwitchItem(
                             title = stringResource(MR.strings.migrationConfigScreen_deepSearchModeTitle),
                             subtitle = stringResource(MR.strings.migrationConfigScreen_deepSearchModeSubtitle),
-                            preference = preferences.migrationDeepSearchMode(),
+                            preference = preferences.migrationDeepSearchMode,
                         )
                         MigrationSheetSwitchItem(
                             title = stringResource(MR.strings.migrationConfigScreen_prioritizeByChaptersTitle),
                             subtitle = stringResource(MR.strings.migrationConfigScreen_prioritizeByChaptersSubtitle),
-                            preference = preferences.migrationPrioritizeByChapters(),
+                            preference = preferences.migrationPrioritizeByChapters,
                         )
                     }
                 }
@@ -264,7 +264,7 @@ private fun MigrationSheetWarningItem(
     ListItem(
         leadingContent = {
             Icon(
-                imageVector = Icons.Outlined.Warning,
+                imageVector = MaterialSymbols.RoundedFilled.Warning,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.active,
             )

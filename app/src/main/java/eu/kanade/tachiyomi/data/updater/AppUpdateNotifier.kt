@@ -19,6 +19,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.release.model.Release
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 internal class AppUpdateNotifier(private val context: Context) {
 
@@ -75,7 +76,7 @@ internal class AppUpdateNotifier(private val context: Context) {
                 updateIntent,
             )
             addAction(
-                R.drawable.ic_info_24dp,
+                MaterialSymbolsR.drawable.rounded_info,
                 context.stringResource(MR.strings.whats_new),
                 releaseIntent,
             )
@@ -97,7 +98,7 @@ internal class AppUpdateNotifier(private val context: Context) {
 
             clearActions()
             addAction(
-                R.drawable.ic_close_24dp,
+                MaterialSymbolsR.drawable.rounded_close,
                 context.stringResource(MR.strings.action_cancel),
                 NotificationReceiver.cancelDownloadAppUpdatePendingBroadcast(context),
             )
@@ -145,12 +146,12 @@ internal class AppUpdateNotifier(private val context: Context) {
 
             clearActions()
             addAction(
-                R.drawable.ic_system_update_alt_white_24dp,
+                MaterialSymbolsR.drawable.rounded_system_update_alt,
                 context.stringResource(MR.strings.action_install),
                 installIntent,
             )
             addAction(
-                R.drawable.ic_close_24dp,
+                MaterialSymbolsR.drawable.rounded_close,
                 context.stringResource(MR.strings.action_cancel),
                 NotificationReceiver.dismissNotificationPendingBroadcast(context, Notifications.ID_APP_UPDATE_PROMPT),
             )
@@ -176,18 +177,18 @@ internal class AppUpdateNotifier(private val context: Context) {
                     (": $error".takeIf { error != null } ?: ""),
                 // KMK <--
             )
-            setSmallIcon(R.drawable.ic_warning_white_24dp)
+            setSmallIcon(MaterialSymbolsR.drawable.rounded_filled_warning)
             setOnlyAlertOnce(false)
             setProgress(0, 0, false)
 
             clearActions()
             addAction(
-                R.drawable.ic_refresh_24dp,
+                MaterialSymbolsR.drawable.rounded_refresh,
                 context.stringResource(MR.strings.action_retry),
                 NotificationReceiver.downloadAppUpdatePendingBroadcast(context, url),
             )
             addAction(
-                R.drawable.ic_close_24dp,
+                MaterialSymbolsR.drawable.rounded_close,
                 context.stringResource(MR.strings.action_cancel),
                 NotificationReceiver.dismissNotificationPendingBroadcast(context, Notifications.ID_APP_UPDATE_ERROR),
             )
@@ -215,7 +216,7 @@ internal class AppUpdateNotifier(private val context: Context) {
             setOnlyAlertOnce(true)
             clearActions()
             addAction(
-                R.drawable.ic_system_update_alt_white_24dp,
+                MaterialSymbolsR.drawable.rounded_system_update_alt,
                 context.stringResource(KMR.strings.action_manual_install),
                 installIntent,
             )
@@ -256,7 +257,7 @@ internal class AppUpdateNotifier(private val context: Context) {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             addAction(
-                R.drawable.ic_info_24dp,
+                MaterialSymbolsR.drawable.rounded_info,
                 context.stringResource(KMR.strings.release_page),
                 PendingIntent.getActivity(
                     context,
@@ -272,20 +273,20 @@ internal class AppUpdateNotifier(private val context: Context) {
         with(notificationBuilder) {
             title?.let { setContentTitle(title) }
             setContentText(context.stringResource(KMR.strings.could_not_install_update))
-            setSmallIcon(R.drawable.ic_warning_white_24dp)
+            setSmallIcon(MaterialSymbolsR.drawable.rounded_filled_warning)
             setOnlyAlertOnce(false)
             setAutoCancel(false)
             setProgress(0, 0, false)
             clearActions()
             // Retry action
             addAction(
-                R.drawable.ic_refresh_24dp,
+                MaterialSymbolsR.drawable.rounded_refresh,
                 context.stringResource(MR.strings.action_retry),
                 NotificationHandler.installApkPendingActivity(context, uri),
             )
             // Cancel action
             addAction(
-                R.drawable.ic_close_24dp,
+                MaterialSymbolsR.drawable.rounded_close,
                 context.stringResource(MR.strings.action_cancel),
                 NotificationReceiver.dismissNotificationPendingBroadcast(context, Notifications.ID_APP_UPDATE_ERROR),
             )

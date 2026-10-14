@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.util.system.notificationManager
 import eu.kanade.tachiyomi.util.system.updaterEnabled
 import exh.log.xLogE
 import kotlinx.coroutines.coroutineScope
+import mihon.app.di.appGraph
 import java.util.concurrent.TimeUnit
 
 class AppUpdateJob(private val context: Context, workerParams: WorkerParameters) :
@@ -25,7 +26,7 @@ class AppUpdateJob(private val context: Context, workerParams: WorkerParameters)
                 cancelTask(context)
                 return@coroutineScope Result.success()
             }
-            AppUpdateChecker().checkForUpdate(context)
+            context.appGraph.updateChecker.checkForUpdate(context)
             Result.success()
         } catch (e: Exception) {
             xLogE("Unable to check for update", e)

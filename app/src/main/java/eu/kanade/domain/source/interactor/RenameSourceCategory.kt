@@ -1,8 +1,10 @@
 package eu.kanade.domain.source.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.source.service.SourcePreferences
 import tachiyomi.core.common.preference.getAndSet
 
+@Inject
 class RenameSourceCategory(
     private val preferences: SourcePreferences,
     private val createSourceCategory: CreateSourceCategory,
@@ -14,7 +16,7 @@ class RenameSourceCategory(
             CreateSourceCategory.Result.Success -> {}
         }
 
-        preferences.sourcesTabSourcesInCategories().getAndSet { sourcesInCategories ->
+        preferences.sourcesTabSourcesInCategories.getAndSet { sourcesInCategories ->
             sourcesInCategories.map {
                 val index = it.indexOf('|')
                 if (index != -1 && it.substring(index + 1) == categoryOld) {
@@ -24,7 +26,7 @@ class RenameSourceCategory(
                 }
             }.toSet()
         }
-        preferences.sourcesTabCategories().getAndSet {
+        preferences.sourcesTabCategories.getAndSet {
             it.minus(categoryOld).plus(categoryNew)
         }
 

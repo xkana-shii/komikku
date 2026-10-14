@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -46,6 +44,8 @@ import com.mikepenz.markdown.model.MarkdownTypography
 import com.mikepenz.markdown.model.NoOpImageTransformerImpl
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.rememberMarkdownState
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Image
 import org.intellij.markdown.MarkdownTokenTypes.Companion.HTML_TAG
 import org.intellij.markdown.flavours.MarkdownFlavourDescriptor
 import org.intellij.markdown.flavours.commonmark.CommonMarkFlavourDescriptor
@@ -77,11 +77,17 @@ fun MarkdownRender(
     loadImages: Boolean = true,
 ) {
     Markdown(
+        // KUN -->
+        // The fork pins multiplatform-markdown-renderer 0.39.2, which predates `parseMarkdown`, so keep
+        // the previous state helper instead of upstream's pre-parsed state.
+        // KUN <--
+        // SY -->
         markdownState = rememberMarkdownState(
             content = content,
             flavour = flavour,
             immediate = true,
         ),
+        // SY <--
         annotator = annotator,
         colors = getMarkdownColors(),
         typography = getMarkdownTypography(),
@@ -240,7 +246,7 @@ private fun getMarkdownInlineContent() = DefaultMarkdownInlineContent(
             ),
             children = {
                 Icon(
-                    imageVector = Icons.Outlined.Image,
+                    imageVector = MaterialSymbols.Rounded.Image,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                 )

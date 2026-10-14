@@ -1,12 +1,11 @@
 package eu.kanade.tachiyomi.ui.library
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -23,12 +22,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
@@ -43,8 +43,7 @@ import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.DiscordScreen
-import eu.kanade.tachiyomi.data.download.DownloadCache
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.ui.browse.source.SourcesScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
@@ -54,19 +53,21 @@ import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.workManager
 import exh.favorites.FavoritesSyncStatus
 import exh.recs.RecommendsScreen
 import exh.recs.batch.RecommendationSearchBottomSheetDialog
 import exh.recs.batch.RecommendationSearchProgressDialog
 import exh.recs.batch.SearchStatus
 import exh.source.MERGED_SOURCE_ID
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import mihon.app.di.appGraph
 import mihon.feature.migration.config.MigrationConfigScreen
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Help
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
@@ -82,8 +83,6 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.isLocal
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 data object LibraryTab : Tab {
     @Suppress("unused")
@@ -93,7 +92,7 @@ data object LibraryTab : Tab {
         @Composable
         get() {
             val isSelected = LocalTabNavigator.current.current.key == key
-            val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_library_enter)
+            val image = AnimatedImageVector.animatedVectorResource(R.drawable.animated_library)
             return TabOptions(
                 index = 0u,
                 title = stringResource(MR.strings.label_library),
@@ -112,15 +111,15 @@ data object LibraryTab : Tab {
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
 
-        val screenModel = rememberScreenModel { LibraryScreenModel() }
-        val settingsScreenModel = rememberScreenModel { LibrarySettingsScreenModel() }
-        val state by screenModel.state.collectAsState()
+        val viewModel = metroViewModel<LibraryViewModel>()
+        val settingsViewModel = metroViewModel<LibrarySettingsViewModel>()
+        val state by viewModel.state.collectAsStateWithLifecycle()
 
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val onClickRefresh: (Category?) -> Boolean = { category ->
+        val onClickRefresh: suspend (Category?) -> Boolean = { category ->
             // SY -->
-            val started = LibraryUpdateJob.startNow(
+            val started = LibraryUpdateWorker.startNow(
                 context = context,
                 category = if (state.groupType == LibraryGroup.BY_DEFAULT) category else null,
                 group = state.groupType,
@@ -154,15 +153,15 @@ data object LibraryTab : Tab {
                     hasActiveFilters = state.hasActiveFilters,
                     selectedCount = state.selection.size,
                     title = title,
-                    onClickUnselectAll = screenModel::clearSelection,
-                    onClickSelectAll = screenModel::selectAll,
-                    onClickInvertSelection = screenModel::invertSelection,
-                    onClickFilter = screenModel::showSettingsDialog,
-                    onClickRefresh = { onClickRefresh(state.activeCategory) },
-                    onClickGlobalUpdate = { onClickRefresh(null) },
+                    onClickUnselectAll = viewModel::clearSelection,
+                    onClickSelectAll = viewModel::selectAll,
+                    onClickInvertSelection = viewModel::invertSelection,
+                    onClickFilter = viewModel::showSettingsDialog,
+                    onClickRefresh = { scope.launch { onClickRefresh(state.activeCategory) } },
+                    onClickGlobalUpdate = { scope.launch { onClickRefresh(null) } },
                     onClickOpenRandomManga = {
                         scope.launch {
-                            val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
+                            val randomItem = viewModel.getRandomLibraryItemForCurrentCategory()
                             if (randomItem != null) {
                                 navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
                             } else {
@@ -173,20 +172,22 @@ data object LibraryTab : Tab {
                         }
                     },
                     onClickSyncNow = {
-                        if (!SyncDataJob.isRunning(context)) {
-                            SyncDataJob.startNow(context, manual = true)
-                        } else {
-                            context.toast(SYMR.strings.sync_in_progress)
+                        scope.launch {
+                            if (!SyncDataJob.isRunning(context)) {
+                                SyncDataJob.startNow(context, manual = true)
+                            } else {
+                                context.toast(SYMR.strings.sync_in_progress)
+                            }
                         }
                     },
                     // SY -->
-                    onClickSyncExh = screenModel::openFavoritesSyncDialog.takeIf { state.showSyncExh },
+                    onClickSyncExh = viewModel::openFavoritesSyncDialog.takeIf { state.showSyncExh },
                     isSyncEnabled = state.isSyncEnabled,
                     // SY <--
                     searchQuery = state.searchQuery,
-                    onSearchQueryChange = screenModel::search,
+                    onSearchQueryChange = viewModel::search,
                     onInvalidateDownloadCache = { context ->
-                        Injekt.get<DownloadCache>().invalidateCache()
+                        context.appGraph.downloadCache.invalidateCache()
                         context.toast(MR.strings.download_cache_invalidated)
                     },
                     // For scroll overlay when no tab
@@ -196,12 +197,12 @@ data object LibraryTab : Tab {
             bottomBar = {
                 LibraryBottomActionMenu(
                     visible = state.selectionMode,
-                    onChangeCategoryClicked = screenModel::openChangeCategoryDialog,
-                    onMarkAsReadClicked = { screenModel.markReadSelection(true) },
-                    onMarkAsUnreadClicked = { screenModel.markReadSelection(false) },
-                    onDownloadClicked = screenModel::performDownloadAction
+                    onChangeCategoryClicked = viewModel::openChangeCategoryDialog,
+                    onMarkAsReadClicked = { viewModel.markReadSelection(true) },
+                    onMarkAsUnreadClicked = { viewModel.markReadSelection(false) },
+                    onDownloadClicked = viewModel::performDownloadAction
                         .takeIf { state.selectedManga.fastAll { !it.isLocal() } },
-                    onDeleteClicked = screenModel::openDeleteMangaDialog,
+                    onDeleteClicked = viewModel::openDeleteMangaDialog,
                     onMigrateClicked = {
                         val selection = state
                             // KMK -->
@@ -209,7 +210,7 @@ data object LibraryTab : Tab {
                             .filterNot { it.source == MERGED_SOURCE_ID }
                             .map { it.id }
                         // KMK <--
-                        screenModel.clearSelection()
+                        viewModel.clearSelection()
                         // KMK -->
                         if (selection.isEmpty()) {
                             context.toast(SYMR.strings.no_valid_entry)
@@ -223,16 +224,16 @@ data object LibraryTab : Tab {
                         if (state.selection.size == 1) {
                             val manga = state.selectedManga.first()
                             // Invoke merging for this manga
-                            screenModel.clearSelection()
+                            viewModel.clearSelection()
                             val smartSearchConfig = SourcesScreen.SmartSearchConfig(manga.title, manga.id)
                             navigator.push(SourcesScreen(smartSearchConfig))
                         } else if (state.selection.isNotEmpty()) {
                             // Invoke multiple merge
                             val selectedManga = state.selectedManga
-                            screenModel.clearSelection()
+                            viewModel.clearSelection()
                             scope.launchIO {
                                 val mergingMangas = selectedManga.filterNot { it.source == MERGED_SOURCE_ID }
-                                val mergedMangaId = screenModel.smartSearchMerge(selectedManga.toPersistentList())
+                                val mergedMangaId = viewModel.smartSearchMerge(selectedManga.toList())
                                 snackbarHostState.showSnackbar(context.stringResource(SYMR.strings.entry_merged))
                                 if (mergedMangaId != null) {
                                     val result = snackbarHostState.showSnackbar(
@@ -241,7 +242,7 @@ data object LibraryTab : Tab {
                                         withDismissAction = true,
                                     )
                                     if (result == SnackbarResult.ActionPerformed) {
-                                        screenModel.removeMangas(
+                                        viewModel.removeMangas(
                                             mangas = mergingMangas,
                                             deleteFromLibrary = true,
                                             deleteChapters = false,
@@ -253,30 +254,30 @@ data object LibraryTab : Tab {
                                 }
                             }
                         } else {
-                            screenModel.clearSelection()
+                            viewModel.clearSelection()
                             context.toast(SYMR.strings.no_valid_entry)
                         }
                     },
                     onSelectionUpdateClicked = {
-                        val started = screenModel.updateSelectedManga()
                         scope.launch {
+                            val started = viewModel.updateSelectedManga()
                             val msgRes = if (started) {
                                 KMR.strings.updating
                             } else {
                                 MR.strings.update_already_running
                             }
                             if (started) {
-                                screenModel.clearSelection()
+                                viewModel.clearSelection()
                             }
                             snackbarHostState.showSnackbar(context.stringResource(msgRes))
                         }
                     },
                     // KMK <--
                     // SY -->
-                    onClickCleanTitles = screenModel::cleanTitles.takeIf { state.showCleanTitles },
-                    onClickCollectRecommendations = screenModel::showRecommendationSearchDialog.takeIf { state.selection.size > 1 },
-                    onClickAddToMangaDex = screenModel::syncMangaToDex.takeIf { state.showAddToMangadex },
-                    onClickResetInfo = screenModel::resetInfo.takeIf { state.showResetInfo },
+                    onClickCleanTitles = viewModel::cleanTitles.takeIf { state.showCleanTitles },
+                    onClickCollectRecommendations = viewModel::showRecommendationSearchDialog.takeIf { state.selection.size > 1 },
+                    onClickAddToMangaDex = viewModel::syncMangaToDex.takeIf { state.showAddToMangadex },
+                    onClickResetInfo = viewModel::resetInfo.takeIf { state.showResetInfo },
                     // SY <--
                 )
             },
@@ -291,10 +292,10 @@ data object LibraryTab : Tab {
                     EmptyScreen(
                         stringRes = MR.strings.information_empty_library,
                         modifier = Modifier.padding(contentPadding),
-                        actions = persistentListOf(
+                        actions = listOf(
                             EmptyScreenAction(
                                 stringRes = MR.strings.getting_started_guide,
-                                icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                                icon = MaterialSymbols.AutoMirroredRounded.Help,
                                 onClick = { handler.openUri(GETTING_STARTED_URL) },
                             ),
                         ),
@@ -312,11 +313,11 @@ data object LibraryTab : Tab {
                         currentPage = state.coercedActiveCategoryIndex,
                         hasActiveFilters = state.hasActiveFilters,
                         showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
-                        onChangeCurrentPage = screenModel::updateActiveCategoryIndex,
+                        onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
                         onClickManga = { navigator.push(MangaScreen(it)) },
                         onContinueReadingClicked = { it: LibraryManga ->
-                            scope.launchIO {
-                                val chapter = screenModel.getNextUnreadChapter(it.manga)
+                            scope.launch {
+                                val chapter = viewModel.getNextUnreadChapter(it.manga)
                                 if (chapter != null) {
                                     context.startActivity(
                                         ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
@@ -327,30 +328,30 @@ data object LibraryTab : Tab {
                             }
                             Unit
                         }.takeIf { state.showMangaContinueButton },
-                        onToggleSelection = screenModel::toggleSelection,
+                        onToggleSelection = viewModel::toggleSelection,
                         onToggleRangeSelection = { category, manga ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            screenModel.toggleRangeSelection(category, manga)
+                            viewModel.toggleRangeSelection(category, manga)
                         },
                         onRefresh = { onClickRefresh(state.activeCategory) },
                         onGlobalSearchClicked = {
-                            navigator.push(GlobalSearchScreen(screenModel.state.value.searchQuery ?: ""))
+                            navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
                         },
                         getItemCountForCategory = { state.getItemCountForCategory(it) },
-                        getDisplayMode = { screenModel.getDisplayMode() },
-                        getColumnsForOrientation = { screenModel.getColumnsForOrientation(it) },
+                        getDisplayMode = { viewModel.getDisplayMode() },
+                        getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
                         getItemsForCategory = { state.getItemsForCategory(it) },
                     )
                 }
             }
         }
 
-        val onDismissRequest = screenModel::closeDialog
+        val onDismissRequest = viewModel::closeDialog
         when (val dialog = state.dialog) {
-            is LibraryScreenModel.Dialog.SettingsSheet -> run {
+            is LibraryViewModel.Dialog.SettingsSheet -> run {
                 LibrarySettingsDialog(
                     onDismissRequest = onDismissRequest,
-                    screenModel = settingsScreenModel,
+                    viewModel = settingsViewModel,
                     category = state.activeCategory,
                     // SY -->
                     hasCategories = state.libraryData.categories.fastAny { !it.isSystemCategory },
@@ -360,58 +361,58 @@ data object LibraryTab : Tab {
                     // KMK <--
                 )
             }
-            is LibraryScreenModel.Dialog.ChangeCategory -> {
+            is LibraryViewModel.Dialog.ChangeCategory -> {
                 ChangeCategoryDialog(
                     initialSelection = dialog.initialSelection,
                     onDismissRequest = onDismissRequest,
                     onEditCategories = {
                         // KMK -->
-                        // screenModel.clearSelection()
+                        // viewModel.clearSelection()
                         // KMK <--
                         navigator.push(CategoryScreen())
                     },
                     onConfirm = { include, exclude ->
-                        screenModel.clearSelection()
-                        screenModel.setMangaCategories(dialog.manga, include, exclude)
+                        viewModel.clearSelection()
+                        viewModel.setMangaCategories(dialog.manga, include, exclude)
                     },
                 )
             }
-            is LibraryScreenModel.Dialog.DeleteManga -> {
+            is LibraryViewModel.Dialog.DeleteManga -> {
                 DeleteLibraryMangaDialog(
                     containsLocalManga = dialog.manga.any(Manga::isLocal),
                     onDismissRequest = onDismissRequest,
                     onConfirm = { deleteManga, deleteChapter ->
-                        screenModel.removeMangas(dialog.manga, deleteManga, deleteChapter)
-                        screenModel.clearSelection()
+                        viewModel.removeMangas(dialog.manga, deleteManga, deleteChapter)
+                        viewModel.clearSelection()
                     },
                 )
             }
             // SY -->
-            LibraryScreenModel.Dialog.SyncFavoritesWarning -> {
+            LibraryViewModel.Dialog.SyncFavoritesWarning -> {
                 SyncFavoritesWarningDialog(
                     onDismissRequest = onDismissRequest,
                     onAccept = {
                         onDismissRequest()
-                        screenModel.onAcceptSyncWarning()
+                        viewModel.onAcceptSyncWarning()
                     },
                 )
             }
-            LibraryScreenModel.Dialog.SyncFavoritesConfirm -> {
+            LibraryViewModel.Dialog.SyncFavoritesConfirm -> {
                 SyncFavoritesConfirmDialog(
                     onDismissRequest = onDismissRequest,
                     onAccept = {
                         onDismissRequest()
-                        screenModel.runSync()
+                        viewModel.runSync()
                     },
                 )
             }
-            is LibraryScreenModel.Dialog.RecommendationSearchSheet -> {
+            is LibraryViewModel.Dialog.RecommendationSearchSheet -> {
                 RecommendationSearchBottomSheetDialog(
                     onDismissRequest = onDismissRequest,
                     onSearchRequest = {
                         onDismissRequest()
-                        screenModel.clearSelection()
-                        screenModel.runRecommendationSearch(dialog.manga)
+                        viewModel.clearSelection()
+                        viewModel.runRecommendationSearch(dialog.manga)
                     },
                 )
             }
@@ -421,22 +422,22 @@ data object LibraryTab : Tab {
 
         // SY -->
         SyncFavoritesProgressDialog(
-            status = screenModel.favoritesSync.status.collectAsState().value,
-            setStatusIdle = { screenModel.favoritesSync.status.value = FavoritesSyncStatus.Idle },
+            status = viewModel.favoritesSync.status.collectAsState().value,
+            setStatusIdle = { viewModel.favoritesSync.status.value = FavoritesSyncStatus.Idle },
             openManga = { navigator.push(MangaScreen(it)) },
         )
 
         RecommendationSearchProgressDialog(
-            status = screenModel.recommendationSearch.status.collectAsState().value,
-            setStatusIdle = { screenModel.recommendationSearch.status.value = SearchStatus.Idle },
-            setStatusCancelling = { screenModel.recommendationSearch.status.value = SearchStatus.Cancelling },
+            status = viewModel.recommendationSearch.status.collectAsState().value,
+            setStatusIdle = { viewModel.recommendationSearch.status.value = SearchStatus.Idle },
+            setStatusCancelling = { viewModel.recommendationSearch.status.value = SearchStatus.Cancelling },
         )
         // SY <--
 
         BackHandler(enabled = state.selectionMode || state.searchQuery != null) {
             when {
-                state.selectionMode -> screenModel.clearSelection()
-                state.searchQuery != null -> screenModel.search(null)
+                state.selectionMode -> viewModel.clearSelection()
+                state.searchQuery != null -> viewModel.search(null)
             }
         }
 
@@ -455,9 +456,11 @@ data object LibraryTab : Tab {
                 // <-- AM (DISCORD)
             }
         }
+        // Lets startup be measured up to the library, not just its loading screen
+        ReportDrawnWhen { !state.isLoading }
 
         // SY -->
-        val recSearchState by screenModel.recommendationSearch.status.collectAsState()
+        val recSearchState by viewModel.recommendationSearch.status.collectAsState()
         LaunchedEffect(recSearchState) {
             when (val current = recSearchState) {
                 is SearchStatus.Finished.WithResults -> {
@@ -465,15 +468,15 @@ data object LibraryTab : Tab {
                         .let(::RecommendsScreen)
                         .let(navigator::push)
 
-                    screenModel.recommendationSearch.status.value = SearchStatus.Idle
+                    viewModel.recommendationSearch.status.value = SearchStatus.Idle
                 }
                 is SearchStatus.Finished.WithoutResults -> {
                     context.toast(SYMR.strings.rec_no_results)
-                    screenModel.recommendationSearch.status.value = SearchStatus.Idle
+                    viewModel.recommendationSearch.status.value = SearchStatus.Idle
                 }
                 is SearchStatus.Cancelling -> {
-                    screenModel.cancelRecommendationSearch()
-                    screenModel.recommendationSearch.status.value = SearchStatus.Idle
+                    viewModel.cancelRecommendationSearch()
+                    viewModel.recommendationSearch.status.value = SearchStatus.Idle
                 }
                 else -> {}
             }
@@ -481,8 +484,8 @@ data object LibraryTab : Tab {
         // SY <--
 
         LaunchedEffect(Unit) {
-            launch { queryEvent.receiveAsFlow().collect(screenModel::search) }
-            launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { screenModel.showSettingsDialog() } }
+            launch { queryEvent.receiveAsFlow().collect(viewModel::search) }
+            launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { viewModel.showSettingsDialog() } }
         }
     }
 

@@ -12,17 +12,17 @@ import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notify
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
+import tachiyomi.i18n.R as I18nR
+import tachiyomi.i18n.sy.R as SyR
 
-class SyncNotifier(private val context: Context) {
-
-    private val preferences: SecurityPreferences by injectLazy()
-
+class SyncNotifier(
+    private val context: Context,
+    private val preferences: SecurityPreferences,
     // KMK -->
-    private val syncStatus: SyncStatus = Injekt.get()
+    private val syncStatus: SyncStatus,
     // KMK <--
+) {
 
     private val progressNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_SYNC_LIBRARY,
@@ -54,9 +54,9 @@ class SyncNotifier(private val context: Context) {
         maxAmount: Int = 100,
     ): NotificationCompat.Builder {
         val builder = with(progressNotificationBuilder) {
-            setContentTitle(context.getString(R.string.syncing_library))
+            setContentTitle(context.getString(I18nR.string.syncing_library))
 
-            if (!preferences.hideNotificationContent().get()) {
+            if (!preferences.hideNotificationContent.get()) {
                 setContentText(content)
             }
 
@@ -68,8 +68,8 @@ class SyncNotifier(private val context: Context) {
 
             clearActions()
             addAction(
-                R.drawable.ic_close_24dp,
-                context.getString(R.string.action_cancel),
+                MaterialSymbolsR.drawable.rounded_close,
+                context.getString(I18nR.string.action_cancel),
                 NotificationReceiver.cancelSyncPendingBroadcast(context, Notifications.ID_SYNC_PROGRESS),
             )
         }
@@ -87,7 +87,7 @@ class SyncNotifier(private val context: Context) {
         context.cancelNotification(Notifications.ID_SYNC_PROGRESS)
 
         with(completeNotificationBuilder) {
-            setContentTitle(context.getString(R.string.sync_error))
+            setContentTitle(context.getString(SyR.string.sync_error))
             setContentText(error)
 
             show(Notifications.ID_SYNC_COMPLETE)
@@ -98,7 +98,7 @@ class SyncNotifier(private val context: Context) {
         context.cancelNotification(Notifications.ID_SYNC_PROGRESS)
 
         with(completeNotificationBuilder) {
-            setContentTitle(context.getString(R.string.sync_complete))
+            setContentTitle(context.getString(SyR.string.sync_complete))
             setContentText(message)
 
             show(Notifications.ID_SYNC_COMPLETE)

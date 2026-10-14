@@ -2,14 +2,20 @@ import mihon.buildlogic.Config
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
+import mihon.buildlogic.tasks.ReplaceShortcutsPlaceholderTask
+import java.io.FileInputStream
+import java.util.Properties
+import kotlin.io.encoding.Base64
 
 plugins {
     id("mihon.android.application")
     id("mihon.android.application.compose")
-    id("com.github.zellius.shortcut-helper")
     kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
     alias(libs.plugins.aboutLibraries)
+    alias(libs.plugins.apollo)
+    alias(libs.plugins.metro)
+    alias(libs.plugins.androidx.baselineProfile)
     id("com.github.ben-manes.versions")
 }
 
@@ -20,15 +26,15 @@ if (Config.includeTelemetry) {
     }
 }
 
-shortcutHelper.setFilePath("./shortcuts.xml")
+val keystorePropertiesFile = layout.settingsDirectory.file("keystore.properties").asFile
 
 android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.komikku"
+        applicationId = "app.komikun"
 
-        versionCode = 82
+        versionCode = 83
         versionName = "1.14.1"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
@@ -40,15 +46,46 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    if (System.getenv("MIHON_GITHUB_RELEASE").toBoolean()) {
+        val tempStoreFile = file(System.getenv("RUNNER_TEMP")).resolve("komikku.keystore")
+
+        val storeFileBytes = System.getenv("storeFileBase64").let(Base64::decode)
+        tempStoreFile.outputStream().use { it.write(storeFileBytes) }
+
+        signingConfigs {
+            named("debug") {
+                storeFile = tempStoreFile
+                storePassword = System.getenv("storePassword")
+                keyAlias = System.getenv("keyAlias")
+                keyPassword = System.getenv("keyPassword")
+            }
+        }
+    } else if (keystorePropertiesFile.exists()) {
+        val keystoreProperties = FileInputStream(keystorePropertiesFile).use { Properties().apply { load(it) } }
+
+        signingConfigs {
+            named("debug") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
-        val debug by getting {
+        val debug = getByName("debug") {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-${getCommitCount()}"
             isPseudoLocalesEnabled = true
         }
-        val release by getting {
+        val release = getByName("release") {
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
+
+            signingConfig = debug.signingConfig
+
+            isProfileable = true
 
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
 
@@ -73,13 +110,12 @@ android {
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
         }
-        create("preview") {
+        create("nightly") {
             initWith(release)
 
             applicationIdSuffix = ".beta"
 
             versionNameSuffix = debug.versionNameSuffix
-            signingConfig = debug.signingConfig
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
 
@@ -88,20 +124,24 @@ android {
         create("benchmark") {
             initWith(release)
 
-            isDebuggable = false
-            isProfileable = true
             versionNameSuffix = "${debug.versionNameSuffix}-benchmark"
             applicationIdSuffix = ".benchmark"
 
-            signingConfig = debug.signingConfig
-
             matchingFallbacks.addAll(commonMatchingFallbacks)
+        }
+
+        if (Config.includeTelemetry) {
+            configureEach {
+                configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                    mappingFileUploadEnabled = Config.uploadCrashlyticsMapping
+                }
+            }
         }
     }
 
     sourceSets {
-        getByName("preview").res.srcDirs("src/beta/res")
-        getByName("benchmark").res.srcDirs("src/debug/res")
+        getByName("nightly").res.directories.add("src/beta/res")
+        getByName("benchmark").res.directories.add("src/debug/res")
     }
 
     splits {
@@ -121,7 +161,6 @@ android {
                 "libconscrypt_jni",
                 "libimagedecoder",
                 "libquickjs",
-                "libsqlite3x",
             )
                 .map { "**/$it.so" }
         }
@@ -151,10 +190,6 @@ android {
         viewBinding = true
         buildConfig = true
         aidl = true
-
-        // Disable some unused things
-        renderScript = false
-        shaders = false
     }
 
     lint {
@@ -178,12 +213,23 @@ kotlin {
             "-opt-in=kotlinx.coroutines.FlowPreview",
             "-opt-in=kotlinx.coroutines.InternalCoroutinesApi",
             "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
-            "-Xannotation-default-target=param-property",
         )
     }
 }
 
+// KUN -->
+// webgpuviewer (v28+) pulls Compose 1.12.0 transitively, whose AAR metadata requires
+// AGP 9.1.0. Komikku builds with AGP 9.4.1, so no version pinning is needed.
+// KUN <--
+
+baselineProfile {
+    baselineProfileOutputDir = "baselineProfiles"
+    mergeIntoMain = true
+}
+
 dependencies {
+    baselineProfile(projects.baselineProfile)
+
     implementation(projects.i18n)
     // KMK -->
     implementation(projects.i18nKmk)
@@ -191,6 +237,9 @@ dependencies {
     // SY -->
     implementation(projects.i18nSy)
     // SY <--
+    implementation(projects.icons.customMaterialSymbols)
+    implementation(projects.icons.materialSymbols)
+    implementation(projects.icons.simpleIcons)
     implementation(projects.core.archive)
     implementation(projects.core.common)
     implementation(projects.coreMetadata)
@@ -202,32 +251,38 @@ dependencies {
     implementation(projects.presentationWidget)
     implementation(projects.telemetry)
 
+    implementation(projects.core.metro)
+    implementation(libs.metro.runtime)
+    implementation(libs.metrox.viewmodel)
+    implementation(libs.metrox.viewmodel.compose)
+
     // Compose
     implementation(compose.activity)
     implementation(compose.foundation)
     implementation(compose.material3.core)
-    implementation(compose.material.icons)
     implementation(compose.animation)
     implementation(compose.animation.graphics)
     debugImplementation(compose.ui.tooling)
     implementation(compose.ui.tooling.preview)
     implementation(compose.ui.util)
+    implementation(androidx.navigationevent)
 
     implementation(androidx.interpolator)
 
     implementation(androidx.paging.runtime)
     implementation(androidx.paging.compose)
 
-    implementation(libs.bundles.sqlite)
+    implementation(androidx.sqlite.bundled)
     // SY -->
     implementation(sylibs.sqlcipher)
     // SY <--
 
     implementation(kotlinx.reflect)
-    implementation(kotlinx.immutables)
 
     implementation(platform(kotlinx.coroutines.bom))
     implementation(kotlinx.bundles.coroutines)
+
+    implementation(libs.sqldelight.async)
 
     // AndroidX libraries
     implementation(androidx.annotation)
@@ -255,6 +310,7 @@ dependencies {
 
     // Data serialization (JSON, protobuf, xml)
     implementation(kotlinx.bundles.serialization)
+    implementation(kotlinx.datetime)
 
     // HTML parser
     implementation(libs.jsoup)
@@ -276,6 +332,8 @@ dependencies {
         exclude(module = "image-decoder")
     }
     implementation(libs.image.decoder)
+
+    implementation(libs.webgpuviewer)
 
     // UI libraries
     implementation(libs.material)
@@ -312,6 +370,10 @@ dependencies {
     // String similarity
     implementation(libs.stringSimilarity)
 
+    // GraphQL generation
+    implementation(libs.apollo)
+    implementation(libs.apollo.adapters)
+
     // Tests
     testImplementation(libs.bundles.test)
     testRuntimeOnly(libs.junit.platform.launcher)
@@ -337,11 +399,95 @@ dependencies {
     implementation(sylibs.zxing.android.embedded)
 }
 
+apollo {
+    val schemaBasePath = "src/main/graphql/mihon/graphql"
+    service("anilist") {
+        packageName.set("mihon.graphql.anilist")
+        val srcDir = "$schemaBasePath/anilist"
+        srcDir(file(srcDir))
+
+        introspection {
+            endpointUrl.set("https://graphql.anilist.co")
+            schemaFile.set(file("$srcDir/anilist.graphqls"))
+        }
+
+        // ISO 3166-1 alpha-2 country code
+        mapScalarToKotlinString("CountryCode")
+    }
+
+    service("kitsu") {
+        packageName.set("mihon.graphql.kitsu")
+        val srcDir = "$schemaBasePath/kitsu"
+        srcDir(file(srcDir))
+
+        introspection {
+            // Kitsu doesn't like requests without a UA
+            // KUN -->
+            headers.put(
+                "User-Agent",
+                "Komikun v${android.defaultConfig.versionName} (${android.defaultConfig.applicationId})",
+            )
+            // KUN <--
+            endpointUrl.set("https://kitsu.app/api/graphql")
+            schemaFile.set(file("$srcDir/kitsu.graphqls"))
+        }
+
+        // A date, expressed as an ISO8601 string
+        mapScalarToKotlinString("Date")
+        // An ISO 8601-encoded datetime
+        mapScalar("ISO8601DateTime", "kotlin.time.Instant", "com.apollographql.adapter.core.KotlinInstantAdapter")
+        // A loose key-value map in GraphQL
+        mapScalar(
+            "Map",
+            "kotlin.collections.Map<String, Any?>",
+            "mihon.graphql.kitsu.adapter.KitsuMapAdapter",
+        )
+    }
+
+    service("shikimori") {
+        packageName.set("mihon.graphql.shikimori")
+        val srcDir = "$schemaBasePath/shikimori"
+        srcDir(file(srcDir))
+
+        introspection {
+            endpointUrl.set("https://shikimori.io/api/graphql")
+            schemaFile.set(file("$srcDir/shikimori.graphqls"))
+        }
+
+        // An ISO 8601-encoded date
+        mapScalarToKotlinString("ISO8601Date")
+    }
+
+    service("suwayomi") {
+        packageName.set("mihon.graphql.suwayomi")
+        val srcDir = "$schemaBasePath/suwayomi"
+        srcDir(file(srcDir))
+
+        introspection {
+            endpointUrl.set("http://localhost:4567/api/graphql")
+            schemaFile.set(file("$srcDir/suwayomi.graphqls"))
+        }
+    }
+}
+
 androidComponents {
     onVariants(selector().withFlavor("default" to "standard")) {
         // Only excluding in standard flavor because this breaks
         // Layout Inspector's Compose tree
         it.packaging.resources.excludes.add("META-INF/*.version")
+    }
+
+    onVariants { variant ->
+        val resSource = variant.sources.res ?: return@onVariants
+
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val replaceShortcutsPlaceholderTask = tasks.register<ReplaceShortcutsPlaceholderTask>(
+            "replace${variantName}ShortcutPlaceholder",
+        ) {
+            applicationId.set(variant.applicationId)
+            shortcutsFile.set(layout.projectDirectory.file("src/main/shortcuts.xml"))
+        }
+        resSource.addGeneratedSourceDirectory(replaceShortcutsPlaceholderTask) { it.outputDir }
     }
 }
 

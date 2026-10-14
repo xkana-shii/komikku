@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +27,7 @@ import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.BuildConfig
-import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
+import eu.kanade.tachiyomi.data.updater.RELEASE_URL
 import eu.kanade.tachiyomi.ui.more.ComingUpdatesScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.WhatsNewScreen
@@ -37,12 +35,24 @@ import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
-import eu.kanade.tachiyomi.util.system.isPreviewBuildType
+import eu.kanade.tachiyomi.util.system.isFossBuildType
+import eu.kanade.tachiyomi.util.system.isNightlyBuildType
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.updaterEnabled
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import logcat.LogPriority
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Public
+import mihon.icons.simpleicons.Discord
+import mihon.icons.simpleicons.Github
+import mihon.icons.simpleicons.SimpleIcons
+import tachiyomi.core.common.Constants
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -53,14 +63,9 @@ import tachiyomi.presentation.core.components.LinkIcon
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
-import tachiyomi.presentation.core.icons.CustomIcons
-import tachiyomi.presentation.core.icons.Discord
-import tachiyomi.presentation.core.icons.Github
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlin.time.Instant
 
 class AboutScreen : Screen() {
 
@@ -72,6 +77,7 @@ class AboutScreen : Screen() {
         val handleBack = LocalBackPress.current
         val navigator = LocalNavigator.currentOrThrow
         var isCheckingUpdates by remember { mutableStateOf(false) }
+        val crashLogUtil = remember { context.appGraph.crashLogUtil }
 
         // KMK -->
         var isCheckingWhatsNew by remember { mutableStateOf(false) }
@@ -99,7 +105,7 @@ class AboutScreen : Screen() {
                         title = stringResource(MR.strings.version),
                         subtitle = getVersionName(withBuildDate = true),
                         onPreferenceClick = {
-                            val deviceInfo = CrashLogUtil(context).getDebugInfo()
+                            val deviceInfo = crashLogUtil.getDebugInfo()
                             context.copyToClipboard("Debug information", deviceInfo)
                         },
                     )
@@ -257,32 +263,32 @@ class AboutScreen : Screen() {
                     ) {
                         LinkIcon(
                             label = stringResource(MR.strings.website),
-                            icon = Icons.Outlined.Public,
+                            icon = MaterialSymbols.Rounded.Public,
                             url = "https://komikku-app.github.io",
                         )
                         LinkIcon(
                             label = "Discord",
-                            icon = CustomIcons.Discord,
+                            icon = SimpleIcons.Discord,
                             url = "https://discord.gg/85jB7V5AJR",
                         )
                         // LinkIcon(
                         //     label = "X",
-                        //     icon = CustomIcons.X,
+                        //     icon = SimpleIcons.X,
                         //     url = "https://x.com/mihonapp",
                         // )
                         // LinkIcon(
                         //     label = "Facebook",
-                        //     icon = CustomIcons.Facebook,
+                        //     icon = SimpleIcons.Facebook,
                         //     url = "https://facebook.com/mihonapp",
                         // )
                         // LinkIcon(
                         //     label = "Reddit",
-                        //     icon = CustomIcons.Reddit,
+                        //     icon = SimpleIcons.Reddit,
                         //     url = "https://www.reddit.com/r/mihonapp",
                         // )
                         LinkIcon(
                             label = "GitHub",
-                            icon = CustomIcons.Github,
+                            icon = SimpleIcons.Github,
                             url = "https://github.com/komikku-app",
                         )
                     }
@@ -302,14 +308,10 @@ class AboutScreen : Screen() {
         peekIntoPreview: Boolean = false,
         // KMK <--
     ) {
-        val updateChecker = AppUpdateChecker(
-            // KMK -->
-            peekIntoPreview = peekIntoPreview,
-            // KMK <--
-        )
-        withUIContext {
+        val updateChecker = context.appGraph.updateChecker
+        withContext(Dispatchers.Main) {
             try {
-                when (val result = withIOContext { updateChecker.checkForUpdate(context, forceCheck = true) }) {
+                when (val result = updateChecker.checkForUpdate(context, forceCheck = true, peekIntoPreview = peekIntoPreview)) {
                     is GetApplicationRelease.Result.NewUpdate -> {
                         onAvailableUpdate(result)
                     }
@@ -336,7 +338,7 @@ class AboutScreen : Screen() {
             onAvailableUpdate: (GetApplicationRelease.Result.NewUpdate) -> Unit,
             onFinish: () -> Unit,
         ) {
-            val updateChecker = AppUpdateChecker()
+            val updateChecker = context.appGraph.updateChecker
             withUIContext {
                 try {
                     when (val result = withIOContext { updateChecker.getReleaseNotes() }) {
@@ -368,8 +370,8 @@ class AboutScreen : Screen() {
                     }
                 }
 
-                isPreviewBuildType -> {
-                    "Beta r${BuildConfig.COMMIT_COUNT}".let {
+                isNightlyBuildType -> {
+                    "Nightly r${BuildConfig.COMMIT_COUNT}".let {
                         if (withBuildDate) {
                             "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
                         } else {
@@ -378,8 +380,12 @@ class AboutScreen : Screen() {
                     }
                 }
 
+                // KUN -->
+                // This fork has no stable channel: every release is a bleeding-edge
+                // prerelease, so don't label the tagged build as "Stable".
                 else -> {
-                    "Stable ${BuildConfig.VERSION_NAME}".let {
+                    val channel = if (isFossBuildType) "FOSS" else "Release"
+                    "$channel ${BuildConfig.VERSION_NAME}".let {
                         if (withBuildDate) {
                             "$it (${getFormattedBuildTime()})"
                         } else {
@@ -387,18 +393,17 @@ class AboutScreen : Screen() {
                         }
                     }
                 }
+                // KUN <--
             }
         }
 
         internal fun getFormattedBuildTime(): String {
             return try {
-                LocalDateTime.ofInstant(
-                    Instant.parse(BuildConfig.BUILD_TIME),
-                    ZoneId.systemDefault(),
-                )
+                Instant.parse(BuildConfig.BUILD_TIME)
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
                     .toDateTimestampString(
                         UiPreferences.dateFormat(
-                            Injekt.get<UiPreferences>().dateFormat().get(),
+                            Injekt.get<Context>().appGraph.uiPreferences.dateFormat.get(),
                         ),
                     )
             } catch (_: Exception) {

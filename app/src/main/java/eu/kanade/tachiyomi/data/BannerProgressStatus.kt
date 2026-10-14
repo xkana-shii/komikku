@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.data
 
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +34,14 @@ open class BannerProgressStatus {
     }
 }
 
+@Inject
+@SingleIn(AppScope::class)
 class LibraryUpdateStatus : BannerProgressStatus()
+
+@Inject
+@SingleIn(AppScope::class)
 class SyncStatus : BannerProgressStatus()
+
+@Inject
+@SingleIn(AppScope::class)
 class BackupRestoreStatus : BannerProgressStatus()

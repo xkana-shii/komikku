@@ -154,6 +154,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <intent-filter android:label="@string/app_settings">
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
 
             <meta-data
                 android:name="android.app.searchable"
@@ -203,8 +207,21 @@
 
                 <data android:host="anilist-auth" />
                 <data android:host="bangumi-auth" />
+                <data android:host="mangabaka-auth" />
                 <data android:host="myanimelist-auth" />
                 <data android:host="shikimori-auth" />
+                <data android:host="hikka-auth" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Comick requires native reverse-domain schemes  -->
+                <data android:scheme="app.mihon" />
+                <data android:host="comick-auth" />
             </intent-filter>
         </activity>
         <activity

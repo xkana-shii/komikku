@@ -95,7 +95,7 @@ body:
           required: true
         - label: I have gone through the [FAQ](https://komikku-app.github.io/docs/faq/general) and [troubleshooting guide](https://komikku-app.github.io/docs/guides/troubleshooting/).
           required: true
-        - label: I have updated the app to version **[latest](https://github.com/komikku-app/komikku/releases/latest)**.
+        - label: I have updated the app to version **[latest](https://github.com/komi-kun/komi-kun/releases/latest)**.
           required: true
         - label: I have filled out all of the requested information in this form, including specific version numbers.
           required: true
@@ -115,4 +115,4 @@ body:
         Add a :+1: [reaction] to [issues you find important].
 
         [reaction]: https://github.blog/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/
-        [issues you find important]: https://github.com/komikku-app/komikku/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc
+        [issues you find important]: https://github.com/komi-kun/komi-kun/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc

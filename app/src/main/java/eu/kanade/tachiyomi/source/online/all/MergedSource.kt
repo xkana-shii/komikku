@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.source.online.all
 
+import android.content.Context
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.source.Source
@@ -16,6 +17,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import mihon.app.di.appGraph
 import mihon.domain.chapter.interactor.FilterChaptersForDownload
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import okhttp3.Response
@@ -27,16 +29,15 @@ import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.injectLazy
 
-class MergedSource : HttpSource() {
-    private val getManga: GetManga by injectLazy()
-    private val getMergedReferencesById: GetMergedReferencesById by injectLazy()
-    private val networkToLocalManga: NetworkToLocalManga by injectLazy()
-    private val updateMangaFromRemote: UpdateMangaFromRemote by injectLazy()
-    private val sourceManager: SourceManager by injectLazy()
-    private val downloadManager: DownloadManager by injectLazy()
-    private val filterChaptersForDownload: FilterChaptersForDownload by injectLazy()
+class MergedSource(private val context: Context) : HttpSource() {
+    private val getManga: GetManga get() = context.appGraph.getManga
+    private val getMergedReferencesById: GetMergedReferencesById get() = context.appGraph.getMergedReferencesById
+    private val networkToLocalManga: NetworkToLocalManga get() = context.appGraph.networkToLocalManga
+    private val updateMangaFromRemote: UpdateMangaFromRemote get() = context.appGraph.updateMangaFromRemote
+    private val sourceManager: SourceManager get() = context.appGraph.sourceManager
+    private val downloadManager: DownloadManager get() = context.appGraph.downloadManager
+    private val filterChaptersForDownload: FilterChaptersForDownload get() = context.appGraph.filterChaptersForDownload
 
     override val id: Long = MERGED_SOURCE_ID
 
@@ -44,7 +45,7 @@ class MergedSource : HttpSource() {
 
     @Deprecated("Use the combined suspend API instead", replaceWith = ReplaceWith("getMangaUpdate"))
     override fun fetchChapterList(manga: SManga) = throw UnsupportedOperationException()
-    override suspend fun getImage(page: Page): Response = throw UnsupportedOperationException()
+    override suspend fun getImage(page: Page, existingSize: Long): Response = throw UnsupportedOperationException()
 
     @Deprecated("Use the suspend API instead", replaceWith = ReplaceWith("getImageUrl"))
     override fun fetchImageUrl(page: Page) = throw UnsupportedOperationException()

@@ -6,12 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
+import dev.zacsweers.metro.Inject
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
@@ -27,31 +31,27 @@ import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notify
-import kotlinx.coroutines.DelicateCoroutinesApi
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
-import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.math.RoundingMode
 import java.text.NumberFormat
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
-@OptIn(DelicateCoroutinesApi::class)
+@Inject
 class LibraryUpdateNotifier(
     private val context: Context,
-
-    private val securityPreferences: SecurityPreferences = Injekt.get(),
-    private val sourceManager: SourceManager = Injekt.get(),
-) {
+    private val securityPreferences: SecurityPreferences,
+    private val sourceManager: SourceManager,
     // KMK -->
-    private val libraryUpdateStatus: LibraryUpdateStatus = Injekt.get()
+    private val libraryUpdateStatus: LibraryUpdateStatus,
     // KMK <--
+) {
 
     private val percentFormatter = NumberFormat.getPercentInstance().apply {
         roundingMode = RoundingMode.DOWN
@@ -78,23 +78,39 @@ class LibraryUpdateNotifier(
     val progressNotificationBuilder by lazy {
         context.notificationBuilder(Notifications.CHANNEL_LIBRARY_PROGRESS) {
             setContentTitle(context.stringResource(MR.strings.app_name))
-            setSmallIcon(R.drawable.ic_refresh_24dp)
+            setSmallIcon(MaterialSymbolsR.drawable.rounded_refresh)
             setColor(ContextCompat.getColor(context, R.color.ic_launcher))
             setLargeIcon(notificationBitmap)
             setOngoing(true)
             setOnlyAlertOnce(true)
-            addAction(R.drawable.ic_close_24dp, context.stringResource(MR.strings.action_cancel), cancelIntent)
+            addAction(
+                MaterialSymbolsR.drawable.rounded_close,
+                context.stringResource(MR.strings.action_cancel),
+                cancelIntent,
+            )
         }
     }
 
+    private var lastProgressNotificationTime = 0L
+
     /**
      * Shows the notification containing the currently updating manga and the progress.
+     *
+     * Called from several update coroutines at once, so it shares the builder under a lock and skips updates that
+     * come faster than the system would show them anyway.
      *
      * @param manga the manga that are being updated.
      * @param current the current progress.
      * @param total the total progress.
      */
+    // KUN --> stays suspend: [libraryUpdateStatus.updateProgress] below suspends, so upstream's
+    // @Synchronized cannot be applied; the throttle below is kept
+    // KUN <--
     suspend fun showProgressNotification(manga: List<Manga>, current: Int, total: Int) {
+        val now = SystemClock.elapsedRealtime()
+        if (current < total && now - lastProgressNotificationTime < NOTIF_PROGRESS_INTERVAL_MS) return
+        lastProgressNotificationTime = now
+
         progressNotificationBuilder
             .setContentTitle(
                 context.stringResource(
@@ -107,7 +123,7 @@ class LibraryUpdateNotifier(
         libraryUpdateStatus.updateProgress(current.toFloat() / total)
         // KMK <--
 
-        if (!securityPreferences.hideNotificationContent().get()) {
+        if (!securityPreferences.hideNotificationContent.get()) {
             val updatingText = manga.joinToString("\n") { it.title.chop(40) }
             progressNotificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(updatingText))
         }
@@ -123,10 +139,10 @@ class LibraryUpdateNotifier(
     /**
      * Warn when excessively checking any single source.
      */
-    fun showQueueSizeWarningNotificationIfNeeded(mangaToUpdate: List<LibraryManga>) {
+    suspend fun showQueueSizeWarningNotificationIfNeeded(mangaToUpdate: List<LibraryManga>) {
         val maxUpdatesFromSource = mangaToUpdate
             .groupBy { it.manga.source }
-            .filterKeys { sourceManager.get(it) !is UnmeteredSource }
+            .filter { (sourceId, _) -> sourceManager.get(sourceId) !is UnmeteredSource }
             .maxOfOrNull { it.value.size } ?: 0
 
         if (maxUpdatesFromSource <= MANGA_PER_SOURCE_QUEUE_WARNING_THRESHOLD) {
@@ -141,7 +157,7 @@ class LibraryUpdateNotifier(
             setStyle(
                 NotificationCompat.BigTextStyle().bigText(context.stringResource(MR.strings.notification_size_warning)),
             )
-            setSmallIcon(R.drawable.ic_warning_white_24dp)
+            setSmallIcon(MaterialSymbolsR.drawable.rounded_filled_warning)
             setColor(ContextCompat.getColor(context, R.color.ic_launcher))
             setTimeoutAfter(Downloader.WARNING_NOTIF_TIMEOUT_MS)
             setContentIntent(NotificationHandler.openUrl(context, HELP_WARNING_URL))
@@ -176,14 +192,14 @@ class LibraryUpdateNotifier(
      *
      * @param updates a list of manga with new updates.
      */
-    fun showUpdateNotifications(updates: List<Pair<Manga, Array<Chapter>>>) {
+    suspend fun showUpdateNotifications(updates: List<Pair<Manga, Array<Chapter>>>) {
         // Parent group notification
         context.notify(
             Notifications.ID_NEW_CHAPTERS,
             Notifications.CHANNEL_NEW_CHAPTERS,
         ) {
             setContentTitle(context.stringResource(MR.strings.notification_new_chapters))
-            if (updates.size == 1 && !securityPreferences.hideNotificationContent().get()) {
+            if (updates.size == 1 && !securityPreferences.hideNotificationContent.get()) {
                 setContentText(updates.first().first.title.chop(NOTIF_TITLE_MAX_LEN))
             } else {
                 setContentText(
@@ -194,7 +210,7 @@ class LibraryUpdateNotifier(
                     ),
                 )
 
-                if (!securityPreferences.hideNotificationContent().get()) {
+                if (!securityPreferences.hideNotificationContent.get()) {
                     setStyle(
                         NotificationCompat.BigTextStyle().bigText(
                             updates.joinToString("\n") {
@@ -219,17 +235,15 @@ class LibraryUpdateNotifier(
         }
 
         // Per-manga notification
-        if (!securityPreferences.hideNotificationContent().get()) {
-            launchUI {
-                context.notify(
-                    updates.map { (manga, chapters) ->
-                        NotificationManagerCompat.NotificationWithIdAndTag(
-                            manga.id.hashCode(),
-                            createNewChaptersNotification(manga, chapters),
-                        )
-                    },
-                )
-            }
+        if (!securityPreferences.hideNotificationContent.get()) {
+            context.notify(
+                updates.map { (manga, chapters) ->
+                    NotificationManagerCompat.NotificationWithIdAndTag(
+                        manga.id.hashCode(),
+                        createNewChaptersNotification(manga, chapters),
+                    )
+                },
+            )
         }
     }
 
@@ -269,7 +283,7 @@ class LibraryUpdateNotifier(
 
             // Mark chapters as read action
             addAction(
-                R.drawable.ic_done_24dp,
+                MaterialSymbolsR.drawable.rounded_check,
                 context.stringResource(MR.strings.action_mark_as_read),
                 NotificationReceiver.markAsReadPendingBroadcast(
                     context,
@@ -280,7 +294,7 @@ class LibraryUpdateNotifier(
             )
             // View chapters action
             addAction(
-                R.drawable.ic_book_24dp,
+                MaterialSymbolsR.drawable.rounded_book,
                 context.stringResource(MR.strings.action_view_chapters),
                 NotificationReceiver.openChapterPendingActivity(
                     context,
@@ -410,3 +424,4 @@ private const val NOTIF_MAX_CHAPTERS = 5
 private const val NOTIF_TITLE_MAX_LEN = 45
 private const val NOTIF_ICON_SIZE = 192
 private const val MANGA_PER_SOURCE_QUEUE_WARNING_THRESHOLD = 60
+private const val NOTIF_PROGRESS_INTERVAL_MS = 500L

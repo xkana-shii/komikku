@@ -37,7 +37,20 @@ jobs:
           java-version-file: .github/.java-version
           distribution: temurin
 
+      - name: Check optional secrets
+        id: opt_secrets
+        run: |
+          echo "google_services=${{ secrets.GOOGLE_SERVICES_JSON != '' }}" >> "$GITHUB_OUTPUT"
+          echo "client_secrets=${{ secrets.GOOGLE_CLIENT_SECRETS_JSON != '' }}" >> "$GITHUB_OUTPUT"
+          echo "signing_key=${{ secrets.SIGNING_KEY != '' }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ secrets.GOOGLE_SERVICES_JSON != '' }}" = "true" ]; then
+            echo "telemetry_flag=" >> "$GITHUB_OUTPUT"
+          else
+            echo "telemetry_flag=-Pinclude-telemetry=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Write google-services.json
+        if: steps.opt_secrets.outputs.google_services == 'true'
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/google-services.json
@@ -45,6 +58,7 @@ jobs:
           write-mode: overwrite
 
       - name: Write client_secrets.json
+        if: steps.opt_secrets.outputs.client_secrets == 'true'
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/src/main/assets/client_secrets.json
@@ -58,29 +72,39 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        run: ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater
+        run: ./gradlew assembleNightly -Pdist=ci ${{ steps.opt_secrets.outputs.telemetry_flag }}
 
       - name: Run unit tests
         id: unit_tests
-        run: ./gradlew testReleaseUnitTest
+        run: ./gradlew testDebugUnitTest
+
+      - name: Verify SQLDelight migrations
+        run: ./gradlew :data:verifyDebugDatabaseMigration
 
       - name: Upload test report
         if: steps.unit_tests.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-report-${{ github.sha }}
-          path: app/build/reports/tests/testReleaseUnitTest
+          path: app/build/reports/tests/testDebugUnitTest
 
       - name: Sign APK
+        if: steps.opt_secrets.outputs.signing_key == 'true'
         uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
         with:
-          releaseDirectory: app/build/outputs/apk/preview
+          releaseDirectory: app/build/outputs/apk/nightly
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
         env:
           BUILD_TOOLS_VERSION: '35.0.1'
+
+      - name: Signed File name
+        id: signed_filename
+        if: steps.opt_secrets.outputs.signing_key == 'true'
+        run: |
+          echo "SIGNED_TRAIL=-signed" >> $GITHUB_OUTPUT
 
       - name: Rename apk
         id: current_commit
@@ -92,7 +116,7 @@ jobs:
           echo "VERSION_TAG=$version_tag" >> $GITHUB_OUTPUT
           echo "COMMIT_COUNT=$commit_count"
           echo "COMMIT_COUNT=$commit_count" >> $GITHUB_OUTPUT
-          mv app/build/outputs/apk/preview/app-universal-preview-signed.apk Komikku-$version_tag-r$commit_count.apk
+          mv app/build/outputs/apk/nightly/app-universal-nightly${{ steps.signed_filename.outputs.SIGNED_TRAIL }}.apk Komikku-$version_tag-r$commit_count.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -104,4 +128,4 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mapping-${{ github.sha }}
-          path: app/build/outputs/mapping/preview
+          path: app/build/outputs/mapping/nightly

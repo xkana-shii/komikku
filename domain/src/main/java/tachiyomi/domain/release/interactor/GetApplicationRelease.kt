@@ -1,36 +1,24 @@
 package tachiyomi.domain.release.interactor
 
-import tachiyomi.core.common.preference.Preference
-import tachiyomi.core.common.preference.PreferenceStore
+import dev.zacsweers.metro.Inject
 import tachiyomi.domain.release.model.Release
 import tachiyomi.domain.release.service.ReleaseService
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
+@Inject
 class GetApplicationRelease(
     private val service: ReleaseService,
-    private val preferenceStore: PreferenceStore,
 ) {
-
-    private val lastChecked: Preference<Long> by lazy {
-        preferenceStore.getLong(Preference.appStateKey("last_app_check"), 0)
-    }
-
     suspend fun await(arguments: Arguments): Result {
-        val now = Instant.now()
-
-        // Limit checks to once every 3 days at most
-        val nextCheckTime = Instant.ofEpochMilli(lastChecked.get()).plus(2, ChronoUnit.DAYS)
-        if (!arguments.forceCheck && now.isBefore(nextCheckTime)) {
-            return Result.NoNewUpdate
-        }
-
         // KMK -->
         val releases = service.releaseNotes(arguments)
             .filter {
-                !it.preRelease &&
+                // KUN -->
+                // Bleeding-edge fork: prereleases are the releases users get, so do
+                // not filter them out; only keep the tag family of this build.
+                isSameReleaseFamily(arguments.isNightly, it.version) &&
+                    // KUN <--
                     isNewVersion(
-                        arguments.isPreview,
+                        arguments.isNightly,
                         arguments.commitCount,
                         arguments.versionName,
                         it.version,
@@ -40,11 +28,9 @@ class GetApplicationRelease(
         val latest = releases.getLatest() ?: return Result.NoNewUpdate
         // KMK <--
 
-        lastChecked.set(now.toEpochMilli())
-
         // Check if latest version is different from current version
         val isNewVersion = isNewVersion(
-            isPreview = arguments.isPreview,
+            isNightly = arguments.isNightly,
             commitCount = arguments.commitCount,
             versionName = arguments.versionName,
             versionTag = latest.version,
@@ -58,36 +44,49 @@ class GetApplicationRelease(
     // KMK -->
     suspend fun awaitReleaseNotes(arguments: Arguments): Result {
         val releases = service.releaseNotes(arguments)
-            .filter { !it.preRelease }
+            // KUN -->
+            .filter { isSameReleaseFamily(arguments.isNightly, it.version) }
+        // KUN <--
 
         val latest = releases.getLatest() ?: return Result.NoNewUpdate
         return Result.NewUpdate(latest)
     }
+
+    // KUN -->
+    /**
+     * Bleeding-edge fork: there is a single repository, and nightly (`r<count>`) and
+     * tagged (`v<semver>`) builds publish prereleases side by side, so only tags that
+     * belong to the current build's family are eligible. This keeps a release build
+     * from offering a nightly APK (a different application id) and vice versa.
+     */
+    private fun isSameReleaseFamily(isNightly: Boolean, versionTag: String): Boolean =
+        if (isNightly) versionTag.startsWith("r") else versionTag.startsWith("v")
+    // KUN <--
     // KMK <--
 
     /**
-     * [isPreview] is if current version is Preview (beta) build
+     * [isNightly] is if current version is Nightly build
      *
      * [versionTag] is the version of new release
      *
      * Release (stable) version will compare with current's [versionName] ("v0.1.2")
      *
-     * Preview (beta) version will compare with current's [commitCount] ("r1234")
+     * Nightly version will compare with current's [commitCount] ("r1234")
      */
     private fun isNewVersion(
-        isPreview: Boolean,
+        isNightly: Boolean,
         commitCount: Int,
         versionName: String,
         versionTag: String,
     ): Boolean {
         // Removes prefixes like "r" or "v"
         val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
-        return if (isPreview) {
-            // Preview builds: based on releases in "komikku-app/komikku-preview" repo
+        return if (isNightly) {
+            // Nightly builds: based on releases in "komi-kun/komi-kun" repo
             // tagged as something like "r1234"
             newVersion.toInt() > commitCount
         } else {
-            // Release builds: based on releases in "komikku-app/komikku" repo
+            // Release builds: based on releases in "komi-kun/komi-kun" repo
             // tagged as something like "v0.1.2"
             val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
 
@@ -107,8 +106,8 @@ class GetApplicationRelease(
 
     data class Arguments(
         val isFoss: Boolean,
-        /** If current version is Preview (beta) build */
-        val isPreview: Boolean,
+        /** If current version is Nightly build */
+        val isNightly: Boolean,
         /** Commit count of current version */
         val commitCount: Int,
         /** Current version name, could be version tag (v0.1.2) or commit count (r1234) */
@@ -126,7 +125,7 @@ class GetApplicationRelease(
     }
 }
 
-// KMK --.
+// KMK -->
 internal fun List<Release>.getLatest(): Release? {
     return firstOrNull()
         ?.copy(

@@ -11,8 +11,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -25,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,19 +35,18 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
-import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.util.system.launchRequestPackageInstallsPermission
 import eu.kanade.tachiyomi.util.system.telemetryIncluded
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Check
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-import uy.kohesive.injekt.injectLazy
 
 internal class PermissionStep : OnboardingStep {
-
-    private val privacyPreferences: PrivacyPreferences by injectLazy()
 
     private var notificationGranted by mutableStateOf(false)
     private var batteryGranted by mutableStateOf(false)
@@ -62,6 +60,7 @@ internal class PermissionStep : OnboardingStep {
     @Composable
     override fun Content() {
         val context = LocalContext.current
+        val privacyPreferences = remember { context.appGraph.privacyPreferences }
         val lifecycleOwner = LocalLifecycleOwner.current
 
         val installGranted = rememberRequestPackageInstallsPermissionState()
@@ -185,7 +184,7 @@ internal class PermissionStep : OnboardingStep {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
-            val crashlyticsPref = privacyPreferences.crashlytics()
+            val crashlyticsPref = privacyPreferences.crashlytics
             val crashlytics by crashlyticsPref.collectAsState()
             PermissionSwitch(
                 title = stringResource(MR.strings.onboarding_permission_crashlytics),
@@ -239,7 +238,7 @@ internal class PermissionStep : OnboardingStep {
                 ) {
                     if (granted) {
                         Icon(
-                            imageVector = Icons.Default.Check,
+                            imageVector = MaterialSymbols.Rounded.Check,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )

@@ -14,7 +14,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.databinding.DescriptionAdapterEhBinding
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel.State
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.dpToPx
 import exh.metadata.MetadataUtil
@@ -27,6 +27,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.icons.FlagEmoji.Companion.getEmojiLangFlag
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 @Composable
 fun EHentaiDescription(
@@ -75,7 +76,7 @@ fun EHentaiDescription(
 
             binding.favorites.text = (meta.favorites ?: 0).toString()
             // KMK -->
-            binding.favorites.bindDrawable(context, R.drawable.ic_book_24dp, iconColor)
+            binding.favorites.bindDrawable(context, MaterialSymbolsR.drawable.rounded_book, iconColor)
             binding.favorites.setTextColor(textColor)
             // KMK <--
 
@@ -124,7 +125,7 @@ fun EHentaiDescription(
             binding.ratingBar.supportSecondaryProgressTintList = ColorStateList.valueOf(ratingBarSecondaryColor)
             binding.rating.setTextColor(textColor)
 
-            binding.moreInfo.bindDrawable(context, R.drawable.ic_info_24dp, iconColor)
+            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info, iconColor)
             binding.moreInfo.text = context.stringResource(SYMR.strings.more_info)
             binding.moreInfo.setTextColor(iconColor)
             // KMK <--

@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -34,20 +33,21 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Close
 import tachiyomi.presentation.core.components.SettingsItemsPaddings
 import tachiyomi.presentation.core.util.runOnEnterKeyPressed
 
 @Composable
 fun AutoCompleteItem(
     name: String,
-    state: ImmutableList<String>,
+    state: List<String>,
     hint: String,
-    values: ImmutableList<String>,
-    skipAutoFillTags: ImmutableList<String>,
-    validPrefixes: ImmutableList<String>,
+    values: List<String>,
+    skipAutoFillTags: List<String>,
+    validPrefixes: List<String>,
     onChange: (List<String>) -> Unit,
 ) {
     Column(
@@ -100,7 +100,7 @@ fun AutoCompleteItem(
                         )
                     },
                     trailingIcon = {
-                        Icon(Icons.Default.Close, contentDescription = it)
+                        Icon(MaterialSymbols.Rounded.Close, contentDescription = it)
                     },
                     colors = InputChipDefaults.inputChipColors(
                         containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
@@ -116,7 +116,7 @@ fun AutoCompleteItem(
 fun AutoCompleteTextField(
     label: String? = null,
     placeholder: String? = null,
-    values: ImmutableList<String>,
+    values: List<String>,
     onValueFilter: ((String) -> (Pair<(String) -> Boolean, String?>)),
     onSubmit: (String) -> Boolean,
 ) {

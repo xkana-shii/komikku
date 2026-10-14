@@ -5,14 +5,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import eu.kanade.domain.source.model.installedExtension
 import eu.kanade.tachiyomi.util.system.LocaleHelper
+import mihon.domain.extension.model.ContentWarning
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
@@ -45,7 +48,7 @@ fun BaseSourceItem(
 }
 
 private val defaultIcon: @Composable RowScope.(Source) -> Unit = { source ->
-    SourceIcon(source = source)
+    SourceIcon(source = source, modifier = Modifier.size(48.dp))
 }
 
 private val defaultContent: @Composable RowScope.(
@@ -90,9 +93,9 @@ private val defaultContent: @Composable RowScope.(
             }
 
             // KMK -->
-            if (source.installedExtension?.isNsfw == true) {
+            if (source.installedExtension?.contentWarning?.let { it != ContentWarning.SAFE } == true) {
                 Text(
-                    text = stringResource(MR.strings.ext_nsfw_short).uppercase(),
+                    text = stringResource(MR.strings.ext_content_warning_nsfw).uppercase(),
                     color = MaterialTheme.colorScheme.error,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

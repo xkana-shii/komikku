@@ -36,6 +36,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix chapter's `memo` field not being updated for existing chapters ([@cuong-tran](https://github.com/cuong-tran)) ([#3538](https://github.com/mihonapp/mihon/pull/3538))
 - Fix app not reading `tachiyomix.extensionLib` extension metadata ([@AntsyLich](https://github.com/AntsyLich)) ([#3545](https://github.com/mihonapp/mihon/pull/3545), [#3559](https://github.com/mihonapp/mihon/pull/3559))
 - Fix reader navigator slider steps not updating after changing chapter ([@AntsyLich](https://github.com/AntsyLich)) ([#3549](https://github.com/mihonapp/mihon/pull/3549))
+- Restore TachiyomiSY's EH/NHentai metadata search in the library. `artist:`, `group:`, `parody:`, `character:`, `uploader:`, `female:`, `male:`, `reclass:` and the short aliases `a:`, `c:`/`char:`, `f:`, `g:`/`creator:`/`circle:`, `l:`, `m:`, `p:`/`series:`, `r:` now match the stored EH metadata; they previously matched unrelated manga fields (`artist:`) or nothing. `language:`/`lang:` keep matching the source language. The other Mihon fields (`id:`, `src:`, wildcards, ...) are unchanged.
 
 ## [v0.20.0] - 2026-06-27
 ### Added

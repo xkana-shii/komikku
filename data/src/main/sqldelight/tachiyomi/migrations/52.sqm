@@ -1,0 +1,40 @@
+-- The schema rework (49.sqm) merged favorite_modified_at into user_favorite_at, which is NULL once
+-- a manga is unfavorited. The SyncYomi upload queries therefore stopped seeing library removals and
+-- the server resurrected them on the next sync. Restore the "ever favorited" marker: a timestamp
+-- stamped on every favorite add/remove and never reset.
+
+ALTER TABLE manga ADD COLUMN favorite_modified_at INTEGER;
+
+-- A currently favorited manga's user_favorite_at (epoch millis) is the only recoverable value, and
+-- favorite_modified_at has always held epoch seconds. Rows that were already unfavorited before this
+-- migration have no recoverable timestamp and stay NULL, so their removal cannot be re-announced;
+-- this only affects entries removed before this build shipped.
+
+-- The backfill must not look like a user edit: keep update_last_modified_at_mangas from stamping
+-- last_modified_at (which would re-upload the whole library and override other devices).
+DROP TRIGGER IF EXISTS update_last_modified_at_mangas;
+UPDATE manga
+SET favorite_modified_at = user_favorite_at / 1000
+WHERE user_favorite_at IS NOT NULL;
+CREATE TRIGGER update_last_modified_at_mangas
+AFTER UPDATE ON manga
+FOR EACH ROW
+WHEN new.is_syncing = 0 AND old.is_syncing = 0
+BEGIN
+  UPDATE manga
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+-- Stamped whenever the favorite flag actually changes and never reset. Mirrors manga.sq's
+-- update_last_favorited_at_mangas (the `IS NOT` comparison is NULL-safe for the nullable column).
+DROP TRIGGER IF EXISTS update_last_favorited_at_mangas;
+CREATE TRIGGER update_last_favorited_at_mangas
+AFTER UPDATE OF user_favorite_at ON manga
+WHEN new.user_favorite_at IS NOT old.user_favorite_at
+    OR (new.user_favorite_at IS NOT NULL AND old.favorite_modified_at IS NULL)
+BEGIN
+  UPDATE manga
+  SET favorite_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;

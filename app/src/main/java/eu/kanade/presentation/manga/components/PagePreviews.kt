@@ -38,8 +38,6 @@ import eu.kanade.domain.manga.model.PagePreview
 import eu.kanade.presentation.manga.MangaScreenItem
 import eu.kanade.tachiyomi.ui.manga.PagePreviewState
 import exh.util.floor
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -65,7 +63,7 @@ private fun PagePreviewLoading(
 @Composable
 private fun PagePreviewRow(
     onOpenPage: (Int) -> Unit,
-    items: ImmutableList<PagePreview>,
+    items: List<PagePreview>,
 ) {
     Row(
         modifier = Modifier
@@ -118,7 +116,7 @@ fun PagePreviews(
                 pagePreviewState.pagePreviews.take(rowCount * itemPerRowCount).chunked(itemPerRowCount).forEach {
                     PagePreviewRow(
                         onOpenPage = onOpenPage,
-                        items = remember(it) { it.toImmutableList() },
+                        items = remember(it) { it.toList() },
                     )
                 }
 
@@ -155,7 +153,7 @@ fun LazyListScope.PagePreviewItems(
             ) {
                 PagePreviewRow(
                     onOpenPage = onOpenPage,
-                    items = remember(it) { it.toImmutableList() },
+                    items = remember(it) { it.toList() },
                 )
             }
             item(

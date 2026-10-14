@@ -4,6 +4,7 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.md.handlers.SimilarHandler
@@ -75,7 +76,7 @@ internal class MangaDexSimilarPagingSource(
     }
     // KMK <--
 
-    override suspend fun requestNextPage(currentPage: Int): MangasPage {
+    override suspend fun requestNextPage(source: Source, currentPage: Int): MangasPage {
         val mangasPage = coroutineScope {
             try {
                 val similarPageDef = async {

@@ -5,13 +5,9 @@ import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.online.UrlImportableSource
 import exh.GalleryAddEvent
-import exh.GalleryAdder
+import mihon.app.di.appGraph
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
-
-private val galleryAdder by lazy {
-    GalleryAdder()
-}
 
 /**
  * A version of fetchSearchManga that supports URL importing
@@ -24,7 +20,7 @@ fun UrlImportableSource.urlImportFetchSearchManga(
     when {
         query.startsWith("http://") || query.startsWith("https://") -> {
             runAsObservable {
-                galleryAdder.addGallery(context, query, false, this@urlImportFetchSearchManga)
+                context.appGraph.galleryAdder.addGallery(context, query, false, this@urlImportFetchSearchManga)
             }
                 .map { res ->
                     MangasPage(
@@ -50,7 +46,7 @@ suspend fun UrlImportableSource.urlImportFetchSearchMangaSuspend(
 ): MangasPage =
     when {
         query.startsWith("http://") || query.startsWith("https://") -> {
-            val res = galleryAdder.addGallery(
+            val res = context.appGraph.galleryAdder.addGallery(
                 context = context,
                 url = query,
                 fav = false,

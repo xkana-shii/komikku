@@ -4,12 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.FlipToBack
-import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -28,9 +22,15 @@ import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
-import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
-import eu.kanade.tachiyomi.ui.history.HistoryScreenModel.HistorySelectionOptions
-import kotlinx.collections.immutable.persistentListOf
+import eu.kanade.tachiyomi.ui.history.HistoryViewModel
+import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
+import kotlinx.datetime.LocalDate
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Checklist
+import mihon.icons.materialsymbols.rounded.DeleteSweep
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.FlipToBack
+import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
@@ -40,17 +40,16 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.active
-import java.time.LocalDate
 
 @Composable
 fun HistoryScreen(
-    state: HistoryScreenModel.State,
+    state: HistoryViewModel.State,
     snackbarHostState: SnackbarHostState,
     onSearchQueryChange: (String?) -> Unit,
     onClickCover: (mangaId: Long) -> Unit,
     onClickResume: (mangaId: Long, chapterId: Long) -> Unit,
     onClickFavorite: (mangaId: Long) -> Unit,
-    onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
+    onDialogChange: (HistoryViewModel.Dialog?) -> Unit,
     // KMK -->
     toggleSelectionMode: () -> Unit,
     onSelectAll: (Boolean) -> Unit,
@@ -74,7 +73,7 @@ fun HistoryScreen(
                     onCancelActionMode = toggleSelectionMode,
                     onClickSelectAll = { onSelectAll(true) },
                     onClickInvertSelection = onInvertSelection,
-                    onClickClearHistory = { onDialogChange(HistoryScreenModel.Dialog.Delete(state.selected)) },
+                    onClickClearHistory = { onDialogChange(HistoryViewModel.Dialog.Delete(state.selected)) },
                 )
                 // KMK <--
                 else -> SearchToolbar(
@@ -83,11 +82,11 @@ fun HistoryScreen(
                     onChangeSearchQuery = onSearchQueryChange,
                     actions = {
                         AppBarActions(
-                            persistentListOf(
+                            listOf(
                                 // KMK -->
                                 AppBar.Action(
                                     title = stringResource(MR.strings.action_filter),
-                                    icon = Icons.Outlined.FilterList,
+                                    icon = MaterialSymbols.Rounded.FilterList,
                                     iconTint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
                                     onClick = onFilterClicked,
                                 ),
@@ -95,7 +94,7 @@ fun HistoryScreen(
                                 AppBar.Action(
                                     title = stringResource(MR.strings.pref_clear_history),
                                     // KMK -->
-                                    icon = Icons.Outlined.Checklist,
+                                    icon = MaterialSymbols.Rounded.Checklist,
                                     onClick = toggleSelectionMode,
                                     // KMK <--
                                 ),
@@ -135,7 +134,7 @@ fun HistoryScreen(
                     contentPadding = contentPadding,
                     onClickCover = { history -> onClickCover(history.mangaId) },
                     onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
-                    onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
+                    onClickDelete = { item -> onDialogChange(HistoryViewModel.Dialog.Delete(item)) },
                     onClickFavorite = { history -> onClickFavorite(history.mangaId) },
                     // KMK -->
                     selectionMode = state.selectionMode,
@@ -151,7 +150,7 @@ fun HistoryScreen(
 @Composable
 private fun HistoryScreenContent(
     // KMK -->
-    state: HistoryScreenModel.State,
+    state: HistoryViewModel.State,
 
     history: List<HistoryUiModel>,
     contentPadding: PaddingValues,
@@ -259,20 +258,20 @@ private fun HistorySelectionToolbar(
         titleContent = { Text(text = "$selectedCount") },
         actions = {
             AppBarActions(
-                persistentListOf(
+                listOf(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_all),
-                        icon = Icons.Outlined.SelectAll,
+                        icon = MaterialSymbols.Rounded.SelectAll,
                         onClick = onClickSelectAll,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_inverse),
-                        icon = Icons.Outlined.FlipToBack,
+                        icon = MaterialSymbols.Rounded.FlipToBack,
                         onClick = onClickInvertSelection,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.pref_clear_history),
-                        icon = Icons.Outlined.DeleteSweep,
+                        icon = MaterialSymbols.Rounded.DeleteSweep,
                         onClick = onClickClearHistory,
                         enabled = selectedCount > 0,
                     ),
@@ -288,8 +287,8 @@ private fun HistorySelectionToolbar(
 @PreviewLightDark
 @Composable
 internal fun HistoryScreenPreviews(
-    @PreviewParameter(HistoryScreenModelStateProvider::class)
-    historyState: HistoryScreenModel.State,
+    @PreviewParameter(HistoryviewModelStateProvider::class)
+    historyState: HistoryViewModel.State,
 ) {
     TachiyomiPreviewTheme {
         HistoryScreen(

@@ -1,5 +1,6 @@
 package mihon.domain.source.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.chapter.interactor.SyncChaptersWithSource
 import eu.kanade.domain.chapter.model.toSChapter
 import eu.kanade.domain.manga.model.hasCustomCover
@@ -10,20 +11,23 @@ import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.all.EHentai
 import eu.kanade.tachiyomi.source.online.all.MergedSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.domain.source.models.RemoteMangaUpdate
-import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.source.local.isLocal
-import java.time.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 
+@Inject
 class UpdateMangaFromRemote(
     private val sourceManager: SourceManager,
     private val chapterRepository: ChapterRepository,
@@ -45,7 +49,7 @@ class UpdateMangaFromRemote(
         fetchDetails: Boolean = false,
         fetchChapters: Boolean = false,
         manualFetch: Boolean = false,
-        fetchWindow: Pair<Long, Long> = Pair(0, 0),
+        fetchWindow: ClosedRange<Instant>? = null,
         // SY -->
         throttleFunc: suspend () -> Unit = {},
         // SY <--
@@ -81,57 +85,48 @@ class UpdateMangaFromRemote(
         fetchDetails: Boolean = false,
         fetchChapters: Boolean = false,
         manualFetch: Boolean = false,
-        fetchWindow: Pair<Long, Long> = Pair(0, 0),
+        fetchWindow: ClosedRange<Instant>? = null,
         // SY -->
         throttleFunc: suspend () -> Unit = {},
         // SY <--
-    ): Result<RemoteMangaUpdate> {
-        return try {
+    ): Result<RemoteMangaUpdate> = withContext(Dispatchers.IO) {
+        try {
             val chapters = chapterRepository.getChapterByMangaId(manga.id)
                 .sortedBy { it.sourceOrder }
-            val update = withIOContext {
-                // SY -->
-                if (source is EHentai) {
-                    source.getMangaUpdate(
-                        manga = manga.toSManga(),
-                        chapters = chapters.map(Chapter::toSChapter),
-                        fetchDetails = fetchDetails,
-                        fetchChapters = fetchChapters,
-                        throttleFunc = throttleFunc,
-                    )
-                } else {
-                    // SY <--
-                    source.getMangaUpdate(
-                        manga = manga.toSManga(),
-                        chapters = chapters.map(Chapter::toSChapter),
-                        fetchDetails = fetchDetails,
-                        fetchChapters = fetchChapters,
-                    )
-                }
+            // SY -->
+            val update = if (source is EHentai) {
+                source.getMangaUpdate(
+                    manga = manga.toSManga(),
+                    chapters = chapters.map(Chapter::toSChapter),
+                    fetchDetails = fetchDetails,
+                    fetchChapters = fetchChapters,
+                    throttleFunc = throttleFunc,
+                )
+            } else {
+                // SY <--
+                source.getMangaUpdate(
+                    manga = manga.toSManga(),
+                    chapters = chapters.map(Chapter::toSChapter),
+                    fetchDetails = fetchDetails,
+                    fetchChapters = fetchChapters,
+                )
             }
-            // KMK -->
-            val updateResult = withIOContext {
-                // KMK <--
-                awaitUpdateFromSource(manga, update.manga, manualFetch)
-                // SY -->
-                val newChapters = if (source is MergedSource) {
-                    source.fetchChaptersAndSync(manga, downloadChapters = manualFetch)
-                } else {
-                    // SY <--
-                    syncChaptersWithSource.await(
-                        rawSourceChapters = update.chapters,
-                        manga = manga,
-                        source = source,
-                        manualFetch = manualFetch,
-                        fetchWindow = fetchWindow,
-                    )
-                }
-                val updatedManga = mangaRepository.getMangaById(manga.id)
-                // KMK -->
-                RemoteMangaUpdate(manga = updatedManga, newChapters = newChapters)
+            awaitUpdateFromSource(manga, update.manga, manualFetch)
+            // SY -->
+            val newChapters = if (source is MergedSource) {
+                source.fetchChaptersAndSync(manga, downloadChapters = manualFetch)
+            } else {
+                // SY <--
+                syncChaptersWithSource.await(
+                    rawSourceChapters = update.chapters,
+                    manga = manga,
+                    source = source,
+                    manualFetch = manualFetch,
+                    fetchWindow = fetchWindow,
+                )
             }
-            Result.success(updateResult)
-            // KMK <--
+            val updatedManga = mangaRepository.getMangaById(manga.id)
+            Result.success(RemoteMangaUpdate(manga = updatedManga, newChapters = newChapters))
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             Result.failure(e)
@@ -151,7 +146,7 @@ class UpdateMangaFromRemote(
 
         // if the manga isn't a favorite (or 'update titles' preference is enabled), set its title from source and update in db
         val title =
-            if (remoteTitle.isNotEmpty() && (!localManga.favorite || libraryPreferences.updateMangaTitles().get())) {
+            if (remoteTitle.isNotEmpty() && (!localManga.favorite || libraryPreferences.updateMangaTitles.get())) {
                 remoteTitle
             } else {
                 null
@@ -161,21 +156,21 @@ class UpdateMangaFromRemote(
             // Never refresh covers if the url is empty to avoid "losing" existing covers
             remoteManga.thumbnail_url.isNullOrEmpty() -> null
             !manualFetch && localManga.thumbnailUrl == remoteManga.thumbnail_url -> null
-            localManga.isLocal() -> Instant.now().toEpochMilli()
+            localManga.isLocal() -> Clock.System.now()
             localManga.hasCustomCover(coverCache) -> {
                 coverCache.deleteFromCache(localManga, false)
                 null
             }
             else -> {
                 coverCache.deleteFromCache(localManga, false)
-                Instant.now().toEpochMilli()
+                Clock.System.now()
             }
         }
 
         val thumbnailUrl = remoteManga.thumbnail_url?.takeIf { it.isNotEmpty() }
 
-        val success = mangaRepository.update(
-            MangaUpdate(
+        val success = mangaRepository.updateRemote(
+            MangaRemoteUpdate(
                 id = localManga.id,
                 title = title,
                 coverLastModified = coverLastModified,

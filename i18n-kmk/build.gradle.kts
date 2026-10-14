@@ -1,13 +1,14 @@
+import mihon.buildlogic.android
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
-    id("mihon.library")
-    kotlin("multiplatform")
+    id("mihon.library.multiplatform")
     alias(libs.plugins.moko)
     id("com.github.ben-manes.versions")
 }
 
 kotlin {
-    androidTarget()
-
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
     applyDefaultHierarchyTemplate()
 
     sourceSets {
@@ -17,19 +18,16 @@ kotlin {
             }
         }
     }
-}
 
-android {
-    namespace = "tachiyomi.i18n.kmk"
+    android {
+        namespace = "tachiyomi.i18n.kmk"
 
-    sourceSets {
-        named("main") {
-            res.srcDir("src/commonMain/resources")
+        // TODO(antsy): Remove when https://youtrack.jetbrains.com/issue/KT-83319 is resolved
+        withHostTest { }
+
+        lint {
+            disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
         }
-    }
-
-    lint {
-        disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
     }
 }
 

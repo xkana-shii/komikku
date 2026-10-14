@@ -1,11 +1,12 @@
 package eu.kanade.domain.chapter.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.download.interactor.DeleteDownload
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
-import eu.kanade.tachiyomi.ui.library.LibraryScreenModel
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
+import eu.kanade.tachiyomi.ui.library.LibraryViewModel
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
-import eu.kanade.tachiyomi.ui.updates.UpdatesScreenModel
+import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel
 import exh.source.MERGED_SOURCE_ID
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withNonCancellableContext
@@ -18,6 +19,7 @@ import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
 
+@Inject
 class SetReadStatus(
     private val downloadPreferences: DownloadPreferences,
     private val deleteDownload: DeleteDownload,
@@ -29,21 +31,20 @@ class SetReadStatus(
 ) {
 
     private val mapper = { chapter: Chapter, read: Boolean ->
-        ChapterUpdate(
-            read = read,
-            lastPageRead = if (!read) 0 else null,
-            id = chapter.id,
-        )
+        ChapterUpdate(chapter.id) {
+            this.read = read
+            if (!read) lastPageRead = 0
+        }
     }
 
     /**
      * Mark chapters as read/unread, also delete downloaded chapters if 'After manually marked as read' is set.
      *
      * Called from:
-     *  - [LibraryScreenModel]: Manually select mangas & mark as read
-     *  - [MangaScreenModel.markChaptersRead]: Manually select chapters & mark as read or swipe chapter as read
-     *  - [UpdatesScreenModel.markUpdatesRead]: Manually select chapters & mark as read
-     *  - [LibraryUpdateJob.updateChapterList]: when a manga is updated and has new chapter but already read,
+     *  - [LibraryViewModel]: Manually select mangas & mark as read
+     *  - [MangaViewModel.markChaptersRead]: Manually select chapters & mark as read or swipe chapter as read
+     *  - [UpdatesViewModel.markUpdatesRead]: Manually select chapters & mark as read
+     *  - [LibraryUpdateWorker.updateChapterList]: when a manga is updated and has new chapter but already read,
      *  it will mark that new **duplicated** chapter as read & delete downloading/downloaded -> should be treat as
      *  automatically ~ no auto delete
      *  - [ReaderViewModel.updateChapterProgress]: mark **duplicated** chapter as read after finish reading -> should be
@@ -55,7 +56,7 @@ class SetReadStatus(
         // KMK -->
         manually: Boolean = true,
         // KMK <--
-    ): Result = withNonCancellableContext {
+    ): Result {
         val chaptersToUpdate = chapters.filter {
             when (read) {
                 true -> !it.read
@@ -63,7 +64,7 @@ class SetReadStatus(
             }
         }
         if (chaptersToUpdate.isEmpty()) {
-            return@withNonCancellableContext Result.NoChapters
+            return Result.NoChapters
         }
 
         try {
@@ -72,7 +73,7 @@ class SetReadStatus(
             )
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
-            return@withNonCancellableContext Result.InternalError(e)
+            return Result.InternalError(e)
         }
 
         if (
@@ -80,10 +81,12 @@ class SetReadStatus(
             manually &&
             // KMK <--
             read &&
-            downloadPreferences.removeAfterMarkedAsRead().get()
+            downloadPreferences.removeAfterMarkedAsRead.get()
         ) {
             chaptersToUpdate
                 // KMK -->
+                // Chapters here still carry their pre-update read state; downstream deletion filtering
+                // (excluded categories) relies on the new state. Ported from Mihon 785f4fd1ed (#3558).
                 .map { it.copy(read = true) } // mark as read so it will respect category exclusion
                 // KMK <--
                 .groupBy { it.mangaId }
@@ -95,17 +98,16 @@ class SetReadStatus(
                 }
         }
 
-        Result.Success
+        return Result.Success
     }
 
-    suspend fun await(mangaId: Long, read: Boolean): Result = withNonCancellableContext {
+    suspend fun await(mangaId: Long, read: Boolean): Result =
         await(
             read = read,
             chapters = chapterRepository
                 .getChapterByMangaId(mangaId)
                 .toTypedArray(),
         )
-    }
 
     // SY -->
     private suspend fun awaitMerged(mangaId: Long, read: Boolean) = withNonCancellableContext f@{

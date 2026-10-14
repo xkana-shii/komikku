@@ -44,13 +44,11 @@ import exh.md.utils.MdLang
 import exh.md.utils.MdUtil
 import exh.metadata.metadata.MangaDexSearchMetadata
 import exh.source.DelegatedHttpSource
+import mihon.app.di.appGraph
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import kotlin.reflect.KClass
 
 @Suppress("OverridingDeprecatedMember")
@@ -70,8 +68,8 @@ class MangaDex(delegate: HttpSource, val context: Context) :
 
     override val matchingHosts: List<String> = listOf("mangadex.org", "www.mangadex.org")
 
-    val trackPreferences: TrackPreferences by injectLazy()
-    val mdList: MdList by lazy { Injekt.get<TrackerManager>().mdList }
+    val trackPreferences: TrackPreferences get() = context.appGraph.trackPreferences
+    val mdList: MdList get() = context.appGraph.trackerManager.mdList
 
     private val sourcePreferences: SharedPreferences by lazy {
         context.getSharedPreferences("source_$id", 0x0000)
@@ -100,7 +98,13 @@ class MangaDex(delegate: HttpSource, val context: Context) :
         MangaDexAuthService(baseHttpClient, headers)
     }
     private val apiMangaParser by lazy {
-        ApiMangaParser(mdLang.lang)
+        ApiMangaParser(
+            mdLang.lang,
+            context.appGraph.getManga,
+            context.appGraph.insertFlatMetadata,
+            context.appGraph.getFlatMetadataById,
+            context,
+        )
     }
     private val followsHandler by lazy {
         FollowsHandler(mdLang.lang, mangadexAuthService)
@@ -109,13 +113,13 @@ class MangaDex(delegate: HttpSource, val context: Context) :
         MangaHandler(mdLang.lang, mangadexService, apiMangaParser)
     }
     private val mangaPlusHandler by lazy {
-        MangaPlusHandler(network.client)
+        MangaPlusHandler(network.client, context.appGraph.json)
     }
     private val comikeyHandler by lazy {
         ComikeyHandler(network.client, network.defaultUserAgentProvider())
     }
     private val bilibiliHandler by lazy {
-        BilibiliHandler(network.client)
+        BilibiliHandler(network.client, context.appGraph.json)
     }
     private val azukHandler by lazy {
         AzukiHandler(network.client, network.defaultUserAgentProvider())
@@ -240,9 +244,9 @@ class MangaDex(delegate: HttpSource, val context: Context) :
         return pageHandler.fetchPageList(chapter, usePort443Only(), dataSaver(), delegate)
     }
 
-    override suspend fun getImage(page: Page): Response {
-        val call = pageHandler.getImageCall(page)
-        return call?.awaitSuccess() ?: super.getImage(page)
+    override suspend fun getImage(page: Page, existingSize: Long): Response {
+        val call = pageHandler.getImageCall(page, existingSize)
+        return call?.awaitSuccess() ?: super.getImage(page, existingSize)
     }
 
     @Deprecated("Use the suspend API instead", replaceWith = ReplaceWith("getImageUrl"))

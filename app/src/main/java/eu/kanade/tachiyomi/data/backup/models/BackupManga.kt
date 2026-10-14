@@ -4,16 +4,19 @@ import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
-import tachiyomi.data.MemoColumnAdapter
+import mihon.core.common.extensions.toInstantOrNull
+import mihon.core.common.extensions.toJsonObject
 import tachiyomi.domain.manga.model.Manga
 
 @Suppress("DEPRECATION")
 @Serializable
 class BackupManga(
     // in 1.x some of these values have different names
-    @ProtoNumber(1) var source: Long,
+    // SY -->
+    @ProtoNumber(1) var source: Long = 0,
     // url is called key in 1.x
-    @ProtoNumber(2) var url: String,
+    @ProtoNumber(2) var url: String = "",
+    // SY <--
     @ProtoNumber(3) var title: String = "",
     @ProtoNumber(4) var artist: String? = null,
     @ProtoNumber(5) var author: String? = null,
@@ -47,6 +50,8 @@ class BackupManga(
     @ProtoNumber(111) var initialized: Boolean = false,
     @ProtoNumber(112) var memo: ByteArray = JsonObjectEmptyBytes,
 
+    @ProtoNumber(113) var nextUpdate: Long = 0,
+
     // SY specific values
     @ProtoNumber(600) var mergedMangaReferences: List<BackupMergedMangaReference> = emptyList(),
     @ProtoNumber(601) var flatMetadata: BackupFlatMetadata? = null,
@@ -76,7 +81,16 @@ class BackupManga(
             // SY <--
             favorite = this@BackupManga.favorite,
             source = this@BackupManga.source,
-            dateAdded = this@BackupManga.dateAdded,
+            // KUN -->
+            // `favorite_modified_at` is not a fallback for a missing `date_added`: every manga
+            // update rewrote it (see migrations/49.sqm). A missing date-added becomes UNKNOWN.
+            // KUN <--
+            dateAdded = if (this@BackupManga.favorite) {
+                this@BackupManga.dateAdded.toInstantOrNull()
+                    ?: Manga.UNKNOWN_FAVORITE_AT
+            } else {
+                null
+            },
             viewerFlags = (this@BackupManga.viewer_flags ?: this@BackupManga.viewer).toLong(),
             chapterFlags = this@BackupManga.chapterFlags.toLong(),
             updateStrategy = this@BackupManga.updateStrategy,
@@ -85,7 +99,8 @@ class BackupManga(
             version = this@BackupManga.version,
             notes = this@BackupManga.notes,
             initialized = this@BackupManga.initialized,
-            memo = MemoColumnAdapter.decode(this@BackupManga.memo),
+            memo = this@BackupManga.memo.toJsonObject(),
+            nextUpdate = this@BackupManga.nextUpdate.toInstantOrNull(),
         )
     }
 }

@@ -5,7 +5,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import mihon.feature.migration.list.MigrationListScreenModel.ChapterInfo
+import mihon.feature.migration.list.MigrationListViewModel.ChapterInfo
 import tachiyomi.domain.manga.model.Manga
 import kotlin.coroutines.CoroutineContext
 

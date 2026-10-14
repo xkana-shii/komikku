@@ -1,5 +1,6 @@
 package exh.md.handlers
 
+import android.content.Context
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import exh.log.xLogE
@@ -18,16 +19,15 @@ import exh.util.nullIfEmpty
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.InsertFlatMetadata
-import uy.kohesive.injekt.injectLazy
 import java.util.Locale
 
 class ApiMangaParser(
     private val lang: String,
+    private val getManga: GetManga,
+    private val insertFlatMetadata: InsertFlatMetadata,
+    private val getFlatMetadataById: GetFlatMetadataById,
+    private val context: Context,
 ) {
-    private val getManga: GetManga by injectLazy()
-    private val insertFlatMetadata: InsertFlatMetadata by injectLazy()
-    private val getFlatMetadataById: GetFlatMetadataById by injectLazy()
-
     val metaClass = MangaDexSearchMetadata::class
 
     /**
@@ -120,13 +120,14 @@ class ApiMangaParser(
                 ).orEmpty()
 
                 description = MdUtil.cleanDescription(rawDesc)
-                    .let { if (altTitlesInDesc) MdUtil.addAltTitleToDesc(it, altTitles) else it }
+                    .let { if (altTitlesInDesc) MdUtil.addAltTitleToDesc(it, altTitles, context) else it }
                     .let {
                         if (finalChapterInDesc) {
                             MdUtil.addFinalChapterToDesc(
                                 it,
                                 mangaAttributesDto.lastVolume,
                                 mangaAttributesDto.lastChapter,
+                                context,
                             )
                         } else {
                             it

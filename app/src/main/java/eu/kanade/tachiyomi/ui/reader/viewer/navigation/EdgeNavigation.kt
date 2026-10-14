@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.navigation
 
 import android.graphics.RectF
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 
 /**
@@ -13,7 +14,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
  * | N | P | N |   N: Next
  * +---+---+---+
 */
-class EdgeNavigation : ViewerNavigation() {
+class EdgeNavigation(readerPreferences: ReaderPreferences) : ViewerNavigation(readerPreferences) {
 
     override var regionList: List<Region> = listOf(
         Region(

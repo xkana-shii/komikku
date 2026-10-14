@@ -1,61 +1,105 @@
 package tachiyomi.data.source
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearchUpdate
+import tachiyomi.domain.source.model.FeedWithSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.FeedSavedSearchRepository
 
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class FeedSavedSearchRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : FeedSavedSearchRepository {
 
+    // KUN -->
+    override suspend fun getAllWithSavedSearch(): List<FeedWithSavedSearch> {
+        val savedSearches = database.saved_searchQueries
+            .selectAll(SavedSearchMapper::map)
+            .awaitAsList()
+            .associateBy { it.id }
+
+        return database.feed_saved_searchQueries
+            .selectAll(FeedSavedSearchMapper::map)
+            .awaitAsList()
+            .map { feed ->
+                FeedWithSavedSearch(
+                    feed = feed,
+                    savedSearch = feed.savedSearch?.let(savedSearches::get),
+                )
+            }
+    }
+    // KUN <--
+
     override suspend fun getGlobal(): List<FeedSavedSearch> {
-        return handler.awaitList { feed_saved_searchQueries.selectAllGlobal(FeedSavedSearchMapper::map) }
+        return database.feed_saved_searchQueries
+            .selectAllGlobal(FeedSavedSearchMapper::map)
+            .awaitAsList()
     }
 
     override fun getGlobalAsFlow(): Flow<List<FeedSavedSearch>> {
-        return handler.subscribeToList { feed_saved_searchQueries.selectAllGlobal(FeedSavedSearchMapper::map) }
+        return database.feed_saved_searchQueries
+            .selectAllGlobal(FeedSavedSearchMapper::map)
+            .subscribeToList()
     }
 
     override suspend fun getGlobalFeedSavedSearch(): List<SavedSearch> {
-        return handler.awaitList { feed_saved_searchQueries.selectGlobalFeedSavedSearch(SavedSearchMapper::map) }
+        return database.feed_saved_searchQueries
+            .selectGlobalFeedSavedSearch(SavedSearchMapper::map)
+            .awaitAsList()
     }
 
     override suspend fun countGlobal(): Long {
-        return handler.awaitOne { feed_saved_searchQueries.countGlobal() }
+        return database.feed_saved_searchQueries
+            .countGlobal()
+            .awaitAsOne()
     }
 
     override suspend fun getBySourceId(sourceId: Long): List<FeedSavedSearch> {
-        return handler.awaitList { feed_saved_searchQueries.selectBySource(sourceId, FeedSavedSearchMapper::map) }
+        return database.feed_saved_searchQueries
+            .selectBySource(sourceId, FeedSavedSearchMapper::map)
+            .awaitAsList()
     }
 
     override fun getBySourceIdAsFlow(sourceId: Long): Flow<List<FeedSavedSearch>> {
-        return handler.subscribeToList { feed_saved_searchQueries.selectBySource(sourceId, FeedSavedSearchMapper::map) }
+        return database.feed_saved_searchQueries
+            .selectBySource(sourceId, FeedSavedSearchMapper::map)
+            .subscribeToList()
     }
 
     override suspend fun getBySourceIdFeedSavedSearch(sourceId: Long): List<SavedSearch> {
-        return handler.awaitList {
-            feed_saved_searchQueries.selectSourceFeedSavedSearch(sourceId, SavedSearchMapper::map)
-        }
+        return database.feed_saved_searchQueries
+            .selectSourceFeedSavedSearch(sourceId, SavedSearchMapper::map)
+            .awaitAsList()
     }
 
     override suspend fun countBySourceId(sourceId: Long): Long {
-        return handler.awaitOne { feed_saved_searchQueries.countSourceFeedSavedSearch(sourceId) }
+        return database.feed_saved_searchQueries
+            .countSourceFeedSavedSearch(sourceId)
+            .awaitAsOne()
     }
 
     override suspend fun delete(feedSavedSearchId: Long) {
-        handler.await { feed_saved_searchQueries.deleteById(feedSavedSearchId) }
+        database.feed_saved_searchQueries
+            .deleteById(feedSavedSearchId)
     }
 
     override suspend fun insert(feedSavedSearch: FeedSavedSearch): Long {
         // KMK -->
-        return handler.await(true) {
-            val currentFeeds = handler.awaitList {
-                feed_saved_searchQueries.selectAll(FeedSavedSearchMapper::map)
-            }
+        return database.transactionWithResult {
+            val currentFeeds = database.feed_saved_searchQueries
+                .selectAll(FeedSavedSearchMapper::map)
+                .awaitAsList()
             val existedFeedId = currentFeeds.find { currentFeed ->
                 currentFeed.source == feedSavedSearch.source &&
                     currentFeed.savedSearch == feedSavedSearch.savedSearch &&
@@ -64,45 +108,38 @@ class FeedSavedSearchRepositoryImpl(
 
             existedFeedId
                 // KMK <--
-                ?: handler.awaitOneExecutable(true) {
-                    feed_saved_searchQueries.insert(
-                        feedSavedSearch.source,
-                        feedSavedSearch.savedSearch,
-                        feedSavedSearch.global,
-                    )
-                    feed_saved_searchQueries.selectLastInsertedRowId()
-                }
+                ?: database.feed_saved_searchQueries.insert(
+                    feedSavedSearch.source,
+                    feedSavedSearch.savedSearch,
+                    feedSavedSearch.global,
+                ).awaitAsOne()
         }
     }
 
     override suspend fun insertAll(feedSavedSearch: List<FeedSavedSearch>) {
-        return handler.await(true) {
+        return database.transaction {
             feedSavedSearch.forEach {
-                feed_saved_searchQueries.insert(
+                database.feed_saved_searchQueries.insert(
                     it.source,
                     it.savedSearch,
                     it.global,
-                )
+                ).awaitAsOne()
             }
         }
     }
 
     // KMK -->
     override suspend fun updatePartial(update: FeedSavedSearchUpdate) {
-        handler.await {
-            updatePartialBlocking(update)
-        }
+        database.updatePartialBlocking(update)
     }
 
     override suspend fun updatePartial(updates: List<FeedSavedSearchUpdate>) {
-        handler.await(inTransaction = true) {
-            for (update in updates) {
-                updatePartialBlocking(update)
-            }
+        database.transaction {
+            updates.forEach { database.updatePartialBlocking(it) }
         }
     }
 
-    private fun Database.updatePartialBlocking(update: FeedSavedSearchUpdate) {
+    private suspend fun Database.updatePartialBlocking(update: FeedSavedSearchUpdate) {
         feed_saved_searchQueries.update(
             source = update.source,
             saved_search = update.savedSearch,

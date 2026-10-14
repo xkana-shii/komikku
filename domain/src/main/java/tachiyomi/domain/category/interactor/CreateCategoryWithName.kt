@@ -1,12 +1,13 @@
 package tachiyomi.domain.category.interactor
 
+import dev.zacsweers.metro.Inject
 import logcat.LogPriority
-import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 
+@Inject
 class CreateCategoryWithName(
     private val categoryRepository: CategoryRepository,
     private val preferences: LibraryPreferences,
@@ -14,11 +15,11 @@ class CreateCategoryWithName(
 
     private val initialFlags: Long
         get() {
-            val sort = preferences.sortingMode().get()
+            val sort = preferences.sortingMode.get()
             return sort.type.flag or sort.direction.flag
         }
 
-    suspend fun await(name: String): Result = withNonCancellableContext {
+    suspend fun await(name: String): Result {
         val categories = categoryRepository.getAll()
         val nextOrder = categories.maxOfOrNull { it.order }?.plus(1) ?: 0
         val newCategory = Category(
@@ -31,7 +32,7 @@ class CreateCategoryWithName(
             // KMK <--
         )
 
-        try {
+        return try {
             categoryRepository.insert(newCategory)
             Result.Success(/* SY --> */newCategory/* SY <-- */)
         } catch (e: Exception) {

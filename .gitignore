@@ -12,6 +12,7 @@ build
 .history
 
 # Configuration files
+keystore.properties
 local.properties
 
 # macOS specific files
@@ -19,5 +20,7 @@ local.properties
 
 /app/client_secrets.json
 /app/google-services.json
+/app/src/main/assets/client_secrets.json
 *.jks
-app/standard/preview/*
+*.keystore
+app/standard/nightly/*

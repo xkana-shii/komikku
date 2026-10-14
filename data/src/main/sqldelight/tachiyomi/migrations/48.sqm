@@ -1,0 +1,7 @@
+-- Ported from Mihon's 14.sqm (Kitsu rating scale support), renumbered to the
+-- next free Komikku migration.
+-- rescale Kitsu (sync_id 3) scores to native 2-20 int scale
+-- old scores were rescaled from Kitsu's 2-20 down to 1, 1.5, ..., 10 at the API boundary
+UPDATE manga_sync
+SET score = score * 2
+WHERE sync_id = 3;

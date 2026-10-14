@@ -1,8 +1,5 @@
 package eu.kanade.presentation.browse.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -14,7 +11,9 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.RadioMenuItem
-import kotlinx.collections.immutable.persistentListOf
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredroundedfilled.ViewList
+import mihon.icons.materialsymbols.roundedfilled.ViewModule
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -39,15 +38,15 @@ fun BrowseSourceSimpleToolbar(
             var selectingDisplayMode by remember { mutableStateOf(false) }
             // KMK -->
             AppBarActions(
-                actions = persistentListOf<AppBar.AppBarAction>().builder().apply {
+                actions = buildList {
                     displayMode?.let { mode ->
                         add(
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_display_mode),
                                 icon = if (mode == LibraryDisplayMode.List) {
-                                    Icons.AutoMirrored.Filled.ViewList
+                                    MaterialSymbols.AutoMirroredRoundedFilled.ViewList
                                 } else {
-                                    Icons.Filled.ViewModule
+                                    MaterialSymbols.RoundedFilled.ViewModule
                                 },
                                 onClick = { selectingDisplayMode = true },
                             ),
@@ -58,8 +57,7 @@ fun BrowseSourceSimpleToolbar(
                             bulkSelectionButton(isRunning, mode),
                         )
                     }
-                }
-                    .build(),
+                },
             )
             // KMK <--
             DropdownMenu(

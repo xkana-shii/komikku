@@ -10,16 +10,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.core.util.ifSourcesLoaded
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.browse.BrowseSourceContent
 import eu.kanade.presentation.browse.components.BrowseSourceSimpleToolbar
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
 import eu.kanade.tachiyomi.ui.browse.source.SourcesScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
@@ -27,7 +27,6 @@ import exh.recs.batch.RankedSearchResults
 import mihon.presentation.core.util.collectAsLazyPagingItems
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.presentation.core.components.material.Scaffold
-import tachiyomi.presentation.core.screens.LoadingScreen
 import java.io.Serializable
 
 class BrowseRecommendsScreen(
@@ -46,24 +45,21 @@ class BrowseRecommendsScreen(
 
     @Composable
     override fun Content() {
-        if (!ifSourcesLoaded()) {
-            LoadingScreen()
-            return
-        }
-
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { BrowseRecommendsScreenModel(args) }
+        val viewModel = assistedMetroViewModel<BrowseRecommendsViewModel, BrowseRecommendsViewModel.Factory> {
+            create(args = args)
+        }
 
         // KMK -->
-        val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
-        val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+        val bulkFavoriteViewModel = metroViewModel<BulkFavoriteViewModel>()
+        val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
 
         val haptic = LocalHapticFeedback.current
 
         BackHandler(enabled = bulkFavoriteState.selectionMode) {
-            bulkFavoriteScreenModel.backHandler()
+            bulkFavoriteViewModel.backHandler()
         }
         // KMK <--
 
@@ -86,7 +82,7 @@ class BrowseRecommendsScreen(
             }
         }
 
-        val mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems()
+        val mangaList = viewModel.mangaPagerFlowFlow.collectAsLazyPagingItems()
         // KMK <--
 
         Scaffold(
@@ -96,35 +92,35 @@ class BrowseRecommendsScreen(
                     BulkSelectionToolbar(
                         selectedCount = bulkFavoriteState.selection.size,
                         isRunning = bulkFavoriteState.isRunning,
-                        onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                        onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                        onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                        onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                         onSelectAll = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .forEach { bulkFavoriteScreenModel.select(it) }
+                                .forEach { bulkFavoriteViewModel.select(it) }
                         },
                         onReverseSelection = {
                             mangaList.itemSnapshotList.items
                                 .map { it.value.first }
-                                .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                                .let { bulkFavoriteViewModel.reverseSelection(it) }
                         },
                     )
                 } else {
                     // KMK <--
                     val title = remember {
-                        val recSource = screenModel.recommendationPagingSource
+                        val recSource = viewModel.recommendationPagingSource
                         "${recSource.name} (${recSource.category.getString(context)})"
                     }
 
                     BrowseSourceSimpleToolbar(
                         navigateUp = navigator::pop,
                         title = title,
-                        displayMode = screenModel.displayMode,
-                        onDisplayModeChange = { screenModel.displayMode = it },
+                        displayMode = viewModel.displayMode,
+                        onDisplayModeChange = { viewModel.displayMode = it },
                         scrollBehavior = scrollBehavior,
                         // KMK -->
                         toggleSelectionMode = {
-                            bulkFavoriteScreenModel.toggleSelectionMode(true)
+                            bulkFavoriteViewModel.toggleSelectionMode(true)
                         }.takeIf { !isExternalSource },
                         isRunning = bulkFavoriteState.isRunning,
                         // KMK <--
@@ -134,13 +130,13 @@ class BrowseRecommendsScreen(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { paddingValues ->
             BrowseSourceContent(
-                source = screenModel.source,
+                source = viewModel.source,
                 mangaList = mangaList,
-                columns = screenModel.getColumnsPreference(LocalConfiguration.current.orientation),
+                columns = viewModel.getColumnsPreference(LocalConfiguration.current.orientation),
                 // SY -->
                 ehentaiBrowseDisplayMode = false,
                 // SY <--
-                displayMode = screenModel.displayMode,
+                displayMode = viewModel.displayMode,
                 snackbarHostState = snackbarHostState,
                 contentPadding = paddingValues,
                 onWebViewClick = null,
@@ -149,7 +145,7 @@ class BrowseRecommendsScreen(
                 onMangaClick = { manga ->
                     // KMK -->
                     if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
+                        bulkFavoriteViewModel.toggleSelection(manga)
                     } else {
                         // KMK <--
                         onClickItem(manga)
@@ -158,7 +154,7 @@ class BrowseRecommendsScreen(
                 onMangaLongClick = { manga ->
                     // KMK -->
                     if (!bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                        bulkFavoriteViewModel.addRemoveManga(manga, haptic)
                     } else {
                         onLongClickItem(manga)
                     }
@@ -172,7 +168,7 @@ class BrowseRecommendsScreen(
 
         // KMK -->
         BulkFavoriteDialogs(
-            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            bulkFavoriteViewModel = bulkFavoriteViewModel,
             dialog = bulkFavoriteState.dialog,
         )
         // KMK <--

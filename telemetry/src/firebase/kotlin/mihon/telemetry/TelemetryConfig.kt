@@ -9,7 +9,7 @@ object TelemetryConfig {
     private var analytics: FirebaseAnalytics? = null
     private var crashlytics: FirebaseCrashlytics? = null
 
-    fun init(context: Context, isPreviewBuildType: Boolean, commitCount: String) {
+    fun init(context: Context, isNightlyBuildType: Boolean, commitCount: String) {
         // To stop forks/test builds from polluting our data
         if (!context.isMihonProductionApp()) return
 
@@ -17,8 +17,8 @@ object TelemetryConfig {
         FirebaseApp.initializeApp(context)
         crashlytics = FirebaseCrashlytics.getInstance()
         // KMK -->
-        if (isPreviewBuildType) {
-            analytics?.setUserProperty("preview_version", commitCount)
+        if (isNightlyBuildType) {
+            analytics?.setUserProperty("nightly_version", commitCount)
         }
         // KMK <--
     }
@@ -37,6 +37,10 @@ object TelemetryConfig {
         return packageManager.getPackageInfo(packageName, SignatureFlags)
             .getCertificateFingerprints()
             .any { it == MIHON_CERTIFICATE_FINGERPRINT }
+    }
+
+    fun recordException(throwable: Throwable) {
+        crashlytics?.recordException(throwable)
     }
 }
 

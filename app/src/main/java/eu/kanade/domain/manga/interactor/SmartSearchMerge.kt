@@ -1,6 +1,7 @@
 package eu.kanade.domain.manga.interactor
 
-import android.app.Application
+import android.content.Context
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.manga.model.copyFrom
 import eu.kanade.domain.manga.model.toSManga
 import exh.source.MERGED_SOURCE_ID
@@ -17,27 +18,25 @@ import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.i18n.sy.SYMR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import kotlin.time.Clock
 
+@Inject
 class SmartSearchMerge(
-    private val getManga: GetManga = Injekt.get(),
-    private val getMergedReferencesById: GetMergedReferencesById = Injekt.get(),
-    private val insertMergedReference: InsertMergedReference = Injekt.get(),
-    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
-    private val deleteMangaById: DeleteMangaById = Injekt.get(),
-    private val deleteByMergeId: DeleteByMergeId = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val setMangaCategories: SetMangaCategories = Injekt.get(),
+    private val context: Context,
+    private val getManga: GetManga,
+    private val getMergedReferencesById: GetMergedReferencesById,
+    private val insertMergedReference: InsertMergedReference,
+    private val networkToLocalManga: NetworkToLocalManga,
+    private val deleteMangaById: DeleteMangaById,
+    private val deleteByMergeId: DeleteByMergeId,
+    private val getCategories: GetCategories,
+    private val setMangaCategories: SetMangaCategories,
 ) {
     /**
      * @param originalMangaId ID of the existed merged entry or the original manga which will be used to create the new merged entry
      * @param manga The manga which will be merged into existed merged entry or the new merged entry (newly created by using [originalMangaId])
      */
     suspend fun smartSearchMerge(manga: Manga, originalMangaId: Long): Manga {
-        // KMK -->
-        val context = Injekt.get<Application>()
-        // KMK <--
         val originalManga = getManga.await(originalMangaId)
             ?: throw IllegalArgumentException(context.stringResource(SYMR.strings.merge_unknown_entry, originalMangaId))
         if (originalManga.source == MERGED_SOURCE_ID) {
@@ -100,7 +99,7 @@ class SmartSearchMerge(
                     lastUpdate = originalManga.lastUpdate,
                     viewerFlags = originalManga.viewerFlags,
                     chapterFlags = originalManga.chapterFlags,
-                    dateAdded = System.currentTimeMillis(),
+                    dateAdded = Clock.System.now(),
                 )
 
             var existingManga = getManga.await(mergedManga.url, mergedManga.source)

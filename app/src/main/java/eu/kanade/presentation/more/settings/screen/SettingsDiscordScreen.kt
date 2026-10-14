@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -32,18 +30,15 @@ import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
-import eu.kanade.tachiyomi.data.connections.ConnectionsManager
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableMap
-import tachiyomi.domain.category.interactor.GetCategories
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Help
+import mihon.icons.materialsymbols.automirroredrounded.Logout
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 object SettingsDiscordScreen : SearchableSettings {
     @Suppress("unused")
@@ -58,7 +53,7 @@ object SettingsDiscordScreen : SearchableSettings {
         val uriHandler = LocalUriHandler.current
         IconButton(onClick = { uriHandler.openUri("https://tachiyomi.org/help/guides/tracking/") }) {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+                imageVector = MaterialSymbols.AutoMirroredRounded.Help,
                 contentDescription = stringResource(MR.strings.tracking_guide),
             )
         }
@@ -67,17 +62,18 @@ object SettingsDiscordScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val navigator = LocalNavigator.currentOrThrow
-        val connectionsPreferences = remember { Injekt.get<ConnectionsPreferences>() }
-        val connectionsManager = remember { Injekt.get<ConnectionsManager>() }
-        val enableDRPCPref = connectionsPreferences.enableDiscordRPC()
-        val useChapterTitlesPref = connectionsPreferences.useChapterTitles()
-        val discordRPCStatus = connectionsPreferences.discordRPCStatus()
-        val customMessagePref = connectionsPreferences.discordCustomMessage()
-        val showProgressPref = connectionsPreferences.discordShowProgress()
-        val showTimestampPref = connectionsPreferences.discordShowTimestamp()
-        val showButtonsPref = connectionsPreferences.discordShowButtons()
-        val showDownloadButtonPref = connectionsPreferences.discordShowDownloadButton()
-        val showDiscordButtonPref = connectionsPreferences.discordShowDiscordButton()
+        val context = LocalContext.current
+        val connectionsPreferences = remember { context.appGraph.connectionsPreferences }
+        val connectionsManager = remember { context.appGraph.connectionsManager }
+        val enableDRPCPref = connectionsPreferences.enableDiscordRPC
+        val useChapterTitlesPref = connectionsPreferences.useChapterTitles
+        val discordRPCStatus = connectionsPreferences.discordRPCStatus
+        val customMessagePref = connectionsPreferences.discordCustomMessage
+        val showProgressPref = connectionsPreferences.discordShowProgress
+        val showTimestampPref = connectionsPreferences.discordShowTimestamp
+        val showButtonsPref = connectionsPreferences.discordShowButtons
+        val showDownloadButtonPref = connectionsPreferences.discordShowDownloadButton
+        val showDiscordButtonPref = connectionsPreferences.discordShowDiscordButton
         val showProgressEnabled by showProgressPref.collectAsState()
 
         val enableDRPC by enableDRPCPref.collectAsState()
@@ -164,7 +160,7 @@ object SettingsDiscordScreen : SearchableSettings {
             ),
             Preference.PreferenceGroup(
                 title = stringResource(KMR.strings.connections_discord),
-                preferenceItems = persistentListOf(
+                preferenceItems = listOf(
                     Preference.PreferenceItem.SwitchPreference(
                         preference = enableDRPCPref,
                         title = stringResource(KMR.strings.pref_enable_discord_rpc),
@@ -172,12 +168,12 @@ object SettingsDiscordScreen : SearchableSettings {
                     Preference.PreferenceItem.ListPreference(
                         preference = discordRPCStatus,
                         title = stringResource(KMR.strings.pref_discord_status),
-                        entries = persistentMapOf(
+                        entries = mapOf(
                             -1 to stringResource(KMR.strings.pref_discord_dnd),
                             0 to stringResource(KMR.strings.pref_discord_idle),
                             1 to stringResource(KMR.strings.pref_discord_online),
                         ),
-                        enabled = enableDRPC,
+                        visible = enableDRPC,
                     ),
                 ),
             ),
@@ -187,8 +183,8 @@ object SettingsDiscordScreen : SearchableSettings {
             ),
             Preference.PreferenceGroup(
                 title = stringResource(KMR.strings.pref_category_discord_customization),
-                enabled = enableDRPC,
-                preferenceItems = persistentListOf(
+                visible = enableDRPC,
+                preferenceItems = listOf(
                     Preference.PreferenceItem.TextPreference(
                         title = stringResource(KMR.strings.pref_discord_custom_message),
                         subtitle = stringResource(KMR.strings.pref_discord_custom_message_summary),
@@ -203,7 +199,7 @@ object SettingsDiscordScreen : SearchableSettings {
                         preference = useChapterTitlesPref,
                         title = stringResource(KMR.strings.show_chapters_titles_title),
                         subtitle = stringResource(KMR.strings.show_chapters_titles_subtitle),
-                        enabled = showProgressEnabled,
+                        visible = showProgressEnabled,
                     ),
                     Preference.PreferenceItem.SwitchPreference(
                         preference = showTimestampPref,
@@ -219,13 +215,13 @@ object SettingsDiscordScreen : SearchableSettings {
                         preference = showDownloadButtonPref,
                         title = stringResource(KMR.strings.pref_discord_show_download_button),
                         subtitle = stringResource(KMR.strings.pref_discord_show_download_button_summary),
-                        enabled = showButtons,
+                        visible = showButtons,
                     ),
                     Preference.PreferenceItem.SwitchPreference(
                         preference = showDiscordButtonPref,
                         title = stringResource(KMR.strings.pref_discord_show_discord_button),
                         subtitle = stringResource(KMR.strings.pref_discord_show_discord_button_summary),
-                        enabled = showButtons,
+                        visible = showButtons,
                     ),
                 ),
             ),
@@ -236,7 +232,7 @@ object SettingsDiscordScreen : SearchableSettings {
                         modifier = Modifier
                             .padding(horizontal = MaterialTheme.padding.large),
                         title = stringResource(MR.strings.logout),
-                        icon = Icons.AutoMirrored.Filled.Logout,
+                        icon = MaterialSymbols.AutoMirroredRounded.Logout,
                         iconTint = MaterialTheme.colorScheme.error,
                         onPreferenceClick = {
                             dialog = LogoutConnectionDialog(connectionsManager.discord)
@@ -252,15 +248,16 @@ object SettingsDiscordScreen : SearchableSettings {
         connectionsPreferences: ConnectionsPreferences,
         enabled: Boolean,
     ): Preference.PreferenceGroup {
-        val getCategories = remember { Injekt.get<GetCategories>() }
+        val context = LocalContext.current
+        val getCategories = remember { context.appGraph.getCategories }
         val allCategories by getCategories.subscribe().collectAsState(initial = emptyList())
 
-        val discordRPCIncognitoPref = connectionsPreferences.discordRPCIncognito()
-        val discordRPCIncognitoCategoriesPref = connectionsPreferences.discordRPCIncognitoCategories()
+        val discordRPCIncognitoPref = connectionsPreferences.discordRPCIncognito
+        val discordRPCIncognitoCategoriesPref = connectionsPreferences.discordRPCIncognitoCategories
 
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.categories),
-            preferenceItems = persistentListOf(
+            preferenceItems = listOf(
                 Preference.PreferenceItem.SwitchPreference(
                     preference = discordRPCIncognitoPref,
                     title = stringResource(KMR.strings.pref_discord_incognito),
@@ -270,14 +267,14 @@ object SettingsDiscordScreen : SearchableSettings {
                     preference = discordRPCIncognitoCategoriesPref,
                     entries = allCategories
                         .associate { it.id.toString() to it.visualName }
-                        .toImmutableMap(),
+                        .toMap(),
                     title = stringResource(MR.strings.categories),
                 ),
                 Preference.PreferenceItem.InfoPreference(
                     stringResource(KMR.strings.pref_discord_incognito_categories_details),
                 ),
             ),
-            enabled = enabled,
+            visible = enabled,
         )
     }
 }

@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -27,6 +25,8 @@ import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.more.settings.LocalPreferenceMinHeight
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Delete
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
@@ -123,7 +123,7 @@ fun FeedActionsDialog(
 
             TextPreferenceWidget(
                 title = stringResource(MR.strings.action_delete),
-                icon = Icons.Outlined.Delete,
+                icon = MaterialSymbols.Rounded.Delete,
                 onPreferenceClick = {
                     onDismissRequest()
                     onClickDelete(feed)

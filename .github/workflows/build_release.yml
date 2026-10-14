@@ -1,10 +1,15 @@
 name: Release Builder
-# Build a stable release on a tag v* newly pushed
+# Build a bleeding-edge release on a tag v* newly pushed.
+# This fork has no stable channel: every release is a prerelease and the newest
+# build is the one users get.
 
 on:
   push:
     tags:
       - v*
+
+env:
+  MIHON_GITHUB_RELEASE: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,7 +45,9 @@ jobs:
         uses: InsonusK/get-latest-release@7a9ff16c8c6b7ead5d71c0f1cc61f2703170eade # v1.1.0
         with:
           myToken: ${{ github.token }}
-          exclude_types: "draft|prerelease"
+          # Only exclude drafts: every published release here is a prerelease, so
+          # excluding prereleases would find no "previous release" at all.
+          exclude_types: "draft"
           view_top: 1
 
       - name: Curren commit
@@ -75,7 +82,7 @@ jobs:
         run: |
           echo "COMMIT_LOGS<<{delimiter}
           $(curl -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/komikku-app/komikku/compare/${{ steps.previous_commit.outputs.PREV_RELEASE_SHA }}...${{ steps.current_commit.outputs.CURRENT_SHA }}" \
+            "https://api.github.com/repos/komi-kun/komi-kun/compare/${{ steps.previous_commit.outputs.PREV_RELEASE_SHA }}...${{ steps.current_commit.outputs.CURRENT_SHA }}" \
             | jq '[.commits[]|{message:(.commit.message | split("\n")), username:.author.login}]' \
             | jq -r '.[]|"- \(.message | first) (@\(.username))"')
           {delimiter}" >> $GITHUB_OUTPUT
@@ -97,7 +104,20 @@ jobs:
           java-version-file: .github/.java-version
           distribution: temurin
 
+      - name: Check optional secrets
+        id: opt_secrets
+        run: |
+          echo "google_services=${{ secrets.GOOGLE_SERVICES_JSON != '' }}" >> "$GITHUB_OUTPUT"
+          echo "client_secrets=${{ secrets.GOOGLE_CLIENT_SECRETS_JSON != '' }}" >> "$GITHUB_OUTPUT"
+          echo "signing_key=${{ secrets.SIGNING_KEY != '' }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ secrets.GOOGLE_SERVICES_JSON != '' }}" = "true" ]; then
+            echo "telemetry_flag=" >> "$GITHUB_OUTPUT"
+          else
+            echo "telemetry_flag=-Pinclude-telemetry=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Write google-services.json
+        if: steps.opt_secrets.outputs.google_services == 'true'
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/google-services.json
@@ -105,6 +125,7 @@ jobs:
           write-mode: overwrite
 
       - name: Write client_secrets.json
+        if: steps.opt_secrets.outputs.client_secrets == 'true'
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/src/main/assets/client_secrets.json
@@ -118,10 +139,15 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        run: ./gradlew assembleRelease -Pinclude-telemetry -Penable-updater
+        run: ./gradlew assembleRelease -Pdist=github ${{ steps.opt_secrets.outputs.telemetry_flag }}
+        env:
+          storeFileBase64: ${{ secrets.SIGNING_KEY }}
+          storePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyAlias: ${{ secrets.ALIAS }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Run unit tests
-        run: ./gradlew testReleaseUnitTest
+        run: ./gradlew testDebugUnitTest
 
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -146,27 +172,16 @@ jobs:
         with:
           merge-multiple: true
 
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: '35.0.1'
-
       - name: Get SHA & clean up build artifacts
         id: get_sha
         run: |
           set -e
 
-          mv app/build/outputs/apk/release/app-universal-release-unsigned-signed.apk Komikku-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
-          mv app/build/outputs/apk/release/app-arm64-v8a-release-unsigned-signed.apk Komikku-arm64-v8a-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
-          mv app/build/outputs/apk/release/app-armeabi-v7a-release-unsigned-signed.apk Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
-          mv app/build/outputs/apk/release/app-x86-release-unsigned-signed.apk Komikku-x86-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
-          mv app/build/outputs/apk/release/app-x86_64-release-unsigned-signed.apk Komikku-x86_64-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
+          mv app/build/outputs/apk/release/app-universal-release.apk Komikku-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
+          mv app/build/outputs/apk/release/app-arm64-v8a-release.apk Komikku-arm64-v8a-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
+          mv app/build/outputs/apk/release/app-armeabi-v7a-release.apk Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
+          mv app/build/outputs/apk/release/app-x86-release.apk Komikku-x86-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
+          mv app/build/outputs/apk/release/app-x86_64-release.apk Komikku-x86_64-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
 
       - name: Create release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -174,7 +189,7 @@ jobs:
           tag_name: ${{ needs.prepare-build.outputs.VERSION_TAG }}
           name: Komikku ${{ needs.prepare-build.outputs.VERSION_TAG }}
           body: |
-            [![GitHub downloads](https://img.shields.io/github/downloads/komikku-app/komikku/${{ needs.prepare-build.outputs.VERSION_TAG }}/total?label=Downloaded&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/komikku-app/komikku/releases/${{ needs.prepare-build.outputs.VERSION_TAG }})
+            [![GitHub downloads](https://img.shields.io/github/downloads/komi-kun/komi-kun/${{ needs.prepare-build.outputs.VERSION_TAG }}/total?label=Downloaded&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/komi-kun/komi-kun/releases/${{ needs.prepare-build.outputs.VERSION_TAG }})
             #### What's Changed
             ##### New
 
@@ -186,7 +201,7 @@ jobs:
 
             ##### Based on
 
-            **Full Changelog**: [komikku-app/komikku@${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }}](https://github.com/komikku-app/komikku/compare/${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }})
+            **Full Changelog**: [komi-kun/komi-kun@${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }}](https://github.com/komi-kun/komi-kun/compare/${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }})
 
             <!-->
             > [!TIP]
@@ -198,6 +213,11 @@ jobs:
             Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
             Komikku-x86-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
             Komikku-x86_64-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
-          draft: true
-          prerelease: false
+          # Bleeding-edge fork: publish (non-draft, so users actually see it and the
+          # updater can offer it) as a prerelease. GitHub forbids marking a prerelease
+          # as "latest" ("Latest release cannot be draft or prerelease"), so
+          # `make_latest: true` is intentionally omitted; the in-app updater lists
+          # all releases and offers the newest one instead.
+          draft: false
+          prerelease: true
           token: ${{ secrets.GITHUB_TOKEN }}

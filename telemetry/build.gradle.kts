@@ -2,7 +2,6 @@ import mihon.buildlogic.Config
 
 plugins {
     id("mihon.library")
-    kotlin("android")
 }
 
 android {
@@ -11,9 +10,9 @@ android {
     sourceSets {
         getByName("main") {
             if (Config.includeTelemetry) {
-                kotlin.srcDirs("src/firebase/kotlin")
+                kotlin.directories.add("src/firebase/kotlin")
             } else {
-                kotlin.srcDirs("src/noop/kotlin")
+                kotlin.directories.add("src/noop/kotlin")
                 manifest.srcFile("src/noop/AndroidManifext.xml")
             }
         }

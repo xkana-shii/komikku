@@ -3,11 +3,16 @@ package mihon.core.migration.migrations
 import android.app.Application
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.source.service.SourcePreferences
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
 
+@Inject
+@ContributesIntoSet(AppScope::class)
 class DisabledRepoMigration : Migration {
     override val version: Float = 80f
 
@@ -16,14 +21,14 @@ class DisabledRepoMigration : Migration {
         val sourcePreferences = migrationContext.get<SourcePreferences>() ?: return@withIOContext false
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         prefs.edit {
-            val disabledRepos = prefs.getStringSet(sourcePreferences.disabledRepos().key(), emptySet()) ?: return@edit
+            val disabledRepos = prefs.getStringSet(sourcePreferences.disabledRepos.key(), emptySet()) ?: return@edit
             disabledRepos
                 .map {
                     it.removeSuffix("/index.min.json").removeSuffix("/index.json")
                         .removeSuffix("/repo.json") + "/repo.json"
                 }.toSet()
                 .let {
-                    putStringSet(sourcePreferences.disabledRepos().key(), it)
+                    putStringSet(sourcePreferences.disabledRepos.key(), it)
                 }
         }
         return@withIOContext true

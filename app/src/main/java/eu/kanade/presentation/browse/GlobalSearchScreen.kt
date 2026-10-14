@@ -15,19 +15,18 @@ import eu.kanade.presentation.browse.components.GlobalSearchResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchToolbar
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchItemResult
-import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchScreenModel
+import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchViewModel
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SourceFilter
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import kotlinx.collections.immutable.ImmutableMap
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.domain.source.model.Source as DomainSource
 
 @Composable
 fun GlobalSearchScreen(
-    state: SearchScreenModel.State,
+    state: SearchViewModel.State,
     navigateUp: () -> Unit,
     onChangeSearchQuery: (String?) -> Unit,
     onSearch: (String) -> Unit,
@@ -38,12 +37,12 @@ fun GlobalSearchScreen(
     onClickItem: (Manga) -> Unit,
     onLongClickItem: (Manga) -> Unit,
     // KMK -->
-    bulkFavoriteScreenModel: BulkFavoriteScreenModel,
+    bulkFavoriteViewModel: BulkFavoriteViewModel,
     hasPinnedSources: Boolean,
     // KMK <--
 ) {
     // KMK -->
-    val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+    val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
     // KMK <--
 
     Scaffold(
@@ -53,19 +52,19 @@ fun GlobalSearchScreen(
                 BulkSelectionToolbar(
                     selectedCount = bulkFavoriteState.selection.size,
                     isRunning = bulkFavoriteState.isRunning,
-                    onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                    onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                    onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                    onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                     onSelectAll = {
                         state.filteredItems.values
                             .filterIsInstance<SearchItemResult.Success>()
                             .flatMap { it.result }
-                            .forEach { bulkFavoriteScreenModel.select(it) }
+                            .forEach { bulkFavoriteViewModel.select(it) }
                     },
                     onReverseSelection = {
                         state.filteredItems.values
                             .filterIsInstance<SearchItemResult.Success>()
                             .flatMap { it.result }
-                            .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                            .let { bulkFavoriteViewModel.reverseSelection(it) }
                     },
                 )
             } else {
@@ -84,7 +83,7 @@ fun GlobalSearchScreen(
                     onToggleResults = onToggleResults,
                     scrollBehavior = scrollBehavior,
                     // KMK -->
-                    toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
+                    toggleSelectionMode = bulkFavoriteViewModel::toggleSelectionMode,
                     isRunning = bulkFavoriteState.isRunning,
                     hasPinnedSources = hasPinnedSources,
                     // KMK <--
@@ -108,7 +107,7 @@ fun GlobalSearchScreen(
 
 @Composable
 internal fun GlobalSearchContent(
-    items: ImmutableMap<Source, SearchItemResult>,
+    items: Map<Source, SearchItemResult>,
     contentPadding: PaddingValues,
     getManga: @Composable (Manga) -> State<Manga>,
     onClickSource: (Source) -> Unit,
