@@ -19,8 +19,8 @@ upstream topology.
 git fetch komikku mihon tachiyomiSY
 ```
 
-The upstreams are configured in `.claude/skills/cherrypick-log/config.json`; the
-[`cherrypick-log`](.claude/skills/cherrypick-log/README.md) skill/script is the source of truth for
+The upstreams are configured in `.agents/skills/cherrypick-log/config.json`; the
+[`cherrypick-log`](.agents/skills/cherrypick-log/README.md) skill/script is the source of truth for
 what has and has not been ported (`cherrypick_log.md`).
 
 ## Provenance markers
@@ -46,7 +46,7 @@ upstream** — they never mark upstream code itself. Rules (extending `AGENTS.md
 
 ## Porting workflow (Mihon / TachiyomiSY → this fork)
 
-1. `python3 .claude/skills/cherrypick-log/update_cherrypick_log.py` — refresh the log.
+1. `python3 .agents/skills/cherrypick-log/update_cherrypick_log.py` — refresh the log.
 2. Review the `?` rows (and, when asked, the empty ones) with the `cherrypick-log` skill; mark
    verdicts through the script (`mark`), never by hand.
 3. Port on a **feature branch**, one upstream sync per branch/PR:
