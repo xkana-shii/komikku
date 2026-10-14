@@ -98,11 +98,9 @@ fun ChapterListDialog(
                                 MetadataUtil.EX_DATE_FORMAT
                                     .format(ZonedDateTime.ofInstant(it.toJavaInstant(), ZoneId.systemDefault()))
                             } else {
-                                // KMK -->
                                 it.toLocalDateTime(TimeZone.currentSystemDefault())
                                     .date
                                     .toRelativeString(context, dateRelativeTime, chapterItem.dateFormat)
-                                // KMK <--
                             }
                             // SY <--
                         },

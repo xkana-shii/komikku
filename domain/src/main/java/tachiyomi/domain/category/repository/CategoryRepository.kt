@@ -36,11 +36,9 @@ interface CategoryRepository {
 
     suspend fun updateAllOrders(orderedIds: List<Long>)
 
-    // KMK -->
     suspend fun updatePartial(update: CategoryUpdate)
 
     suspend fun updatePartial(updates: List<CategoryUpdate>)
-    // KMK <--
 
     suspend fun delete(categoryId: Long)
 }

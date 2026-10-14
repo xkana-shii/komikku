@@ -223,7 +223,6 @@ class CategoryRepositoryImpl(
         }
     }
 
-    // KMK -->
     override suspend fun updatePartial(update: CategoryUpdate) {
         database.updatePartialBlocking(update)
     }
@@ -251,7 +250,6 @@ class CategoryRepositoryImpl(
             categoryId = update.id,
         )
     }
-    // KMK <--
 
     override suspend fun delete(categoryId: Long) {
         database.categoryQueries.delete(categoryId = categoryId)
