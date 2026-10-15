@@ -17,12 +17,17 @@ data class MangaCover(
     val lastModified: Instant?,
 ) {
     // SY -->
-    private val customThumbnailUrl = if (isMangaFavorite) {
-        getCustomMangaInfo?.get(mangaId)?.thumbnailUrl
-    } else {
-        null
+    // KUN -->
+    // Lazy so the bridge is resolved on first access rather than at construction.
+    private val customThumbnailUrl by lazy {
+        if (isMangaFavorite) {
+            getCustomMangaInfo?.get(mangaId)?.thumbnailUrl
+        } else {
+            null
+        }
     }
-    val url: String? = customThumbnailUrl ?: ogUrl
+    // KUN <--
+    val url: String? by lazy { customThumbnailUrl ?: ogUrl }
     // SY <--
 
     // KMK -->

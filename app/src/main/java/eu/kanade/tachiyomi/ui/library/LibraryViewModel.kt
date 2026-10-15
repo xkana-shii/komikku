@@ -29,6 +29,7 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
+import eu.kanade.tachiyomi.data.sync.SyncManager
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.model.SManga
@@ -68,6 +69,7 @@ import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -206,6 +208,58 @@ class LibraryViewModel(
     private val includedCategories = MutableStateFlow(setOf<Long>())
     private val excludedCategories = MutableStateFlow(setOf<Long>())
     // KMK <--
+
+    init {
+        // SY -->
+        combine(
+            exhPreferences.isHentaiEnabled.changes(),
+            sourcePreferences.disabledSources.changes(),
+            exhPreferences.enableExhentai.changes(),
+        ) { isHentaiEnabled, disabledSources, enableExhentai ->
+            isHentaiEnabled && (EH_SOURCE_ID.toString() !in disabledSources || enableExhentai)
+        }
+            .distinctUntilChanged()
+            .onEach { showSyncExh.value = it }
+            .launchIn(viewModelScope)
+
+        libraryPreferences.groupLibraryBy.changes()
+            .onEach { groupType.value = it }
+            .launchIn(viewModelScope)
+
+        syncPreferences.syncService.changes()
+            .distinctUntilChanged()
+            .onEach { isSyncEnabled.value = it != SyncManager.SyncService.NONE.value }
+            .launchIn(viewModelScope)
+        // SY <--
+
+        // KMK -->
+        combine(
+            libraryPreferences.filterCategories.changes(),
+            libraryPreferences.filterCategoriesInclude.changes(),
+            libraryPreferences.filterCategoriesExclude.changes(),
+        ) { filter, included, excluded ->
+            Triple(
+                filter,
+                included.mapNotNull(String::toLongOrNull).toSet(),
+                excluded.mapNotNull(String::toLongOrNull).toSet(),
+            )
+        }
+            .distinctUntilChanged()
+            .onEach { (filter, included, excluded) ->
+                filterCategory.value = filter
+                includedCategories.value = included
+                excludedCategories.value = excluded
+            }
+            .launchIn(viewModelScope)
+
+        // The DMCA uuid list backs the `mangadex-dmca` search; without this it stays empty.
+        viewModelScope.launchIO {
+            if (mangaDexDmcaUuids.isEmpty()) {
+                mangaDexDmcaUuids = loadMangaDexDmcaUuids(context = preferences.context)
+            }
+        }
+        // KMK <--
+    }
 
     private val displayPreferences = combine(
         libraryPreferences.categoryTabs.changes(),

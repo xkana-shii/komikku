@@ -49,11 +49,16 @@ data class Manga(
 
     // SY -->
     /* KMK --> */ @Transient /* KMK <-- */
-    private val customMangaInfo = if (favorite) {
-        getCustomMangaInfo?.get(id)
-    } else {
-        null
+    // KUN -->
+    // Lazy so the bridge is resolved on first access rather than at construction.
+    private val customMangaInfo by lazy {
+        if (favorite) {
+            getCustomMangaInfo?.get(id)
+        } else {
+            null
+        }
     }
+    // KUN <--
 
     val title: String
         get() = customMangaInfo?.title ?: ogTitle
