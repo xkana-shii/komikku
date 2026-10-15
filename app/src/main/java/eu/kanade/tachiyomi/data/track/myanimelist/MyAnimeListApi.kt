@@ -318,7 +318,15 @@ class MyAnimeListApi(
     }
 
     private fun parseDate(isoDate: String): Long {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(isoDate)?.time ?: 0L
+        // KMK -->
+        val pattern = when (isoDate.length) {
+            10 -> "yyyy-MM-dd"
+            7 -> "yyyy-MM"
+            4 -> "yyyy"
+            else -> throw IllegalArgumentException("Unsupported date format: \"$isoDate\"")
+        }
+        // KMK <--
+        return SimpleDateFormat(pattern, Locale.US).parse(isoDate)?.time ?: 0L
     }
 
     private fun convertToIsoDate(epochTime: Long): String? {

@@ -2,7 +2,9 @@
 aboutlib_version = "13.2.1"
 leakcanary = "2.14"
 moko = "0.26.4"
-okhttp_version = "5.3.2"
+# KMK -->
+okhttp_version = "5.5.0"
+# KMK <--
 shizuku_version = "13.1.5"
 # KMK -->
 sqldelight = "2.4.0"

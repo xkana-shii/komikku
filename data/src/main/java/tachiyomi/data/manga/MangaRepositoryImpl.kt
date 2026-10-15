@@ -97,10 +97,26 @@ class MangaRepositoryImpl(
         return database.mangaQueries.getDuplicateLibraryManga(id, title, MangaMapper::mapMangaWithChapterCount).awaitAsList()
     }
 
-    override suspend fun getUpcomingManga(statuses: Set<Long>): Flow<List<Manga>> {
+    // KMK -->
+    override suspend fun getUpcomingManga(
+        statuses: Set<Long>,
+        excludedCategories: List<Long>,
+        includedCategories: List<Long>,
+    ): Flow<List<Manga>> {
         val epochMillis = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
-        return database.mangaQueries.getUpcomingManga(epochMillis, statuses, MangaMapper::mapManga).subscribeToList()
+        return database.mangaQueries
+            .getUpcomingManga(
+                startOfDay = epochMillis,
+                statuses = statuses,
+                includedEmpty = includedCategories.isEmpty(),
+                includedCategories = includedCategories,
+                excludedEmpty = excludedCategories.isEmpty(),
+                excludedCategories = excludedCategories,
+                mapper = MangaMapper::mapManga,
+            )
+            .subscribeToList()
     }
+    // KMK <--
 
     override suspend fun resetViewerFlags(): Boolean {
         return try {

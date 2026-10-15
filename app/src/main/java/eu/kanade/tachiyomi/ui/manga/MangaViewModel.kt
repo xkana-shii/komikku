@@ -131,7 +131,7 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
-import tachiyomi.domain.chapter.model.filterChapterVisibility
+import tachiyomi.domain.chapter.model.chapterListVisibility
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.filterBlacklistedChapters
@@ -392,14 +392,20 @@ class MangaViewModel(
                 // KMK -->
                 .combine(libraryPreferences.smartScanlatorMerge().changes()) { state, _ -> state }
                 .combine(libraryPreferences.smartScanlatorMergeOverride(mangaId).changes()) { state, _ -> state }
+                .combine(libraryPreferences.hideBlacklistedChapters(mangaId).changes()) { state, _ -> state }
                 // KMK <--
                 // SY <--
                 .flowWithLifecycle(lifecycle)
                 .collectLatest { (manga, chapters /* SY --> */, flatMetadata, mergedData /* SY <-- */) ->
                     // KMK -->
-                    val chapterItems = chapters.processSmartScanlatorChapters(manga)
+                    val chapterVisibility = chapters.processSmartScanlatorChapters(manga)
+                    val chapterItems = chapterVisibility.chapters
                         // KMK <--
-                        .toChapterListItems(manga /* SY --> */, mergedData /* SY <-- */)
+                        .toChapterListItems(
+                            manga /* SY --> */,
+                            mergedData /* SY <-- */,
+                            chapterVisibility.blacklistedChapterIds,
+                        )
                     updateSuccessState {
                         it.copy(
                             manga = manga,
@@ -464,15 +470,19 @@ class MangaViewModel(
                         .map { sourceManager.getOrStub(it) },
                 )
             }
-            val chapters = if (manga.source == MERGED_SOURCE_ID) {
+            val chapterVisibility = if (manga.source == MERGED_SOURCE_ID) {
                 getMergedChaptersByMangaId.await(mangaId, applyFilter = true)
             } else {
                 getMangaAndChapters.awaitChapters(mangaId, applyFilter = true)
             }
                 // KMK -->
                 .processSmartScanlatorChapters(manga)
-                // KMK <--
-                .toChapterListItems(manga, mergedData)
+            // KMK <--
+            val chapters = chapterVisibility.chapters.toChapterListItems(
+                manga,
+                mergedData,
+                chapterVisibility.blacklistedChapterIds,
+            )
             val meta = getFlatMetadata.await(mangaId)
             // SY <--
 
@@ -1121,6 +1131,9 @@ class MangaViewModel(
         // SY -->
         mergedData: MergedMangaData?,
         // SY <--
+        // KMK -->
+        blacklistedChapterIds: Set<Long>,
+        // KMK <--
     ): List<ChapterList.Item> {
         val isLocal = manga.isLocal()
         // SY -->
@@ -1162,6 +1175,9 @@ class MangaViewModel(
                 downloadState = downloadState,
                 downloadProgress = activeDownload?.progress ?: 0,
                 selected = chapter.id in selectedChapterIds,
+                // KMK --> The display preference must not change chapter eligibility.
+                isBlacklisted = chapter.id in blacklistedChapterIds,
+                // KMK <--
                 // SY -->
                 sourceName = source?.getNameForMangaInfo(uiPreferences = uiPreferences),
                 showScanlator = !isExhManga,
@@ -1171,12 +1187,12 @@ class MangaViewModel(
     }
 
     // KMK -->
-    private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga): List<Chapter> {
-        return filterChapterVisibility(
+    private fun List<Chapter>.processSmartScanlatorChapters(manga: Manga) =
+        chapterListVisibility(
             manga = manga,
             smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+            hideBlacklistedChapters = libraryPreferences.hideBlacklistedChapters(manga.id).get(),
         )
-    }
     // KMK <--
 
     // SY -->
@@ -2221,7 +2237,10 @@ class MangaViewModel(
                     manga.blacklistedChapters,
                 ).mapTo(HashSet(), Chapter::id)
                 return asSequence()
-                    .filter { (chapter) -> chapter.id in visibleIds }
+                    // KMK --> Display-only reveals retain their blacklist state while normal
+                    // chapter filters continue to operate on the existing chapter list.
+                    .filter { item -> item.isBlacklisted || item.chapter.id in visibleIds }
+                    // KMK <--
                     // KMK -->
                     .filter { (chapter) ->
                         bookmarkedFilter != TriState.ENABLED_IS ||
@@ -2260,6 +2279,9 @@ sealed class ChapterList {
         val downloadState: Download.State,
         val downloadProgress: Int,
         val selected: Boolean = false,
+        // KMK --> Kept separate from chapter eligibility for display-only blacklist reveals.
+        val isBlacklisted: Boolean = false,
+        // KMK <--
         // SY -->
         val sourceName: String?,
         val showScanlator: Boolean,

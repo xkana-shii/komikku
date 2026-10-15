@@ -13,6 +13,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -184,6 +185,45 @@ class GetNextChaptersTest {
         coEvery { getChaptersByMangaId.await(10L, applyFilter = true) } returns listOf(hidden, preferred)
 
         interactor.await(10L, hidden.id, onlyUnread = false).first() shouldBe preferred
+    }
+
+    @Test
+    fun `continues after the visible preferred chapter when History references its hidden duplicate`() = runTest {
+        val preferredOne = chapter(1L, 10L, read = true, number = 1.0).copy(scanlator = "Group A")
+        val hiddenOne = chapter(2L, 10L, read = false, number = 1.0).copy(scanlator = "Group B")
+        val preferredTwo = chapter(3L, 10L, read = true, number = 2.0).copy(scanlator = "Group A")
+        val hiddenTwo = chapter(4L, 10L, read = false, number = 2.0).copy(scanlator = "Group B")
+        val nextPreferred = chapter(5L, 10L, read = false, number = 3.0).copy(scanlator = "Group A")
+        smartMergeEnabled = true
+        coEvery { getManga.await(10L) } returns Manga.create().copy(
+            id = 10L,
+            source = 1L,
+            scanlatorPriority = listOf("Group A", "Group B"),
+        )
+        coEvery { getChaptersByMangaId.await(10L, applyFilter = true) } returns listOf(
+            preferredOne,
+            hiddenOne,
+            preferredTwo,
+            hiddenTwo,
+            nextPreferred,
+        )
+
+        interactor.await(10L, hiddenTwo.id, onlyUnread = false).first() shouldBe nextPreferred
+    }
+
+    @Test
+    fun `continues after a blacklisted History chapter without reopening earlier chapters`() = runTest {
+        val first = chapter(1L, 10L, read = true, number = 1.0)
+        val blacklisted = chapter(2L, 10L, read = true, number = 2.0).copy(url = "/blacklisted")
+        val next = chapter(3L, 10L, read = false, number = 3.0)
+        coEvery { getManga.await(10L) } returns Manga.create().copy(
+            id = 10L,
+            source = 1L,
+            blacklistedChapters = listOf(chapterUrlBlacklistKey(blacklisted.url)),
+        )
+        coEvery { getChaptersByMangaId.await(10L, applyFilter = true) } returns listOf(first, blacklisted, next)
+
+        interactor.await(10L, blacklisted.id, onlyUnread = false).first() shouldBe next
     }
 
     companion object {

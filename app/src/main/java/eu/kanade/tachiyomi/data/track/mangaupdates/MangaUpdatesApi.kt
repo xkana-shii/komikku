@@ -178,6 +178,25 @@ class MangaUpdatesApi(
         }
     }
 
+    // KMK -->
+    suspend fun getSeriesDetails(id: Long): MURecord? {
+        return withIOContext {
+            val url = "$BASE_URL/v1/series/$id"
+
+            with(json) {
+                val response = client.newCall(GET(url))
+                    .await()
+
+                if (response.code == 404) {
+                    null
+                } else {
+                    response.parseAs<MURecord>()
+                }
+            }
+        }
+    }
+    // KMK <--
+
     suspend fun authenticate(username: String, password: String): MUContext {
         val body = buildJsonObject {
             put("username", username)

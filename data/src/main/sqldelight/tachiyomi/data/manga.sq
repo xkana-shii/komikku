@@ -276,6 +276,44 @@ FROM manga
 WHERE state_chapter_next_update >= :startOfDay
 AND user_favorite_at IS NOT NULL
 AND remote_status IN :statuses
+-- KMK -->
+AND (
+    :includedEmpty
+    OR EXISTS (
+        SELECT 1
+        FROM manga_category
+        WHERE manga_category.manga_id = manga.id
+        AND COALESCE(manga_category.category_id, 0) IN :includedCategories
+    )
+    OR (
+        0 IN :includedCategories
+        AND NOT EXISTS (
+            SELECT 1
+            FROM manga_category
+            WHERE manga_category.manga_id = manga.id
+        )
+    )
+)
+AND (
+    :excludedEmpty
+    OR (
+        NOT EXISTS (
+            SELECT 1
+            FROM manga_category
+            WHERE manga_category.manga_id = manga.id
+            AND COALESCE(manga_category.category_id, 0) IN :excludedCategories
+        )
+        AND (
+            0 NOT IN :excludedCategories
+            OR EXISTS (
+                SELECT 1
+                FROM manga_category
+                WHERE manga_category.manga_id = manga.id
+            )
+        )
+    )
+)
+-- KMK <--
 ORDER BY state_chapter_next_update ASC;
 
 resetViewerFlags:

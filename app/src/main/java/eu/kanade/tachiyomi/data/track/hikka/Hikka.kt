@@ -27,6 +27,10 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
         private val SCORE_LIST = IntRange(0, 10)
             .map(Int::toString)
             .toImmutableList()
+
+        // KMK -->
+        private const val SEARCH_ID_PREFIX = "id:"
+        // KMK <--
     }
 
     private val json: Json by injectLazy()
@@ -122,7 +126,17 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
         }
     }
 
-    override suspend fun search(query: String): List<TrackSearch> = api.searchManga(query)
+    // KMK -->
+    override suspend fun search(query: String): List<TrackSearch> {
+        if (query.startsWith(SEARCH_ID_PREFIX)) {
+            query.substringAfter(SEARCH_ID_PREFIX).trim().let { slug ->
+                return api.getMangaDetails(slug)?.let { listOf(it) } ?: emptyList()
+            }
+        }
+
+        return api.searchManga(query)
+    }
+    // KMK <--
 
     override suspend fun refresh(track: Track): Track {
         val remoteTrack = api.getManga(track)

@@ -103,6 +103,7 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.filterChapterVisibility
 import tachiyomi.domain.chapter.model.resolveVisibleChapter
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.interactor.GetNextChapters
@@ -276,12 +277,24 @@ class ReaderViewModel @JvmOverloads constructor(
             manga = manga,
             smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
         )
-        val selectedChapter = chapters.resolveVisibleChapter(
-            manga = manga,
-            smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
-            chapterId = chapterId,
-            visibleChapters = visibleChapters,
+        val requestedChapter = chapters.firstOrNull { it.id == chapterId }
+        // KMK --> Resolve blacklist keys against the complete chapter list so hybrid keys keep
+        // working after an extension changes a chapter URL.
+        val blacklistedChapterIds = filterBlacklistedChapters(
+            chapters,
+            manga.blacklistedChapters,
         )
+            .mapTo(HashSet(), Chapter::id)
+            .let { visibleIds -> chapters.map(Chapter::id).filterNot(visibleIds::contains).toSet() }
+        // KMK <--
+        val selectedChapter = requestedChapter
+            ?.takeIf { it.id in blacklistedChapterIds }
+            ?: chapters.resolveVisibleChapter(
+                manga = manga,
+                smartScanlatorMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id),
+                chapterId = chapterId,
+                visibleChapters = visibleChapters,
+            )
             ?: error("Requested chapter of id $chapterId not found in chapter list")
         // KMK <--
 
@@ -318,6 +331,11 @@ class ReaderViewModel @JvmOverloads constructor(
             }
             // KMK -->
             else -> visibleChapters
+            // KMK <--
+        }.let { readerChapters ->
+            // KMK --> Keep an explicitly opened blacklisted chapter readable without making any
+            // other blacklisted upload eligible for automatic reader navigation.
+            if (readerChapters.any { it.id == selectedChapter.id }) readerChapters else readerChapters + selectedChapter
             // KMK <--
         }
 

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
@@ -42,6 +43,7 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import tachiyomi.presentation.core.theme.active
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -51,6 +53,8 @@ fun UpcomingScreenContent(
     setSelectedYearMonth: (YearMonth) -> Unit,
     onClickUpcoming: (manga: Manga) -> Unit,
     // KMK -->
+    hasActiveFilters: Boolean,
+    onClickFilter: () -> Unit,
     showUpdatingMangas: () -> Unit,
     hideUpdatingMangas: () -> Unit,
     isPredictReleaseDate: Boolean,
@@ -79,6 +83,8 @@ fun UpcomingScreenContent(
             UpcomingToolbar(
                 // KMK -->
                 state.isShowingUpdatingMangas,
+                hasActiveFilters = hasActiveFilters,
+                onClickFilter = onClickFilter,
                 showUpdatingMangas = showUpdatingMangas,
                 hideUpdatingMangas = hideUpdatingMangas,
                 isPredictReleaseDate = isPredictReleaseDate,
@@ -129,6 +135,8 @@ fun UpcomingScreenContent(
 private fun UpcomingToolbar(
     // KMK -->
     isShowingUpdatingMangas: Boolean,
+    hasActiveFilters: Boolean,
+    onClickFilter: () -> Unit,
     showUpdatingMangas: () -> Unit,
     hideUpdatingMangas: () -> Unit,
     isPredictReleaseDate: Boolean,
@@ -147,6 +155,13 @@ private fun UpcomingToolbar(
         navigateUp = navigator::pop,
         actions = {
             // KMK -->
+            IconButton(onClick = onClickFilter) {
+                Icon(
+                    imageVector = Icons.Outlined.FilterList,
+                    contentDescription = stringResource(MR.strings.action_filter),
+                    tint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                )
+            }
             if (isPredictReleaseDate) {
                 IconButton(
                     onClick = {

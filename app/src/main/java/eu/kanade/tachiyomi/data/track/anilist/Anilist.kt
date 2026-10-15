@@ -33,6 +33,10 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
         const val POINT_10_DECIMAL = "POINT_10_DECIMAL"
         const val POINT_5 = "POINT_5"
         const val POINT_3 = "POINT_3"
+
+        // KMK -->
+        private const val SEARCH_ID_PREFIX = "id:"
+        // KMK <--
     }
 
     private val json: Json by injectLazy()
@@ -201,6 +205,14 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        // KMK -->
+        if (query.startsWith(SEARCH_ID_PREFIX)) {
+            query.substringAfter(SEARCH_ID_PREFIX).trim().toIntOrNull()?.let { id ->
+                return api.getMangaDetails(id)?.let { listOf(it) } ?: emptyList()
+            }
+        }
+        // KMK <--
+
         return api.search(query)
     }
 

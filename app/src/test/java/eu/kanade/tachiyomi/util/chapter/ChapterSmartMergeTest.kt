@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ScanlatorRangeRule
 import tachiyomi.domain.chapter.model.applySmartScanlatorMerge
+import tachiyomi.domain.chapter.model.chapterListVisibility
 import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
 import tachiyomi.domain.chapter.model.filterChapterVisibility
 import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
@@ -146,6 +147,26 @@ class ChapterSmartMergeTest {
         val manga = Manga.create().copy(scanlatorPriority = listOf("Group A", "Group B"))
 
         listOf(hidden, preferred).resolveVisibleChapter(manga, true, hidden.id) shouldBe preferred
+    }
+
+    @Test
+    fun `reveals only explicit blacklist matches without unmerging other duplicates`() {
+        val blacklisted = chapter(id = 1, number = 5.0, scanlator = "Group A")
+        val preferred = chapter(id = 2, number = 5.0, scanlator = "Group B")
+        val hiddenDuplicate = chapter(id = 3, number = 5.0, scanlator = "Group C")
+        val manga = Manga.create().copy(
+            scanlatorPriority = listOf("Group B", "Group C"),
+            blacklistedChapters = listOf(chapterUrlBlacklistKey(blacklisted.url)),
+        )
+
+        val result = listOf(blacklisted, preferred, hiddenDuplicate).chapterListVisibility(
+            manga = manga,
+            smartScanlatorMergeEnabled = true,
+            hideBlacklistedChapters = false,
+        )
+
+        result.chapters.map(Chapter::id) shouldBe listOf(1L, 2L)
+        result.blacklistedChapterIds shouldBe setOf(1L)
     }
 
     private fun chapter(

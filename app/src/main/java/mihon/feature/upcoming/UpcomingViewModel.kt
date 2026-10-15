@@ -1,5 +1,6 @@
 package mihon.feature.upcoming
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMapIndexedNotNull
 import androidx.lifecycle.ViewModel
@@ -18,16 +19,20 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import mihon.domain.upcoming.interactor.GetUpcomingManga
+import tachiyomi.core.common.preference.getAndSet
+import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.upcoming.service.UpcomingPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.LocalDate
@@ -36,16 +41,43 @@ import kotlin.time.Duration.Companion.seconds
 
 class UpcomingViewModel(
     private val getUpcomingManga: GetUpcomingManga = Injekt.get(),
+    // KMK -->
+    val getCategories: GetCategories = Injekt.get(),
+    val upcomingPreferences: UpcomingPreferences = Injekt.get(),
+    // KMK <--
 ) : ViewModel() {
 
     // KMK -->
     private val libraryPreferences: LibraryPreferences = Injekt.get()
     private val updatingState = MutableStateFlow(UpdatingState())
+    private val dialog = MutableStateFlow<Dialog?>(null)
+
+    val excludedCategories = upcomingPreferences.filterExcludedCategories
+    val includedCategories = upcomingPreferences.filterIncludedCategories
     // KMK <--
 
     private val selectedYearMonth = MutableStateFlow(YearMonth.now())
 
-    private val upcoming = flow { emitAll(getUpcomingManga.subscribe()) }
+    // KMK -->
+    private val itemPreferences = combine(
+        excludedCategories.changes(),
+        includedCategories.changes(),
+    ) { excluded, included ->
+        ItemPreferences(
+            excludedCategories = excluded,
+            includedCategories = included,
+        )
+    }
+        .distinctUntilChanged()
+
+    private val upcoming = itemPreferences
+        .flatMapLatest { preferences ->
+            getUpcomingManga.subscribe(
+                excludedCategories = preferences.excludedCategories,
+                includedCategories = preferences.includedCategories,
+            )
+        }
+        // KMK <--
         .map { it.toUpcomingUIModels() }
         .flowOn(Dispatchers.IO)
         .stateIn<ImmutableList<UpcomingUIModel>?>(
@@ -57,10 +89,12 @@ class UpcomingViewModel(
     val state: StateFlow<State> = combine(
         upcoming,
         selectedYearMonth,
-        // KMK -->
         updatingState,
+        // KMK -->
+        itemPreferences,
+        dialog,
         // KMK <--
-    ) { upcoming, selectedYearMonth, updating ->
+    ) { upcoming, selectedYearMonth, updating, preferences, dialog ->
         val upcomingItems = upcoming ?: persistentListOf()
         State(
             selectedYearMonth = selectedYearMonth,
@@ -68,6 +102,8 @@ class UpcomingViewModel(
             events = upcomingItems.toEvents(),
             headerIndexes = upcomingItems.getHeaderIndexes(),
             // KMK -->
+            hasActiveFilters = preferences.hasActiveFilters,
+            dialog = dialog,
             isLoadingUpcoming = upcoming == null,
             isShowingUpdatingMangas = updating.isShowing,
             updatingItems = updating.items,
@@ -127,6 +163,26 @@ class UpcomingViewModel(
     }
 
     // KMK -->
+    fun resetDialog() {
+        dialog.update { null }
+    }
+
+    fun showFilterDialog() {
+        dialog.update { Dialog.FilterSheet }
+    }
+
+    fun cycleCategory(category: Category) {
+        when (category.id) {
+            in includedCategories.get() -> {
+                includedCategories.getAndSet { it - category.id }
+                excludedCategories.getAndSet { it + category.id }
+            }
+
+            in excludedCategories.get() -> excludedCategories.getAndSet { it - category.id }
+            else -> includedCategories.getAndSet { it + category.id }
+        }
+    }
+
     val restriction by lazy { libraryPreferences.autoUpdateMangaRestrictions().get() }
 
     fun showUpdatingMangas() {
@@ -135,6 +191,14 @@ class UpcomingViewModel(
 
     fun hideUpdatingMangas() {
         updatingState.update { it.copy(isShowing = false) }
+    }
+
+    @Immutable
+    private data class ItemPreferences(
+        val excludedCategories: List<Long>,
+        val includedCategories: List<Long>,
+    ) {
+        val hasActiveFilters = excludedCategories.isNotEmpty() || includedCategories.isNotEmpty()
     }
 
     private data class UpdatingState(
@@ -150,6 +214,8 @@ class UpcomingViewModel(
         val events: ImmutableMap<LocalDate, Int> = persistentMapOf(),
         val headerIndexes: ImmutableMap<LocalDate, Int> = persistentMapOf(),
         // KMK -->
+        val hasActiveFilters: Boolean = false,
+        val dialog: Dialog? = null,
         val isLoadingUpcoming: Boolean = true,
         val isShowingUpdatingMangas: Boolean = false,
         val updatingItems: ImmutableList<UpcomingUIModel> = persistentListOf(),
@@ -158,4 +224,10 @@ class UpcomingViewModel(
         val isLoadingUpdating: Boolean = true,
         // KMK <--
     )
+
+    // KMK -->
+    sealed interface Dialog {
+        data object FilterSheet : Dialog
+    }
+    // KMK <--
 }
