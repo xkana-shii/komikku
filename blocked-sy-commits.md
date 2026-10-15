@@ -8,3 +8,4 @@
 | `188f396609f82b52bf2efaedad070b6c29c07c39` / `a8e0465c999afbe3e06b41c8fef3e8577188fcde` | SY's alpha Compose BOM and workaround removal require a single coordinated Compose migration; Komikku intentionally uses the stable BOM. |
 | `380496a5becb5be0d83a4bc86112e1ff266a6448` | SyncYomi protocol v2 requires a compatibility design for Komikku's WebDAV/Google Drive transports and custom bookmark/blacklist payloads. |
 | `2c03122571afd23905dbbc8d551787a4c1cc5cea` | Upstream later disabled resumable image downloads (`c148d18c01`), so porting its progress correction would implement a retired feature. |
+| `3b1f8024f1` | Dropping the legacy decoder requires a dedicated reader image-pipeline and visual-regression migration; current Komikku WebGPU support is not sufficient evidence that each decoder fallback is replaceable. |

@@ -21,8 +21,8 @@ resolution, reorganized code, and Komikku features change patch identities.
 | Outcome | Count |
 | --- | ---: |
 | Verified `git cherry-pick -x` ports | 4 |
-| Behaviorally equivalent candidates reconfirmed | 8 |
-| Dependency chains blocked or obsolete | 3 |
+| Behaviorally equivalent, superseded, or inapplicable candidates documented | 14 |
+| Blocked individual candidates | 7 |
 | Remaining patch-absent review queue | 1,029 |
 
 The four completed ports are listed with their immutable provenance in

@@ -36,6 +36,17 @@ branch reflog records a `cherry-pick` operation for it.
 | `b884b203a1ea18ef094976e52522b5cd13b224b6` | Already implemented | Extension initialization uses IO-scoped work and source registration waits for initialized installed extensions. |
 | `e65e78419e0d24e9aad28601e3e1fda991fe8b9e` | Behaviorally equivalent | Current Java Time formatting uses `ChronoUnit.DAYS.between`, the total-day calculation SY intended. |
 | `25b9d8793e83d195e8fc4fc6fac1398e412339d3` | Superseded | The new Upcoming category state drives the active-filter indication; the current Updates state already includes category filtering. |
+| `0457edf283` | Superseded | SY updates `imagedecoder` to v9, while Komikku already uses v16 in its current reader image pipeline. |
+| `419830bccd` / `4431b1de9b` / `0a9fa54b5c` | Inapplicable | These are intermediate Kim dependency bumps. Komikku has no Kim dependency or use-site, so there is no compatible target to upgrade. |
+| `b7f19ea053` | Already implemented | The current reader includes the WebGPU renderer, continuous viewer, settings, cover preview integration, and a newer WebGPU dependency line. |
+
+## Deliberately deferred image-pipeline change
+
+`3b1f8024f1` (Drop legacy decoder) touches the reader image decoder, app
+initialization, renderer, settings, and image utilities. Although Komikku already
+has WebGPU support, it has a newer and fork-specific image pipeline. It remains
+blocked for a dedicated visual/runtime regression pass rather than being forced
+through a broad conflict resolution during this synchronization batch.
 
 ## Deferred work
 
