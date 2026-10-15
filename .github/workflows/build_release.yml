@@ -27,6 +27,7 @@ jobs:
       PREV_RELEASE_SHA: ${{ steps.previous_commit.outputs.PREV_RELEASE_SHA }}
       COMMIT_LOGS: ${{ steps.commit_logs.outputs.COMMIT_LOGS }}
       PREV_TAG_NAME: ${{ steps.previous_commit.outputs.PREV_TAG_NAME }}
+      CHANGELOG_MD: ${{ steps.changelog.outputs.CHANGELOG_MD }}
     steps:
       - name: Get tag name (${{ github.ref }})
         id: get_tag
@@ -86,6 +87,18 @@ jobs:
             | jq '[.commits[]|{message:(.commit.message | split("\n")), username:.author.login}]' \
             | jq -r '.[]|"- \(.message | first) (@\(.username))"')
           {delimiter}" >> $GITHUB_OUTPUT
+
+      - name: Full changelog link
+        id: changelog
+        run: |
+          prev="${{ steps.previous_commit.outputs.PREV_TAG_NAME }}"
+          tag="${{ steps.get_tag.outputs.VERSION_TAG }}"
+          if [ -n "$prev" ]; then
+            echo "CHANGELOG_MD=**Full Changelog**: [komi-kun/komi-kun@$prev...$tag](https://github.com/komi-kun/komi-kun/compare/$prev...$tag)" >> "$GITHUB_OUTPUT"
+          else
+            # First release: there is no previous tag to compare against.
+            echo "CHANGELOG_MD=**Full Changelog**: [komi-kun/komi-kun@$tag](https://github.com/komi-kun/komi-kun/releases/tag/$tag)" >> "$GITHUB_OUTPUT"
+          fi
 
   build-app:
     name: Build release app
@@ -189,7 +202,7 @@ jobs:
           tag_name: ${{ needs.prepare-build.outputs.VERSION_TAG }}
           name: Komikku ${{ needs.prepare-build.outputs.VERSION_TAG }}
           body: |
-            [![GitHub downloads](https://img.shields.io/github/downloads/komi-kun/komi-kun/${{ needs.prepare-build.outputs.VERSION_TAG }}/total?label=Downloaded&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/komi-kun/komi-kun/releases/${{ needs.prepare-build.outputs.VERSION_TAG }})
+            [![GitHub downloads](https://img.shields.io/github/downloads/komi-kun/komi-kun/${{ needs.prepare-build.outputs.VERSION_TAG }}/total?label=Downloaded&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/komi-kun/komi-kun/releases/tag/${{ needs.prepare-build.outputs.VERSION_TAG }})
             #### What's Changed
             ##### New
 
@@ -201,7 +214,7 @@ jobs:
 
             ##### Based on
 
-            **Full Changelog**: [komi-kun/komi-kun@${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }}](https://github.com/komi-kun/komi-kun/compare/${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }})
+            ${{ needs.prepare-build.outputs.CHANGELOG_MD }}
 
             <!-->
             > [!TIP]
