@@ -4,6 +4,7 @@ package eu.kanade.tachiyomi.data.database.models
 
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
+import tachiyomi.domain.chapter.model.BookmarkColor
 
 class ChapterImpl : Chapter {
 
@@ -20,6 +21,10 @@ class ChapterImpl : Chapter {
     override var read: Boolean = false
 
     override var bookmark: Boolean = false
+
+    // KMK -->
+    override var bookmarkColor: BookmarkColor = BookmarkColor.NONE
+    // KMK <--
 
     override var last_page_read: Int = 0
 

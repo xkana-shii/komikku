@@ -443,7 +443,7 @@ class ReaderActivity : BaseActivity() {
                 }
 
                 is ReaderViewModel.Dialog.ChapterList -> {
-                    var chapters by remember {
+                    var chapters by remember(state.chapterListVersion) {
                         mutableStateOf(viewModel.getChapters().toImmutableList())
                     }
                     ChapterListDialog(
@@ -456,6 +456,8 @@ class ReaderActivity : BaseActivity() {
                         },
                         onBookmark = { chapter ->
                             viewModel.toggleBookmark(chapter.id, !chapter.bookmark)
+                            // Keep the dialog responsive before the database stream emits.
+                            // The next chapter-list version replaces this with persisted state.
                             chapters = chapters.map {
                                 if (it.chapter.id == chapter.id) {
                                     it.copy(chapter = chapter.copy(bookmark = !chapter.bookmark))
