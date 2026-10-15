@@ -125,7 +125,17 @@ class GetNextChapters(
             fromChapterId,
             visibleChapters,
         )
-        val currChapterIndex = chapters.indexOfFirst { it.id == resolvedChapter?.id }
+        val currChapterIndex = resolvedChapter
+            ?.let { resolved -> chapters.indexOfFirst { it.id == resolved.id } }
+            ?: allChapters.indexOfFirst { it.id == fromChapterId }
+                .takeIf { it >= 0 }
+                ?.let { historyIndex ->
+                    allChapters.drop(historyIndex + 1)
+                        .firstNotNullOfOrNull { chapter ->
+                            chapters.indexOfFirst { it.id == chapter.id }.takeIf { it >= 0 }
+                        }
+                }
+            ?: return emptyList()
         // KMK <--
         val nextChapters = chapters.subList(max(0, currChapterIndex), chapters.size)
 
