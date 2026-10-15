@@ -3,6 +3,7 @@
 package eu.kanade.tachiyomi.data.database.models
 
 import eu.kanade.tachiyomi.source.model.SChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import java.io.Serializable
 import tachiyomi.domain.chapter.model.Chapter as DomainChapter
 
@@ -15,6 +16,10 @@ interface Chapter : SChapter, Serializable {
     var read: Boolean
 
     var bookmark: Boolean
+
+    // KMK --> Keep the persisted bookmark palette value through the legacy Reader model.
+    var bookmarkColor: BookmarkColor
+    // KMK <--
 
     var last_page_read: Int
 
@@ -37,6 +42,9 @@ fun Chapter.toDomainChapter(): DomainChapter? {
         mangaId = manga_id!!,
         read = read,
         bookmark = bookmark,
+        // KMK -->
+        bookmarkColor = bookmarkColor,
+        // KMK <--
         lastPageRead = last_page_read.toLong(),
         dateFetch = date_fetch,
         sourceOrder = source_order.toLong(),

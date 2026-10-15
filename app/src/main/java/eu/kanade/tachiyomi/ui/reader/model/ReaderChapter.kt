@@ -24,6 +24,14 @@ data class ReaderChapter(val chapter: Chapter) {
 
     private var references = 0
 
+    // KMK --> Keep database bookmark changes in the cached Reader model without replacing the
+    // chapter object that owns page-loader state.
+    fun syncBookmarkState(latest: tachiyomi.domain.chapter.model.Chapter) {
+        chapter.bookmark = latest.bookmark
+        chapter.bookmarkColor = latest.bookmarkColor
+    }
+    // KMK <--
+
     constructor(chapter: tachiyomi.domain.chapter.model.Chapter) : this(chapter.toDbChapter())
 
     fun ref() {

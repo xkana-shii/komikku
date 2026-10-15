@@ -359,6 +359,26 @@ class ReaderViewModel @JvmOverloads constructor(
             .map(::ReaderChapter)
     }
 
+    // KMK --> A single database stream keeps cached Reader chapters synchronized without replacing
+    // the objects that own page loaders and reader position.
+    private fun syncChapterBookmarkState(chapters: List<Chapter>) {
+        val chaptersById = chapters.associateBy { it.id }
+        chapterList.forEach { readerChapter ->
+            val latest = chaptersById[readerChapter.chapter.id] ?: return@forEach
+            readerChapter.syncBookmarkState(latest)
+        }
+        val currentChapterId = state.value.currentChapter?.chapter?.id?.toLong() ?: return
+        val current = chaptersById[currentChapterId] ?: return
+        mutableState.update {
+            it.copy(
+                bookmarked = current.bookmark,
+                bookmarkColor = current.bookmarkColor.takeIf { current.bookmark } ?: BookmarkColor.NONE,
+                chapterListVersion = it.chapterListVersion + 1,
+            )
+        }
+    }
+    // KMK <--
+
     val incognitoMode: Boolean by lazy { getIncognitoState.await(manga?.source) }
     private val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading().get()
 
@@ -384,18 +404,13 @@ class ReaderViewModel @JvmOverloads constructor(
         if (hasValidArgs) {
             viewModelScope.launch { init() }
             viewModelScope.launchIO {
-                getChaptersByMangaId.subscribe(mangaId).collectLatest { chapters ->
-                    val currentChapterId = state.value.currentChapter?.chapter?.id?.toLong() ?: return@collectLatest
-                    chapters.firstOrNull { it.id == currentChapterId }?.let { chapter ->
-                        mutableState.update {
-                            it.copy(
-                                bookmarked = chapter.bookmark,
-                                bookmarkColor = chapter.bookmarkColor.takeIf { chapter.bookmark }
-                                    ?: BookmarkColor.NONE,
-                            )
-                        }
-                    }
+                val readerManga = state.map { it.manga }.filterNotNull().first()
+                val chapters = if (readerManga.source == MERGED_SOURCE_ID) {
+                    getMergedChaptersByMangaId.subscribe(mangaId, dedupe = false)
+                } else {
+                    getChaptersByMangaId.subscribe(mangaId)
                 }
+                chapters.collectLatest(::syncChapterBookmarkState)
             }
         }
     }
@@ -1171,6 +1186,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val chapter = getCurrentChapter()?.chapter ?: return
         val bookmarked = !chapter.bookmark
         chapter.bookmark = bookmarked
+        if (bookmarked) chapter.bookmarkColor = BookmarkColor.NONE
 
         viewModelScope.launchNonCancellable {
             updateChapter.await(
@@ -1193,6 +1209,7 @@ class ReaderViewModel @JvmOverloads constructor(
     fun setChapterBookmarkColor(color: BookmarkColor) {
         val chapter = getCurrentChapter()?.chapter ?: return
         chapter.bookmark = true
+        chapter.bookmarkColor = color
         viewModelScope.launchNonCancellable {
             updateChapter.await(
                 ChapterUpdate(
@@ -1676,6 +1693,9 @@ class ReaderViewModel @JvmOverloads constructor(
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
         val bookmarkColor: BookmarkColor = BookmarkColor.NONE,
+        // KMK --> Rebuild the dialog list only when chapter data actually changes.
+        val chapterListVersion: Long = 0,
+        // KMK <--
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
 
