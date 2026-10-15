@@ -1442,6 +1442,7 @@ private fun LazyListScope.sharedChapterItems(
                     bookmark = item.chapter.bookmark,
                     // KMK -->
                     bookmarkColor = item.chapter.bookmarkColor,
+                    blacklisted = item.isBlacklisted,
                     // KMK <--
                     selected = item.selected,
                     downloadIndicatorEnabled =

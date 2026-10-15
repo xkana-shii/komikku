@@ -80,6 +80,48 @@ fun List<Chapter>.filterChapterVisibility(
 }
 
 /**
+ * Applies chapter-list display visibility without changing the visibility used by automatic
+ * reading, downloads, History, or statistics. When blacklisted chapters are revealed, only
+ * those explicit blacklist matches are added back; duplicate uploads remain merged normally.
+ */
+data class ChapterListVisibility(
+    val chapters: List<Chapter>,
+    val blacklistedChapterIds: Set<Long>,
+)
+
+fun List<Chapter>.chapterListVisibility(
+    manga: Manga,
+    smartScanlatorMergeEnabled: Boolean,
+    hideBlacklistedChapters: Boolean,
+): ChapterListVisibility {
+    val unblacklistedChapters = filterBlacklistedChapters(this, manga.blacklistedChapters)
+    val unblacklistedIds = unblacklistedChapters.mapTo(HashSet(), Chapter::id)
+    val blacklistedIds = asSequence()
+        .map(Chapter::id)
+        .filterNot(unblacklistedIds::contains)
+        .toSet()
+    val visibleChapters = if (smartScanlatorMergeEnabled) {
+        unblacklistedChapters.applySmartScanlatorMerge(
+            priority = manga.scanlatorPriority,
+            blacklistedChapters = emptyList(),
+            rangeRules = manga.scanlatorRangeRules,
+        )
+    } else {
+        unblacklistedChapters
+    }
+
+    return ChapterListVisibility(
+        chapters = if (hideBlacklistedChapters) {
+            visibleChapters
+        } else {
+            val visibleIds = visibleChapters.mapTo(HashSet(), Chapter::id)
+            filter { it.id in visibleIds || it.id in blacklistedIds }
+        },
+        blacklistedChapterIds = blacklistedIds,
+    )
+}
+
+/**
  * Resolves a chapter that Smart Scanlator Merge has hidden to the chosen duplicate. A hidden
  * chapter with no matching visible chapter stays unresolved so callers do not reopen it.
  */

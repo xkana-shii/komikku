@@ -171,6 +171,11 @@ class LibraryPreferences(
             else -> smartScanlatorMerge().get()
         }
     }
+
+    fun hideBlacklistedChapters(mangaId: Long) = preferenceStore.getBoolean(
+        "pref_hide_blacklisted_chapters_$mangaId",
+        true,
+    )
     // KMK <--
 
     fun filterCompleted() = preferenceStore.getEnum(

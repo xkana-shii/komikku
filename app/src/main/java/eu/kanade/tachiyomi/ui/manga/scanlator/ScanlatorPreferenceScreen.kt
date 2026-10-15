@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -269,13 +270,33 @@ class ScanlatorPreferenceScreen(
         state: ScanlatorPreferenceScreenModel.State,
         screenModel: ScanlatorPreferenceScreenModel,
     ) {
-        ChapterBlacklistEntries(
-            entries = state.blacklist,
-            onRemove = screenModel::removeBlacklisted,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            // KMK --> This controls chapter-list presentation only, never blacklist membership.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(KMR.strings.hide_blacklisted_chapters),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Switch(
+                    checked = state.hideBlacklistedChapters,
+                    onCheckedChange = screenModel::setHideBlacklistedChapters,
+                )
+            }
+            // KMK <--
+            ChapterBlacklistEntries(
+                entries = state.blacklist,
+                onRemove = screenModel::removeBlacklisted,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+            )
+        }
     }
 
     @Composable
@@ -438,6 +459,9 @@ private data class ScanlatorState(
     val chapters: List<Chapter>,
     val globalEnabled: Boolean,
     val override: String,
+    // KMK -->
+    val hideBlacklistedChapters: Boolean,
+    // KMK <--
 )
 
 class ScanlatorPreferenceScreenModel(
@@ -457,6 +481,9 @@ class ScanlatorPreferenceScreenModel(
         val rangeRules: List<String> = emptyList(),
         val smartMergeOverride: Boolean? = null,
         val smartMergeEnabled: Boolean = false,
+        // KMK -->
+        val hideBlacklistedChapters: Boolean = true,
+        // KMK <--
     )
 
     init {
@@ -466,8 +493,11 @@ class ScanlatorPreferenceScreenModel(
                 getChaptersByMangaId.subscribe(mangaId),
                 libraryPreferences.smartScanlatorMerge().changes(),
                 libraryPreferences.smartScanlatorMergeOverride(mangaId).changes(),
-            ) { manga, chapters, globalEnabled, override ->
-                ScanlatorState(manga, chapters, globalEnabled, override)
+                // KMK -->
+                libraryPreferences.hideBlacklistedChapters(mangaId).changes(),
+                // KMK <--
+            ) { manga, chapters, globalEnabled, override, hideBlacklistedChapters ->
+                ScanlatorState(manga, chapters, globalEnabled, override, hideBlacklistedChapters)
             }
                 .collectLatest { scanlatorState ->
                     val manga = scanlatorState.manga
@@ -499,6 +529,9 @@ class ScanlatorPreferenceScreenModel(
                                 "disabled" -> false
                                 else -> scanlatorState.globalEnabled
                             },
+                            // KMK -->
+                            hideBlacklistedChapters = scanlatorState.hideBlacklistedChapters,
+                            // KMK <--
                         )
                     }
                 }
@@ -518,6 +551,12 @@ class ScanlatorPreferenceScreenModel(
             preference.set(if (enabled) "enabled" else "disabled")
         }
     }
+
+    // KMK --> This preference is per manga and does not affect automatic chapter visibility.
+    fun setHideBlacklistedChapters(hide: Boolean) {
+        libraryPreferences.hideBlacklistedChapters(mangaId).set(hide)
+    }
+    // KMK <--
 
     fun setPriority(scanlators: List<String>) {
         screenModelScope.launch {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
 import androidx.compose.material.icons.outlined.Delete
@@ -42,6 +43,7 @@ import me.saket.swipe.SwipeableActionsBox
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
 import tachiyomi.presentation.core.i18n.stringResource
@@ -60,6 +62,7 @@ fun MangaChapterListItem(
     bookmark: Boolean,
     // KMK --> A color is only a local reason tag for an existing bookmark.
     bookmarkColor: BookmarkColor = BookmarkColor.NONE,
+    blacklisted: Boolean = false,
     // KMK <--
     selected: Boolean,
     downloadIndicatorEnabled: Boolean,
@@ -130,6 +133,17 @@ fun MangaChapterListItem(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
+                    // KMK --> A revealed chapter remains blacklisted outside this display list.
+                    if (blacklisted) {
+                        Icon(
+                            imageVector = Icons.Outlined.Block,
+                            contentDescription = stringResource(KMR.strings.action_blacklist_chapter),
+                            modifier = Modifier
+                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    // KMK <--
                     if (bookmark) {
                         Icon(
                             imageVector = Icons.Filled.Bookmark,

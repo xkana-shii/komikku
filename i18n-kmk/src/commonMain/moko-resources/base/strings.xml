@@ -372,6 +372,7 @@
     <!-- KMK -->
     <string name="blacklisted_chapters">Blacklisted chapters</string>
     <string name="blacklist_empty">No blacklisted chapters</string>
+    <string name="hide_blacklisted_chapters">Hide blacklisted chapters</string>
     <string name="chapter_number_label">Chapter %s</string>
     <string name="blacklist_chapter_unavailable">Unavailable chapter</string>
     <string name="blacklist_matching_chapters">Applies to %d chapters</string>
