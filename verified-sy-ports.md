@@ -10,6 +10,7 @@ manual commit.
 | `b9a52f9dddfbe5cb128a9b2f8fc3367ebe402918` | `f9fe95eb31` | Reflog `cherry-pick`; trailer present; MAL partial-date parser port. |
 | `a82473af8f9449f882592cc27e02ee724ca3d110` | `adf36cd63b` | Reflog `commit (cherry-pick)`; trailer present; Upcoming category-filter port. |
 | `82e5e7f6fdf2e3170e875067f562e24df2f6350e` | `cf3bb3294d` | Reflog `commit (cherry-pick)`; trailer present; tracker `id:` search port. |
+| `5a469745d39e8f8cea9a1669bea6108cd71dc951` | `418f100288` | Reflog `commit (cherry-pick)`; trailer present; final OkHttp 5.5.0 version bump. |
 
 Historical verified mappings from the earlier, now-rebaselined window remain in
 Git history and are retained here for provenance:

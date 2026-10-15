@@ -20,12 +20,12 @@ resolution, reorganized code, and Komikku features change patch identities.
 
 | Outcome | Count |
 | --- | ---: |
-| Verified `git cherry-pick -x` ports | 3 |
+| Verified `git cherry-pick -x` ports | 4 |
 | Behaviorally equivalent candidates reconfirmed | 8 |
 | Dependency chains blocked or obsolete | 3 |
 | Remaining patch-absent review queue | 1,029 |
 
-The three completed ports are listed with their immutable provenance in
+The four completed ports are listed with their immutable provenance in
 [`verified-sy-ports.md`](verified-sy-ports.md). The candidate inventory and
 queue are [`missing-sy-commits.txt`](missing-sy-commits.txt) and
 [`remaining-sy-commits.txt`](remaining-sy-commits.txt). They intentionally

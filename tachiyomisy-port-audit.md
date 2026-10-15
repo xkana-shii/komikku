@@ -19,6 +19,7 @@ TachiyomiSY `5a469745d39e8f8cea9a1669bea6108cd71dc951`, and Mihon
 | `b9a52f9dddfbe5cb128a9b2f8fc3367ebe402918` | `f9fe95eb31af54ce30f4d59c05816920f279799a` | Genuine `-x` cherry-pick. Preserved the strict existing date parser while accepting year-only and year-month MAL values. Only the unavailable upstream changelog hunk conflicted. |
 | `a82473af8f9449f882592cc27e02ee724ca3d110` | `adf36cd63b7d3e7d853a61a4a1064fd9ec3c58b7` | Genuine `-x` cherry-pick, continued after adapting state, Java Time, SQLDelight, and Komikku's prediction UI. Category filters preserve system/default-category semantics and use a Komikku-only string in `i18n-kmk`. |
 | `82e5e7f6fdf2e3170e875067f562e24df2f6350e` | `cf3bb3294dbc05a14f5f167cd012037119418d77` | Genuine `-x` cherry-pick, continued after retaining tracker-specific API/error handling and immutable score lists. Adds direct `id:` lookup for AniList, Bangumi, Hikka, Kitsu, MangaUpdates, and Shikimori. |
+| `5a469745d39e8f8cea9a1669bea6108cd71dc951` | `418f100288` | Genuine `-x` cherry-pick, continued after preserving Komikku's split catalog and applying the final OkHttp 5.5.0 pin only. |
 
 Each result has the upstream `(cherry picked from commit …)` trailer and the
 branch reflog records a `cherry-pick` operation for it.
