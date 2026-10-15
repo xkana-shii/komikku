@@ -26,6 +26,7 @@ import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_OUTSIDE_RELEASE_PERIOD
 import tachiyomi.i18n.MR
@@ -126,7 +127,7 @@ private fun UpcomingFilterDialog(
 ) {
     TabbedDialog(
         onDismissRequest = viewModel::resetDialog,
-        tabTitles = listOf(stringResource(MR.strings.categories)),
+        tabTitles = listOf(stringResource(MR.strings.categories)).toImmutableList(),
     ) {
         Column(
             modifier = Modifier

@@ -248,6 +248,7 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
         }
     }
 
+    // KMK -->
     suspend fun getMangaDetails(id: Int): TrackSearch? {
         return withIOContext {
             val url = "$BASE_URL/manga/$id"
@@ -267,6 +268,7 @@ class KitsuApi(private val client: OkHttpClient, interceptor: KitsuInterceptor) 
             }
         }
     }
+    // KMK <--
 
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         return withIOContext {

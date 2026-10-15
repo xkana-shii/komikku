@@ -113,6 +113,7 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        // KMK -->
         if (query.startsWith(SEARCH_ID_PREFIX)) {
             return try {
                 val stringId = query.substringAfter(SEARCH_ID_PREFIX).trim()
@@ -123,6 +124,7 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
                 emptyList()
             }
         }
+        // KMK <--
 
         return api.search(query)
             .map {

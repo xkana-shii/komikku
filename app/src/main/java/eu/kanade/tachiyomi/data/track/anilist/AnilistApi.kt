@@ -389,6 +389,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
         }
     }
 
+    // KMK -->
     suspend fun getMangaDetails(id: Int): TrackSearch? {
         return withIOContext {
             val query = $$"""
@@ -446,7 +447,9 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                         body = payload.toString().toRequestBody(jsonMime),
                     ),
                 )
-                    .awaitSuccess()
+                    // KMK -->
+                    .awaitALSuccess()
+                    // KMK <--
                     .parseAs<ALSearchResult>()
                     .data.page.media
                     .firstOrNull()
@@ -455,6 +458,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
             }
         }
     }
+    // KMK <--
 
     // SY -->
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {

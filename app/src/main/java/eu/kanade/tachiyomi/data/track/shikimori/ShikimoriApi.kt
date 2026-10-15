@@ -127,6 +127,7 @@ class ShikimoriApi(
         }
     }
 
+    // KMK -->
     suspend fun getMangaDetails(id: Int): TrackSearch? {
         return withIOContext {
             val query = $$"""
@@ -177,6 +178,7 @@ class ShikimoriApi(
             }
         }
     }
+    // KMK <--
 
     suspend fun findLibManga(track: Track, isRefresh: Boolean = false): Track? {
         return withIOContext {

@@ -114,6 +114,7 @@ class BangumiApi(
         }
     }
 
+    // KMK -->
     suspend fun getMangaDetails(id: Int): TrackSearch? {
         return withIOContext {
             val url = "$API_URL/v0/subjects/$id"
@@ -127,6 +128,7 @@ class BangumiApi(
             }
         }
     }
+    // KMK <--
 
     suspend fun statusLibManga(track: Track, username: String): Track? {
         return withIOContext {

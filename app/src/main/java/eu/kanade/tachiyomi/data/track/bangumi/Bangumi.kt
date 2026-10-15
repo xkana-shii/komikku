@@ -70,11 +70,13 @@ class Bangumi(id: Long) : BaseTracker(id, "Bangumi") {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        // KMK -->
         if (query.startsWith(SEARCH_ID_PREFIX)) {
             query.substringAfter(SEARCH_ID_PREFIX).trim().toIntOrNull()?.let { id ->
                 return api.getMangaDetails(id)?.let { listOf(it) } ?: emptyList()
             }
         }
+        // KMK <--
 
         return api.search(query)
     }

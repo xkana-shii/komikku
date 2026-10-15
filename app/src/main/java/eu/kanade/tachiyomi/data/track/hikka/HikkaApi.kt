@@ -100,6 +100,7 @@ class HikkaApi(
         }
     }
 
+    // KMK -->
     suspend fun getMangaDetails(slug: String): TrackSearch? {
         return withIOContext {
             val url = "$BASE_API_URL/manga/$slug"
@@ -118,6 +119,7 @@ class HikkaApi(
             }
         }
     }
+    // KMK <--
 
     suspend fun getRead(track: Track): HKRead? {
         return withIOContext {

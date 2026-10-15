@@ -25,7 +25,9 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
         const val DROPPED = 4L
         const val PLAN_TO_READ = 5L
 
+        // KMK -->
         private const val SEARCH_ID_PREFIX = "id:"
+        // KMK <--
     }
 
     override val supportsReadingDates: Boolean = true
@@ -119,11 +121,13 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
+        // KMK -->
         if (query.startsWith(SEARCH_ID_PREFIX)) {
             query.substringAfter(SEARCH_ID_PREFIX).trim().toIntOrNull()?.let { id ->
                 return api.getMangaDetails(id)?.let { listOf(it) } ?: emptyList()
             }
         }
+        // KMK <--
 
         return api.search(query)
     }

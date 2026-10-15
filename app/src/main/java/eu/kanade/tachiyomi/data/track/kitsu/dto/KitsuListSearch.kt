@@ -64,6 +64,7 @@ data class KitsuListSearchItemDataAttributes(
     val private: Boolean,
 )
 
+// KMK -->
 @Serializable
 data class KitsuSingleManga(
     val data: KitsuListSearchItemIncluded,
@@ -83,6 +84,7 @@ data class KitsuSingleManga(
         }
     }
 }
+// KMK <--
 
 @Serializable
 data class KitsuListSearchItemIncluded(
@@ -99,5 +101,7 @@ data class KitsuListSearchItemIncludedAttributes(
     val synopsis: String?,
     val startDate: String?,
     val status: String,
+    // KMK -->
     val averageRating: String?,
+    // KMK <--
 )
