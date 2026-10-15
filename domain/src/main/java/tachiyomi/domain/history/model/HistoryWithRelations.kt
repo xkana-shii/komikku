@@ -24,7 +24,7 @@ data class HistoryWithRelations(
 ) {
     // SY -->
     // KUN -->
-    val title: String = customMangaManager?.get(mangaId)?.title ?: ogTitle
+    val title: String by lazy { customMangaManager?.get(mangaId)?.title ?: ogTitle }
     // KUN <--
 
     companion object {

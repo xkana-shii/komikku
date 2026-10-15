@@ -16,6 +16,7 @@ import coil3.decode.Decoder
 import coil3.decode.ImageSource
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
+import com.davemorrissey.labs.subscaleview.CropBorders
 import com.hippo.unifile.UniFile
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -166,45 +167,68 @@ class ImageDecoder(
             val config = if (isHdr) Bitmap.Config.RGBA_F16 else Bitmap.Config.ARGB_8888
             val bytesPerPixel = if (isHdr) 8 else 4
             val rowBytes = frame.width * bytesPerPixel
-            val viewWidth = options.size.widthPx(options.scale) { frame.width }
+
+            // KUN -->
+            // Crop borders before splitting the page, reusing SSIV's native routine so the strips
+            // path trims exactly like the SSIV/WebGPU readers. The routine assumes 4 bytes per
+            // pixel, so HDR frames stay uncropped.
+            val crop = if (options.cropBorders && !isHdr) {
+                frame.image.rewind()
+                val pixels = ByteArray(frame.image.remaining())
+                frame.image.get(pixels)
+                CropBorders.findCropBorders(pixels, frame.width, frame.height)
+            } else {
+                null
+            }
+            frame.image.rewind()
+            val srcLeft = (crop?.getOrNull(0) ?: 0).coerceIn(0, frame.width - 1)
+            val srcTop = (crop?.getOrNull(1) ?: 0).coerceIn(0, frame.height - 1)
+            val srcWidth = (crop?.getOrNull(2) ?: frame.width).coerceIn(1, frame.width - srcLeft)
+            val srcHeight = (crop?.getOrNull(3) ?: frame.height).coerceIn(1, frame.height - srcTop)
+            // KUN <--
+
+            val viewWidth = options.size.widthPx(options.scale) { srcWidth }
             val sampleSize = DecodeUtils.calculateInSampleSize(
-                srcWidth = frame.width,
-                srcHeight = frame.height,
+                srcWidth = srcWidth,
+                srcHeight = srcHeight,
                 dstWidth = viewWidth,
-                dstHeight = options.size.heightPx(options.scale) { frame.height },
+                dstHeight = options.size.heightPx(options.scale) { srcHeight },
                 scale = options.scale,
             )
-            val budgetWidth = sqrt(MAX_PAGE_BYTES.toDouble() / bytesPerPixel * frame.width / frame.height).toInt()
-            val stripWidth = maxOf(viewWidth, min(frame.width / sampleSize, budgetWidth))
+            val budgetWidth = sqrt(MAX_PAGE_BYTES.toDouble() / bytesPerPixel * srcWidth / srcHeight).toInt()
+            val stripWidth = maxOf(viewWidth, min(srcWidth / sampleSize, budgetWidth))
                 // Older GPUs can't draw a texture wider than this
                 .coerceAtMost(MAX_STRIP_WIDTH)
-                .coerceIn(1, frame.width)
-            val scale = stripWidth.toFloat() / frame.width
+                .coerceIn(1, srcWidth)
+            val scale = stripWidth.toFloat() / srcWidth
 
             // Strips of about the same size in bytes, so each takes about as long to upload
             val stripRows = (STRIP_BYTES / (stripWidth * bytesPerPixel)).coerceAtLeast(1)
-            val bandRows = (stripRows / scale).toInt().coerceIn(1, frame.height)
+            val bandRows = (stripRows / scale).toInt().coerceIn(1, srcHeight)
             val matrix = Matrix().apply { setScale(scale, scale) }
             val band = createBitmap(frame.width, bandRows, config)
-            val strips = (0..<frame.height step bandRows).map { top ->
-                val rows = min(bandRows, frame.height - top)
+            val strips = (0..<srcHeight step bandRows).map { top ->
+                val rows = min(bandRows, srcHeight - top)
                 if (rows != band.height) band.reconfigure(frame.width, rows, config)
                 band.copyPixelsFromBuffer(
                     frame.image.duplicate().apply {
-                        position(top * rowBytes)
-                        limit((top + rows) * rowBytes)
+                        position((srcTop + top) * rowBytes)
+                        limit((srcTop + top + rows) * rowBytes)
                     },
                 )
-                val strip = if (stripWidth < frame.width) {
-                    Bitmap.createBitmap(band, 0, 0, frame.width, rows, matrix, true)
+                // KUN -->
+                // Also crop the columns (and scale) when the page was border-cropped
+                val strip = if (stripWidth < srcWidth || srcWidth != frame.width) {
+                    Bitmap.createBitmap(band, srcLeft, 0, srcWidth, rows, matrix, true)
                 } else {
                     band
                 }
+                // KUN <--
                 // createBitmap returns a mutable bitmap despite its docs, and copy is the only way to an immutable one
                 strip.copy(config, false).also { if (strip !== band) strip.recycle() }
             }
             band.recycle()
-            DecodeResult(image = StripsImage(strips), isSampled = stripWidth < frame.width)
+            DecodeResult(image = StripsImage(strips), isSampled = stripWidth < srcWidth)
         }
     }
 

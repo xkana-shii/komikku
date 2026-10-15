@@ -21,7 +21,9 @@ data class UpdatesWithRelations(
     val coverData: MangaCover,
 ) {
     // SY -->
-    val mangaTitle: String = getCustomMangaInfo?.get(mangaId)?.title ?: ogMangaTitle
+    // KUN --> lazy so the bridge resolves on first access
+    val mangaTitle: String by lazy { getCustomMangaInfo?.get(mangaId)?.title ?: ogMangaTitle }
+    // KUN <--
 
     companion object {
         private val getCustomMangaInfo: GetCustomMangaInfo?
