@@ -159,15 +159,20 @@ fun CategoryCreateDialog(
     var name by remember { mutableStateOf("") }
 
     val focusRequester = remember { FocusRequester() }
-    val nameAlreadyExists = remember(name) { categories.contains(name) }
+    // KMK --> Keep UI feedback aligned with the sibling validation in the interactor.
+    val normalizedName = remember(name) { name.trim() }
+    val nameAlreadyExists = remember(name, categories) {
+        categories.any { it.trim().equals(normalizedName, ignoreCase = true) }
+    }
+    // KMK <--
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(
-                enabled = name.isNotEmpty() && !nameAlreadyExists,
+                enabled = normalizedName.isNotEmpty() && normalizedName.length <= 50 && !nameAlreadyExists,
                 onClick = {
-                    onCreate(name)
+                    onCreate(normalizedName)
                     onDismissRequest()
                 },
             ) {
@@ -199,7 +204,7 @@ fun CategoryCreateDialog(
                         Text(text = stringResource(MR.strings.name))
                     },
                     supportingText = {
-                        val msgRes = if (name.isNotEmpty() && nameAlreadyExists) {
+                        val msgRes = if (normalizedName.isNotEmpty() && nameAlreadyExists) {
                             // SY -->
                             alreadyExistsError
                             // SY <--
@@ -208,7 +213,7 @@ fun CategoryCreateDialog(
                         }
                         Text(text = stringResource(msgRes))
                     },
-                    isError = name.isNotEmpty() && nameAlreadyExists,
+                    isError = normalizedName.isNotEmpty() && nameAlreadyExists,
                     singleLine = true,
                 )
                 // SY -->
@@ -235,15 +240,20 @@ fun CategoryRenameDialog(
     var valueHasChanged by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
-    val nameAlreadyExists = remember(name) { categories.contains(name) }
+    // KMK --> Keep UI feedback aligned with the sibling validation in the interactor.
+    val normalizedName = remember(name) { name.trim() }
+    val nameAlreadyExists = remember(name, categories) {
+        categories.any { it.trim().equals(normalizedName, ignoreCase = true) }
+    }
+    // KMK <--
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(
-                enabled = valueHasChanged && !nameAlreadyExists,
+                enabled = valueHasChanged && normalizedName.isNotEmpty() && normalizedName.length <= 50 && !nameAlreadyExists,
                 onClick = {
-                    onRename(name)
+                    onRename(normalizedName)
                     onDismissRequest()
                 },
             ) {

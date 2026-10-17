@@ -84,14 +84,19 @@ class CategoryScreen : Screen() {
                 CategoryCreateDialog(
                     onDismissRequest = viewModel::dismissDialog,
                     onCreate = viewModel::createCategory,
-                    categories = successState.categories.fastMap { it.name }.toImmutableList(),
+                    // KMK --> Root categories only compete with other root categories.
+                    categories = successState.categories.filter { it.parentId == 0L }.fastMap { it.name }.toImmutableList(),
                 )
             }
             is CategoryDialog.Rename -> {
                 CategoryRenameDialog(
                     onDismissRequest = viewModel::dismissDialog,
                     onRename = { viewModel.renameCategory(dialog.category, it) },
-                    categories = successState.categories.fastMap { it.name }.toImmutableList(),
+                    // KMK --> A rename only needs to check the current category's siblings.
+                    categories = successState.categories
+                        .filter { it.parentId == dialog.category.parentId && it.id != dialog.category.id }
+                        .fastMap { it.name }
+                        .toImmutableList(),
                     category = dialog.category.name,
                 )
             }
@@ -127,7 +132,11 @@ class CategoryScreen : Screen() {
                 CategoryCreateDialog(
                     onDismissRequest = viewModel::dismissDialog,
                     onCreate = { viewModel.createSubcategory(dialog.parent, it) },
-                    categories = successState.categories.fastMap { it.name }.toImmutableList(),
+                    // KMK --> Same names are valid below different parents.
+                    categories = successState.categories
+                        .filter { it.parentId == dialog.parent.id }
+                        .fastMap { it.name }
+                        .toImmutableList(),
                     title = stringResource(tachiyomi.i18n.kmk.KMR.strings.category_create_subcategory),
                 )
             }

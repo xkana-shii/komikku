@@ -6,6 +6,25 @@ import tachiyomi.domain.category.model.Category
 /** Pure tree operations shared by category management, restore validation, and scheduling. */
 object CategoryTreeHandler {
 
+    // KMK --> Category names are user input. Keep all hierarchy operations on one comparison
+    // policy so dialog validation, moves, and backup restore cannot disagree.
+    fun normalizeName(name: String): String = name.trim().lowercase()
+
+    fun hasSiblingName(
+        name: String,
+        parentId: Long,
+        categories: Iterable<Category>,
+        excludingId: Long? = null,
+    ): Boolean {
+        val normalizedName = normalizeName(name)
+        return categories.any {
+            it.id != excludingId &&
+                it.parentId == parentId &&
+                normalizeName(it.name) == normalizedName
+        }
+    }
+    // KMK <--
+
     fun childrenOf(parentId: Long, categories: Iterable<Category>): List<Category> =
         categories.filter { it.parentId == parentId }
 

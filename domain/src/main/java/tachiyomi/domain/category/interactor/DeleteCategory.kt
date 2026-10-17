@@ -5,6 +5,7 @@ import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryTreeHandler
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 
@@ -19,7 +20,20 @@ class DeleteCategory(
             // KMK --> Preserve child categories and their manga memberships. The deleted
             // category's own memberships are removed by the existing foreign key, while direct
             // children move one level up instead of becoming orphaned.
-            val parentId = categoryRepository.get(categoryId)?.parentId ?: Category.UNCATEGORIZED_ID
+            val categories = categoryRepository.getAll()
+            val parentId = categories.firstOrNull { it.id == categoryId }?.parentId ?: Category.UNCATEGORIZED_ID
+            val children = CategoryTreeHandler.childrenOf(categoryId, categories)
+            val childIds = children.mapTo(HashSet(), Category::id)
+            val destinationNames = CategoryTreeHandler.childrenOf(parentId, categories)
+                .filterNot { it.id == categoryId || it.id in childIds }
+                .map { CategoryTreeHandler.normalizeName(it.name) }
+                .toSet()
+            val childNames = children.map { CategoryTreeHandler.normalizeName(it.name) }
+            if (childNames.size != childNames.distinct().size || childNames.any { it in destinationNames }) {
+                return@withNonCancellableContext Result.InternalError(
+                    IllegalArgumentException("Deleting category would create duplicate sibling names"),
+                )
+            }
             categoryRepository.reparentChildren(categoryId, parentId)
             // KMK <--
             categoryRepository.delete(categoryId)

@@ -44,8 +44,23 @@ class MergeCategories(
                     IllegalArgumentException("Merge would create more than two category levels"),
                 )
             }
-
+            // KMK --> Moving children as part of a merge must obey the same sibling-name rule
+            // as a manual or bulk reparenting operation.
             val sourceSet = sources.toSet()
+            val targetChildNames = CategoryTreeHandler.childrenOf(targetId, categories)
+                .filterNot { it.id in sourceSet }
+                .map { CategoryTreeHandler.normalizeName(it.name) }
+                .toSet()
+            val movedChildNames = sourceChildren.map { CategoryTreeHandler.normalizeName(it.name) }
+            if (movedChildNames.size != movedChildNames.distinct().size ||
+                movedChildNames.any { it in targetChildNames }
+            ) {
+                return@withNonCancellableContext Result.InternalError(
+                    IllegalArgumentException("Merge would create duplicate sibling names"),
+                )
+            }
+            // KMK <--
+
             if (target.parentId in sourceSet) {
                 val parent = byId[target.parentId]
                 val newParentId = parent?.parentId ?: Category.UNCATEGORIZED_ID

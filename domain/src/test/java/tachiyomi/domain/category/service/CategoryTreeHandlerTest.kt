@@ -45,9 +45,24 @@ class CategoryTreeHandlerTest {
         CategoryTreeHandler.canMove(11, 2, categories) shouldBe true
     }
 
-    private fun category(id: Long, parentId: Long, order: Long) = Category(
+    @Test
+    fun `category names are unique among siblings rather than across the tree`() {
+        val categories = listOf(
+            category(1, 0, 0, "Yaoi"),
+            category(11, 1, 1, "Reading"),
+            category(2, 0, 2, "Normal"),
+            category(21, 2, 3, "Reading"),
+        )
+
+        CategoryTreeHandler.hasSiblingName(" reading ", 1, categories) shouldBe true
+        CategoryTreeHandler.hasSiblingName("Reading", 2, categories) shouldBe true
+        CategoryTreeHandler.hasSiblingName("Reading", 0, categories) shouldBe false
+        CategoryTreeHandler.hasSiblingName("Reading", 1, categories, excludingId = 11) shouldBe false
+    }
+
+    private fun category(id: Long, parentId: Long, order: Long, name: String = "category$id") = Category(
         id = id,
-        name = "category$id",
+        name = name,
         order = order,
         flags = 0,
         hidden = false,

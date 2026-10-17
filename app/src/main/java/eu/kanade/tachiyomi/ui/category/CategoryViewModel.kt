@@ -241,18 +241,8 @@ class CategoryViewModel(
 
     fun bulkMove(ids: List<Long>, parentId: Long) {
         viewModelScope.launch {
-            val state = state.value as? CategoryScreenState.Success ?: return@launch
-            val selectedSet = ids.toSet()
-            if (parentId in selectedSet) {
-                _events.send(CategoryEvent.InternalError)
-                return@launch
-            }
-            var nextIndex = state.categories.count { it.parentId == parentId && it.id !in selectedSet }
-            var failed = false
-            ids.forEach { id ->
-                if (!moveCategory.await(id, parentId, nextIndex++)) failed = true
-            }
-            if (failed) _events.send(CategoryEvent.InternalError)
+            // KMK --> Preflight the complete selection, including sibling-name collisions.
+            if (!moveCategory.awaitAll(ids, parentId)) _events.send(CategoryEvent.InternalError)
             finishSelection()
         }
     }
