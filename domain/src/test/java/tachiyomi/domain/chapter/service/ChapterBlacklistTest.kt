@@ -10,7 +10,7 @@ class ChapterBlacklistTest {
     fun `scanlator key matches its normalized chapter identity`() {
         val chapter = chapter(number = 12.345, scanlator = "  Team  ")
 
-        isChapterBlacklisted(chapter, listOf(scanlatorBlacklistKey(12.345, "Team"))) shouldBe true
+        filterBlacklistedChapters(listOf(chapter), listOf(scanlatorBlacklistKey(12.345, "Team"))) shouldBe emptyList()
     }
 
     @Test
@@ -81,6 +81,30 @@ class ChapterBlacklistTest {
 
         filterBlacklistedChapters(listOf(selected, duplicate), listOf(hybridChapterBlacklistKey(selected)))
             .map { it.url } shouldBe listOf(duplicate.url)
+    }
+
+    @Test
+    fun `Mangago extra blacklist does not hide its matching numbered chapter`() {
+        val twitterExtra = chapter(url = "/the_melting_season/twitter-extra", number = 1.0, scanlator = null)
+        val chapterOne = chapter(url = "/the_melting_season/chapter-1", number = 1.0, scanlator = null).copy(id = 2)
+        val seasonComeback = chapter(url = "/the_melting_season/season-comeback-6-15", number = 6.0, scanlator = null).copy(id = 3)
+        val chapterSix = chapter(url = "/the_melting_season/chapter-6", number = 6.0, scanlator = null).copy(id = 4)
+        val chapters = listOf(twitterExtra, chapterOne, seasonComeback, chapterSix)
+
+        filterBlacklistedChapters(
+            chapters,
+            listOf(hybridChapterBlacklistKey(twitterExtra), hybridChapterBlacklistKey(seasonComeback)),
+        ).map(Chapter::url) shouldBe listOf(chapterOne.url, chapterSix.url)
+    }
+
+    @Test
+    fun `ambiguous legacy key does not hide multiple Mangago chapters`() {
+        val extra = chapter(url = "/the_melting_season/twitter-extra", number = 1.0, scanlator = null)
+        val chapterOne = chapter(url = "/the_melting_season/chapter-1", number = 1.0, scanlator = null).copy(id = 2)
+        val legacyKey = scanlatorBlacklistKey(extra.chapterNumber, extra.scanlator)
+
+        filterBlacklistedChapters(listOf(extra, chapterOne), listOf(legacyKey)) shouldBe listOf(extra, chapterOne)
+        isChapterBlacklisted(extra, listOf(legacyKey)) shouldBe false
     }
 
     private fun chapter(

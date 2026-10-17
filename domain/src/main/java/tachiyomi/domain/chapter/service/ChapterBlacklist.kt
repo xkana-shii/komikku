@@ -100,12 +100,12 @@ fun resolveChapterBlacklistKey(key: String, chapters: List<Chapter>): Set<String
         return matches.takeIf { it.size == 1 }?.let(::chapterUrlKeySet).orEmpty()
     }
 
-    // Legacy number-and-scanlator entries intentionally retain their historical all-matches
-    // semantics because they contain no URL with which to disambiguate old data.
+    // Legacy number-and-scanlator entries have no URL. Reconcile them only when the current
+    // snapshot has exactly one candidate; guessing would hide unrelated extras and duplicates.
     val matches = chapters.filter {
         scanlatorBlacklistKey(it.chapterNumber, it.scanlator) == key
     }
-    return chapterUrlKeySet(matches)
+    return matches.takeIf { it.size == 1 }?.let(::chapterUrlKeySet).orEmpty()
 }
 
 fun filterBlacklistedChapters(chapters: List<Chapter>, blacklist: Collection<String>): List<Chapter> {
@@ -134,14 +134,17 @@ fun legacyFillermarkBlacklistKeys(urls: Iterable<String>): List<String> {
     return urls.map(::chapterUrlBlacklistKey).distinct()
 }
 
-/** The single matcher used by every surface that displays or acts on chapters. */
+/**
+ * Single-chapter checks intentionally only honour exact URL-bearing entries. Legacy keys need a
+ * complete chapter snapshot to establish whether their number-and-scanlator fallback is unique;
+ * callers that filter a list use [filterBlacklistedChapters] for that resolution.
+ */
 fun isChapterBlacklisted(chapter: Chapter, blacklist: Collection<String>): Boolean {
     return blacklist.isNotEmpty() && (
         chapterUrlBlacklistKey(chapter.url) in blacklist ||
             blacklist.any { key ->
                 parseHybridBlacklistKey(key)?.let { chapterUrlBlacklistKey(it.url) == chapterUrlBlacklistKey(chapter.url) } == true
-            } ||
-            scanlatorBlacklistKey(chapter.chapterNumber, chapter.scanlator) in blacklist
+            }
         )
 }
 // KMK <--
