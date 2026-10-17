@@ -17,9 +17,11 @@ import tachiyomi.data.Database
 import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.service.CategoryTreeHandler
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetMangaByUrlAndSourceId
@@ -49,6 +51,9 @@ class MangaRestorer(
     private val updateManga: UpdateManga = Injekt.get(),
     private val getTracks: GetTracks = Injekt.get(),
     private val insertTrack: InsertTrack = Injekt.get(),
+    // KMK --> Per-manga merge settings are preference-backed but belong to this manga restore.
+    private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    // KMK <--
     fetchInterval: FetchInterval = Injekt.get(),
     // SY -->
     private val setCustomMangaInfo: SetCustomMangaInfo = Injekt.get(),
@@ -84,6 +89,9 @@ class MangaRestorer(
     suspend fun restore(
         backupManga: BackupManga,
         backupCategories: List<BackupCategory>,
+        // KMK --> Backup category IDs are remapped before membership restoration.
+        restoredCategoryIds: Map<Long, Long> = emptyMap(),
+        // KMK <--
     ) {
         database.transaction {
             val dbManga = findExistingManga(backupManga)
@@ -94,14 +102,18 @@ class MangaRestorer(
             val restoredManga = if (dbManga == null) {
                 restoreNewManga(manga)
             } else {
-                restoreExistingManga(manga, dbManga)
+                restoreExistingManga(manga, dbManga, backupManga)
             }
 
             restoreMangaDetails(
                 manga = restoredManga,
                 chapters = backupManga.chapters,
                 categories = backupManga.categories,
+                // KMK --> Prefer lossless category IDs over legacy order values.
+                categoryIds = backupManga.categoryIds,
                 backupCategories = backupCategories,
+                restoredCategoryIds = restoredCategoryIds,
+                // KMK <--
                 history = backupManga.history,
                 tracks = backupManga.tracking,
                 excludedScanlators = backupManga.excludedScanlators,
@@ -113,6 +125,11 @@ class MangaRestorer(
 
             // KMK --> Custom metadata lives outside SQLite; don't persist IDs from a rolled-back batch.
             afterCommit { restoreEditedInfo(backupManga.getCustomMangaInfo()?.copy(id = restoredManga.id)) }
+            // Per-manga preference keys use device-local IDs, so write them only after this manga
+            // has its new stable ID and only when the backup beat (or created) the local record.
+            if (dbManga == null || backupManga.version > dbManga.version) {
+                afterCommit { restoreSmartScanlatorPreferences(restoredManga.id, backupManga) }
+            }
             // KMK <--
 
             if (isSync) {
@@ -126,15 +143,20 @@ class MangaRestorer(
         return getMangaByUrlAndSourceId.await(backupManga.url, backupManga.source)
     }
 
-    private suspend fun restoreExistingManga(manga: Manga, dbManga: Manga): Manga {
+    private suspend fun restoreExistingManga(manga: Manga, dbManga: Manga, backupManga: BackupManga): Manga {
         return if (manga.version > dbManga.version) {
-            updateManga(dbManga.copyFrom(manga).copy(id = dbManga.id))
+            updateManga(
+                dbManga.copyFrom(
+                    newer = manga,
+                    replaceScanlatorSettings = backupManga.hasExplicitScanlatorSettings(),
+                ).copy(id = dbManga.id),
+            )
         } else {
-            updateManga(manga.copyFrom(dbManga).copy(id = dbManga.id))
+            updateManga(manga.copyFrom(dbManga, replaceScanlatorSettings = true).copy(id = dbManga.id))
         }
     }
 
-    private fun Manga.copyFrom(newer: Manga): Manga {
+    private fun Manga.copyFrom(newer: Manga, replaceScanlatorSettings: Boolean): Manga {
         return this.copy(
             favorite = this.favorite || newer.favorite,
             // SY -->
@@ -159,9 +181,9 @@ class MangaRestorer(
             nextUpdate = newer.nextUpdate.takeIf { it != 0L } ?: nextUpdate,
             fetchInterval = newer.fetchInterval.takeIf { it != 0 } ?: fetchInterval,
             // KMK -->
-            scanlatorPriority = newer.scanlatorPriority.ifEmpty { scanlatorPriority },
+            scanlatorPriority = if (replaceScanlatorSettings) newer.scanlatorPriority else scanlatorPriority,
             blacklistedChapters = (blacklistedChapters + newer.blacklistedChapters).distinct(),
-            scanlatorRangeRules = newer.scanlatorRangeRules.ifEmpty { scanlatorRangeRules },
+            scanlatorRangeRules = if (replaceScanlatorSettings) newer.scanlatorRangeRules else scanlatorRangeRules,
             // KMK <--
         )
     }
@@ -397,7 +419,11 @@ class MangaRestorer(
         manga: Manga,
         chapters: List<BackupChapter>,
         categories: List<Long>,
+        // KMK --> New backups use IDs because sort values are not a stable identity.
+        categoryIds: List<Long>,
         backupCategories: List<BackupCategory>,
+        restoredCategoryIds: Map<Long, Long>,
+        // KMK <--
         history: List<BackupHistory>,
         tracks: List<BackupTracking>,
         excludedScanlators: List<String>,
@@ -406,7 +432,7 @@ class MangaRestorer(
         flatMetadata: BackupFlatMetadata?,
         // SY <--
     ): Manga {
-        restoreCategories(manga, categories, backupCategories)
+        restoreCategories(manga, categories, categoryIds, backupCategories, restoredCategoryIds)
         restoreChapters(manga, chapters)
         restoreTracking(manga, tracks)
         restoreHistory(manga, history)
@@ -432,30 +458,56 @@ class MangaRestorer(
     private suspend fun restoreCategories(
         manga: Manga,
         categories: List<Long>,
+        // KMK -->
+        categoryIds: List<Long>,
         backupCategories: List<BackupCategory>,
+        restoredCategoryIds: Map<Long, Long>,
+        // KMK <--
     ) {
-        val dbCategories = getCategories.await()
-        val dbCategoriesByName = dbCategories.associateBy { it.name }
-
-        val backupCategoriesByOrder = backupCategories.associateBy { it.order }
-
-        val mangaCategoriesToUpdate = categories.mapNotNull { backupCategoryOrder ->
-            backupCategoriesByOrder[backupCategoryOrder]?.let { backupCategory ->
-                dbCategoriesByName[backupCategory.name]?.let { dbCategory ->
-                    Pair(manga.id, dbCategory.id)
-                }
+        // KMK --> A category ID comes from the backup, never the destination database. The
+        // mapping produced by CategoriesRestorer preserves duplicate names under different
+        // parents and prevents category membership from being silently merged.
+        val mangaCategoriesToUpdate = categoryIds.mapNotNull(restoredCategoryIds::get).distinct()
+            .ifEmpty {
+                val backupCategoriesByOrder = backupCategories.groupBy(BackupCategory::order)
+                val dbCategories = getCategories.await()
+                categories.mapNotNull { backupCategoryOrder ->
+                    backupCategoriesByOrder[backupCategoryOrder]
+                        ?.singleOrNull()
+                        ?.let { backupCategory ->
+                            restoredCategoryIds[backupCategory.id]
+                                ?: dbCategories.filter {
+                                    CategoryTreeHandler.normalizeName(it.name) ==
+                                        CategoryTreeHandler.normalizeName(backupCategory.name)
+                                }.singleOrNull()?.id
+                        }
+                }.distinct()
             }
-        }
+        // KMK <--
 
         if (mangaCategoriesToUpdate.isNotEmpty()) {
             database.transaction {
                 database.manga_categoryQueries.deleteMangaCategoryByMangaId(manga.id)
-                mangaCategoriesToUpdate.forEach { (mangaId, categoryId) ->
-                    database.manga_categoryQueries.insert(mangaId, categoryId)
+                mangaCategoriesToUpdate.forEach { categoryId ->
+                    database.manga_categoryQueries.insert(manga.id, categoryId)
                 }
             }
         }
     }
+
+    // KMK -->
+    private fun restoreSmartScanlatorPreferences(mangaId: Long, backupManga: BackupManga) {
+        val override = backupManga.smartScanlatorMergeOverride
+        when (override) {
+            "enabled", "disabled" -> libraryPreferences.smartScanlatorMergeOverride(mangaId)
+                .set(override)
+            "global" -> libraryPreferences.smartScanlatorMergeOverride(mangaId).delete()
+        }
+        backupManga.hideBlacklistedChapters?.let {
+            libraryPreferences.hideBlacklistedChapters(mangaId).set(it)
+        }
+    }
+    // KMK <--
 
     private suspend fun restoreHistory(manga: Manga, backupHistory: List<BackupHistory>) {
         if (backupHistory.isEmpty()) return

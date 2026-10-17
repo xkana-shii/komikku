@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.BackupTracking
 import eu.kanade.tachiyomi.data.backup.restore.restoreBatch
+import eu.kanade.tachiyomi.data.backup.restore.restorers.CategoriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.FeedRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
@@ -22,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.data.Chapter
 import tachiyomi.data.Database
 import tachiyomi.data.DateColumnAdapter
@@ -38,6 +40,7 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetMangaByUrlAndSourceId
@@ -54,6 +57,8 @@ import java.util.Properties
 class RestoreDatabaseTest {
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var db: Database
+    private val preferenceStore = InMemoryPreferenceStore()
+    private val libraryPreferences = LibraryPreferences(preferenceStore)
     private val customInfo = mutableMapOf<Long, CustomMangaInfo>()
     private val customRepository = object : CustomMangaRepository {
         override fun get(mangaId: Long) = customInfo[mangaId]
@@ -147,15 +152,7 @@ class RestoreDatabaseTest {
     fun `sync restore keeps stable IDs metadata and version convergence`() = runBlocking<Unit> {
         val chapters = GetChaptersByMangaId(ChapterRepositoryImpl(db))
         val tracks = TrackRepositoryImpl(db)
-        val restorer = MangaRestorer(
-            isSync = true, database = db,
-            getCategories = GetCategories(CategoryRepositoryImpl(db)),
-            getMangaByUrlAndSourceId = GetMangaByUrlAndSourceId(MangaRepositoryImpl(db)),
-            getChaptersByMangaId = chapters, updateManga = mockk(relaxed = true),
-            getTracks = GetTracks(tracks), insertTrack = InsertTrack(tracks),
-            fetchInterval = FetchInterval(chapters), setCustomMangaInfo = SetCustomMangaInfo(customRepository),
-            insertFlatMetadata = mockk(relaxed = true), getFlatMetadataById = mockk(relaxed = true),
-        )
+        val restorer = createMangaRestorer(isSync = true)
         db.categoryQueries.insert("Reading", 1, 0, 1, parentId = 0L, dateAdded = 0L, dateModified = 0L)
         val category = BackupCategory("Reading", 1)
         val backup = BackupManga(
@@ -250,6 +247,116 @@ class RestoreDatabaseTest {
     }
 
     @Test
+    fun `restore preserves duplicate subcategory identities and manga membership`() = runBlocking<Unit> {
+        val backupCategories = listOf(
+            BackupCategory("Yaoi", order = 0, id = 10),
+            BackupCategory("Reading", order = 1, id = 11, parentId = 10),
+            BackupCategory("Normal", order = 2, id = 20),
+            BackupCategory("Reading", order = 3, id = 21, parentId = 20),
+        )
+        val categoriesRestorer = CategoriesRestorer(
+            database = db,
+            getCategories = GetCategories(CategoryRepositoryImpl(db)),
+            libraryPreferences = libraryPreferences,
+        )
+
+        val restoredCategoryIds = categoriesRestorer(backupCategories)
+        val categories = GetCategories(CategoryRepositoryImpl(db)).await()
+        val yaoiId = restoredCategoryIds.getValue(10)
+        val normalId = restoredCategoryIds.getValue(20)
+        val yaoiReadingId = restoredCategoryIds.getValue(11)
+        val normalReadingId = restoredCategoryIds.getValue(21)
+        categories.single { it.id == yaoiReadingId }.parentId shouldBe yaoiId
+        categories.single { it.id == normalReadingId }.parentId shouldBe normalId
+        (yaoiReadingId == normalReadingId) shouldBe false
+
+        val restorer = createMangaRestorer()
+        restorer.restore(
+            BackupManga(source = 1, url = "/yaoi", title = "Yaoi title", categoryIds = listOf(11)),
+            backupCategories,
+            restoredCategoryIds,
+        )
+        restorer.restore(
+            BackupManga(source = 1, url = "/normal", title = "Normal title", categoryIds = listOf(21)),
+            backupCategories,
+            restoredCategoryIds,
+        )
+
+        val mangaByUrl = db.mangaQueries.getAll().awaitAsList().associateBy { it.remote_url }
+        GetCategories(CategoryRepositoryImpl(db)).await(mangaByUrl.getValue("/yaoi").id).single().id shouldBe yaoiReadingId
+        GetCategories(CategoryRepositoryImpl(db)).await(mangaByUrl.getValue("/normal").id).single().id shouldBe normalReadingId
+    }
+
+    @Test
+    fun `restore applies explicit per manga scanlator preferences to its new ID`() = runBlocking<Unit> {
+        val restorer = createMangaRestorer()
+        val backup = BackupManga(
+            source = 1,
+            url = "/scanlator",
+            title = "Scanlator title",
+            scanlatorPriority = listOf("Preferred", "Fallback"),
+            blacklistedChapters = listOf(chapterUrlBlacklistKey("/scanlator/extra")),
+            scanlatorRangeRules = listOf("1.0:10.0:Preferred"),
+            excludedScanlators = listOf("Excluded"),
+            smartScanlatorMergeOverride = "enabled",
+            hideBlacklistedChapters = false,
+            scanlatorSettingsPresent = true,
+        )
+
+        restorer.restore(backup, emptyList())
+
+        val manga = db.mangaQueries.getAll().awaitAsList().single()
+        manga.user_scanlator_priority shouldBe listOf("Preferred", "Fallback")
+        manga.user_blacklisted_chapters shouldBe listOf(chapterUrlBlacklistKey("/scanlator/extra"))
+        manga.user_scanlator_range_rules shouldBe listOf("1.0:10.0:Preferred")
+        db.excluded_scanlatorQueries.getExcludedScanlatorsByMangaId(manga.id).awaitAsList() shouldBe listOf("Excluded")
+        libraryPreferences.smartScanlatorMergeOverride(manga.id).get() shouldBe "enabled"
+        libraryPreferences.hideBlacklistedChapters(manga.id).get() shouldBe false
+
+        backup.version = 1
+        backup.smartScanlatorMergeOverride = "disabled"
+        restorer.restore(backup, emptyList())
+        libraryPreferences.smartScanlatorMergeOverride(manga.id).get() shouldBe "disabled"
+
+        backup.version = 2
+        backup.smartScanlatorMergeOverride = "global"
+        backup.hideBlacklistedChapters = true
+        restorer.restore(backup, emptyList())
+
+        libraryPreferences.smartScanlatorMergeOverride(manga.id).isSet() shouldBe false
+        libraryPreferences.hideBlacklistedChapters(manga.id).get() shouldBe true
+    }
+
+    @Test
+    fun `legacy empty scanlator fields do not erase an existing configuration`() = runBlocking<Unit> {
+        val restorer = createMangaRestorer()
+        val current = BackupManga(
+            source = 1,
+            url = "/legacy-settings",
+            title = "Current settings",
+            version = 1,
+            scanlatorPriority = listOf("Current"),
+            scanlatorRangeRules = listOf("1.0:5.0:Current"),
+            scanlatorSettingsPresent = true,
+        )
+        restorer.restore(current, emptyList())
+
+        restorer.restore(
+            BackupManga(
+                source = 1,
+                url = "/legacy-settings",
+                title = "Older format",
+                version = 2,
+            ),
+            emptyList(),
+        )
+
+        val manga = db.mangaQueries.getAll().awaitAsList().single()
+        manga.user_scanlator_priority shouldBe listOf("Current")
+        manga.user_scanlator_range_rules shouldBe listOf("1.0:5.0:Current")
+    }
+
+    @Test
     fun `saved search and feed restoration retains filters and avoids duplicates`() = runBlocking<Unit> {
         val search = BackupSavedSearch("Yaoi latest", "", "[saved-filters]", 1)
         repeat(2) {
@@ -260,6 +367,26 @@ class RestoreDatabaseTest {
         val feeds = db.feed_saved_searchQueries.selectAllFeedWithSavedSearch().awaitAsList()
         feeds.size shouldBe 2
         feeds.single { it.source == 1L }.filters_json shouldBe search.filterList
+    }
+
+    private fun createMangaRestorer(isSync: Boolean = false): MangaRestorer {
+        val chapters = GetChaptersByMangaId(ChapterRepositoryImpl(db))
+        val tracks = TrackRepositoryImpl(db)
+        return MangaRestorer(
+            isSync = isSync,
+            database = db,
+            getCategories = GetCategories(CategoryRepositoryImpl(db)),
+            getMangaByUrlAndSourceId = GetMangaByUrlAndSourceId(MangaRepositoryImpl(db)),
+            getChaptersByMangaId = chapters,
+            updateManga = mockk(relaxed = true),
+            getTracks = GetTracks(tracks),
+            insertTrack = InsertTrack(tracks),
+            libraryPreferences = libraryPreferences,
+            fetchInterval = FetchInterval(chapters),
+            setCustomMangaInfo = SetCustomMangaInfo(customRepository),
+            insertFlatMetadata = mockk(relaxed = true),
+            getFlatMetadataById = mockk(relaxed = true),
+        )
     }
 }
 // KMK <--

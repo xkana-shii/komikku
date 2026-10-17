@@ -54,11 +54,20 @@ class BackupManga(
     @ProtoNumber(115) var fetchInterval: Int = 0,
     // KMK <--
     // KMK -->
-    // Houri reserves adjacent field numbers for compatible scanlator configuration.
+    // Houri reserves adjacent field numbers for compatible category and scanlator configuration.
+    // Compatible forks may scope category order to a parent, so IDs are the only lossless link.
+    @ProtoNumber(613) var categoryIds: List<Long> = emptyList(),
     @ProtoNumber(614) var scanlatorPriority: List<String> = emptyList(),
     // Matches Houri's field number so compatible backups preserve chapter exclusions.
     @ProtoNumber(615) var blacklistedChapters: List<String> = emptyList(),
     @ProtoNumber(616) var scanlatorRangeRules: List<String> = emptyList(),
+    // 617 is used by Houri for isLightNovel. Keep per-manga preference state in separate,
+    // nullable fields so old backups do not overwrite a destination's existing preferences.
+    // `global` is explicit: a missing field represents a backup made before this support.
+    @ProtoNumber(618) var smartScanlatorMergeOverride: String? = null,
+    @ProtoNumber(619) var hideBlacklistedChapters: Boolean? = null,
+    // Repeated protobuf fields cannot tell an unset legacy value from an intentional empty list.
+    @ProtoNumber(620) var scanlatorSettingsPresent: Boolean = false,
     // KMK <--
 
     // SY specific values
@@ -143,4 +152,12 @@ class BackupManga(
             // KMK <--
         )
     }
+
+    // KMK -->
+    fun hasExplicitScanlatorSettings(): Boolean =
+        scanlatorSettingsPresent ||
+            scanlatorPriority.isNotEmpty() ||
+            scanlatorRangeRules.isNotEmpty() ||
+            blacklistedChapters.isNotEmpty()
+    // KMK <--
 }

@@ -20,8 +20,6 @@ import exh.log.xLogE
 import tachiyomi.core.common.preference.AndroidPreferenceStore
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.plusAssign
-import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 import uy.kohesive.injekt.Injekt
@@ -29,17 +27,22 @@ import uy.kohesive.injekt.api.get
 
 class PreferenceRestorer(
     private val context: Context,
-    private val getCategories: GetCategories = Injekt.get(),
     private val preferenceStore: PreferenceStore = Injekt.get(),
 ) {
     suspend fun restoreApp(
         preferences: List<BackupPreference>,
         backupCategories: List<BackupCategory>?,
+        // KMK --> Category preference values store device-local IDs.
+        restoredCategoryIds: Map<Long, Long> = emptyMap(),
+        // KMK <--
     ) {
         restorePreferences(
             preferences,
             preferenceStore,
             backupCategories,
+            // KMK -->
+            restoredCategoryIds,
+            // KMK <--
         )
 
         LibraryUpdateJob.setupTask(context)
@@ -60,19 +63,27 @@ class PreferenceRestorer(
         toRestore: List<BackupPreference>,
         preferenceStore: PreferenceStore,
         backupCategories: List<BackupCategory>? = null,
+        // KMK -->
+        restoredCategoryIds: Map<Long, Long> = emptyMap(),
+        // KMK <--
     ) {
-        val allCategories = if (backupCategories != null) getCategories.await() else emptyList()
-        val categoriesByName = allCategories.associateBy { it.name }
         val backupCategoriesById = backupCategories?.associateBy { it.id.toString() }.orEmpty()
         val prefs = preferenceStore.getAll()
         toRestore.forEach { (key, value) ->
             try {
+                // KMK --> These keys are tied to old database IDs. New BackupManga fields carry
+                // an identity-safe replacement; legacy backups have no manga ID to map safely.
+                if (key.startsWith("pref_smart_scanlator_merge_override_") ||
+                    key.startsWith("pref_hide_blacklisted_chapters_")
+                ) {
+                    return@forEach
+                }
+                // KMK <--
                 when (value) {
                     is IntPreferenceValue -> {
                         if (prefs[key] is Int?) {
                             val newValue = if (key == LibraryPreferences.DEFAULT_CATEGORY_PREF_KEY) {
-                                backupCategoriesById[value.value.toString()]
-                                    ?.let { categoriesByName[it.name]?.id?.toInt() }
+                                restoredCategoryIds[value.value.toLong()]?.toInt()
                             } else {
                                 value.value
                             }
@@ -107,7 +118,7 @@ class PreferenceRestorer(
                                 value.value,
                                 preferenceStore,
                                 backupCategoriesById,
-                                categoriesByName,
+                                restoredCategoryIds,
                             )
                             if (!restored) {
                                 // KMK -->
@@ -139,15 +150,13 @@ class PreferenceRestorer(
         value: Set<String>,
         preferenceStore: PreferenceStore,
         backupCategoriesById: Map<String, BackupCategory>,
-        categoriesByName: Map<String, Category>,
+        restoredCategoryIds: Map<Long, Long>,
     ): Boolean {
         val categoryPreferences = LibraryPreferences.categoryPreferenceKeys + DownloadPreferences.categoryPreferenceKeys
         if (key !in categoryPreferences) return false
 
         val ids = value.mapNotNull {
-            backupCategoriesById[it]?.name?.let { name ->
-                categoriesByName[name]?.id?.toString()
-            }
+            backupCategoriesById[it]?.id?.let(restoredCategoryIds::get)?.toString()
         }
 
         if (ids.isNotEmpty()) {

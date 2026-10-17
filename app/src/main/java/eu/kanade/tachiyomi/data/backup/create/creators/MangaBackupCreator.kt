@@ -18,6 +18,7 @@ import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.interactor.GetHistory
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.model.CustomMangaInfo
@@ -33,6 +34,9 @@ class MangaBackupCreator(
     private val chapterRepository: ChapterRepository = Injekt.get(),
     private val getCategories: GetCategories = Injekt.get(),
     private val getHistory: GetHistory = Injekt.get(),
+    // KMK --> These values are per-manga despite being stored in preferences.
+    private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    // KMK <--
     // SY -->
     private val sourceManager: SourceManager = Injekt.get(),
     private val getCustomMangaInfo: GetCustomMangaInfo = Injekt.get(),
@@ -72,6 +76,14 @@ class MangaBackupCreator(
         // SY <--
 
         mangaObject.excludedScanlators = database.excluded_scanlatorQueries.getExcludedScanlatorsByMangaId(manga.id).awaitAsList()
+        // KMK --> Keep database-ID-based preference keys attached to their manga identity.
+        mangaObject.smartScanlatorMergeOverride = when (libraryPreferences.smartScanlatorMergeOverride(manga.id).get()) {
+            "enabled", "disabled" -> libraryPreferences.smartScanlatorMergeOverride(manga.id).get()
+            else -> "global"
+        }
+        mangaObject.hideBlacklistedChapters = libraryPreferences.hideBlacklistedChapters(manga.id).get()
+        mangaObject.scanlatorSettingsPresent = true
+        // KMK <--
 
         if (options.chapters) {
             // Backup all the chapters
@@ -92,6 +104,9 @@ class MangaBackupCreator(
                 .filter { options.includedCategoryIds == null || it.id in options.includedCategoryIds }
             if (categoriesForManga.isNotEmpty()) {
                 mangaObject.categories = categoriesForManga.map { it.order }
+                // KMK --> IDs remain lossless across compatible category-order schemes.
+                mangaObject.categoryIds = categoriesForManga.map { it.id }
+                // KMK <--
             }
         }
 

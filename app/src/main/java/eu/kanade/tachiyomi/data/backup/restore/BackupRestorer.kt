@@ -118,9 +118,13 @@ class BackupRestorer(
         }
 
         coroutineScope {
-            if (options.categories) {
-                restoreCategories(backup.backupCategories).join()
+            // KMK --> Restore the category tree first so ID-based references can be remapped.
+            val restoredCategoryIds = if (options.categories) {
+                restoreCategories(backup.backupCategories)
+            } else {
+                emptyMap()
             }
+            // KMK <--
             // SY -->
             if (options.savedSearchesFeeds) {
                 restoreSavedSearches(
@@ -132,13 +136,21 @@ class BackupRestorer(
             }
             // SY <--
             if (options.appSettings) {
-                restoreAppPreferences(backup.backupPreferences, backup.backupCategories.takeIf { options.categories })
+                restoreAppPreferences(
+                    backup.backupPreferences,
+                    backup.backupCategories.takeIf { options.categories },
+                    restoredCategoryIds,
+                )
             }
             if (options.sourceSettings) {
                 restoreSourcePreferences(backup.backupSourcePreferences)
             }
             if (options.libraryEntries) {
-                restoreManga(backup.backupManga, if (options.categories) backup.backupCategories else emptyList())
+                restoreManga(
+                    backup.backupManga,
+                    if (options.categories) backup.backupCategories else emptyList(),
+                    restoredCategoryIds,
+                )
             }
             if (options.extensionStores) {
                 restoreExtensionStores(backup.backupExtensionStores)
@@ -148,9 +160,8 @@ class BackupRestorer(
         }
     }
 
-    private fun CoroutineScope.restoreCategories(backupCategories: List<BackupCategory>) = launch {
-        ensureActive()
-        categoriesRestorer(backupCategories)
+    private suspend fun restoreCategories(backupCategories: List<BackupCategory>): Map<Long, Long> {
+        val restoredCategoryIds = categoriesRestorer(backupCategories)
 
         restoreProgress.incrementAndFetch()
         with(notifier) {
@@ -161,6 +172,7 @@ class BackupRestorer(
                 isSync,
             )
         }
+        return restoredCategoryIds
     }
 
     // SY -->
@@ -191,11 +203,14 @@ class BackupRestorer(
     private fun CoroutineScope.restoreManga(
         backupMangas: List<BackupManga>,
         backupCategories: List<BackupCategory>,
+        // KMK -->
+        restoredCategoryIds: Map<Long, Long>,
+        // KMK <--
     ) = launch {
         mangaRestorer.sortByNew(backupMangas).chunked(100).forEach { chunk ->
             database.restoreBatch(
                 chunk,
-                restore = { mangaRestorer.restore(it, backupCategories) },
+                restore = { mangaRestorer.restore(it, backupCategories, restoredCategoryIds) },
                 onError = { manga, error ->
                     val sourceName = sourceMapping[manga.source] ?: manga.source.toString()
                     errors.add(Date() to "${manga.title} [$sourceName]: ${error.message}")
@@ -209,11 +224,17 @@ class BackupRestorer(
     private fun CoroutineScope.restoreAppPreferences(
         preferences: List<BackupPreference>,
         categories: List<BackupCategory>?,
+        // KMK -->
+        restoredCategoryIds: Map<Long, Long>,
+        // KMK <--
     ) = launch {
         ensureActive()
         preferenceRestorer.restoreApp(
             preferences,
             categories,
+            // KMK -->
+            restoredCategoryIds,
+            // KMK <--
         )
 
         restoreProgress.incrementAndFetch()
