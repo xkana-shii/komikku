@@ -1,3 +1,4 @@
+
 package eu.kanade.presentation.manga
 
 import io.kotest.matchers.shouldBe
@@ -10,7 +11,7 @@ import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
 class ChapterBlacklistEntryTest {
 
     @Test
-    fun `resolves a numbered scanlator key and reports every affected chapter`() {
+    fun `ambiguous numbered scanlator key does not resolve unrelated duplicates`() {
         val first = chapter(id = 1, name = "Chapter 12", number = 12.0, scanlator = "Team")
         val second = chapter(id = 2, name = "Alternative title", number = 12.0, scanlator = "Team")
         val key = scanlatorBlacklistKey(12.0, "Team")
@@ -18,10 +19,41 @@ class ChapterBlacklistEntryTest {
         val entry = resolveChapterBlacklistEntries(listOf(key), listOf(first, second)).single()
 
         entry.key shouldBe key
+        entry.chapter shouldBe null
+        entry.chapterNumber shouldBe 12.0
+        entry.scanlator shouldBe "Team"
+        entry.matchingChapterCount shouldBe 0
+        entry.isAvailable shouldBe false
+    }
+
+    @Test
+    fun `numbered scanlator key resolves a unique matching chapter`() {
+        val first = chapter(id = 1, name = "Chapter 12", number = 12.0, scanlator = "Team")
+        val key = scanlatorBlacklistKey(12.0, "Team")
+
+        val entry = resolveChapterBlacklistEntries(listOf(key), listOf(first)).single()
+
+        entry.key shouldBe key
         entry.chapter shouldBe first
         entry.chapterNumber shouldBe 12.0
         entry.scanlator shouldBe "Team"
-        entry.matchingChapterCount shouldBe 2
+        entry.matchingChapterCount shouldBe 1
+        entry.isAvailable shouldBe true
+    }
+
+    @Test
+    fun `URL blacklist key resolves only the selected duplicate`() {
+        val first = chapter(id = 1, name = "Chapter 12", number = 12.0, scanlator = "Team")
+        val second = chapter(id = 2, name = "Alternative title", number = 12.0, scanlator = "Team")
+        val key = chapterUrlBlacklistKey(second.url)
+
+        val entry = resolveChapterBlacklistEntries(listOf(key), listOf(first, second)).single()
+
+        entry.key shouldBe key
+        entry.chapter shouldBe second
+        entry.chapterNumber shouldBe 12.0
+        entry.scanlator shouldBe "Team"
+        entry.matchingChapterCount shouldBe 1
         entry.isAvailable shouldBe true
     }
 
