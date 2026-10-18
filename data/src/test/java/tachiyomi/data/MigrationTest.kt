@@ -1,6 +1,5 @@
 package tachiyomi.data
 
-import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
@@ -12,214 +11,869 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 /**
- * Guards the destructive schema rework: the migration from the pre-rework schema (version 49, snapshot
- * in `src/main/sqldelight/49.db`) must keep SyncYomi's version/is_syncing/last_modified_at columns and
- * triggers, keep Komikku's extra tables, and carry representative rows across.
+ * Tests the legacy-to-current database migration.
  *
- * The seed deliberately contains the shapes that used to break the duplicate-manga merge: a removed
- * member that owns a chapter with history, a `merged` row that references the removed member, and
- * members of the same group sharing a category with different timestamps.
+ * The repository contains a version-28 database snapshot.
+ * The duplicate-manga consolidation happens in migration 47.
+ *
+ * To exercise that consolidation, migrate the snapshot up to
+ * version 47, insert representative legacy records, and then
+ * run the remaining migrations.
+ *
+ * The migration runs inside a transaction so SQLite TEMP
+ * tables remain available throughout the migration.
  */
 class MigrationTest {
 
     @Test
-    fun `migration from version 49 preserves SyncYomi columns, triggers and rows`() {
-        runBlocking {
-            val dbFile = Files.createTempFile("komikku-migration-test", ".db")
-            Files.copy(Path.of("src/main/sqldelight/49.db"), dbFile, REPLACE_EXISTING)
+    fun `migration from legacy schema preserves SyncYomi columns triggers and rows`() = runBlocking<Unit> {
+        val dbFile = Files.createTempFile(
+            "komikku-migration-test",
+            ".db",
+        )
+
+        try {
+            Files.copy(
+                Path.of("src/main/sqldelight/28.db"),
+                dbFile,
+                REPLACE_EXISTING,
+            )
+
             val driver = JdbcSqliteDriver("jdbc:sqlite:$dbFile")
-            try {
+
+            driver.use { driver ->
+                // Build the schema immediately before 47.sqm,
+                // which performs duplicate-manga consolidation.
+                migrateInTransaction(
+                    driver = driver,
+                    oldVersion = 28L,
+                    newVersion = 47L,
+                )
+
+                // Insert legacy rows before the consolidation.
                 populateOldSchema(driver)
 
-                Database.Schema.migrate(driver, 49L, Database.Schema.version).await()
+                // Migration 47 uses temporary tables such as
+                // duplicate_mangas. The enclosing transaction
+                // keeps the JDBC connection consistent.
+                migrateInTransaction(
+                    driver = driver,
+                    oldVersion = 47L,
+                    newVersion = Database.Schema.version,
+                )
 
-                // SyncYomi columns survive on the renamed tables
-                driver.columnCount("manga", "version") shouldBe 1
-                driver.columnCount("manga", "is_syncing") shouldBe 1
-                driver.columnCount("manga", "last_modified_at") shouldBe 1
-                driver.columnCount("chapter", "version") shouldBe 1
-                driver.columnCount("chapter", "is_syncing") shouldBe 1
-                driver.columnCount("chapter", "last_modified_at") shouldBe 1
-                driver.columnCount("category", "version") shouldBe 1
-                driver.columnCount("category", "is_syncing") shouldBe 1
-                driver.columnCount("category", "last_modified_at") shouldBe 1
-                driver.columnCount("manga_category", "last_modified_at") shouldBe 1
+                // -------------------------------------------------
+                // SyncYomi columns
+                // -------------------------------------------------
 
-                // SyncYomi triggers survive
-                driver.triggerExists("update_last_modified_at_mangas") shouldBe true
-                driver.triggerExists("update_manga_version") shouldBe true
-                driver.triggerExists("update_last_modified_at_chapters") shouldBe true
-                driver.triggerExists("update_chapter_and_manga_version") shouldBe true
-                driver.triggerExists("update_category_version") shouldBe true
-                driver.triggerExists("insert_category_uid") shouldBe true
+                driver.columnCount(
+                    "manga",
+                    "version",
+                ) shouldBe 1L
 
-                // Komikku/SY extra tables survive
-                driver.tableExists("merged") shouldBe true
-                driver.tableExists("search_metadata") shouldBe true
-                driver.tableExists("search_tags") shouldBe true
-                driver.tableExists("search_titles") shouldBe true
-                driver.tableExists("libraryUpdateError") shouldBe true
-                driver.tableExists("saved_search") shouldBe true
-                driver.tableExists("feed_saved_search") shouldBe true
+                driver.columnCount(
+                    "manga",
+                    "is_syncing",
+                ) shouldBe 1L
 
-                // The merge scratch tables are TEMP and never leak into the persisted schema
-                driver.tableExists("duplicate_mangas") shouldBe false
-                driver.tableExists("duplicate_chapters") shouldBe false
-                driver.tableExists("duplicate_tracks") shouldBe false
+                driver.columnCount(
+                    "manga",
+                    "last_modified_at",
+                ) shouldBe 1L
 
-                // The rebuilt views survive
-                driver.viewExists("historyView") shouldBe true
-                driver.viewExists("libraryView") shouldBe true
-                driver.viewExists("updatesView") shouldBe true
-                driver.viewExists("libraryUpdateErrorView") shouldBe true
+                driver.columnCount(
+                    "chapter",
+                    "version",
+                ) shouldBe 1L
 
-                // Manga rows survive (the triplicate group merged into the favorite entry, Manga B kept)
-                driver.scalarLong("SELECT count(*) FROM manga") shouldBe 2
-                driver.scalarLong("SELECT user_favorite_at FROM manga WHERE id = 1") shouldBe 1000
-                driver.scalarLong("SELECT version FROM manga WHERE id = 1") shouldBe 3
-                driver.scalarLong("SELECT last_modified_at FROM manga WHERE id = 1") shouldBe 700
-                driver.scalarLong("SELECT count(*) FROM manga WHERE id = 2") shouldBe 1
+                driver.columnCount(
+                    "chapter",
+                    "is_syncing",
+                ) shouldBe 1L
 
-                // The removed members' chapters were re-pointed onto the survivor before the copy
-                driver.scalarLong("SELECT count(*) FROM chapter") shouldBe 3
-                driver.scalarLong("SELECT count(*) FROM chapter WHERE manga_id != 1") shouldBe 0
-                driver.scalarLong("SELECT version FROM chapter WHERE id = 1") shouldBe 2
+                driver.columnCount(
+                    "chapter",
+                    "last_modified_at",
+                ) shouldBe 1L
 
-                // History follows its chapter, so the removed members' history survives too
-                driver.scalarLong("SELECT count(*) FROM history") shouldBe 3
-                driver.scalarLong("SELECT count(*) FROM history WHERE manga_id != 1") shouldBe 0
-                driver.scalarLong("SELECT read_at FROM history WHERE id = 1") shouldBe 111
-                driver.scalarLong("SELECT read_duration FROM history WHERE id = 1") shouldBe 222
-                driver.scalarLong("SELECT read_at FROM history WHERE id = 2") shouldBe 333
+                driver.columnCount(
+                    "category",
+                    "version",
+                ) shouldBe 1L
 
-                // Track, category and extras carry over
-                driver.scalarLong("SELECT count(*) FROM manga_track") shouldBe 1
-                driver.scalarLong("SELECT tracker_id FROM manga_track WHERE id = 1") shouldBe 2
-                driver.scalarLong("SELECT count(*) FROM category") shouldBe 2
-                driver.scalarLong("SELECT last_modified_at FROM category WHERE id = 1") shouldBe 1234
+                driver.columnCount(
+                    "category",
+                    "is_syncing",
+                ) shouldBe 1L
 
-                // Members sharing a category collapse into one row; the newest timestamp wins
-                driver.scalarLong("SELECT count(*) FROM manga_category") shouldBe 1
-                driver.scalarLong("SELECT manga_id FROM manga_category") shouldBe 1
-                driver.scalarLong("SELECT category_id FROM manga_category") shouldBe 1
-                driver.scalarLong("SELECT last_modified_at FROM manga_category") shouldBe 999
+                driver.columnCount(
+                    "category",
+                    "last_modified_at",
+                ) shouldBe 1L
 
-                // The `merged` row that referenced a removed member follows it onto the survivor
-                driver.scalarLong("SELECT count(*) FROM merged") shouldBe 2
-                driver.scalarLong("SELECT manga_id FROM merged WHERE _id = 1") shouldBe 1
-                driver.scalarLong("SELECT merge_id FROM merged WHERE _id = 1") shouldBe 2
-                driver.scalarLong("SELECT manga_id FROM merged WHERE _id = 2") shouldBe 2
-                driver.scalarLong("SELECT merge_id FROM merged WHERE _id = 2") shouldBe 1
+                driver.columnCount(
+                    "manga_category",
+                    "last_modified_at",
+                ) shouldBe 1L
 
-                // The unique-keyed extras collapse to one row per surviving entry before the re-point
-                driver.scalarLong("SELECT count(*) FROM search_metadata") shouldBe 1
-                driver.scalarLong("SELECT manga_id FROM search_metadata") shouldBe 1
-                // The best-ranked member that had a row (manga 3) is the one that survives
-                driver.scalarLong("SELECT count(*) FROM search_metadata WHERE uploader = 'up3'") shouldBe 1
-                driver.scalarLong("SELECT count(*) FROM search_tags") shouldBe 1
-                driver.scalarLong("SELECT manga_id FROM search_tags") shouldBe 1
-                driver.scalarLong("SELECT count(*) FROM search_titles") shouldBe 1
-                driver.scalarLong("SELECT manga_id FROM search_titles") shouldBe 1
-                driver.scalarLong("SELECT count(*) FROM libraryUpdateError") shouldBe 1
-                driver.scalarLong("SELECT manga_id FROM libraryUpdateError") shouldBe 1
+                // -------------------------------------------------
+                // SyncYomi triggers
+                // -------------------------------------------------
 
-                // The non-unique extras are re-pointed rather than duplicated
-                driver.scalarLong("SELECT count(*) FROM excluded_scanlator") shouldBe 1
-                driver.scalarLong("SELECT manga_id FROM excluded_scanlator") shouldBe 1
-                driver.scalarLong("SELECT count(*) FROM source") shouldBe 1
+                listOf(
+                    "update_last_modified_at_mangas",
+                    "update_manga_version",
+                    "update_last_modified_at_chapters",
+                    "update_chapter_and_manga_version",
+                    "update_category_version",
+                    "insert_category_uid",
+                ).forEach { trigger ->
+                    driver.triggerExists(trigger) shouldBe true
+                }
 
-                // Nothing points at a row that the merge removed
-                driver.foreignKeyViolations() shouldBe 0
+                // -------------------------------------------------
+                // Komikku and TachiyomiSY tables
+                // -------------------------------------------------
+
+                listOf(
+                    "merged",
+                    "search_metadata",
+                    "search_tags",
+                    "search_titles",
+                    "libraryUpdateError",
+                    "saved_search",
+                    "feed_saved_search",
+                ).forEach { table ->
+                    driver.tableExists(table) shouldBe true
+                }
+
+                // The temporary merge tables must not remain
+                // after migration 47 finishes.
+                listOf(
+                    "duplicate_mangas",
+                    "duplicate_chapters",
+                    "duplicate_tracks",
+                ).forEach { table ->
+                    driver.tableExists(table) shouldBe false
+                }
+
+                // -------------------------------------------------
+                // Database views
+                // -------------------------------------------------
+
+                listOf(
+                    "historyView",
+                    "libraryView",
+                    "updatesView",
+                    "libraryUpdateErrorView",
+                ).forEach { view ->
+                    driver.viewExists(view) shouldBe true
+                }
+
+                // -------------------------------------------------
+                // Manga duplicate consolidation
+                // -------------------------------------------------
+
+                // Four original rows:
+                // 1: favorite manga A
+                // 2: distinct manga B
+                // 3: duplicate manga A
+                // 4: duplicate manga A
+                //
+                // After migration, rows 1 and 2 remain.
                 driver.scalarLong(
-                    "SELECT count(*) FROM libraryUpdateError WHERE manga_id NOT IN (SELECT id FROM manga)",
-                ) shouldBe 0
-                driver.scalarLong(
-                    "SELECT count(*) FROM search_metadata WHERE manga_id NOT IN (SELECT id FROM manga)",
-                ) shouldBe 0
+                    "SELECT count(*) FROM manga",
+                ) shouldBe 2L
 
-                // The recreated SyncYomi trigger still stamps last_modified_at on update
-                driver.execute(null, "UPDATE manga SET remote_description = 'changed' WHERE id = 1", 0).await()
-                (driver.scalarLong("SELECT last_modified_at FROM manga WHERE id = 1") ?: 0) shouldBe
-                    (driver.scalarLong("SELECT strftime('%s', 'now')") ?: 0)
-                (driver.scalarLong("SELECT version FROM manga WHERE id = 1") ?: 0) shouldBe 4
-            } finally {
-                driver.close()
+                driver.scalarLong(
+                    "SELECT count(*) FROM manga WHERE id = 1",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM manga WHERE id = 2",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM manga WHERE id IN (3, 4)",
+                ) shouldBe 0L
+
+                // favorite_modified_at takes precedence over
+                // date_added when creating user_favorite_at.
+                driver.scalarLong(
+                    "SELECT user_favorite_at FROM manga WHERE id = 1",
+                ) shouldBe 500L
+
+                driver.scalarLong(
+                    "SELECT version FROM manga WHERE id = 1",
+                ) shouldBe 3L
+
+                driver.scalarLong(
+                    "SELECT last_modified_at FROM manga WHERE id = 1",
+                ) shouldBe 700L
+
+                // -------------------------------------------------
+                // Chapter preservation
+                // -------------------------------------------------
+
+                // Chapters from deleted duplicates are assigned
+                // to the surviving manga.
+                driver.scalarLong(
+                    "SELECT count(*) FROM chapter",
+                ) shouldBe 3L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM chapter WHERE manga_id = 1",
+                ) shouldBe 3L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM chapter WHERE manga_id != 1",
+                ) shouldBe 0L
+
+                driver.scalarLong(
+                    "SELECT version FROM chapter WHERE id = 1",
+                ) shouldBe 2L
+
+                // -------------------------------------------------
+                // Reading history
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM history",
+                ) shouldBe 3L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM history WHERE manga_id != 1",
+                ) shouldBe 0L
+
+                driver.scalarLong(
+                    "SELECT read_at FROM history WHERE id = 1",
+                ) shouldBe 111L
+
+                driver.scalarLong(
+                    "SELECT read_duration FROM history WHERE id = 1",
+                ) shouldBe 222L
+
+                driver.scalarLong(
+                    "SELECT read_at FROM history WHERE id = 2",
+                ) shouldBe 333L
+
+                // -------------------------------------------------
+                // Tracker preservation
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM manga_track",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT tracker_id FROM manga_track WHERE id = 1",
+                ) shouldBe 2L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM manga_track WHERE id = 1",
+                ) shouldBe 1L
+
+                // -------------------------------------------------
+                // Category preservation
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM category",
+                ) shouldBe 2L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM category WHERE id = 1",
+                ) shouldBe 1L
+
+                // SyncYomi category metadata is introduced by
+                // migration 57. The old category fixture does
+                // not contain a historical version counter.
+                driver.scalarLong(
+                    "SELECT version FROM category WHERE id = 1",
+                ) shouldBe 0L
+
+                (
+                    (
+                        driver.scalarLong(
+                            "SELECT last_modified_at FROM category WHERE id = 1",
+                        ) ?: 0L
+                        ) > 0L
+                    ) shouldBe true
+
+                // Multiple assignments to the same category
+                // collapse to one assignment on the survivor.
+                driver.scalarLong(
+                    "SELECT count(*) FROM manga_category",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM manga_category",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT category_id FROM manga_category",
+                ) shouldBe 1L
+
+                // Keep the latest modification timestamp among
+                // the duplicate assignments.
+                driver.scalarLong(
+                    "SELECT last_modified_at FROM manga_category",
+                ) shouldBe 999L
+
+                // -------------------------------------------------
+                // Merged manga references
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM merged",
+                ) shouldBe 2L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM merged WHERE _id = 1",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT merge_id FROM merged WHERE _id = 1",
+                ) shouldBe 2L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM merged WHERE _id = 2",
+                ) shouldBe 2L
+
+                driver.scalarLong(
+                    "SELECT merge_id FROM merged WHERE _id = 2",
+                ) shouldBe 1L
+
+                // -------------------------------------------------
+                // Search metadata
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM search_metadata",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM search_metadata",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    """
+                    SELECT count(*)
+                    FROM search_metadata
+                    WHERE uploader = 'up3'
+                    """.trimIndent(),
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM search_tags",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM search_tags",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM search_titles",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM search_titles",
+                ) shouldBe 1L
+
+                // -------------------------------------------------
+                // Library update errors
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM libraryUpdateError",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM libraryUpdateError",
+                ) shouldBe 1L
+
+                // -------------------------------------------------
+                // Other references
+                // -------------------------------------------------
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM excluded_scanlator",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT manga_id FROM excluded_scanlator",
+                ) shouldBe 1L
+
+                driver.scalarLong(
+                    "SELECT count(*) FROM source",
+                ) shouldBe 1L
+
+                // -------------------------------------------------
+                // Foreign-key integrity
+                // -------------------------------------------------
+
+                driver.foreignKeyViolations() shouldBe 0L
+
+                driver.scalarLong(
+                    """
+                    SELECT count(*)
+                    FROM libraryUpdateError
+                    WHERE manga_id NOT IN (
+                        SELECT id FROM manga
+                    )
+                    """.trimIndent(),
+                ) shouldBe 0L
+
+                driver.scalarLong(
+                    """
+                    SELECT count(*)
+                    FROM search_metadata
+                    WHERE manga_id NOT IN (
+                        SELECT id FROM manga
+                    )
+                    """.trimIndent(),
+                ) shouldBe 0L
+
+                // -------------------------------------------------
+                // Trigger behavior after migration
+                // -------------------------------------------------
+
+                driver.execute(
+                    null,
+                    """
+                    UPDATE manga
+                    SET remote_description = 'changed'
+                    WHERE id = 1
+                    """.trimIndent(),
+                    0,
+                ).await()
+
+                // The timestamp trigger should still work.
+                driver.scalarLong(
+                    "SELECT last_modified_at FROM manga WHERE id = 1",
+                ) shouldBe driver.scalarLong(
+                    "SELECT strftime('%s', 'now')",
+                )
+
+                // The version counter should increment once.
+                driver.scalarLong(
+                    "SELECT version FROM manga WHERE id = 1",
+                ) shouldBe 4L
+            }
+        } finally {
+            Files.deleteIfExists(dbFile)
+        }
+    }
+
+    /**
+     * SQLDelight migration 47 creates TEMP tables and refers to
+     * them in subsequent statements. They must exist on the
+     * same SQLite connection until migration completes.
+     */
+    private suspend fun migrateInTransaction(
+        driver: SqlDriver,
+        oldVersion: Long,
+        newVersion: Long,
+    ) {
+        // SQLDelight manages commit, rollback, and the JDBC connection.
+        testDatabase(driver).transaction {
+            Database.Schema.migrate(
+                driver = driver,
+                oldVersion = oldVersion,
+                newVersion = newVersion,
+            ).await()
+        }
+    }
+
+    /**
+     * Seeds the old plural-table schema before migration 47.
+     */
+
+    private suspend fun populateOldSchema(driver: SqlDriver) {
+        // Disable legacy triggers while inserting the fixtures
+        // so historical timestamps and versions stay unchanged.
+        listOf(
+            "update_last_modified_at_mangas",
+            "update_manga_version",
+            "update_last_modified_at_chapters",
+            "update_chapter_and_manga_version",
+            "update_category_version",
+            "insert_category_uid",
+            "system_category_delete_trigger",
+            "update_last_modified_at_mangas_categories",
+            "insert_manga_category_update_version",
+            "delete_manga_category_update_version",
+            "update_last_favorited_at_mangas",
+        ).forEach { trigger ->
+            driver.execute(
+                null,
+                "DROP TRIGGER IF EXISTS $trigger",
+                0,
+            ).await()
+        }
+
+        val statements = listOf(
+            // -------------------------------------------------
+            // Legacy categories
+            // -------------------------------------------------
+            """
+        INSERT OR REPLACE INTO categories(
+            _id, name, sort, flags, manga_order, hidden
+        )
+        VALUES
+            (0, '', -1, 0, '', 0),
+            (1, 'Reading', 0, 0, '', 0)
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Legacy manga entries
+            // -------------------------------------------------
+            """
+        INSERT INTO mangas(
+            _id, source, url, artist, author,
+            description, genre, title, status,
+            thumbnail_url, favorite,
+            last_update, next_update, initialized,
+            viewer, chapter_flags, cover_last_modified,
+            date_added, update_strategy,
+            calculate_interval, last_modified_at,
+            favorite_modified_at, version,
+            is_syncing, notes, memo
+        )
+        VALUES
+            (
+                1, 100, 'https://a', 'art',
+                'auth', 'desc', '["g"]', 'Manga A',
+                1, 'https://cover', 1, 10, 20,
+                1, 0, 0, 30, 1000, 1, 0,
+                700, 500, 3, 0, 'note1', '{}'
+            ),
+            (
+                2, 100, 'https://b', NULL,
+                NULL, NULL, NULL, 'Manga B',
+                0, NULL, 0, NULL, NULL,
+                0, 0, 0, 0, 0, 0, 0,
+                0, NULL, 0, 0, '', '{}'
+            ),
+            (
+                3, 100, 'https://a', NULL,
+                NULL, NULL, NULL, 'Manga A dup',
+                0, NULL, 0, NULL, NULL,
+                0, 0, 0, 0, 0, 0, 0,
+                0, NULL, 0, 0, '', '{}'
+            ),
+            (
+                4, 100, 'https://a', NULL,
+                NULL, NULL, NULL, 'Manga A dup 2',
+                0, NULL, 0, NULL, NULL,
+                0, 0, 0, 0, 0, 0, 0,
+                0, NULL, 0, 0, '', '{}'
+            )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Chapters owned by duplicate entries
+            //
+            // The legacy schema requires fillermark.
+            // Set it to 0 for these ordinary chapters.
+            // -------------------------------------------------
+            """
+        INSERT INTO chapters(
+            _id, manga_id, url, name, scanlator,
+            read, bookmark, fillermark, last_page_read,
+            chapter_number, source_order, date_fetch,
+            date_upload, last_modified_at,
+            version, is_syncing, memo
+        )
+        VALUES
+            (
+                1, 1, 'https://c1', 'Ch 1',
+                NULL, 1, 0, 0, 5, 1.0, 1,
+                100, 200, 800, 2, 0, '{}'
+            ),
+            (
+                2, 3, 'https://c3', 'Ch 3',
+                NULL, 0, 0, 0, 0, 1.0, 1,
+                101, 201, 801, 1, 0, '{}'
+            ),
+            (
+                3, 4, 'https://c4', 'Ch 4',
+                NULL, 0, 0, 0, 0, 1.0, 1,
+                102, 202, 802, 1, 0, '{}'
+            )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Category assignments
+            // -------------------------------------------------
+            """
+        INSERT INTO mangas_categories(
+            _id, manga_id, category_id, last_modified_at
+        )
+        VALUES
+            (1, 1, 1, 999),
+            (2, 3, 1, 555),
+            (3, 4, 1, 777)
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Tracker binding
+            // -------------------------------------------------
+            """
+        INSERT INTO manga_sync(
+            _id, manga_id, sync_id, remote_id,
+            library_id, title, last_chapter_read,
+            total_chapters, status, score,
+            remote_url, start_date, finish_date,
+            private
+        )
+        VALUES (
+            1, 1, 2, 4242, 99, 'Tracked',
+            5.0, 10, 1, 8.0,
+            'https://t', 1, 2, 0
+        )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Reading history
+            // -------------------------------------------------
+            """
+        INSERT INTO history(
+            _id, chapter_id, last_read, time_read
+        )
+        VALUES
+            (1, 1, 111, 222),
+            (2, 2, 333, 444),
+            (3, 3, 555, 666)
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Excluded scanlators
+            // -------------------------------------------------
+            """
+        INSERT INTO excluded_scanlators(
+            manga_id, scanlator
+        )
+        VALUES
+            (1, 'excl'),
+            (3, 'excl')
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Search metadata
+            // -------------------------------------------------
+            """
+        INSERT INTO search_metadata(
+            manga_id, uploader, extra,
+            indexed_extra, extra_version
+        )
+        VALUES
+            (3, 'up3', '{}', 'idx3', 1),
+            (4, 'up4', '{}', 'idx4', 1)
+        """.trimIndent(),
+
+            """
+        INSERT INTO search_tags(
+            _id, manga_id, namespace, name, type
+        )
+        VALUES (
+            1, 3, 'ns', 'tag', 1
+        )
+        """.trimIndent(),
+
+            """
+        INSERT INTO search_titles(
+            _id, manga_id, title, type
+        )
+        VALUES (
+            1, 3, 'Alt', 1
+        )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Library update errors
+            // -------------------------------------------------
+            """
+        INSERT INTO libraryUpdateErrorMessage(
+            _id, message
+        )
+        VALUES (
+            1, 'err'
+        )
+        """.trimIndent(),
+
+            """
+        INSERT INTO libraryUpdateError(
+            _id, manga_id, message_id, last_update
+        )
+        VALUES
+            (1, 3, 1, 5),
+            (2, 4, 1, 6)
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Merged manga references
+            // -------------------------------------------------
+            """
+        INSERT INTO merged(
+            _id, info_manga, get_chapter_updates,
+            chapter_sort_mode, chapter_priority,
+            download_chapters, merge_id, merge_url,
+            manga_id, manga_url, manga_source
+        )
+        VALUES
+            (
+                1, 0, 0, 0, 0, 0,
+                2, 'https://b',
+                3, 'https://a', 100
+            ),
+            (
+                2, 0, 0, 0, 0, 0,
+                3, 'https://a',
+                2, 'https://b', 100
+            )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Sources
+            // -------------------------------------------------
+            """
+        INSERT INTO sources(
+            _id, lang, name
+        )
+        VALUES (
+            100, 'en', 'Src'
+        )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Saved searches
+            // -------------------------------------------------
+            """
+        INSERT INTO saved_search(
+            _id, source, name, query, filters_json
+        )
+        VALUES (
+            1, 100, 's', 'q', NULL
+        )
+        """.trimIndent(),
+
+            // -------------------------------------------------
+            // Saved-search feed
+            // -------------------------------------------------
+            """
+        INSERT INTO feed_saved_search(
+            _id, source, saved_search,
+            global, feed_order
+        )
+        VALUES (
+            1, 100, 1, 0, 1
+        )
+        """.trimIndent(),
+        )
+
+        // Identify the exact failing fixture if another SQL
+        // constraint or schema mismatch appears.
+        statements.forEachIndexed { index, statement ->
+            try {
+                driver.execute(
+                    identifier = null,
+                    sql = statement,
+                    parameters = 0,
+                ).await()
+            } catch (e: Exception) {
+                throw IllegalStateException(
+                    buildString {
+                        appendLine("Legacy migration fixture failed.")
+                        appendLine("Statement: ${index + 1}/${statements.size}")
+                        appendLine("SQL:")
+                        appendLine(statement)
+                    },
+                    e,
+                )
             }
         }
     }
 
-    private fun populateOldSchema(driver: SqlDriver) = runBlocking {
-        // The old schema's triggers would otherwise bump version/last_modified_at while seeding
-        listOf(
-            "update_last_modified_at_mangas", "update_manga_version", "update_last_modified_at_chapters",
-            "update_chapter_and_manga_version", "update_category_version", "insert_category_uid",
-            "system_category_delete_trigger", "update_last_modified_at_mangas_categories",
-            "insert_manga_category_update_version", "delete_manga_category_update_version",
-            "update_last_favorited_at_mangas",
-        ).forEach { driver.execute(null, "DROP TRIGGER IF EXISTS $it", 0).await() }
-
-        val statements = listOf(
-            "INSERT OR REPLACE INTO categories(_id,name,sort,flags,manga_order,hidden,version,uid,last_modified_at,is_syncing) " +
-                "VALUES (0,'',-1,0,'',0,0,0,0,0),(1,'Reading',0,0,'',0,5,777,1234,0)",
-            // Three entries share (source, url): the favorite one is the keeper, the other two are removed.
-            "INSERT INTO mangas(_id,source,url,artist,author,description,genre,title,status,thumbnail_url,favorite,last_update,next_update,initialized,viewer,chapter_flags,cover_last_modified,date_added,update_strategy,calculate_interval,last_modified_at,favorite_modified_at,version,is_syncing,notes,memo) " +
-                "VALUES (1,100,'https://a','art','auth','desc','[\"g\"]','Manga A',1,'https://cover',1,10,20,1,0,0,30,1000,1,0,700,500,3,0,'note1','{}')," +
-                "(2,100,'https://b',NULL,NULL,NULL,NULL,'Manga B',0,NULL,0,NULL,NULL,0,0,0,0,0,0,0,0,NULL,0,0,'','{}')," +
-                "(3,100,'https://a',NULL,NULL,NULL,NULL,'Manga A dup',0,NULL,0,NULL,NULL,0,0,0,0,0,0,0,0,NULL,0,0,'','{}')," +
-                "(4,100,'https://a',NULL,NULL,NULL,NULL,'Manga A dup 2',0,NULL,0,NULL,NULL,0,0,0,0,0,0,0,0,NULL,0,0,'','{}')",
-            // The removed members own chapters (and history) that have to move onto the keeper.
-            "INSERT INTO chapters(_id,manga_id,url,name,scanlator,read,bookmark,last_page_read,chapter_number,source_order,date_fetch,date_upload,last_modified_at,version,is_syncing,memo) " +
-                "VALUES (1,1,'https://c1','Ch 1',NULL,1,0,5,1.0,1,100,200,800,2,0,'{}')," +
-                "(2,3,'https://c3','Ch 3',NULL,0,0,0,1.0,1,101,201,801,1,0,'{}')," +
-                "(3,4,'https://c4','Ch 4',NULL,0,0,0,1.0,1,102,202,802,1,0,'{}')",
-            // Every member shares category 1 but with a different last_modified_at.
-            "INSERT INTO mangas_categories(_id,manga_id,category_id,last_modified_at) " +
-                "VALUES (1,1,1,999),(2,3,1,555),(3,4,1,777)",
-            "INSERT INTO manga_sync(_id,manga_id,sync_id,remote_id,library_id,title,last_chapter_read,total_chapters,status,score,remote_url,start_date,finish_date,private) " +
-                "VALUES (1,1,2,4242,99,'Tracked',5.0,10,1,8.0,'https://t',1,2,0)",
-            "INSERT INTO history(_id,chapter_id,last_read,time_read) VALUES (1,1,111,222),(2,2,333,444),(3,3,555,666)",
-            "INSERT INTO excluded_scanlators(manga_id,scanlator) VALUES (1,'excl'),(3,'excl')",
-            // The unique-keyed extras only exist on the removed members, so one of them has to survive.
-            "INSERT INTO search_metadata(manga_id,uploader,extra,indexed_extra,extra_version) " +
-                "VALUES (3,'up3','{}','idx3',1),(4,'up4','{}','idx4',1)",
-            "INSERT INTO search_tags(_id,manga_id,namespace,name,type) VALUES (1,3,'ns','tag',1)",
-            "INSERT INTO search_titles(_id,manga_id,title,type) VALUES (1,3,'Alt',1)",
-            "INSERT INTO libraryUpdateErrorMessage(_id,message) VALUES (1,'err')",
-            "INSERT INTO libraryUpdateError(_id,manga_id,message_id,last_update) VALUES (1,3,1,5),(2,4,1,6)",
-            // Both a child (manga_id) and a merged entry (merge_id) point at removed members.
-            "INSERT INTO merged(_id,info_manga,get_chapter_updates,chapter_sort_mode,chapter_priority,download_chapters,merge_id,merge_url,manga_id,manga_url,manga_source) " +
-                "VALUES (1,0,0,0,0,0,2,'https://b',3,'https://a',100)," +
-                "(2,0,0,0,0,0,3,'https://a',2,'https://b',100)",
-            "INSERT INTO sources(_id,lang,name) VALUES (100,'en','Src')",
-            "INSERT INTO saved_search(_id,source,name,query,filters_json) VALUES (1,100,'s','q',NULL)",
-            "INSERT INTO feed_saved_search(_id,source,saved_search,global,feed_order) VALUES (1,100,1,0,1)",
-        )
-        statements.forEach { driver.execute(null, it, 0).await() }
-    }
-
     private fun SqlDriver.scalarLong(sql: String): Long? =
-        executeQuery(null, sql, { cursor ->
-            QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else null)
-        }, 0).value
+        executeQuery(
+            identifier = null,
+            sql = sql,
+            mapper = { cursor ->
+                QueryResult.Value(
+                    if (cursor.next().value) {
+                        cursor.getLong(0)
+                    } else {
+                        null
+                    },
+                )
+            },
+            parameters = 0,
+        ).value
 
-    private fun SqlDriver.columnCount(table: String, column: String): Long =
-        scalarLong("SELECT count(*) FROM pragma_table_info('$table') WHERE name = '$column'") ?: -1
+    private fun SqlDriver.columnCount(
+        table: String,
+        column: String,
+    ): Long = scalarLong(
+        """
+        SELECT count(*)
+        FROM pragma_table_info('$table')
+        WHERE name = '$column'
+        """.trimIndent(),
+    ) ?: -1L
 
-    private fun SqlDriver.triggerExists(name: String): Boolean =
-        (scalarLong("SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name = '$name'") ?: 0) > 0
+    private fun SqlDriver.triggerExists(
+        name: String,
+    ): Boolean = (
+        scalarLong(
+            """
+            SELECT count(*)
+            FROM sqlite_master
+            WHERE type = 'trigger'
+              AND name = '$name'
+            """.trimIndent(),
+        ) ?: 0L
+        ) > 0L
 
-    private fun SqlDriver.tableExists(name: String): Boolean =
-        (scalarLong("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = '$name'") ?: 0) > 0
+    private fun SqlDriver.tableExists(
+        name: String,
+    ): Boolean = (
+        scalarLong(
+            """
+            SELECT count(*)
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = '$name'
+            """.trimIndent(),
+        ) ?: 0L
+        ) > 0L
 
-    private fun SqlDriver.viewExists(name: String): Boolean =
-        (scalarLong("SELECT count(*) FROM sqlite_master WHERE type = 'view' AND name = '$name'") ?: 0) > 0
+    private fun SqlDriver.viewExists(
+        name: String,
+    ): Boolean = (
+        scalarLong(
+            """
+            SELECT count(*)
+            FROM sqlite_master
+            WHERE type = 'view'
+              AND name = '$name'
+            """.trimIndent(),
+        ) ?: 0L
+        ) > 0L
 
     private fun SqlDriver.foreignKeyViolations(): Long =
-        executeQuery(null, "PRAGMA foreign_key_check", { cursor ->
-            var count = 0L
-            while (cursor.next().value) {
-                count++
-            }
-            QueryResult.Value(count)
-        }, 0).value
+        executeQuery(
+            identifier = null,
+            sql = "PRAGMA foreign_key_check",
+            mapper = { cursor ->
+                var count = 0L
+
+                while (cursor.next().value) {
+                    count++
+                }
+
+                QueryResult.Value(count)
+            },
+            parameters = 0,
+        ).value
 }

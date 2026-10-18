@@ -3,7 +3,15 @@ package eu.kanade.tachiyomi.data.track.mangabaka.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-private val TITLE_PRIORITIES = listOf("en", "ja-Latn", "ja", "ko-Latn", "ko", "zh-Latn", "zh")
+private val TITLE_PRIORITIES = listOf(
+    "en",
+    "ja-Latn",
+    "ja",
+    "ko-Latn",
+    "ko",
+    "zh-Latn",
+    "zh",
+)
 
 @Serializable
 data class MangaBakaItemResult(
@@ -27,16 +35,20 @@ data class MangaBakaItem(
     val type: String,
     val rating: Double?,
     val titles: List<MangaBakaItemTitle>?,
-    // KMK --> MangaBaka exposes relations and merged IDs on series detail responses.
+
+    // KMK --> Relations and merged IDs.
     @SerialName("merged_with")
     val mergedWith: Long? = null,
+
     @SerialName("relationships_v2")
     val relationships: List<MangaBakaRelationship>? = null,
+
+    // Preserve optional external tracker bindings.
+    val source: MangaBakaExternalSources? = null,
     // KMK <--
 ) {
+
     fun chooseBestTitle(): String {
-        // based on https://mangabaka.org/pages/announcements/15-titles-v2#finding-the-title-you-want
-        // extended with zh-Latn and zh
         val bestTitlePerLanguage = TITLE_PRIORITIES.associateWith { lang ->
             titles?.filter { it.language == lang }
                 ?.minByOrNull {
@@ -50,7 +62,9 @@ data class MangaBakaItem(
         }
 
         return TITLE_PRIORITIES
-            .firstNotNullOfOrNull { bestTitlePerLanguage[it]?.title }
+            .firstNotNullOfOrNull {
+                bestTitlePerLanguage[it]?.title
+            }
             ?: titles?.firstOrNull()?.title
             ?: "ID: $id - Could not find name! (report on the MangaBaka Discord)"
     }
@@ -58,9 +72,31 @@ data class MangaBakaItem(
 
 // KMK -->
 @Serializable
+data class MangaBakaExternalSources(
+    @SerialName("manga_updates")
+    val mangaUpdates: MangaBakaExternalStringId? = null,
+
+    @SerialName("my_anime_list")
+    val myAnimeList: MangaBakaExternalLongId? = null,
+)
+
+@Serializable
+data class MangaBakaExternalStringId(
+    val id: String,
+)
+
+@Serializable
+data class MangaBakaExternalLongId(
+    val id: Long,
+)
+
+@Serializable
 data class MangaBakaRelationship(
-    @SerialName("to_series_id") val seriesId: Long,
-    @SerialName("relation_type") val relationType: String,
+    @SerialName("to_series_id")
+    val seriesId: Long,
+
+    @SerialName("relation_type")
+    val relationType: String,
 )
 // KMK <--
 
@@ -85,6 +121,7 @@ data class MangaBakaItemTitle(
     val language: String,
     val traits: List<String>,
     val title: String,
+
     @SerialName("is_primary")
     val isPrimary: Boolean,
 )

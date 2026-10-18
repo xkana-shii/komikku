@@ -6,27 +6,53 @@ import tachiyomi.domain.chapter.model.Chapter
 
 // KMK -->
 class ChapterBlacklistTest {
+
     @Test
     fun `scanlator key matches its normalized chapter identity`() {
-        val chapter = chapter(number = 12.345, scanlator = "  Team  ")
+        val chapter = chapter(
+            number = 12.345,
+            scanlator = "  Team  ",
+        )
 
-        filter(listOf(chapter), listOf(scanlatorBlacklistKey(12.345, "Team"))) shouldBe emptyList()
+        filter(
+            listOf(chapter),
+            listOf(scanlatorBlacklistKey(12.345, "Team")),
+        ) shouldBe emptyList()
     }
 
     @Test
     fun `URL key only excludes the Fillermarked chapter when number and scanlator collide`() {
-        val fillermarked = chapter(url = "/chapter/one", number = 0.0, scanlator = null)
-        val unmarkedDuplicate = chapter(url = "/chapter/two", number = 0.0, scanlator = null)
-        val migratedKeys = legacyFillermarkBlacklistKeys(listOf(fillermarked.url))
+        val fillermarked = chapter(
+            url = "/chapter/one",
+            number = 0.0,
+            scanlator = null,
+        )
+        val duplicate = chapter(
+            url = "/chapter/two",
+            number = 0.0,
+            scanlator = null,
+        )
+        val keys = legacyFillermarkBlacklistKeys(
+            listOf(fillermarked.url),
+        )
 
-        isChapterBlacklisted(fillermarked, migratedKeys) shouldBe true
-        isChapterBlacklisted(unmarkedDuplicate, migratedKeys) shouldBe false
+        isChapterBlacklisted(fillermarked, keys) shouldBe true
+        isChapterBlacklisted(duplicate, keys) shouldBe false
     }
 
     @Test
     fun `URL key only excludes the selected numbered chapter when scanlator metadata collides`() {
-        val selected = chapter(url = "/chapter/one", number = 12.0, scanlator = "Team")
-        val duplicate = chapter(url = "/chapter/two", number = 12.0, scanlator = "Team")
+        val selected = chapter(
+            url = "/chapter/one",
+            number = 12.0,
+            scanlator = "Team",
+        )
+        val duplicate = chapter(
+            url = "/chapter/two",
+            number = 12.0,
+            scanlator = "Team",
+        )
+
         val keys = listOf(chapterUrlBlacklistKey(selected.url))
 
         isChapterBlacklisted(selected, keys) shouldBe true
@@ -44,67 +70,154 @@ class ChapterBlacklistTest {
 
     @Test
     fun `hybrid key hides only the selected duplicate`() {
-        val selected = chapter(url = "/chapter,100%|one", number = 12.0, scanlator = "Team|A")
-        val duplicate = chapter(url = "/chapter/two", number = 12.0, scanlator = "Team|A").copy(id = 2)
-        val otherScanlator = chapter(url = "/chapter/three", number = 12.0, scanlator = "Team B").copy(id = 3)
-        val key = hybridChapterBlacklistKey(selected)
+        val selected = chapter(
+            url = "/chapter,100%|one",
+            number = 12.0,
+            scanlator = "Team|A",
+        )
+        val duplicate = chapter(
+            url = "/chapter/two",
+            number = 12.0,
+            scanlator = "Team|A",
+        ).copy(id = 2)
+        val other = chapter(
+            url = "/chapter/three",
+            number = 12.0,
+            scanlator = "Team B",
+        ).copy(id = 3)
 
-        filter(listOf(selected, duplicate, otherScanlator), listOf(key))
-            .map { it.url } shouldBe listOf(duplicate.url, otherScanlator.url)
+        filter(
+            listOf(selected, duplicate, other),
+            listOf(hybridChapterBlacklistKey(selected)),
+        ).map(Chapter::url) shouldBe listOf(
+            duplicate.url,
+            other.url,
+        )
     }
 
     @Test
     fun `hybrid key falls back to a unique metadata match after URL change`() {
-        val original = chapter(url = "/old", number = 8.0, scanlator = "Team")
-        val refreshed = chapter(url = "/new", number = 8.0, scanlator = " team ")
+        val original = chapter(
+            url = "/old",
+            name = "Chapter 8",
+            number = 8.0,
+            scanlator = "Team",
+        )
+        val refreshed = chapter(
+            url = "/new",
+            name = "Chapter 8",
+            number = 8.0,
+            scanlator = " team ",
+        )
         val key = hybridChapterBlacklistKey(original)
 
-        filter(listOf(refreshed), listOf(key)) shouldBe emptyList()
+        filter(
+            listOf(refreshed),
+            listOf(key),
+        ) shouldBe emptyList()
     }
 
     @Test
     fun `hybrid key leaves ambiguous URL replacements visible`() {
-        val original = chapter(url = "/old", number = 8.0, scanlator = "Team")
-        val replacementOne = chapter(url = "/new-1", number = 8.0, scanlator = "Team").copy(id = 2)
-        val replacementTwo = chapter(url = "/new-2", number = 8.0, scanlator = "Team").copy(id = 3)
+        val original = chapter(
+            url = "/old",
+            number = 8.0,
+            scanlator = "Team",
+        )
+        val first = chapter(
+            url = "/new-1",
+            number = 8.0,
+            scanlator = "Team",
+        ).copy(id = 2)
+        val second = chapter(
+            url = "/new-2",
+            number = 8.0,
+            scanlator = "Team",
+        ).copy(id = 3)
 
         filter(
-            listOf(replacementOne, replacementTwo),
+            listOf(first, second),
             listOf(hybridChapterBlacklistKey(original)),
         ).size shouldBe 2
     }
 
     @Test
     fun `hybrid key uses URL for special chapter numbers`() {
-        val selected = chapter(url = "/special", number = 0.0, scanlator = "Team")
-        val duplicate = chapter(url = "/other-special", number = 0.0, scanlator = "Team").copy(id = 2)
+        val selected = chapter(
+            url = "/special",
+            number = 0.0,
+            scanlator = "Team",
+        )
+        val duplicate = chapter(
+            url = "/other-special",
+            number = 0.0,
+            scanlator = "Team",
+        ).copy(id = 2)
 
-        filter(listOf(selected, duplicate), listOf(hybridChapterBlacklistKey(selected)))
-            .map { it.url } shouldBe listOf(duplicate.url)
+        filter(
+            listOf(selected, duplicate),
+            listOf(hybridChapterBlacklistKey(selected)),
+        ).map(Chapter::url) shouldBe listOf(duplicate.url)
     }
 
     @Test
     fun `Mangago extra blacklist does not hide its matching numbered chapter`() {
-        val twitterExtra = chapter(url = "/the_melting_season/twitter-extra", number = 1.0, scanlator = null)
-        val chapterOne = chapter(url = "/the_melting_season/chapter-1", number = 1.0, scanlator = null).copy(id = 2)
-        val seasonComeback = chapter(url = "/the_melting_season/season-comeback-6-15", number = 6.0, scanlator = null).copy(id = 3)
-        val chapterSix = chapter(url = "/the_melting_season/chapter-6", number = 6.0, scanlator = null).copy(id = 4)
-        val chapters = listOf(twitterExtra, chapterOne, seasonComeback, chapterSix)
+        val twitterExtra = chapter(
+            url = "/the_melting_season/twitter-extra",
+            number = 1.0,
+            scanlator = null,
+        )
+        val chapterOne = chapter(
+            url = "/the_melting_season/chapter-1",
+            number = 1.0,
+            scanlator = null,
+        ).copy(id = 2)
+        val seasonComeback = chapter(
+            url = "/the_melting_season/season-comeback-6-15",
+            number = 6.0,
+            scanlator = null,
+        ).copy(id = 3)
+        val chapterSix = chapter(
+            url = "/the_melting_season/chapter-6",
+            number = 6.0,
+            scanlator = null,
+        ).copy(id = 4)
 
         filter(
-            chapters,
-            listOf(hybridChapterBlacklistKey(twitterExtra), hybridChapterBlacklistKey(seasonComeback)),
-        ).map(Chapter::url) shouldBe listOf(chapterOne.url, chapterSix.url)
+            listOf(twitterExtra, chapterOne, seasonComeback, chapterSix),
+            listOf(
+                hybridChapterBlacklistKey(twitterExtra),
+                hybridChapterBlacklistKey(seasonComeback),
+            ),
+        ).map(Chapter::url) shouldBe listOf(
+            chapterOne.url,
+            chapterSix.url,
+        )
     }
 
     @Test
     fun `ambiguous legacy key does not hide multiple Mangago chapters`() {
-        val extra = chapter(url = "/the_melting_season/twitter-extra", number = 1.0, scanlator = null)
-        val chapterOne = chapter(url = "/the_melting_season/chapter-1", number = 1.0, scanlator = null).copy(id = 2)
-        val legacyKey = scanlatorBlacklistKey(extra.chapterNumber, extra.scanlator)
+        val extra = chapter(
+            url = "/the_melting_season/twitter-extra",
+            number = 1.0,
+            scanlator = null,
+        )
+        val chapterOne = chapter(
+            url = "/the_melting_season/chapter-1",
+            number = 1.0,
+            scanlator = null,
+        ).copy(id = 2)
+        val key = scanlatorBlacklistKey(
+            extra.chapterNumber,
+            extra.scanlator,
+        )
 
-        filter(listOf(extra, chapterOne), listOf(legacyKey)) shouldBe listOf(extra, chapterOne)
-        isChapterBlacklisted(extra, listOf(legacyKey)) shouldBe false
+        filter(
+            listOf(extra, chapterOne),
+            listOf(key),
+        ) shouldBe listOf(extra, chapterOne)
+
+        isChapterBlacklisted(extra, listOf(key)) shouldBe false
     }
 
     @Test
@@ -121,53 +234,91 @@ class ChapterBlacklistTest {
             number = 6.0,
             scanlator = null,
         ).copy(id = 2)
-        val twitterExtra = oldTwitterExtra.copy(url = "/the_melting_season/twitter-extra-new")
+
+        val twitterExtra = oldTwitterExtra.copy(
+            url = "/the_melting_season/twitter-extra-new",
+        )
         val chapterOne = chapter(
             url = "/the_melting_season/chapter-1",
             name = "Chapter 1",
             number = 1.0,
             scanlator = null,
         ).copy(id = 3)
-        val seasonComeback = oldSeasonComeback.copy(url = "/the_melting_season/season-comeback-new")
+        val seasonComeback = oldSeasonComeback.copy(
+            url = "/the_melting_season/season-comeback-new",
+        )
         val chapterSix = chapter(
             url = "/the_melting_season/chapter-6",
             name = "Chapter 6",
             number = 6.0,
             scanlator = null,
         ).copy(id = 4)
-        val refreshedChapters = listOf(twitterExtra, chapterOne, seasonComeback, chapterSix)
 
         filter(
-            refreshedChapters,
-            listOf(hybridChapterBlacklistKey(oldTwitterExtra), hybridChapterBlacklistKey(oldSeasonComeback)),
-        ).map(Chapter::url) shouldBe listOf(chapterOne.url, chapterSix.url)
+            listOf(twitterExtra, chapterOne, seasonComeback, chapterSix),
+            listOf(
+                hybridChapterBlacklistKey(oldTwitterExtra),
+                hybridChapterBlacklistKey(oldSeasonComeback),
+            ),
+        ).map(Chapter::url) shouldBe listOf(
+            chapterOne.url,
+            chapterSix.url,
+        )
     }
 
     @Test
     fun `legacy fallback uses the complete snapshot rather than a filtered subset`() {
-        val extra = chapter(url = "/extra", name = "Twitter extra", number = 1.0, scanlator = null)
-        val chapterOne = chapter(url = "/chapter-1", name = "Chapter 1", number = 1.0, scanlator = null).copy(id = 2)
-        val legacyKey = scanlatorBlacklistKey(1.0, null)
+        val extra = chapter(
+            url = "/extra",
+            name = "Twitter extra",
+            number = 1.0,
+            scanlator = null,
+        )
+        val chapterOne = chapter(
+            url = "/chapter-1",
+            name = "Chapter 1",
+            number = 1.0,
+            scanlator = null,
+        ).copy(id = 2)
+        val key = scanlatorBlacklistKey(1.0, null)
 
         filterBlacklistedChapters(
             chapters = listOf(extra),
-            blacklist = listOf(legacyKey),
+            blacklist = listOf(key),
             allChapters = listOf(extra, chapterOne),
         ) shouldBe listOf(extra)
     }
 
     @Test
     fun `v1 hybrid keys and URL backup keys remain compatible`() {
-        val refreshed = chapter(url = "/new", name = "Chapter 8", number = 8.0, scanlator = "Team")
+        val refreshed = chapter(
+            url = "/new",
+            name = "Chapter 8",
+            number = 8.0,
+            scanlator = "Team",
+        )
         val v1Hybrid = "hybrid:8.0|team|%2Fold"
         val urlKey = chapterUrlBlacklistKey(refreshed.url)
 
-        filter(listOf(refreshed), listOf(v1Hybrid)) shouldBe emptyList()
-        filter(listOf(refreshed), listOf(urlKey)) shouldBe emptyList()
+        filter(
+            listOf(refreshed),
+            listOf(v1Hybrid),
+        ) shouldBe emptyList()
+
+        filter(
+            listOf(refreshed),
+            listOf(urlKey),
+        ) shouldBe emptyList()
     }
 
-    private fun filter(chapters: List<Chapter>, blacklist: Collection<String>): List<Chapter> =
-        filterBlacklistedChapters(chapters, blacklist, chapters)
+    private fun filter(
+        chapters: List<Chapter>,
+        blacklist: Collection<String>,
+    ): List<Chapter> = filterBlacklistedChapters(
+        chapters,
+        blacklist,
+        chapters,
+    )
 
     private fun chapter(
         url: String = "/chapter",

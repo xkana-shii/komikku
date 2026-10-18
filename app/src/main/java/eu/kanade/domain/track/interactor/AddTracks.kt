@@ -33,18 +33,25 @@ class AddTracks(
     private val context: Context,
 ) {
 
-    // TODO: update all trackers based on common data
-    suspend fun bind(tracker: Tracker, item: Track, mangaId: Long) = withContext(Dispatchers.IO) {
+    suspend fun bind(
+        tracker: Tracker,
+        item: Track,
+        mangaId: Long,
+    ) = withContext(Dispatchers.IO) {
         val allChapters = getChaptersByMangaId.await(mangaId)
         val hasReadChapters = allChapters.any { it.read }
-        tracker.bind(item, hasReadChapters)
 
-        var track = item.toDomainTrack(idRequired = false) ?: return@withContext
+        // KMK --> Use the actual remote result.
+        // Binding may assign a remote ID or update the status.
+        val boundTrack = tracker.bind(item, hasReadChapters)
+
+        var track = boundTrack.toDomainTrack(
+            idRequired = false,
+        ) ?: return@withContext
 
         upsertTrack.await(track)
+        // KMK <--
 
-        // TODO: merge into [SyncChapterProgressWithTrack]?
-        // Update chapter progress if newer chapters marked read locally
         if (hasReadChapters) {
             val latestLocalReadChapterNumber = allChapters
                 .sortedBy { it.chapterNumber }
@@ -53,17 +60,12 @@ class AddTracks(
                 ?.chapterNumber ?: -1.0
 
             if (latestLocalReadChapterNumber > track.lastChapterRead) {
-                /* KMK -->
-                // This code causes issue NOT settings remote-track's status
-                track = track.copy(
-                    lastChapterRead = latestLocalReadChapterNumber,
+                tracker.setRemoteLastChapterRead(
+                    track.toDbTrack(),
+                    latestLocalReadChapterNumber.toInt(),
                 )
-                KMK <-- */
-                tracker.setRemoteLastChapterRead(track.toDbTrack(), latestLocalReadChapterNumber.toInt())
-                    // KMK -->
                     .toDomainTrack(idRequired = false)
                     ?.let { track = it }
-                // KMK <--
             }
 
             if (track.startDate == null) {
@@ -72,54 +74,82 @@ class AddTracks(
                     .minOrNull()
 
                 firstReadChapterDate?.let {
-                    val startDate = firstReadChapterDate.toEpochMilliseconds()
+                    val startDate = it.toEpochMilliseconds()
+
                     track = track.copy(
-                        startDate = Instant.fromEpochMilliseconds(startDate),
+                        startDate = Instant.fromEpochMilliseconds(
+                            startDate,
+                        ),
                     )
-                    tracker.setRemoteStartDate(track.toDbTrack(), startDate)
+
+                    tracker.setRemoteStartDate(
+                        track.toDbTrack(),
+                        startDate,
+                    )
                 }
             }
         }
 
-        syncChapterProgressWithTrack.await(mangaId, track, tracker)
-            // KMK -->
-            ?.let {
-                withUIContext {
-                    context.toast(context.stringResource(KMR.strings.sync_progress_from_trackers_up_to_chapter, it))
-                }
+        syncChapterProgressWithTrack.await(
+            mangaId,
+            track,
+            tracker,
+        )?.let {
+            withUIContext {
+                context.toast(
+                    context.stringResource(
+                        KMR.strings.sync_progress_from_trackers_up_to_chapter,
+                        it,
+                    ),
+                )
             }
-        // KMK <--
+        }
     }
 
-    suspend fun bindEnhancedTrackers(manga: Manga, source: Source) = withContext(Dispatchers.IO) {
+    suspend fun bindEnhancedTrackers(
+        manga: Manga,
+        source: Source,
+    ) = withContext(Dispatchers.IO) {
         trackerManager.loggedInTrackers()
             .filterIsInstance<EnhancedTracker>()
             .filter { it.accept(source) }
             .forEach { service ->
                 try {
-                    service.match(manga)?.let { track ->
-                        track.manga_id = manga.id
-                        (service as Tracker).bind(track)
-                        upsertTrack.await(track.toDomainTrack(idRequired = false)!!)
+                    service.match(manga)?.let { matchedTrack ->
+                        matchedTrack.manga_id = manga.id
+
+                        val boundTrack = (service as Tracker).bind(
+                            matchedTrack,
+                        )
+
+                        val track = boundTrack.toDomainTrack(
+                            idRequired = false,
+                        ) ?: return@let
+
+                        upsertTrack.await(track)
 
                         syncChapterProgressWithTrack.await(
                             manga.id,
-                            track.toDomainTrack(idRequired = false)!!,
+                            track,
                             service,
-                        )
-                            // KMK -->
-                            ?.let {
-                                withUIContext {
-                                    context.toast(context.stringResource(KMR.strings.sync_progress_from_trackers_up_to_chapter, it))
-                                }
+                        )?.let {
+                            withUIContext {
+                                context.toast(
+                                    context.stringResource(
+                                        KMR.strings.sync_progress_from_trackers_up_to_chapter,
+                                        it,
+                                    ),
+                                )
                             }
-                        // KMK <--
+                        }
                     }
                 } catch (e: Exception) {
                     logcat(
                         LogPriority.WARN,
                         e,
-                    ) { "Could not match manga: ${manga.title} with service $service" }
+                    ) {
+                        "Could not match manga: ${manga.title} with service $service"
+                    }
                 }
             }
     }
