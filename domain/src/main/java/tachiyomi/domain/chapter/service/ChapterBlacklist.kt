@@ -5,8 +5,10 @@ import kotlin.math.roundToInt
 
 // KMK -->
 private const val MAX_KEY_SCANLATOR_LENGTH = 64
+private const val MAX_KEY_NAME_LENGTH = 256
 private const val URL_KEY_PREFIX = "url:"
 private const val HYBRID_KEY_PREFIX = "hybrid:"
+private const val HYBRID_KEY_V2_PREFIX = "${HYBRID_KEY_PREFIX}v2:"
 
 /** Returns Houri's per-number-and-scanlator blacklist key. */
 fun scanlatorBlacklistKey(chapterNumber: Double, scanlator: String?): String {
@@ -48,13 +50,25 @@ private fun normalizedHybridScanlator(scanlator: String?): String = scanlator.or
     .lowercase()
     .take(MAX_KEY_SCANLATOR_LENGTH)
 
-/** A versioned key carrying all stable metadata needed to recover a chapter after a URL change. */
+private fun normalizedHybridName(name: String): String = name
+    .trim()
+    .lowercase()
+    .replace(Regex("\\s+"), " ")
+    .take(MAX_KEY_NAME_LENGTH)
+
+/**
+ * A versioned key carrying enough stable metadata to recover a chapter after a URL change.
+ *
+ * Version two adds the source chapter name because sources such as Mangago can give announcements
+ * the same number and scanlator as a real chapter.
+ */
 fun hybridChapterBlacklistKey(chapter: Chapter): String {
     val number = normalizedHybridNumber(chapter.chapterNumber).orEmpty()
-    return HYBRID_KEY_PREFIX + listOf(
+    return HYBRID_KEY_V2_PREFIX + listOf(
         number,
         normalizedHybridScanlator(chapter.scanlator),
         chapter.url,
+        normalizedHybridName(chapter.name),
     ).joinToString("|", transform = ::encodeBlacklistComponent)
 }
 
@@ -62,17 +76,33 @@ private data class HybridBlacklistEntry(
     val number: String?,
     val scanlator: String,
     val url: String,
+    val name: String?,
 )
 
 private fun parseHybridBlacklistKey(key: String): HybridBlacklistEntry? {
-    if (!key.startsWith(HYBRID_KEY_PREFIX)) return null
-    val values = key.removePrefix(HYBRID_KEY_PREFIX).split('|', limit = 3)
-    if (values.size != 3) return null
-    return HybridBlacklistEntry(
-        number = values[0].takeIf(String::isNotEmpty),
-        scanlator = decodeBlacklistComponent(values[1]),
-        url = decodeBlacklistComponent(values[2]),
-    )
+    return when {
+        key.startsWith(HYBRID_KEY_V2_PREFIX) -> {
+            val values = key.removePrefix(HYBRID_KEY_V2_PREFIX).split('|', limit = 4)
+            if (values.size != 4) return null
+            HybridBlacklistEntry(
+                number = values[0].takeIf(String::isNotEmpty),
+                scanlator = decodeBlacklistComponent(values[1]),
+                url = decodeBlacklistComponent(values[2]),
+                name = decodeBlacklistComponent(values[3]).takeIf(String::isNotEmpty),
+            )
+        }
+        key.startsWith(HYBRID_KEY_PREFIX) -> {
+            val values = key.removePrefix(HYBRID_KEY_PREFIX).split('|', limit = 3)
+            if (values.size != 3) return null
+            HybridBlacklistEntry(
+                number = values[0].takeIf(String::isNotEmpty),
+                scanlator = decodeBlacklistComponent(values[1]),
+                url = decodeBlacklistComponent(values[2]),
+                name = null,
+            )
+        }
+        else -> null
+    }
 }
 
 private fun chapterUrlKeySet(chapters: Iterable<Chapter>): Set<String> =
@@ -81,8 +111,8 @@ private fun chapterUrlKeySet(chapters: Iterable<Chapter>): Set<String> =
 /**
  * Resolves one stored entry against a complete chapter snapshot.
  *
- * Hybrid entries prefer their exact URL. If it has disappeared, metadata is used only when it
- * identifies one chapter; ambiguous replacements are deliberately left visible.
+ * Hybrid entries prefer their exact URL. If it has disappeared, a version-two name discriminator
+ * is considered before the old number-and-scanlator fallback.
  */
 fun resolveChapterBlacklistKey(key: String, chapters: List<Chapter>): Set<String> {
     val byUrl = chapters.associateBy { chapterUrlBlacklistKey(it.url) }
@@ -92,12 +122,18 @@ fun resolveChapterBlacklistKey(key: String, chapters: List<Chapter>): Set<String
     if (hybrid != null) {
         val exact = chapterUrlBlacklistKey(hybrid.url)
         if (exact in byUrl) return setOf(exact)
-        if (hybrid.number == null) return emptySet()
-        val matches = chapters.filter {
-            normalizedHybridNumber(it.chapterNumber) == hybrid.number &&
+        val metadataMatches = chapters.filter {
+            (hybrid.number == null || normalizedHybridNumber(it.chapterNumber) == hybrid.number) &&
                 normalizedHybridScanlator(it.scanlator) == hybrid.scanlator
         }
-        return matches.takeIf { it.size == 1 }?.let(::chapterUrlKeySet).orEmpty()
+        val nameMatches = hybrid.name?.let { name ->
+            metadataMatches.filter { normalizedHybridName(it.name) == name }
+        }
+        if (!nameMatches.isNullOrEmpty()) {
+            return nameMatches.takeIf { it.size == 1 }?.let(::chapterUrlKeySet).orEmpty()
+        }
+        if (hybrid.number == null) return emptySet()
+        return metadataMatches.takeIf { it.size == 1 }?.let(::chapterUrlKeySet).orEmpty()
     }
 
     // Legacy number-and-scanlator entries have no URL. Reconcile them only when the current
@@ -108,9 +144,21 @@ fun resolveChapterBlacklistKey(key: String, chapters: List<Chapter>): Set<String
     return matches.takeIf { it.size == 1 }?.let(::chapterUrlKeySet).orEmpty()
 }
 
-fun filterBlacklistedChapters(chapters: List<Chapter>, blacklist: Collection<String>): List<Chapter> {
+fun filterBlacklistedChapters(
+    chapters: List<Chapter>,
+    blacklist: Collection<String>,
+    allChapters: List<Chapter>? = chapters,
+): List<Chapter> {
     if (chapters.isEmpty() || blacklist.isEmpty()) return chapters
-    val blacklistedUrls = blacklist.flatMapTo(HashSet()) { resolveChapterBlacklistKey(it, chapters) }
+    val blacklistedUrls = blacklist.mapNotNullTo(HashSet()) { key ->
+        when {
+            key.startsWith(URL_KEY_PREFIX) -> key
+            else -> parseHybridBlacklistKey(key)?.let { chapterUrlBlacklistKey(it.url) }
+        }
+    }
+    allChapters?.let { snapshot ->
+        blacklist.flatMapTo(blacklistedUrls) { resolveChapterBlacklistKey(it, snapshot) }
+    }
     return chapters.filterNot { chapterUrlBlacklistKey(it.url) in blacklistedUrls }
 }
 

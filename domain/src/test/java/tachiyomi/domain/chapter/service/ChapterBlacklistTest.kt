@@ -107,15 +107,77 @@ class ChapterBlacklistTest {
         isChapterBlacklisted(extra, listOf(legacyKey)) shouldBe false
     }
 
+    @Test
+    fun `refreshed Mangago extras use their names without hiding numbered chapters`() {
+        val oldTwitterExtra = chapter(
+            url = "/the_melting_season/twitter-extra-old",
+            name = "twitter extra 1st anniversary",
+            number = 1.0,
+            scanlator = null,
+        )
+        val oldSeasonComeback = chapter(
+            url = "/the_melting_season/season-comeback-old",
+            name = "season comeback 6/15",
+            number = 6.0,
+            scanlator = null,
+        ).copy(id = 2)
+        val twitterExtra = oldTwitterExtra.copy(url = "/the_melting_season/twitter-extra-new")
+        val chapterOne = chapter(
+            url = "/the_melting_season/chapter-1",
+            name = "Chapter 1",
+            number = 1.0,
+            scanlator = null,
+        ).copy(id = 3)
+        val seasonComeback = oldSeasonComeback.copy(url = "/the_melting_season/season-comeback-new")
+        val chapterSix = chapter(
+            url = "/the_melting_season/chapter-6",
+            name = "Chapter 6",
+            number = 6.0,
+            scanlator = null,
+        ).copy(id = 4)
+        val refreshedChapters = listOf(twitterExtra, chapterOne, seasonComeback, chapterSix)
+
+        filterBlacklistedChapters(
+            refreshedChapters,
+            listOf(hybridChapterBlacklistKey(oldTwitterExtra), hybridChapterBlacklistKey(oldSeasonComeback)),
+            refreshedChapters,
+        ).map(Chapter::url) shouldBe listOf(chapterOne.url, chapterSix.url)
+    }
+
+    @Test
+    fun `legacy fallback uses the complete snapshot rather than a filtered subset`() {
+        val extra = chapter(url = "/extra", name = "Twitter extra", number = 1.0, scanlator = null)
+        val chapterOne = chapter(url = "/chapter-1", name = "Chapter 1", number = 1.0, scanlator = null).copy(id = 2)
+        val legacyKey = scanlatorBlacklistKey(1.0, null)
+
+        filterBlacklistedChapters(
+            chapters = listOf(extra),
+            blacklist = listOf(legacyKey),
+            allChapters = listOf(extra, chapterOne),
+        ) shouldBe listOf(extra)
+    }
+
+    @Test
+    fun `v1 hybrid keys remain compatible after the name discriminator is added`() {
+        val refreshed = chapter(url = "/new", name = "Chapter 8", number = 8.0, scanlator = "Team")
+
+        filterBlacklistedChapters(
+            listOf(refreshed),
+            listOf("hybrid:8.0|team|%2Fold"),
+            listOf(refreshed),
+        ) shouldBe emptyList()
+    }
+
     private fun chapter(
         url: String = "/chapter",
+        name: String = url,
         number: Double = 1.0,
         scanlator: String? = "Group",
     ) = Chapter.create().copy(
         id = 1,
         mangaId = 1,
         url = url,
-        name = url,
+        name = name,
         chapterNumber = number,
         scanlator = scanlator,
     )

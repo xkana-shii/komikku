@@ -12,6 +12,7 @@ import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.model.resolveVisibleChapter
 import tachiyomi.domain.chapter.model.visibleChapterStats
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
+import tachiyomi.domain.chapter.service.hybridChapterBlacklistKey
 import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
 import tachiyomi.domain.manga.model.Manga
 
@@ -167,6 +168,17 @@ class ChapterSmartMergeTest {
 
         result.chapters.map(Chapter::id) shouldBe listOf(1L, 2L)
         result.blacklistedChapterIds shouldBe setOf(1L)
+    }
+
+    @Test
+    fun `filtered chapter subsets resolve refreshed Mangago extras against the complete snapshot`() {
+        val oldExtra = chapter(1, 1.0, null, "/twitter-extra-old").copy(name = "twitter extra 1st anniversary")
+        val extra = oldExtra.copy(url = "/twitter-extra-new")
+        val chapterOne = chapter(2, 1.0, null, "/chapter-1").copy(name = "Chapter 1")
+        val manga = Manga.create().copy(blacklistedChapters = listOf(hybridChapterBlacklistKey(oldExtra)))
+
+        listOf(chapterOne).filterChapterVisibility(manga, smartScanlatorMergeEnabled = false, allChapters = listOf(extra, chapterOne))
+            .map(Chapter::id) shouldBe listOf(chapterOne.id)
     }
 
     private fun chapter(
