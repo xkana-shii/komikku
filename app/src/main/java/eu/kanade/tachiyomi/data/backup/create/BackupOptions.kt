@@ -1,4 +1,3 @@
-
 package eu.kanade.tachiyomi.data.backup.create
 
 import dev.icerock.moko.resources.StringResource
@@ -17,18 +16,10 @@ data class BackupOptions(
     val extensionStores: Boolean = true,
     val sourceSettings: Boolean = true,
     val privateSettings: Boolean = false,
-
     // SY -->
     val customInfo: Boolean = true,
     val savedSearchesFeeds: Boolean = true,
     // SY <--
-
-    // KMK -->
-    // null: no restriction
-    // empty: select no library manga
-    // setOf(0): include uncategorized entries
-    val includedCategoryIds: Set<Long>? = null,
-    // KMK <--
 ) {
 
     fun asBooleanArray() = booleanArrayOf(
@@ -42,140 +33,93 @@ data class BackupOptions(
         extensionStores,
         sourceSettings,
         privateSettings,
+        // SY -->
         customInfo,
         savedSearchesFeeds,
+        // SY <--
     )
 
     fun canCreate() =
-        libraryEntries ||
-            categories ||
-            appSettings ||
-            extensionStores ||
-            sourceSettings ||
-            savedSearchesFeeds
-
-    // KMK -->
-    fun includesManga(
-        categoryIds: List<Long>,
-    ): Boolean {
-        val included = includedCategoryIds
-            ?: return true
-
-        if (included.isEmpty()) {
-            return false
-        }
-
-        if (categoryIds.isEmpty()) {
-            return 0L in included
-        }
-
-        return categoryIds.any { it in included }
-    }
-    // KMK <--
+        libraryEntries || categories || appSettings || extensionStores || sourceSettings || savedSearchesFeeds
 
     companion object {
-
         val libraryOptions = listOf(
             Entry(
                 label = MR.strings.manga,
                 getter = BackupOptions::libraryEntries,
-                setter = { options, enabled ->
-                    options.copy(libraryEntries = enabled)
-                },
+                setter = { options, enabled -> options.copy(libraryEntries = enabled) },
             ),
             Entry(
                 label = MR.strings.chapters,
                 getter = BackupOptions::chapters,
-                setter = { options, enabled ->
-                    options.copy(chapters = enabled)
-                },
+                setter = { options, enabled -> options.copy(chapters = enabled) },
                 enabled = { it.libraryEntries },
             ),
             Entry(
                 label = MR.strings.track,
                 getter = BackupOptions::tracking,
-                setter = { options, enabled ->
-                    options.copy(tracking = enabled)
-                },
+                setter = { options, enabled -> options.copy(tracking = enabled) },
                 enabled = { it.libraryEntries },
             ),
             Entry(
                 label = MR.strings.history,
                 getter = BackupOptions::history,
-                setter = { options, enabled ->
-                    options.copy(history = enabled)
-                },
+                setter = { options, enabled -> options.copy(history = enabled) },
                 enabled = { it.libraryEntries },
             ),
             Entry(
                 label = MR.strings.categories,
                 getter = BackupOptions::categories,
-                setter = { options, enabled ->
-                    options.copy(categories = enabled)
-                },
+                setter = { options, enabled -> options.copy(categories = enabled) },
             ),
             Entry(
                 label = MR.strings.non_library_settings,
                 getter = BackupOptions::readEntries,
-                setter = { options, enabled ->
-                    options.copy(readEntries = enabled)
-                },
+                setter = { options, enabled -> options.copy(readEntries = enabled) },
                 enabled = { it.libraryEntries },
             ),
+            // SY -->
             Entry(
                 label = SYMR.strings.custom_entry_info,
                 getter = BackupOptions::customInfo,
-                setter = { options, enabled ->
-                    options.copy(customInfo = enabled)
-                },
+                setter = { options, enabled -> options.copy(customInfo = enabled) },
                 enabled = { it.libraryEntries },
             ),
             Entry(
+                // KMK-->
                 label = KMR.strings.saved_searches_feeds,
+                // KMK <--
                 getter = BackupOptions::savedSearchesFeeds,
-                setter = { options, enabled ->
-                    options.copy(savedSearchesFeeds = enabled)
-                },
+                setter = { options, enabled -> options.copy(savedSearchesFeeds = enabled) },
             ),
+            // SY <--
         )
 
         val settingsOptions = listOf(
             Entry(
                 label = MR.strings.app_settings,
                 getter = BackupOptions::appSettings,
-                setter = { options, enabled ->
-                    options.copy(appSettings = enabled)
-                },
+                setter = { options, enabled -> options.copy(appSettings = enabled) },
             ),
             Entry(
                 label = MR.strings.extensionStores,
                 getter = BackupOptions::extensionStores,
-                setter = { options, enabled ->
-                    options.copy(extensionStores = enabled)
-                },
+                setter = { options, enabled -> options.copy(extensionStores = enabled) },
             ),
             Entry(
                 label = MR.strings.source_settings,
                 getter = BackupOptions::sourceSettings,
-                setter = { options, enabled ->
-                    options.copy(sourceSettings = enabled)
-                },
+                setter = { options, enabled -> options.copy(sourceSettings = enabled) },
             ),
             Entry(
                 label = MR.strings.private_settings,
                 getter = BackupOptions::privateSettings,
-                setter = { options, enabled ->
-                    options.copy(privateSettings = enabled)
-                },
-                enabled = {
-                    it.appSettings || it.sourceSettings
-                },
+                setter = { options, enabled -> options.copy(privateSettings = enabled) },
+                enabled = { it.appSettings || it.sourceSettings },
             ),
         )
 
-        fun fromBooleanArray(
-            array: BooleanArray,
-        ) = BackupOptions(
+        fun fromBooleanArray(array: BooleanArray) = BackupOptions(
             libraryEntries = array[0],
             categories = array[1],
             chapters = array[2],
@@ -186,12 +130,10 @@ data class BackupOptions(
             extensionStores = array[7],
             sourceSettings = array[8],
             privateSettings = array[9],
+            // SY -->
             customInfo = array[10],
             savedSearchesFeeds = array[11],
-
-            // This selection is separate from the historical
-            // Boolean backup option representation.
-            includedCategoryIds = null,
+            // SY <--
         )
     }
 

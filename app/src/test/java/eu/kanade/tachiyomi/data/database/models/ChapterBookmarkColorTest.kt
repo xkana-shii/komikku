@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.database.models
 
-import eu.kanade.tachiyomi.data.backup.models.BackupChapter
-import eu.kanade.tachiyomi.data.backup.models.toBackupChapter
+import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.chapter.model.BookmarkColor
@@ -10,50 +9,49 @@ import tachiyomi.domain.chapter.model.Chapter
 class ChapterBookmarkColorTest {
 
     @Test
-    fun `backup round trip preserves every bookmark color`() {
+    fun `Reader chapter preserves every bookmark color`() {
         BookmarkColor.entries.forEach { color ->
             val chapter = Chapter.create().copy(
                 id = color.value.toLong() + 1L,
                 mangaId = 42L,
-                url = "/chapter/${color.value}",
-                name = "Chapter ${color.value}",
                 bookmark = color != BookmarkColor.NONE,
                 bookmarkColor = color,
             )
 
-            val backup = chapter.toBackupChapter()
-            val restored = backup.toChapterImpl()
+            val readerChapter = ReaderChapter(chapter)
 
-            backup.bookmarkColor shouldBe color.value
-            restored.bookmarkColor shouldBe color
-            restored.bookmark shouldBe chapter.bookmark
-            restored.url shouldBe chapter.url
-            restored.name shouldBe chapter.name
+            readerChapter.chapter.bookmarkColor shouldBe color
+            readerChapter.chapter.bookmark shouldBe (
+                color != BookmarkColor.NONE
+                )
         }
     }
 
     @Test
-    fun `older backups default to uncolored bookmarks`() {
-        val backup = BackupChapter(
-            url = "/old-chapter",
-            name = "Old chapter",
-            bookmark = true,
+    fun `Reader chapter synchronizes every changed bookmark color`() {
+        val initial = Chapter.create().copy(
+            id = 1L,
+            mangaId = 42L,
+            bookmark = false,
+            bookmarkColor = BookmarkColor.NONE,
         )
 
-        backup.bookmarkColor shouldBe BookmarkColor.NONE.value
-        backup.toChapterImpl().bookmark shouldBe true
-        backup.toChapterImpl().bookmarkColor shouldBe BookmarkColor.NONE
-    }
+        val readerChapter = ReaderChapter(initial)
 
-    @Test
-    fun `unknown bookmark colors safely fall back to none`() {
-        val backup = BackupChapter(
-            url = "/chapter",
-            bookmark = true,
-            bookmarkColor = 999,
-        )
+        BookmarkColor.entries.forEach { color ->
+            val bookmarked = color != BookmarkColor.NONE
 
-        backup.toChapterImpl().bookmarkColor shouldBe BookmarkColor.NONE
-        backup.toChapterImpl().bookmark shouldBe true
+            readerChapter.syncBookmarkState(
+                initial.copy(
+                    bookmark = bookmarked,
+                    bookmarkColor = color,
+                ),
+            )
+
+            readerChapter.chapter.bookmarkColor shouldBe color
+            readerChapter.chapter.bookmark shouldBe bookmarked
+            readerChapter.chapter.id shouldBe initial.id
+            readerChapter.chapter.mangaId shouldBe initial.mangaId
+        }
     }
 }

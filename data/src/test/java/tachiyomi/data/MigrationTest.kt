@@ -523,7 +523,7 @@ class MigrationTest {
         VALUES
             (0, '', -1, 0, '', 0),
             (1, 'Reading', 0, 0, '', 0)
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Legacy manga entries
@@ -569,7 +569,7 @@ class MigrationTest {
                 0, 0, 0, 0, 0, 0, 0,
                 0, NULL, 0, 0, '', '{}'
             )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Chapters owned by duplicate entries
@@ -601,7 +601,7 @@ class MigrationTest {
                 NULL, 0, 0, 0, 0, 1.0, 1,
                 102, 202, 802, 1, 0, '{}'
             )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Category assignments
@@ -614,7 +614,7 @@ class MigrationTest {
             (1, 1, 1, 999),
             (2, 3, 1, 555),
             (3, 4, 1, 777)
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Tracker binding
@@ -632,7 +632,7 @@ class MigrationTest {
             5.0, 10, 1, 8.0,
             'https://t', 1, 2, 0
         )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Reading history
@@ -645,7 +645,7 @@ class MigrationTest {
             (1, 1, 111, 222),
             (2, 2, 333, 444),
             (3, 3, 555, 666)
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Excluded scanlators
@@ -657,7 +657,7 @@ class MigrationTest {
         VALUES
             (1, 'excl'),
             (3, 'excl')
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Search metadata
@@ -670,7 +670,7 @@ class MigrationTest {
         VALUES
             (3, 'up3', '{}', 'idx3', 1),
             (4, 'up4', '{}', 'idx4', 1)
-            """.trimIndent(),
+        """.trimIndent(),
 
             """
         INSERT INTO search_tags(
@@ -679,7 +679,7 @@ class MigrationTest {
         VALUES (
             1, 3, 'ns', 'tag', 1
         )
-            """.trimIndent(),
+        """.trimIndent(),
 
             """
         INSERT INTO search_titles(
@@ -688,7 +688,7 @@ class MigrationTest {
         VALUES (
             1, 3, 'Alt', 1
         )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Library update errors
@@ -700,7 +700,7 @@ class MigrationTest {
         VALUES (
             1, 'err'
         )
-            """.trimIndent(),
+        """.trimIndent(),
 
             """
         INSERT INTO libraryUpdateError(
@@ -709,7 +709,7 @@ class MigrationTest {
         VALUES
             (1, 3, 1, 5),
             (2, 4, 1, 6)
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Merged manga references
@@ -732,7 +732,7 @@ class MigrationTest {
                 3, 'https://a',
                 2, 'https://b', 100
             )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Sources
@@ -744,7 +744,7 @@ class MigrationTest {
         VALUES (
             100, 'en', 'Src'
         )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Saved searches
@@ -756,7 +756,7 @@ class MigrationTest {
         VALUES (
             1, 100, 's', 'q', NULL
         )
-            """.trimIndent(),
+        """.trimIndent(),
 
             // -------------------------------------------------
             // Saved-search feed
@@ -769,7 +769,7 @@ class MigrationTest {
         VALUES (
             1, 100, 1, 0, 1
         )
-            """.trimIndent(),
+        """.trimIndent(),
         )
 
         // Identify the exact failing fixture if another SQL

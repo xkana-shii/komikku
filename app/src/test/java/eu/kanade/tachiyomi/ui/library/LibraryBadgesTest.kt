@@ -1,156 +1,41 @@
 package eu.kanade.tachiyomi.ui.library
 
 import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Test
+import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.library.model.LibraryManga
-import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.applyFilter
 
+// KMK -->
 class LibraryBadgesTest {
-
-    private fun libraryManga(
-        chapterFlags: Long = 0L,
-    ) = LibraryManga(
-        manga = Manga.create().copy(
-            id = 1L,
-        ),
-        categories = emptyList(),
-        totalChapters = 8L,
-        readCount = 3L,
-        bookmarkCount = 2L,
-        bookmarkReadCount = 1L,
-        chapterFlags = chapterFlags,
-        latestUpload = null,
-        chapterFetchedAt = null,
-        lastRead = null,
-    )
-
-    private fun item(
-        libraryManga: LibraryManga = libraryManga(),
-        downloadCount: Int = 5,
-        unreadCount: Long = 5L,
-        isLocal: Boolean = false,
-        showDownloads: Boolean = true,
-        showUnread: Boolean = true,
-        showLocal: Boolean = true,
-        showLanguage: Boolean = true,
-    ) = LibraryItem(
-        libraryManga = libraryManga,
-        downloadCount = downloadCount,
-        unreadCount = unreadCount,
-        isLocal = isLocal,
-        sourceName = "Test source",
-        sourceLanguage = "en",
-        useLangIcon = false,
-        badges = LibraryItem.Badges(
-            downloadCount = if (showDownloads) {
-                downloadCount
-            } else {
-                0
-            },
-            unreadCount = if (showUnread) {
-                unreadCount
-            } else {
-                0L
-            },
-            isLocal = isLocal && showLocal,
-            sourceLanguage = if (showLanguage) {
-                "en"
-            } else {
-                ""
-            },
-        ),
-    )
-
     @Test
-    fun `badge state keeps download unread local and language independent`() {
+    fun `badge combinations preserve downloaded unread and local filtering`() {
+        val manga = mockk<LibraryManga> {
+            every { id } returns 1
+            every { unreadCount } returns 3
+        }
+        // A merged manga uses the aggregate count calculated by the ScreenModel.
+        val downloaded = LibraryItem(manga, downloadCount = 5, unreadCount = 3, sourceManager = mockk(), source = mockk())
+        val local = downloaded.copy(downloadCount = 0, isLocal = true)
+        val unavailable = downloaded.copy(downloadCount = 0)
         for (mask in 0 until 16) {
-            val entry = item(
-                showDownloads = mask and 1 != 0,
-                showUnread = mask and 2 != 0,
-                showLocal = mask and 4 != 0,
-                showLanguage = mask and 8 != 0,
-                isLocal = true,
-            )
-
-            entry.downloadCount shouldBe 5
-            entry.unreadCount shouldBe 5L
-            entry.isLocal shouldBe true
-            entry.useLangIcon shouldBe false
-
-            entry.badges.downloadCount shouldBe if (
-                mask and 1 != 0
-            ) {
-                5
-            } else {
-                0
+            val items = listOf(downloaded, local, unavailable).map {
+                it.copy(badges = libraryBadges(it.downloadCount, it.unreadCount, it.isLocal, mask and 1 != 0, mask and 2 != 0, mask and 4 != 0, mask and 8 != 0, "en"))
             }
-
-            entry.badges.unreadCount shouldBe if (
-                mask and 2 != 0
-            ) {
-                5L
-            } else {
-                0L
-            }
-
-            entry.badges.isLocal shouldBe (
-                mask and 4 != 0
-                )
-
-            entry.badges.sourceLanguage shouldBe if (
-                mask and 8 != 0
-            ) {
-                "en"
-            } else {
-                ""
-            }
+            items.map { item -> applyFilter(TriState.ENABLED_IS) { item.isDownloaded } } shouldBe listOf(true, true, false)
+            items.map { item -> applyFilter(TriState.ENABLED_IS) { item.libraryManga.unreadCount > 0 } } shouldBe listOf(true, true, true)
+            items.first().downloadCount shouldBe 5
+            items.first().unreadCount shouldBe 3
+            items[1].isLocal shouldBe true
+            items.first().badges.downloadCount shouldBe if (mask and 1 != 0) 5 else 0
+            items.first().badges.unreadCount shouldBe if (mask and 2 != 0) 3 else 0
+            items[1].badges.isLocal shouldBe (mask and 4 != 0)
+            items.first().badges.sourceLanguage shouldBe if (mask and 8 != 0) "en" else ""
+            items.first().source shouldBe downloaded.source
+            items.first().useLangIcon shouldBe downloaded.useLangIcon
         }
     }
-
-    @Test
-    fun `ordinary unread count respects read chapters`() {
-        val manga = libraryManga()
-
-        manga.unreadCount shouldBe 5L
-        manga.hasBookmarks shouldBe true
-        manga.hasStarted shouldBe true
-    }
-
-    @Test
-    fun `bookmarked chapter filter uses bookmarked unread count`() {
-        val manga = libraryManga(
-            Manga.CHAPTER_SHOW_BOOKMARKED,
-        )
-
-        manga.unreadCount shouldBe 1L
-    }
-
-    @Test
-    fun `non bookmarked chapter filter excludes read chapters in that group`() {
-        val manga = libraryManga(
-            Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-        )
-
-        manga.unreadCount shouldBe 4L
-    }
-
-    @Test
-    fun `copying a library item preserves its source and presentation preferences`() {
-        val original = item()
-        val local = original.copy(
-            isLocal = true,
-            downloadCount = 0,
-            badges = original.badges.copy(
-                downloadCount = 0,
-                isLocal = true,
-            ),
-        )
-
-        local.libraryManga shouldBe original.libraryManga
-        local.source shouldBe original.source
-        local.sourceLanguage shouldBe "en"
-        local.useLangIcon shouldBe false
-        local.downloadCount shouldBe 0
-        local.badges.isLocal shouldBe true
-    }
 }
+// KMK <--
