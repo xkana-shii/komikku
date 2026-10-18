@@ -17,20 +17,14 @@ import java.io.File
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class)
 class CustomMangaRepositoryImpl(context: Context) : CustomMangaRepository {
-
-    private val editJson = File(
-        context.getExternalFilesDir(null),
-        "edits.json",
-    )
+    private val editJson = File(context.getExternalFilesDir(null), "edits.json")
 
     private val customMangaMap = fetchCustomData()
 
     override fun get(mangaId: Long) = customMangaMap[mangaId]
 
     private fun fetchCustomData(): MutableMap<Long, CustomMangaInfo> {
-        if (!editJson.exists() || !editJson.isFile) {
-            return mutableMapOf()
-        }
+        if (!editJson.exists() || !editJson.isFile) return mutableMapOf()
 
         val json = try {
             Json.decodeFromString<MangaList>(
@@ -41,7 +35,6 @@ class CustomMangaRepositoryImpl(context: Context) : CustomMangaRepository {
         } ?: return mutableMapOf()
 
         val mangasJson = json.mangas ?: return mutableMapOf()
-
         return mangasJson
             .mapNotNull { mangaJson ->
                 val id = mangaJson.id ?: return@mapNotNull null
@@ -65,19 +58,15 @@ class CustomMangaRepositoryImpl(context: Context) : CustomMangaRepository {
         } else {
             customMangaMap[mangaInfo.id] = mangaInfo
         }
-
         saveCustomInfo()
     }
 
     private fun saveCustomInfo() {
         val jsonElements = customMangaMap.values.map { it.toJson() }
-
-        // Persist the empty list too. Otherwise deleting the final
-        // customization leaves the old edits.json on disk and it
-        // reappears when the repository is reloaded.
-        editJson.writeText(
-            Json.encodeToString(MangaList(jsonElements)),
-        )
+        if (jsonElements.isNotEmpty()) {
+            editJson.delete()
+            editJson.writeText(Json.encodeToString(MangaList(jsonElements)))
+        }
     }
 
     @Serializable

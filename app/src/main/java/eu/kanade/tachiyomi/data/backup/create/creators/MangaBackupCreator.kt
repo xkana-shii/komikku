@@ -35,7 +35,6 @@ class MangaBackupCreator(
     private val categoryRepository: CategoryRepository,
     private val historyRepository: HistoryRepository,
     private val trackRepository: TrackRepository,
-
     // SY -->
     private val mangaMergeRepository: MangaMergeRepository,
     private val sourceManager: SourceManager,
@@ -44,127 +43,96 @@ class MangaBackupCreator(
     // SY <--
 ) {
 
-    operator fun invoke(
-        mangas: List<Manga>,
-        options: BackupOptions,
-    ): Flow<BackupManga> = flow {
+    /**
+     * Builds the entries a chunk at a time, so only one chunk's chapters are held at once.
+     */
+    operator fun invoke(mangas: List<Manga>, options: BackupOptions): Flow<BackupManga> = flow {
         mangas.chunked(CHUNK_SIZE).forEach { chunk ->
-            backupMangas(chunk, options).forEach { backup ->
-                emit(backup)
-            }
+            backupMangas(chunk, options).forEach { emit(it) }
         }
     }
 
-    private suspend fun backupMangas(
-        mangas: List<Manga>,
-        options: BackupOptions,
-    ): List<BackupManga> {
+    private suspend fun backupMangas(mangas: List<Manga>, options: BackupOptions): List<BackupManga> {
         val mangaIds = mangas.map { it.id }
 
-        val excludedScanlatorsByMangaId =
-            mangaRepository.getExcludedScanlatorsByMangaIds(mangaIds)
-
-        val chaptersByMangaId = if (
-            options.chapters || options.history
-        ) {
-            chapterRepository
-                .getChaptersByMangaIds(mangaIds)
-                .groupBy { it.mangaId }
+        val excludedScanlatorsByMangaId = mangaRepository.getExcludedScanlatorsByMangaIds(mangaIds)
+        // History is backed up by chapter URL, so it needs the chapters too
+        val chaptersByMangaId = if (options.chapters || options.history) {
+            // KMK: the chapter batch query predates this port and returns a flat list, so it is grouped here
+            chapterRepository.getChaptersByMangaIds(mangaIds).groupBy { it.mangaId }
         } else {
             emptyMap()
         }
-
         val categoriesByMangaId = if (options.categories) {
             categoryRepository.getCategoriesByMangaIds(mangaIds)
         } else {
             emptyMap()
         }
-
         val tracksByMangaId = if (options.tracking) {
-            trackRepository
-                .getTracksByMangaIds(mangaIds)
-                .groupBy { it.mangaId }
+            // KMK: same as the chapters above, the track batch query returns a flat list
+            trackRepository.getTracksByMangaIds(mangaIds).groupBy { it.mangaId }
         } else {
             emptyMap()
         }
-
-        val historyByMangaId = if (options.history) {
-            historyRepository.getHistoryByMangaIds(mangaIds)
-        } else {
-            emptyMap()
-        }
+        val historyByMangaId = if (options.history) historyRepository.getHistoryByMangaIds(mangaIds) else emptyMap()
 
         return mangas.map { manga ->
-            val customInfo = if (options.customInfo) {
-                getCustomMangaInfo.get(manga.id)
-            } else {
-                null
-            }
-
-            val backup = manga.toBackupManga(customInfo)
+            // Entry for this manga
+            val mangaObject = manga.toBackupManga(
+                // SY -->
+                if (options.customInfo) {
+                    getCustomMangaInfo.get(manga.id)
+                } else {
+                    null
+                },
+                // SY <--
+            )
             val chapters = chaptersByMangaId[manga.id].orEmpty()
 
             // SY -->
             if (manga.source == MERGED_SOURCE_ID) {
-                backup.mergedMangaReferences = mangaMergeRepository
+                mangaObject.mergedMangaReferences = mangaMergeRepository
                     .getReferencesById(manga.id)
                     .map { it.toBackupMergedMangaReference() }
             }
 
-            val source = sourceManager
-                .get(manga.source)
-                ?.getMainSource<MetadataSource<*, *>>()
-
+            val source = sourceManager.get(manga.source)?.getMainSource<MetadataSource<*, *>>()
             if (source != null) {
-                getFlatMetadataById.await(manga.id)
-                    ?.let { flatMetadata ->
-                        backup.flatMetadata =
-                            BackupFlatMetadata.copyFrom(flatMetadata)
-                    }
+                getFlatMetadataById.await(manga.id)?.let { flatMetadata ->
+                    mangaObject.flatMetadata = BackupFlatMetadata.copyFrom(flatMetadata)
+                }
             }
             // SY <--
 
-            backup.excludedScanlators =
-                excludedScanlatorsByMangaId[manga.id].orEmpty()
+            mangaObject.excludedScanlators = excludedScanlatorsByMangaId[manga.id].orEmpty()
 
             if (options.chapters) {
-                backup.chapters = chapters.map {
-                    it.toBackupChapter()
-                }
+                // Backup all the chapters
+                mangaObject.chapters = chapters.map { it.toBackupChapter() }
             }
 
             if (options.categories) {
-                backup.categories = categoriesByMangaId[manga.id]
-                    .orEmpty()
-                    .map { it.order }
+                // Backup categories for this manga
+                mangaObject.categories = categoriesByMangaId[manga.id].orEmpty().map { it.order }
             }
 
             if (options.tracking) {
-                backup.tracking = tracksByMangaId[manga.id]
-                    .orEmpty()
-                    .map { it.toBackupTracking() }
+                mangaObject.tracking = tracksByMangaId[manga.id].orEmpty().map { it.toBackupTracking() }
             }
 
             if (options.history) {
-                val chapterUrlsById = chapters.associate {
-                    it.id to it.url
+                val chapterUrlsById = chapters.associate { it.id to it.url }
+                mangaObject.history = historyByMangaId[manga.id].orEmpty().mapNotNull { history ->
+                    // KUN -->
+                    // A chapter removed since its history was read takes that history with it;
+                    // skip an orphan row instead of aborting the whole backup.
+                    val url = chapterUrlsById[history.chapterId] ?: return@mapNotNull null
+                    // KUN <--
+                    BackupHistory(url, history.readAt.toEpochMillisOrZero(), history.readDuration)
                 }
-
-                backup.history = historyByMangaId[manga.id]
-                    .orEmpty()
-                    .mapNotNull { history ->
-                        val url = chapterUrlsById[history.chapterId]
-                            ?: return@mapNotNull null
-
-                        BackupHistory(
-                            url,
-                            history.readAt.toEpochMillisOrZero(),
-                            history.readDuration,
-                        )
-                    }
             }
 
-            backup
+            mangaObject
         }
     }
 
@@ -173,51 +141,42 @@ class MangaBackupCreator(
     }
 }
 
-private fun Manga.toBackupManga(
-    customMangaInfo: CustomMangaInfo?,
-) = BackupManga(
-    url = url,
-
-    // SY -->
-    title = ogTitle,
-    artist = ogArtist,
-    author = ogAuthor,
-    description = ogDescription,
-    genre = ogGenre.orEmpty(),
-    status = ogStatus.toInt(),
-    thumbnailUrl = ogThumbnailUrl,
-    // SY <--
-
-    favorite = favorite,
-    source = source,
-    dateAdded = dateAdded.toEpochMillisOrZero(),
-    viewer = viewerFlags.toInt() and ReadingMode.MASK,
-    viewer_flags = viewerFlags.toInt(),
-    chapterFlags = chapterFlags.toInt(),
-    updateStrategy = updateStrategy,
-    lastModifiedAt = lastModifiedAt,
-    favoriteModifiedAt = favoriteModifiedAt,
-    version = version,
-    notes = notes,
-    initialized = initialized,
-    memo = memo.toByteArray(),
-    nextUpdate = nextUpdate.toEpochMillisOrZero(),
-
-    // KMK --> Back up every user-owned chapter setting.
-    scanlatorPriority = scanlatorPriority,
-    blacklistedChapters = blacklistedChapters,
-    scanlatorRangeRules = scanlatorRangeRules,
-    // KMK <--
-).also { backup ->
-    // SY -->
-    customMangaInfo?.let {
-        backup.customTitle = it.title
-        backup.customArtist = it.artist
-        backup.customAuthor = it.author
-        backup.customThumbnailUrl = it.thumbnailUrl
-        backup.customDescription = it.description
-        backup.customGenre = it.genre
-        backup.customStatus = it.status?.toInt() ?: 0
+private fun Manga.toBackupManga(/* SY --> */customMangaInfo: CustomMangaInfo?/* SY <-- */) =
+    BackupManga(
+        url = this.url,
+        // SY -->
+        title = this.ogTitle,
+        artist = this.ogArtist,
+        author = this.ogAuthor,
+        description = this.ogDescription,
+        genre = this.ogGenre.orEmpty(),
+        status = this.ogStatus.toInt(),
+        thumbnailUrl = this.ogThumbnailUrl,
+        // SY <--
+        favorite = this.favorite,
+        source = this.source,
+        dateAdded = this.dateAdded.toEpochMillisOrZero(),
+        viewer = (this.viewerFlags.toInt() and ReadingMode.MASK),
+        viewer_flags = this.viewerFlags.toInt(),
+        chapterFlags = this.chapterFlags.toInt(),
+        updateStrategy = this.updateStrategy,
+        lastModifiedAt = this.lastModifiedAt,
+        favoriteModifiedAt = this.favoriteModifiedAt,
+        version = this.version,
+        notes = this.notes,
+        initialized = this.initialized,
+        memo = this.memo.toByteArray(),
+        nextUpdate = this.nextUpdate.toEpochMillisOrZero(),
+        // SY -->
+    ).also { backupManga ->
+        customMangaInfo?.let {
+            backupManga.customTitle = it.title
+            backupManga.customArtist = it.artist
+            backupManga.customAuthor = it.author
+            backupManga.customThumbnailUrl = it.thumbnailUrl
+            backupManga.customDescription = it.description
+            backupManga.customGenre = it.genre
+            backupManga.customStatus = it.status?.toInt() ?: 0
+        }
     }
-    // SY <--
-}
+// SY <--

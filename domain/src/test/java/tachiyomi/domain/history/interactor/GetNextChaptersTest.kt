@@ -1,3 +1,4 @@
+
 package tachiyomi.domain.history.interactor
 
 import io.kotest.matchers.shouldBe
@@ -90,7 +91,7 @@ class GetNextChaptersTest {
             sourceId = 1,
             isMangaFavorite = true,
             ogUrl = null,
-            lastModified = null,
+            lastModified = 0,
         ),
     )
 

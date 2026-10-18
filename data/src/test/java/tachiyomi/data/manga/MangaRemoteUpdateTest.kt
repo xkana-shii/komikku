@@ -13,20 +13,14 @@ import tachiyomi.domain.manga.model.MangaRemoteUpdate
 
 // KMK -->
 class MangaRemoteUpdateTest {
-
     @Test
     fun `source metadata update leaves user-owned manga fields intact`() = runBlocking<Unit> {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-
-        driver.use { driver ->
+        try {
             Database.Schema.create(driver).await()
-
             val database = testDatabase(driver)
             val mangaId = insertTestManga(database, "/manga")
-
-            val before = database.mangaQueries
-                .getMangaById(mangaId)
-                .awaitAsOne()
+            val before = database.mangaQueries.getMangaById(mangaId).awaitAsOne()
 
             check(
                 MangaRepositoryImpl(database).updateRemote(
@@ -37,7 +31,7 @@ class MangaRemoteUpdateTest {
                         artist = null,
                         description = null,
                         genre = null,
-                        status = 1L,
+                        status = 1,
                         thumbnailUrl = null,
                         updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
                         memo = JsonObject(emptyMap()),
@@ -47,18 +41,15 @@ class MangaRemoteUpdateTest {
                 ),
             )
 
-            val after = database.mangaQueries
-                .getMangaById(mangaId)
-                .awaitAsOne()
-
-            check(after.remote_title == "New title")
-            check(after.remote_author == "New author")
-
+            val after = database.mangaQueries.getMangaById(mangaId).awaitAsOne()
+            check(after.remote_title == "New title" && after.remote_author == "New author")
             check(after.user_favorite_at == before.user_favorite_at)
             check(after.user_reader_flags == before.user_reader_flags)
             check(after.user_chapter_flags == before.user_chapter_flags)
             check(after.user_notes == before.user_notes)
-            check(after.version == before.version)
+            check(after.state_version == before.state_version)
+        } finally {
+            driver.close()
         }
     }
 }

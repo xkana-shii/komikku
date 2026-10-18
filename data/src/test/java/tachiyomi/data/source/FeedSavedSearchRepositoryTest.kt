@@ -1,13 +1,21 @@
 package tachiyomi.data.source
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import tachiyomi.data.Chapter
 import tachiyomi.data.Database
-import tachiyomi.data.testDatabase
+import tachiyomi.data.DateColumnAdapter
+import tachiyomi.data.History
+import tachiyomi.data.Manga
+import tachiyomi.data.MemoColumnAdapter
+import tachiyomi.data.StringListColumnAdapter
+import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import java.io.File
@@ -16,7 +24,6 @@ import java.util.Properties
 
 // KMK -->
 class FeedSavedSearchRepositoryTest {
-
     private lateinit var file: File
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var searches: SavedSearchRepositoryImpl
@@ -31,19 +38,27 @@ class FeedSavedSearchRepositoryTest {
     private suspend fun open(create: Boolean = false) {
         driver = JdbcSqliteDriver(
             "jdbc:sqlite:${file.absolutePath}",
-            Properties().apply {
-                setProperty("foreign_keys", "true")
-            },
+            Properties().apply { setProperty("foreign_keys", "true") },
         )
-
-        if (create) {
-            Database.Schema.create(driver).await()
-        }
-
+        if (create) Database.Schema.create(driver).await()
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
-
-        val db = testDatabase(driver)
-
+        val db = Database(
+            driver = driver,
+            historyAdapter = History.Adapter(DateColumnAdapter),
+            mangaAdapter = Manga.Adapter(
+                remote_genreAdapter = StringListColumnAdapter,
+                // KMK -->
+                user_scanlator_priorityAdapter = StringListColumnAdapter,
+                // KMK <--
+                user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                // KMK -->
+                user_scanlator_range_rulesAdapter = StringListColumnAdapter,
+                // KMK <--
+                remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
+                remote_memoAdapter = MemoColumnAdapter,
+            ),
+            chapterAdapter = Chapter.Adapter(MemoColumnAdapter),
+        )
         searches = SavedSearchRepositoryImpl(db)
         feeds = FeedSavedSearchRepositoryImpl(db)
     }
@@ -57,93 +72,34 @@ class FeedSavedSearchRepositoryTest {
     @Test
     fun `query default and filtered records resolve by saved ID and source and survive a reopened database`() = runBlocking<Unit> {
         val values = listOf(
-            SavedSearch(-1L, 101L, "Query", "title", null),
-            SavedSearch(-1L, 101L, "Default", "", "[]"),
-            SavedSearch(
-                -1L,
-                202L,
-                "Filtered",
-                null,
-                """[{"_type":"CHECKBOX","name":"Completed","state":"true"}]""",
-            ),
+            SavedSearch(-1, 101, "Query", "title", null),
+            SavedSearch(-1, 101, "Default", "", "[]"),
+            SavedSearch(-1, 202, "Filtered", null, "[{\"_type\":\"CHECKBOX\",\"name\":\"Completed\",\"state\":\"true\"}]"),
         )
-
-        // Ensure feed IDs cannot accidentally be confused
-        // with saved-search IDs.
-        feeds.insert(
-            FeedSavedSearch(-1L, 101L, null, true, 0L),
-        )
-
-        val saved = values.map {
-            it.copy(id = searches.insert(it))
-        }
-
+        // Offset feed IDs deliberately so confusing feed IDs with saved-search IDs cannot pass.
+        feeds.insert(FeedSavedSearch(-1, 101, null, true, 0))
+        val saved = values.map { it.copy(id = searches.insert(it)) }
         saved.forEach {
-            feeds.insert(
-                FeedSavedSearch(-1L, it.source, it.id, true, 0L),
-            )
-            feeds.insert(
-                FeedSavedSearch(-1L, it.source, it.id, false, 0L),
-            )
+            feeds.insert(FeedSavedSearch(-1, it.source, it.id, true, 0))
+            feeds.insert(FeedSavedSearch(-1, it.source, it.id, false, 0))
         }
-
         driver.close()
         open()
-
         feeds.getGlobalFeedSavedSearch().toSet() shouldBe saved.toSet()
-
-        feeds.getBySourceIdFeedSavedSearch(101L).toSet() shouldBe
-            saved.take(2).toSet()
-
-        feeds.getBySourceIdFeedSavedSearch(202L) shouldBe
-            listOf(saved.last())
+        feeds.getBySourceIdFeedSavedSearch(101).toSet() shouldBe saved.take(2).toSet()
+        feeds.getBySourceIdFeedSavedSearch(202) shouldBe listOf(saved.last())
     }
 
     @Test
     fun `edit keeps references and delete removes only the deleted saved search feeds`() = runBlocking<Unit> {
-        val first = SavedSearch(
-            -1L,
-            101L,
-            "First",
-            "old",
-            null,
-        ).let {
-            it.copy(id = searches.insert(it))
-        }
-
-        val second = SavedSearch(
-            -1L,
-            101L,
-            "Second",
-            "other",
-            null,
-        ).let {
-            it.copy(id = searches.insert(it))
-        }
-
-        for ((id) in listOf(first, second)) {
-            feeds.insert(
-                FeedSavedSearch(-1L, 101L, id, true, 0L),
-            )
-        }
-
-        val edited = first.copy(
-            name = "Renamed",
-            query = "edited",
-            filtersJson = "[]",
-        )
-
+        val first = SavedSearch(-1, 101, "First", "old", null).let { it.copy(id = searches.insert(it)) }
+        val second = SavedSearch(-1, 101, "Second", "other", null).let { it.copy(id = searches.insert(it)) }
+        for (search in listOf(first, second)) feeds.insert(FeedSavedSearch(-1, 101, search.id, true, 0))
+        val edited = first.copy(name = "Renamed", query = "edited", filtersJson = "[]")
         searches.update(edited)
-
-        feeds.getGlobalFeedSavedSearch()
-            .first { it.id == first.id } shouldBe edited
-
-        feeds.getGlobal()
-            .map { it.savedSearch }
-            .toSet() shouldBe setOf(first.id, second.id)
-
+        feeds.getGlobalFeedSavedSearch().first { it.id == first.id } shouldBe edited
+        feeds.getGlobal().map { it.savedSearch }.toSet() shouldBe setOf(first.id, second.id)
         searches.delete(first.id)
-
         feeds.getGlobalFeedSavedSearch() shouldBe listOf(second)
         feeds.getGlobal().single().savedSearch shouldBe second.id
     }

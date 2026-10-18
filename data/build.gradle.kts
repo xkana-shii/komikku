@@ -17,8 +17,8 @@ android {
 
     // KMK -->
     sourceSets {
-        getByName("test").kotlin.srcDir("src/testSupport/kotlin")
-        getByName("androidTest").kotlin.srcDir("src/testSupport/kotlin")
+        getByName("test").java.srcDir("src/testSupport/kotlin")
+        getByName("androidTest").java.srcDir("src/testSupport/kotlin")
     }
     // KMK <--
 
