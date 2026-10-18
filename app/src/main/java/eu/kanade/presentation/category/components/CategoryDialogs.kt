@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.preference.asToggleableState
 import eu.kanade.presentation.category.visualName
@@ -383,14 +384,13 @@ fun ChangeCategoryDialog(
                 tachiyomi.presentation.core.components.material.TextButton(
                     onClick = {
                         onDismissRequest()
+                        // KMK --> A selected subcategory must persist together with its parent.
+                        val (included, excluded) = categorySelectionChange(selection)
                         onConfirm(
-                            selection
-                                .filter { it is CheckboxState.State.Checked || it is CheckboxState.TriState.Include }
-                                .map { it.value.id },
-                            selection
-                                .filter { it is CheckboxState.State.None || it is CheckboxState.TriState.None }
-                                .map { it.value.id },
+                            included,
+                            excluded,
                         )
+                        // KMK <--
                     },
                 ) {
                     Text(text = stringResource(MR.strings.action_ok))
@@ -404,7 +404,9 @@ fun ChangeCategoryDialog(
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                selection.forEach { checkbox ->
+                // KMK --> Keep manager order while grouping each child immediately after its parent.
+                orderedCategorySelection(selection).forEach { checkbox ->
+                    // KMK <--
                     val onChange: (CheckboxState<Category>) -> Unit = {
                         val index = selection.indexOf(it)
                         if (index != -1) {
@@ -416,6 +418,15 @@ fun ChangeCategoryDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            // KMK --> Indent subcategories without changing root alignment.
+                            .padding(
+                                start = if (checkbox.value.parentId != Category.UNCATEGORIZED_ID) {
+                                    MaterialTheme.padding.medium
+                                } else {
+                                    0.dp
+                                },
+                            )
+                            // KMK <--
                             .clickable { onChange(checkbox) },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -444,3 +455,50 @@ fun ChangeCategoryDialog(
         },
     )
 }
+
+// KMK --> Shared pure dialog logic keeps hierarchy handling identical across category flows.
+internal fun orderedCategorySelection(
+    selection: List<CheckboxState<Category>>,
+): List<CheckboxState<Category>> {
+    val childrenByParent = selection
+        .filter { it.value.parentId != Category.UNCATEGORIZED_ID }
+        .groupBy { it.value.parentId }
+    val ordered = mutableListOf<CheckboxState<Category>>()
+    val includedIds = mutableSetOf<Long>()
+
+    fun addBranch(checkbox: CheckboxState<Category>) {
+        if (!includedIds.add(checkbox.value.id)) return
+        ordered += checkbox
+        childrenByParent[checkbox.value.id].orEmpty().forEach(::addBranch)
+    }
+
+    selection.filter { it.value.parentId == Category.UNCATEGORIZED_ID }.forEach(::addBranch)
+    selection.forEach(::addBranch)
+    return ordered
+}
+
+internal fun categorySelectionChange(
+    selection: List<CheckboxState<Category>>,
+): Pair<List<Long>, List<Long>> {
+    val parentIdById = selection.associate { it.value.id to it.value.parentId }
+    val included = linkedSetOf<Long>()
+    selection
+        .filter { it is CheckboxState.State.Checked || it is CheckboxState.TriState.Include }
+        .forEach { included += it.value.id.withAncestorChain(parentIdById) }
+    val excluded = selection
+        .filter { it is CheckboxState.State.None || it is CheckboxState.TriState.None }
+        .mapTo(linkedSetOf()) { it.value.id }
+        .apply { removeAll(included) }
+    return included.toList() to excluded.toList()
+}
+
+/** Returns [id] with each known ancestor, protecting malformed imported cycles. */
+internal fun Long.withAncestorChain(parentIdById: Map<Long, Long>): Set<Long> {
+    val chain = linkedSetOf(this)
+    var cursor = parentIdById[this] ?: Category.UNCATEGORIZED_ID
+    while (cursor != Category.UNCATEGORIZED_ID && chain.add(cursor)) {
+        cursor = parentIdById[cursor] ?: Category.UNCATEGORIZED_ID
+    }
+    return chain
+}
+// KMK <--
