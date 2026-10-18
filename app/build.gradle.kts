@@ -37,8 +37,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku.kns"
 
-        versionCode = 172
-        versionName = "1.24.8"
+        versionCode = 173
+        versionName = "1.24.9"
 
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
         // KMK --> Used by the telemetry compatibility facade.
