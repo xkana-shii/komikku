@@ -10,26 +10,54 @@ class SyncCategoriesWithTrackStatus(
     private val setMangaCategories: SetMangaCategories,
 ) {
     suspend fun await(mangaId: Long, trackStatus: Int?) {
-        val bound = categoryRepository.getAll().filter { it.trackStatus != null }
-        if (mangaId <= 0L || bound.isEmpty()) return
+        if (mangaId <= 0L) return
+        val categories = categoryRepository.getAll()
+        if (categories.none { it.trackStatus != null }) return
 
         val current = categoryRepository.getCategoriesByMangaId(mangaId).mapTo(mutableSetOf()) { it.id }
-        val original = current.toSet()
-        bound.forEach { category ->
-            if (category.trackStatus == trackStatus) current += category.id else current -= category.id
-        }
-        if (current != original) setMangaCategories.await(mangaId, current.toList())
+        val updated = updatedMembership(current, categories, trackStatus)
+        if (updated != current) setMangaCategories.await(mangaId, updated.toList())
     }
 
     companion object {
         fun updatedMembership(
             current: Set<Long>,
-            boundCategories: Collection<Category>,
+            categories: Collection<Category>,
             trackStatus: Int?,
-        ): Set<Long> = current.toMutableSet().apply {
-            boundCategories.filter { it.trackStatus != null }.forEach { category ->
-                if (category.trackStatus == trackStatus) add(category.id) else remove(category.id)
+        ): Set<Long> {
+            val boundCategories = categories.filter { it.trackStatus != null }
+            if (boundCategories.isEmpty()) return current
+
+            val categoriesById = categories.associateBy(Category::id)
+            val activeRoots = current.mapNotNull { categoryId ->
+                categoryId.rootCategoryId(categoriesById)
+            }.toSet()
+            val managedChildren = boundCategories.filter { category ->
+                category.parentId != Category.UNCATEGORIZED_ID &&
+                    category.id.rootCategoryId(categoriesById) in activeRoots
             }
+            val legacyRootCategories = boundCategories.filter {
+                it.parentId == Category.UNCATEGORIZED_ID
+            }
+
+            return current.toMutableSet().apply {
+                // A child-only membership still implies that its parent branch is active.
+                addAll(activeRoots)
+                // Root bindings predate hierarchical categories and remain global for compatibility.
+                (legacyRootCategories + managedChildren).forEach { category ->
+                    if (category.trackStatus == trackStatus) add(category.id) else remove(category.id)
+                }
+            }
+        }
+
+        private fun Long.rootCategoryId(categoriesById: Map<Long, Category>): Long? {
+            var category = categoriesById[this] ?: return null
+            val visited = mutableSetOf<Long>()
+            while (category.parentId != Category.UNCATEGORIZED_ID) {
+                if (!visited.add(category.id)) return null
+                category = categoriesById[category.parentId] ?: return null
+            }
+            return category.id
         }
     }
 }
