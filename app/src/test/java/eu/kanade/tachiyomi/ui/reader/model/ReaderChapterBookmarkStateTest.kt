@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.reader.model
 
-import eu.kanade.tachiyomi.data.database.models.toDomainChapter
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.chapter.model.BookmarkColor
@@ -16,10 +15,16 @@ class ReaderChapterBookmarkStateTest {
             bookmark = true,
             bookmarkColor = BookmarkColor.ORANGE,
         )
+
         val readerChapter = ReaderChapter(initial)
 
-        readerChapter.syncBookmarkState(initial.copy(bookmarkColor = BookmarkColor.BLUE))
+        readerChapter.syncBookmarkState(
+            initial.copy(
+                bookmarkColor = BookmarkColor.BLUE,
+            ),
+        )
 
-        readerChapter.chapter.toDomainChapter()!!.bookmarkColor shouldBe BookmarkColor.BLUE
+        readerChapter.chapter.bookmarkColor shouldBe BookmarkColor.BLUE
+        readerChapter.chapter.bookmark shouldBe true
     }
 }
