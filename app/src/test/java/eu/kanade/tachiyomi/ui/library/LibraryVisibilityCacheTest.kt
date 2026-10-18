@@ -98,16 +98,9 @@ class LibraryVisibilityCacheTest {
     }
 
     private fun manga(id: Long) = LibraryManga(
-        manga = Manga.create().copy(id = id),
-        categories = emptyList(),
-        totalChapters = 8,
-        readCount = 3,
-        bookmarkCount = 2,
-        bookmarkReadCount = 1,
-        chapterFlags = 0,
-        latestUpload = null,
-        chapterFetchedAt = null,
-        lastRead = null,
+        manga = Manga.create().copy(id = id), categories = emptyList(), totalChapters = 8,
+        readCount = 3, bookmarkCount = 2, bookmarkReadCount = 1, chapterFlags = 0,
+        latestUpload = 0, chapterFetchedAt = 0, lastRead = 0,
     )
 }
 // KMK <--
