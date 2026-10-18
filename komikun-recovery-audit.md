@@ -41,3 +41,52 @@ because it builds.
 4. Library SQL/cache/query behavior and large-library performance.
 5. Feeds, saved searches, global search, history, relations, and reader behavior.
 6. Database schema and migration compatibility for baseline and already-integrated installs.
+
+## Required pre-integration fixes
+
+These fixes were completed on the recovered baseline before any Komi-kun integration.
+
+### Chapter blacklist identity
+
+- Baseline source: `b82417882d` introduced URL/hybrid identity and conservative legacy
+  number/scanlator matching.
+- Reference follow-up: `a124437ece` added the version-two hybrid key and complete-snapshot
+  plumbing.
+- The collision was caused by Mangago announcement chapters sharing a parsed number and empty
+  scanlator with normal chapters. The new `hybrid:v2` key stores normalized chapter name in
+  addition to number, scanlator, and URL. URL remains authoritative; refreshed URLs use the name
+  discriminator, and ambiguous legacy matches remain visible.
+- `filterBlacklistedChapters` accepts an authoritative snapshot so filtered subsets cannot turn a
+  legacy collision into a unique match. Smart merge and chapter-list visibility use the same
+  matcher.
+- Regression coverage includes both Mangago extras, simultaneous blacklisting, URL refreshes,
+  v1 compatibility, ambiguous legacy keys, filtered subsets, and Smart Scanlator Merge.
+
+### Hierarchical Set Categories
+
+- Baseline source: `ce1064ba13` retained parent-scoped category identity.
+- Reference follow-up: `a124437ece` supplied the hierarchy-aware dialog helpers.
+- `ChangeCategoryDialog` now displays each parent followed by its children with indentation and
+  saves selected child IDs together with their ancestor IDs. Parent selection does not select
+  children; IDs and `parentId` are used throughout, so same-named children remain independent.
+- Regression coverage verifies ordering, indentation-related ordering helpers, ancestor inclusion,
+  and parent-only selection.
+
+### Parent-aware Smart Categories
+
+- Reference follow-up: `a124437ece` changed `SyncCategoriesWithTrackStatus` from global status
+  assignment to active parent-branch assignment.
+- Synchronization now derives active roots from current parent or child memberships, preserves
+  manual memberships, updates all active branches, and retains legacy standalone root bindings.
+  Child-only membership implies and restores its parent. Empty membership does not create nested
+  branches, and repeated synchronization is idempotent.
+- Regression coverage verifies single and multiple parents, status changes, child-only recovery,
+  unrelated/manual categories, root compatibility, and idempotence.
+
+Validation for this milestone: focused domain and app unit tests, `spotlessApply`,
+`spotlessCheck`, `:app:compileDebugKotlin`, `assembleDebug`, and `git diff --check` passed.
+No schema files changed, so SQLDelight regeneration was not required. Commits:
+
+- `e7c51bdcec` — `fix: prevent chapter blacklist collisions`
+- `431657f5f5` — `feat: make set categories hierarchy-aware`
+- `62933f19dc` — `fix: scope smart categories to parent branches`

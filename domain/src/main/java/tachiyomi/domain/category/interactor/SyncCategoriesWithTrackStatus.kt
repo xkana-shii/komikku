@@ -32,6 +32,7 @@ class SyncCategoriesWithTrackStatus(
             val activeRoots = current.mapNotNull { categoryId ->
                 categoryId.rootCategoryId(categoriesById)
             }.toSet()
+            val impliedRoots = activeRoots - current
             val managedChildren = boundCategories.filter { category ->
                 category.parentId != Category.UNCATEGORIZED_ID &&
                     category.id.rootCategoryId(categoriesById) in activeRoots
@@ -47,6 +48,7 @@ class SyncCategoriesWithTrackStatus(
                 (legacyRootCategories + managedChildren).forEach { category ->
                     if (category.trackStatus == trackStatus) add(category.id) else remove(category.id)
                 }
+                addAll(impliedRoots)
             }
         }
 
