@@ -82,7 +82,7 @@ class SyncChapterProgressWithTrackTest {
             upsert.await(
                 match {
                     it.lastChapterRead == 5.0 &&
-                    it.status == 1L &&
+                        it.status == 1L &&
                         it.startDate ==
                         Instant.fromEpochMilliseconds(10) &&
                         it.finishDate == null
