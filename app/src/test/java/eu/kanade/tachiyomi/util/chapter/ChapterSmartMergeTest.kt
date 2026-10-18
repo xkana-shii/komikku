@@ -12,6 +12,7 @@ import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.model.resolveVisibleChapter
 import tachiyomi.domain.chapter.model.visibleChapterStats
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
+import tachiyomi.domain.chapter.service.hybridChapterBlacklistKey
 import tachiyomi.domain.chapter.service.scanlatorBlacklistKey
 import tachiyomi.domain.manga.model.Manga
 
@@ -167,6 +168,31 @@ class ChapterSmartMergeTest {
 
         result.chapters.map(Chapter::id) shouldBe listOf(1L, 2L)
         result.blacklistedChapterIds shouldBe setOf(1L)
+    }
+
+    @Test
+    fun `refreshed Mangago extras stay hidden through the shared visibility pipeline`() {
+        val oldTwitterExtra = chapter(id = 1, number = 1.0, scanlator = null, url = "/twitter-extra-old")
+            .copy(name = "twitter extra 1st anniversary")
+        val oldSeasonComeback = chapter(id = 2, number = 6.0, scanlator = null, url = "/season-comeback-old")
+            .copy(name = "season comeback 6/15")
+        val twitterExtra = oldTwitterExtra.copy(url = "/twitter-extra-new")
+        val chapterOne = chapter(id = 3, number = 1.0, scanlator = null, url = "/chapter-1")
+        val seasonComeback = oldSeasonComeback.copy(url = "/season-comeback-new")
+        val chapterSix = chapter(id = 4, number = 6.0, scanlator = null, url = "/chapter-6")
+        val chapters = listOf(twitterExtra, chapterOne, seasonComeback, chapterSix)
+        val manga = Manga.create().copy(
+            blacklistedChapters = listOf(
+                hybridChapterBlacklistKey(oldTwitterExtra),
+                hybridChapterBlacklistKey(oldSeasonComeback),
+            ),
+        )
+
+        chapters.filterChapterVisibility(manga, false).map(Chapter::id) shouldBe listOf(3L, 4L)
+        chapters.filterChapterVisibility(manga, true).map(Chapter::id) shouldBe listOf(3L, 4L)
+        chapters.chapterListVisibility(manga, true, hideBlacklistedChapters = false)
+            .chapters
+            .map(Chapter::id) shouldBe listOf(1L, 3L, 2L, 4L)
     }
 
     private fun chapter(

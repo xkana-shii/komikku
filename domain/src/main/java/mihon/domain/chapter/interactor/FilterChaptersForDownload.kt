@@ -6,6 +6,7 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.model.Manga
 
@@ -41,14 +42,19 @@ class FilterChaptersForDownload(
             return emptyList()
         }
 
-        if (!downloadPreferences.downloadNewUnreadChaptersOnly.get()) return newChapters
-
         // SY -->
         val existingChapters = if (manga.source == MERGED_SOURCE_ID) {
             getMergedChaptersByMangaId.await(manga.id, /* KMK --> */ applyFilter = true /* KMK <-- */)
         } else {
             getChaptersByMangaId.await(manga.id, /* KMK --> */ applyFilter = true /* KMK <-- */)
         }
+
+        // KMK --> Resolve fallbacks against all known chapters, never only the new subset.
+        val allChapters = (existingChapters + newChapters).distinctBy(Chapter::url)
+        val allowedChapters = filterBlacklistedChapters(newChapters, manga.blacklistedChapters, allChapters)
+        if (allowedChapters.isEmpty()) return emptyList()
+        if (!downloadPreferences.downloadNewUnreadChaptersOnly.get()) return allowedChapters
+        // KMK <--
 
         val readChapterNumbers = existingChapters
             // SY <--
@@ -57,7 +63,7 @@ class FilterChaptersForDownload(
             .map { it.chapterNumber }
             .toSet()
 
-        return newChapters.filterNot { it.chapterNumber in readChapterNumbers }
+        return allowedChapters.filterNot { it.chapterNumber in readChapterNumbers }
     }
 
     /**

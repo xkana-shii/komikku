@@ -37,7 +37,7 @@ fun List<Chapter>.applySmartScanlatorMerge(
     blacklistedChapters: Collection<String>,
     rangeRules: List<String>,
 ): List<Chapter> {
-    val visible = filterBlacklistedChapters(this, blacklistedChapters)
+    val visible = filterBlacklistedChapters(this, blacklistedChapters, this)
     val parsedRules = rangeRules.mapNotNull(::parseScanlatorRangeRule)
     val selectedIds = visible.asSequence()
         .filter { it.chapterNumber.isFinite() && it.chapterNumber > 0.0 }
@@ -75,7 +75,7 @@ fun List<Chapter>.filterChapterVisibility(
             rangeRules = manga.scanlatorRangeRules,
         )
     } else {
-        filterBlacklistedChapters(this, manga.blacklistedChapters)
+        filterBlacklistedChapters(this, manga.blacklistedChapters, this)
     }
 }
 
@@ -94,7 +94,7 @@ fun List<Chapter>.chapterListVisibility(
     smartScanlatorMergeEnabled: Boolean,
     hideBlacklistedChapters: Boolean,
 ): ChapterListVisibility {
-    val unblacklistedChapters = filterBlacklistedChapters(this, manga.blacklistedChapters)
+    val unblacklistedChapters = filterBlacklistedChapters(this, manga.blacklistedChapters, this)
     val unblacklistedIds = unblacklistedChapters.mapTo(HashSet(), Chapter::id)
     val blacklistedIds = asSequence()
         .map(Chapter::id)

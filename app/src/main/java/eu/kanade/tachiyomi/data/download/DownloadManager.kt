@@ -29,6 +29,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
@@ -150,9 +151,13 @@ class DownloadManager(
      * @param autoStart whether to start the downloader after enqueing the chapters.
      */
     suspend fun downloadChapters(manga: Manga, chapters: List<Chapter>, autoStart: Boolean = true) {
-        if (downloader.queueChapters(manga, chapters, autoStart)) {
+        // KMK --> A manual selection may be filtered, so only exact URL-bearing keys are resolved
+        // here. The automatic-download interactor supplies an authoritative full snapshot.
+        val visibleChapters = filterBlacklistedChapters(chapters, manga.blacklistedChapters)
+        if (downloader.queueChapters(manga, visibleChapters, autoStart)) {
             startDownloads()
         }
+        // KMK <--
     }
 
     /**

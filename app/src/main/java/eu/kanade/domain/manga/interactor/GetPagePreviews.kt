@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.source.PagePreviewSource
 import eu.kanade.tachiyomi.source.Source
 import exh.source.getMainSource
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.manga.model.Manga
 
 @Inject
@@ -20,7 +21,11 @@ class GetPagePreviews(
     suspend fun await(manga: Manga, source: Source, page: Int): Result {
         @Suppress("NAME_SHADOWING")
         val source = source.getMainSource<PagePreviewSource>() ?: return Result.Unused
-        val chapters = getChaptersByMangaId.await(manga.id).sortedByDescending { it.sourceOrder }
+        // KMK --> Page previews must respect blacklists using the full chapter snapshot.
+        val allChapters = getChaptersByMangaId.await(manga.id)
+        val chapters = filterBlacklistedChapters(allChapters, manga.blacklistedChapters, allChapters)
+            .sortedByDescending { it.sourceOrder }
+        // KMK <--
         val chapterIds = chapters.map { it.id }
         return try {
             val pagePreviews = try {
