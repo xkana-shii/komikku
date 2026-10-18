@@ -1,10 +1,8 @@
-
 package tachiyomi.domain.history.interactor
 
 import dev.zacsweers.metro.Inject
 import exh.source.MERGED_SOURCE_ID
 import exh.source.isEhBasedManga
-import kotlinx.coroutines.flow.first
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
@@ -15,6 +13,7 @@ import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
+import kotlin.math.max
 
 // KMK -->
 private const val DEFAULT_HISTORY_SCAN_LIMIT = 25L
@@ -33,137 +32,54 @@ class GetNextChapters(
 ) {
 
     suspend fun await(onlyUnread: Boolean = true): List<Chapter> {
-        val history = historyRepository.getLastHistory()
-            ?: return emptyList()
-
-        return await(
-            mangaId = history.mangaId,
-            fromChapterId = history.chapterId,
-            onlyUnread = onlyUnread,
-        )
+        val history = historyRepository.getLastHistory() ?: return emptyList()
+        return await(history.mangaId, history.chapterId, onlyUnread)
     }
 
     // KMK -->
-    /**
-     * Finds the first unread continuation among recent History entries.
-     *
-     * Uses the existing HistoryRepository.getHistory() API rather than
-     * referencing a nonexistent getRecentHistory() method.
-     *
-     * The history list is already ordered by most recent reading
-     * activity, with one latest History entry per manga.
-     *
-     * scanLimit bounds the number of entries examined. The existing
-     * repository query still loads its complete result; database-level
-     * LIMIT optimization would require a separate repository query.
-     */
-    suspend fun awaitFirstReadable(
-        scanLimit: Long = DEFAULT_HISTORY_SCAN_LIMIT,
-    ): Chapter? {
-        if (scanLimit <= 0L) return null
-
-        val limit = scanLimit
-            .coerceAtMost(Int.MAX_VALUE.toLong())
-            .toInt()
-
-        val recentHistory = historyRepository.getHistory(
-            query = "",
-            unfinishedManga = null,
-            unfinishedChapter = null,
-            nonLibraryEntries = null,
-        )
-            .first()
-            .take(limit)
-
+    /** Finds the first unread chapter while walking a bounded set of recent History entries. */
+    suspend fun awaitFirstReadable(scanLimit: Long = DEFAULT_HISTORY_SCAN_LIMIT): Chapter? {
         val checkedMangaIds = mutableSetOf<Long>()
-
-        for (history in recentHistory) {
-            if (!checkedMangaIds.add(history.mangaId)) {
-                continue
-            }
-
-            val continuation = await(
-                mangaId = history.mangaId,
-                fromChapterId = history.chapterId,
-                onlyUnread = false,
-            )
-
-            val firstUnread = continuation.firstOrNull { !it.read }
-
-            if (firstUnread != null) {
-                return firstUnread
-            }
+        historyRepository.getRecentHistory(scanLimit).forEach { history ->
+            if (!checkedMangaIds.add(history.mangaId)) return@forEach
+            await(history.mangaId, history.chapterId, onlyUnread = false)
+                .firstOrNull { !it.read }
+                ?.let { return it }
         }
-
         return null
     }
     // KMK <--
 
-    suspend fun await(
-        mangaId: Long,
-        onlyUnread: Boolean = true,
-    ): List<Chapter> {
-        val manga = getManga.await(mangaId)
-            ?: return emptyList()
-
-        // KMK -->
-        // History, next-chapter navigation, and automatic chapter
-        // selection use the same visibility rules.
+    suspend fun await(mangaId: Long, onlyUnread: Boolean = true): List<Chapter> {
+        val manga = getManga.await(mangaId) ?: return emptyList()
+        // KMK --> History, next chapter, and automatic downloads use the same visibility rule.
         val chapters = chaptersFor(manga).filterChapterVisibility(
-            manga = manga,
-            smartScanlatorMergeEnabled = libraryPreferences
-                .smartScanlatorMergeEnabled(manga.id),
+            manga,
+            libraryPreferences.smartScanlatorMergeEnabled(manga.id),
         )
-
         return when {
             !onlyUnread -> chapters
-
-            manga.isEhBasedManga() -> {
-                chapters
-                    .takeLast(1)
-                    .takeUnless { it.firstOrNull()?.read == true }
-                    .orEmpty()
-            }
-
+            manga.isEhBasedManga() -> chapters.takeLast(1).takeUnless { it.firstOrNull()?.read == true }.orEmpty()
             else -> chapters.filterNot(Chapter::read)
         }
         // KMK <--
     }
 
     // KMK -->
-    /**
-     * Loads and sorts chapters before applying Smart Scanlator Merge
-     * and chapter blacklist visibility.
-     *
-     * Source-level chapter filters are preserved.
-     */
     private suspend fun chaptersFor(manga: Manga): List<Chapter> {
         // SY -->
         if (manga.source == MERGED_SOURCE_ID) {
-            return getMergedChaptersByMangaId.await(
-                manga.id,
-                applyFilter = true,
-            ).sortedWith(
-                getChapterSort(manga, sortDescending = false),
-            )
+            return getMergedChaptersByMangaId.await(manga.id, applyFilter = true)
+                .sortedWith(getChapterSort(manga, sortDescending = false))
         }
-
         if (manga.isEhBasedManga()) {
-            return getChaptersByMangaId.await(
-                manga.id,
-                applyFilter = true,
-            ).sortedWith(
-                getChapterSort(manga, sortDescending = false),
-            )
+            return getChaptersByMangaId.await(manga.id, applyFilter = true)
+                .sortedWith(getChapterSort(manga, sortDescending = false))
         }
         // SY <--
 
-        return getChaptersByMangaId.await(
-            manga.id,
-            applyFilter = true,
-        ).sortedWith(
-            getChapterSort(manga, sortDescending = false),
-        )
+        return getChaptersByMangaId.await(manga.id, applyFilter = true)
+            .sortedWith(getChapterSort(manga, sortDescending = false))
     }
     // KMK <--
 
@@ -172,100 +88,38 @@ class GetNextChapters(
         fromChapterId: Long,
         onlyUnread: Boolean = true,
     ): List<Chapter> {
-        val manga = getManga.await(mangaId)
-            ?: return emptyList()
-
-        // KMK -->
-        val smartMergeEnabled = libraryPreferences
-            .smartScanlatorMergeEnabled(manga.id)
-
+        // KMK --> Resolve a hidden History chapter through the complete snapshot.
+        val manga = getManga.await(mangaId) ?: return emptyList()
+        val smartMergeEnabled = libraryPreferences.smartScanlatorMergeEnabled(manga.id)
         val allChapters = chaptersFor(manga)
-
-        if (allChapters.isEmpty()) {
-            return emptyList()
-        }
-
-        val originalIndex = allChapters.indexOfFirst { chapter ->
-            chapter.id == fromChapterId
-        }
-
-        if (originalIndex < 0) {
-            return emptyList()
-        }
-
-        // Resolve chapters hidden by Smart Scanlator Merge to the
-        // corresponding visible chapter before continuing.
-        val visibleChapters = allChapters.filterChapterVisibility(
-            manga = manga,
-            smartScanlatorMergeEnabled = smartMergeEnabled,
-        )
-
-        val resolvedChapter = allChapters.resolveVisibleChapter(
-            manga = manga,
-            smartScanlatorMergeEnabled = smartMergeEnabled,
-            chapterId = fromChapterId,
-            visibleChapters = visibleChapters,
-        )
-
-        // If the chapter is hidden by a blacklist and no visible
-        // replacement exists, continue after the original position.
-        //
-        // This prevents History navigation from starting over at
-        // Chapter 1 when the recorded chapter was blacklisted.
-        val anchorIndex = resolvedChapter
-            ?.let { resolved ->
-                allChapters.indexOfFirst { it.id == resolved.id }
-            }
-            ?.takeIf { it >= 0 }
-            ?: originalIndex
-
-        val anchorChapterId = resolvedChapter?.id
-
+        val visibleChapters = allChapters.filterChapterVisibility(manga, smartMergeEnabled)
         val chapters = when {
             !onlyUnread -> visibleChapters
-
-            manga.isEhBasedManga() -> {
-                visibleChapters
-                    .takeLast(1)
-                    .takeUnless { it.firstOrNull()?.read == true }
-                    .orEmpty()
-            }
-
+            manga.isEhBasedManga() -> visibleChapters.takeLast(1).takeUnless { it.firstOrNull()?.read == true }.orEmpty()
             else -> visibleChapters.filterNot(Chapter::read)
         }
-
-        if (chapters.isEmpty()) {
-            return emptyList()
-        }
-
-        // Preserve the positions of all chapters, including hidden
-        // duplicates, so continuation never moves backward when
-        // blacklist or Smart Merge visibility removes an entry.
-        val chapterPositions = allChapters
-            .withIndex()
-            .associate { (index, chapter) ->
-                chapter.id to index
-            }
-
-        return chapters.filter { chapter ->
-            val position = chapterPositions[chapter.id]
-                ?: return@filter false
-
-            when {
-                position > anchorIndex -> true
-
-                position < anchorIndex -> false
-
-                // A currently unread chapter may be resumed.
-                // Read chapters are skipped for continuation.
-                position == anchorIndex -> {
-                    chapter.id == anchorChapterId &&
-                        !chapter.read
-                }
-
-                else -> false
-            }
-        }
+        val resolvedChapter = allChapters.resolveVisibleChapter(
+            manga,
+            smartMergeEnabled,
+            fromChapterId,
+            visibleChapters,
+        )
+        val currChapterIndex = chapters.indexOfFirst { it.id == resolvedChapter?.id }
         // KMK <--
+        val nextChapters = chapters.subList(max(0, currChapterIndex), chapters.size)
+
+        if (onlyUnread) {
+            return nextChapters
+        }
+
+        // The "next chapter" is either:
+        // - The current chapter if it isn't completely read
+        // - The chapters after the current chapter if the current one is completely read
+        val fromChapter = chapters.getOrNull(currChapterIndex)
+        return if (fromChapter != null && !fromChapter.read) {
+            nextChapters
+        } else {
+            nextChapters.drop(1)
+        }
     }
 }
