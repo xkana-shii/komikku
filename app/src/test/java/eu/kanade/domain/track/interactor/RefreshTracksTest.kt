@@ -1,288 +1,396 @@
+
 package eu.kanade.domain.track.interactor
 
+import android.content.Context
 import eu.kanade.domain.track.model.toDbTrack
-import eu.kanade.domain.track.service.TrackPreferences
-import eu.kanade.tachiyomi.data.track.BaseTracker
+import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
-import eu.kanade.tachiyomi.data.track.mdlist.MdList
-import eu.kanade.tachiyomi.ui.manga.track.TrackerOperationQueue
-import exh.md.utils.FollowStatus
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.track.interactor.GetTracks
-import tachiyomi.domain.track.interactor.InsertTrack
+import tachiyomi.domain.track.interactor.UpsertTrack
 import tachiyomi.domain.track.model.Track
+import kotlin.time.Instant
 import eu.kanade.tachiyomi.data.database.models.Track as DbTrack
 
 class RefreshTracksTest {
+
     private val getTracks = mockk<GetTracks>()
     private val manager = mockk<TrackerManager>()
-    private val insert = mockk<InsertTrack>(relaxed = true)
+    private val upsert = mockk<UpsertTrack>(relaxed = true)
     private val local = mockk<SyncChapterProgressWithTrack>()
-    private val preferences = mockk<TrackPreferences>(relaxed = true)
-    private val one = tracker(1)
-    private val two = tracker(2)
-    private val subject = RefreshTracks(getTracks, manager, insert, local, preferences)
-    private fun track(id: Long, progress: Double, status: Long = 1) = Track(id, 10, id, id, null, "Title", progress, 100, status, 0.0, "", 10, 20, false)
-    private fun tracker(id: Long) = mockk<BaseTracker> {
+    private val context = mockk<Context>()
+
+    private val one = tracker(1L)
+    private val two = tracker(2L)
+
+    private val subject = RefreshTracks(
+        getTracks = getTracks,
+        trackerManager = manager,
+        upsertTrack = upsert,
+        syncChapterProgressWithTrack = local,
+        context = context,
+    )
+
+    private fun track(
+        trackerId: Long,
+        progress: Double,
+        status: Long = 1L,
+    ) = Track(
+        id = trackerId,
+        mangaId = 10L,
+        trackerId = trackerId,
+        remoteId = trackerId,
+        libraryId = null,
+        title = "Title",
+        lastChapterRead = progress,
+        totalChapters = 100L,
+        status = status,
+        score = 0.0,
+        remoteUrl = "",
+        startDate = null,
+        finishDate = null,
+        private = false,
+    )
+
+    private fun tracker(id: Long) = mockk<Tracker> {
         every { this@mockk.id } returns id
         every { isLoggedIn } returns true
-        every { getRereadingStatus() } returns 6
-        every { getReadingStatus() } returns 1
-        coEvery { refresh(any()) } answers { firstArg() }
-        coEvery { update(any(), any()) } answers { firstArg() }
+        every { getReadingStatus() } returns 1L
+        every { getCompletionStatus() } returns 2L
+        every { getRereadingStatus() } returns 6L
+
+        coEvery {
+            refresh(any())
+        } answers {
+            firstArg()
+        }
+
+        coEvery {
+            update(any(), any())
+        } answers {
+            firstArg()
+        }
     }
 
     init {
-        every { manager.get(1) } returns one
-        every { manager.get(2) } returns two
-        every { preferences.autoSyncProgressFromTrackers().get() } returns true
-        every { preferences.resolvePreferredTracker(any(), any()) } returns null
-        coEvery { local.await(any(), any(), any(), any()) } returns null
-        coEvery { local.sync(any(), any(), any(), any()) } returns null
+        every { manager.get(1L) } returns one
+        every { manager.get(2L) } returns two
+
+        coEvery {
+            getTracks.await(10L)
+        } returns listOf(
+            track(1L, 3.0),
+            track(2L, 8.0),
+        )
+
+        coEvery {
+            local.await(any(), any(), any())
+        } returns null
+
+        coEvery {
+            local.sync(any(), any(), any())
+        } returns null
     }
 
     @Test
-    fun `queued rapid taps read persisted progress while sibling step writes remain concurrent`() = runTest {
-        val queue = TrackerOperationQueue()
-        val persisted = mutableMapOf(1L to track(1, 8.0), 2L to track(2, 8.0))
-        coEvery { getTracks.await(10) } answers { persisted.values.toList() }
-        coEvery { insert.awaitOrThrow(any()) } answers {
-            val returned = firstArg<Track>()
-            persisted[returned.trackerId] = returned
-        }
-        val release = CompletableDeferred<Unit>()
-        val started = mutableListOf<Pair<Long, Double>>()
-        listOf(one, two).forEach { service ->
-            coEvery { service.update(any(), true) } coAnswers {
-                val binding = firstArg<DbTrack>()
-                started += service.id to binding.last_chapter_read
-                if (service.id == 1L) release.await()
-                binding.apply { finished_reading_date = 99 }
-            }
-        }
-        val operations = listOf(1, 1, -1).map { delta ->
-            async { queue.run { subject.adjustProgress(10, delta) shouldBe emptyList() } }
-        }
-        try {
-            testScheduler.runCurrent()
-            // First tap starts both services, but subsequent taps wait for its persistence.
-            started shouldBe listOf(1L to 9.0, 2L to 9.0)
-            operations.all { !it.isCompleted } shouldBe true
-        } finally {
-            release.complete(Unit)
-        }
-        operations.forEach { it.await() }
-        started shouldBe listOf(1L to 9.0, 2L to 9.0, 1L to 10.0, 2L to 10.0, 1L to 9.0, 2L to 9.0)
-        persisted.values.map { it.lastChapterRead } shouldBe listOf(9.0, 9.0)
-        persisted.values.map { it.finishDate } shouldBe listOf(99L, 99L)
-    }
+    fun `refresh persists every successful tracker`() = runTest {
+        subject.await(10L) shouldBe emptyList()
 
-    @Test
-    fun `failed service does not discard queued steps or successful sibling persistence`() = runTest {
-        val queue = TrackerOperationQueue()
-        val persisted = mutableMapOf(1L to track(1, 8.0), 2L to track(2, 8.0))
-        coEvery { getTracks.await(10) } answers { persisted.values.toList() }
-        coEvery { insert.awaitOrThrow(any()) } answers {
-            val returned = firstArg<Track>()
-            persisted[returned.trackerId] = returned
+        coVerify(exactly = 2) {
+            upsert.await(any())
         }
-        coEvery { one.update(any(), true) } throws IllegalStateException("offline")
-        val operations = List(3) {
-            async { queue.run { subject.adjustProgress(10, 1).single().first shouldBe one } }
-        }
-        operations.forEach { it.await() }
-        persisted[1L]!!.lastChapterRead shouldBe 8.0
-        persisted[2L]!!.lastChapterRead shouldBe 11.0
-    }
 
-    @Test
-    fun `plus and minus start sibling writes before a slow tracker finishes`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        for (delta in listOf(-1, 1)) {
-            val release = CompletableDeferred<Unit>()
-            val started = mutableListOf<Long>()
-            coEvery { one.update(any(), true) } coAnswers {
-                started += 1L
-                release.await()
-                firstArg()
-            }
-            coEvery { two.update(any(), true) } coAnswers {
-                started += 2L
-                firstArg()
-            }
-            val operation = async { subject.adjustProgress(10, delta) }
-            try {
-                testScheduler.runCurrent()
-                started shouldBe listOf(1L, 2L)
-                operation.isCompleted shouldBe false
-            } finally {
-                release.complete(Unit)
-            }
-            operation.await() shouldBe emptyList()
+        coVerify(exactly = 2) {
+            local.await(any(), any(), any())
         }
     }
 
     @Test
-    fun `configured reconciliation advances only lagging tracker`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        subject.await(10) shouldBe emptyList()
-        coVerify { one.update(match { it.last_chapter_read == 8.0 && it.started_reading_date == 10L }, false) }
-        coVerify(exactly = 0) { two.update(any(), any()) }
+    fun `full synchronization uses the unrestricted sync path`() = runTest {
+        subject.await(
+            mangaId = 10L,
+            enhancedTrackersOnly = false,
+        ) shouldBe emptyList()
+
+        coVerify(exactly = 2) {
+            local.sync(any(), any(), any())
+        }
+
+        coVerify(exactly = 0) {
+            local.await(any(), any(), any())
+        }
     }
 
     @Test
-    fun `rereading and preferred lower progress do not cause rollback or fast forward`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0, 6), track(2, 100.0, 2))
-        subject.await(10) shouldBe emptyList()
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        every { preferences.resolvePreferredTracker(any(), any()) } returns 1
-        subject.await(10) shouldBe emptyList()
-        coVerify(exactly = 0) { one.update(any(), any()) }
-        coVerify(exactly = 0) { two.update(any(), any()) }
+    fun `refresh failure does not prevent another tracker from persisting`() = runTest {
+        coEvery {
+            one.refresh(any())
+        } throws IllegalStateException("Offline")
+
+        val failures = subject.await(10L)
+
+        failures.size shouldBe 1
+        failures.single().first shouldBe one
+
+        coVerify(exactly = 1) {
+            upsert.await(
+                match {
+                    it.trackerId == 2L
+                },
+            )
+        }
+
+        coVerify(exactly = 0) {
+            upsert.await(
+                match {
+                    it.trackerId == 1L
+                },
+            )
+        }
     }
 
     @Test
-    fun `refresh failures stay visible and prevent propagating stale values`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        coEvery { two.refresh(any()) } throws IllegalStateException("remote failed")
-        val errors = subject.await(10)
-        errors.size shouldBe 1
-        errors.single().first shouldBe two
-        coVerify(exactly = 0) { one.update(any(), any()) }
+    fun `plus updates all bound trackers to one shared progress value`() = runTest {
+        subject.adjustProgress(
+            mangaId = 10L,
+            delta = 1,
+        ) shouldBe emptyList()
+
+        coVerify(exactly = 1) {
+            one.update(
+                match {
+                    it.last_chapter_read == 9.0
+                },
+                true,
+            )
+        }
+
+        coVerify(exactly = 1) {
+            two.update(
+                match {
+                    it.last_chapter_read == 9.0
+                },
+                true,
+            )
+        }
+
+        coVerify(exactly = 2) {
+            upsert.await(
+                match {
+                    it.lastChapterRead == 9.0
+                },
+            )
+        }
     }
 
     @Test
-    fun `single tracker behavior keeps local sync but does not reconcile services`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0))
-        subject.await(10) shouldBe emptyList()
-        coVerify { local.sync(10, any(), one, true) }
-        coVerify(exactly = 0) { one.update(any(), any()) }
+    fun `minus updates all trackers and clamps progress to zero`() = runTest {
+        subject.adjustProgress(
+            mangaId = 10L,
+            delta = -1,
+        ) shouldBe emptyList()
+
+        coVerify {
+            one.update(
+                match {
+                    it.last_chapter_read == 7.0
+                },
+                true,
+            )
+        }
+
+        coVerify {
+            two.update(
+                match {
+                    it.last_chapter_read == 7.0
+                },
+                true,
+            )
+        }
+
+        coEvery {
+            getTracks.await(10L)
+        } returns listOf(
+            track(1L, 0.0),
+            track(2L, 0.0),
+        )
+
+        subject.adjustProgress(
+            mangaId = 10L,
+            delta = -1,
+        ) shouldBe emptyList()
+
+        coVerify {
+            one.update(
+                match {
+                    it.last_chapter_read == 0.0
+                },
+                true,
+            )
+        }
+
+        coVerify {
+            two.update(
+                match {
+                    it.last_chapter_read == 0.0
+                },
+                true,
+            )
+        }
     }
 
     @Test
-    fun `auto sync off refreshes and persists without any reconciliation`() = runTest {
-        every { preferences.autoSyncProgressFromTrackers().get() } returns false
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        subject.await(10) shouldBe emptyList()
-        coVerify(exactly = 2) { insert.await(any()) }
+    fun `failed service does not prevent successful sibling progress`() = runTest {
+        coEvery {
+            one.update(any(), true)
+        } throws IllegalStateException("Remote failed")
+
+        val failures = subject.adjustProgress(
+            mangaId = 10L,
+            delta = 1,
+        )
+
+        failures.size shouldBe 1
+        failures.single().first shouldBe one
+
+        coVerify(exactly = 1) {
+            upsert.await(
+                match {
+                    it.trackerId == 2L &&
+                        it.lastChapterRead == 9.0
+                },
+            )
+        }
+
+        coVerify(exactly = 0) {
+            upsert.await(
+                match {
+                    it.trackerId == 1L
+                },
+            )
+        }
+    }
+
+    @Test
+    fun `failed refresh does not propagate stale tracker progress`() = runTest {
+        coEvery {
+            one.refresh(any())
+        } throws IllegalStateException("Refresh failed")
+
+        val failures = subject.adjustProgress(
+            mangaId = 10L,
+            delta = 1,
+        )
+
+        failures.size shouldBe 1
+        failures.single().first shouldBe one
+
         coVerify(exactly = 0) {
             one.update(any(), any())
-            two.update(any(), any())
-            local.sync(any(), any(), any(), any())
-            local.await(any(), any(), any(), any())
+        }
+
+        coVerify(exactly = 1) {
+            two.update(
+                match {
+                    it.last_chapter_read == 9.0
+                },
+                true,
+            )
         }
     }
 
     @Test
-    fun `plus refreshes ahead remote and persists returned dates on every service`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        coEvery { two.refresh(any()) } returns track(2, 12.0).toDbTrack()
-        coEvery { one.update(any(), true) } answers { firstArg<DbTrack>().apply { finished_reading_date = 99 } }
-        subject.adjustProgress(10, 1) shouldBe emptyList()
-        coVerify {
-            one.update(match { it.last_chapter_read == 13.0 }, true)
-            two.update(match { it.last_chapter_read == 13.0 }, true)
+    fun `remote returned status and reading dates are persisted`() = runTest {
+        coEvery {
+            one.update(any(), true)
+        } answers {
+            firstArg<DbTrack>().apply {
+                status = 1L
+                started_reading_date = 50L
+                finished_reading_date = 99L
+            }
         }
-        coVerify { insert.awaitOrThrow(match { it.trackerId == 1L && it.lastChapterRead == 13.0 && it.finishDate == 99L }) }
-    }
 
-    @Test
-    fun `minus updates every service and clamps at zero`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        subject.adjustProgress(10, -1) shouldBe emptyList()
-        coVerify {
-            one.update(match { it.last_chapter_read == 7.0 }, true)
-            two.update(match { it.last_chapter_read == 7.0 }, true)
+        subject.adjustProgress(
+            mangaId = 10L,
+            delta = 1,
+        ) shouldBe emptyList()
+
+        coVerify(exactly = 1) {
+            upsert.await(
+                match {
+                    it.trackerId == 1L &&
+                        it.lastChapterRead == 9.0 &&
+                        it.startDate ==
+                        Instant.fromEpochMilliseconds(50) &&
+                        it.finishDate ==
+                        Instant.fromEpochMilliseconds(99)
+                },
+            )
         }
-        coEvery { getTracks.await(10) } returns listOf(track(1, 0.0), track(2, 0.0))
-        subject.adjustProgress(10, -1) shouldBe emptyList()
-        coVerify {
-            one.update(match { it.last_chapter_read == 0.0 }, true)
-            two.update(match { it.last_chapter_read == 0.0 }, true)
+    }
+
+    @Test
+    fun `rereading progress cannot be fast forwarded by a completed tracker`() = runTest {
+        coEvery {
+            getTracks.await(10L)
+        } returns listOf(
+            track(1L, 3.0, status = 6L),
+            track(2L, 100.0, status = 2L),
+        )
+
+        subject.adjustProgress(
+            mangaId = 10L,
+            delta = 1,
+        ) shouldBe emptyList()
+
+        coVerify(exactly = 1) {
+            one.update(
+                match {
+                    it.last_chapter_read == 4.0 &&
+                        it.status == 6L
+                },
+                true,
+            )
         }
-    }
 
-    @Test
-    fun `failed update does not block other services and next attempt clears failures`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        coEvery { one.update(any(), any()) } throws IllegalStateException("update failed")
-        subject.adjustProgress(10, 1).single().first shouldBe one
-        coVerify { two.update(match { it.last_chapter_read == 9.0 }, true) }
-        coEvery { one.update(any(), any()) } answers { firstArg() }
-        subject.adjustProgress(10, 1) shouldBe emptyList()
-    }
-
-    @Test
-    fun `failed refresh does not block explicit adjustment of successful service`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0))
-        coEvery { one.refresh(any()) } throws IllegalStateException("refresh failed")
-        subject.adjustProgress(10, 1).single().first shouldBe one
-        coVerify(exactly = 0) { one.update(any(), any()) }
-        coVerify { two.update(match { it.last_chapter_read == 9.0 }, true) }
-    }
-
-    @Test
-    fun `explicit adjustment keeps rereading separate from completed progress`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0, 6), track(2, 100.0, 2))
-        subject.adjustProgress(10, 1) shouldBe emptyList()
-        coVerify { one.update(match { it.last_chapter_read == 4.0 && it.status == 6L }, true) }
-    }
-
-    @Test
-    fun `unfollowed MDList is refreshed but never updated or imported`() = runTest {
-        val mdlist = mockk<MdList> {
-            every { id } returns 3L
-            every { isLoggedIn } returns true
-            coEvery { refresh(any()) } answers { firstArg() }
-        }
-        every { manager.get(3) } returns mdlist
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0), track(3, 90.0, FollowStatus.UNFOLLOWED.long))
-        subject.adjustProgress(10, 1) shouldBe emptyList()
-        subject.await(10) shouldBe emptyList()
         coVerify(exactly = 0) {
-            mdlist.update(any(), any())
-            local.sync(any(), any(), mdlist, any())
+            two.update(any(), any())
         }
-        coVerify { one.update(match { it.last_chapter_read == 9.0 }, true) }
     }
 
     @Test
-    fun `rereading guard also prevents completed services marking local chapters read`() = runTest {
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0, 6), track(2, 100.0, 2))
-        subject.await(10) shouldBe emptyList()
-        coVerify(exactly = 0) { local.sync(any(), any(), any(), any()) }
-    }
+    fun `successive operations use newly persisted progress`() = runTest {
+        val persisted = mutableMapOf(
+            1L to track(1L, 8.0),
+            2L to track(2L, 8.0),
+        )
 
-    @Test
-    fun `third service failure does not stop successful service reconciliation`() = runTest {
-        val three = tracker(3)
-        every { manager.get(3) } returns three
-        coEvery { three.refresh(any()) } throws IllegalStateException("offline")
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0), track(3, 100.0))
-        subject.await(10).single().first shouldBe three
-        coVerify { one.update(match { it.last_chapter_read == 8.0 }, false) }
-        coVerify(exactly = 0) { three.update(any(), any()) }
-    }
-
-    @Test
-    fun `plus and minus update three bound trackers even with a preferred service`() = runTest {
-        val three = tracker(3)
-        every { manager.get(3) } returns three
-        every { preferences.resolvePreferredTracker(any(), any()) } returns 1
-        coEvery { getTracks.await(10) } returns listOf(track(1, 3.0), track(2, 8.0), track(3, 6.0))
-        subject.adjustProgress(10, 1) shouldBe emptyList()
-        subject.adjustProgress(10, -1) shouldBe emptyList()
-        listOf(one, two, three).forEach { service ->
-            coVerify { service.update(match { it.last_chapter_read == 9.0 }, true) }
-            coVerify { service.update(match { it.last_chapter_read == 7.0 }, true) }
+        coEvery {
+            getTracks.await(10L)
+        } answers {
+            persisted.values.toList()
         }
+
+        coEvery {
+            upsert.await(any())
+        } answers {
+            val written = firstArg<Track>()
+            persisted[written.trackerId] = written
+        }
+
+        subject.adjustProgress(10L, 1) shouldBe emptyList()
+        subject.adjustProgress(10L, 1) shouldBe emptyList()
+        subject.adjustProgress(10L, -1) shouldBe emptyList()
+
+        persisted.values.map {
+            it.lastChapterRead
+        } shouldBe listOf(9.0, 9.0)
     }
 }

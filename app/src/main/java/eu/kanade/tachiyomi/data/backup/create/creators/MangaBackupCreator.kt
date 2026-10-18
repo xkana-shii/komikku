@@ -1,3 +1,4 @@
+
 package eu.kanade.tachiyomi.data.backup.create.creators
 
 import dev.zacsweers.metro.Inject
@@ -35,13 +36,10 @@ class MangaBackupCreator(
     private val categoryRepository: CategoryRepository,
     private val historyRepository: HistoryRepository,
     private val trackRepository: TrackRepository,
-
-    // SY -->
     private val mangaMergeRepository: MangaMergeRepository,
     private val sourceManager: SourceManager,
     private val getCustomMangaInfo: GetCustomMangaInfo,
     private val getFlatMetadataById: GetFlatMetadataById,
-    // SY <--
 ) {
 
     operator fun invoke(
@@ -49,7 +47,10 @@ class MangaBackupCreator(
         options: BackupOptions,
     ): Flow<BackupManga> = flow {
         mangas.chunked(CHUNK_SIZE).forEach { chunk ->
-            backupMangas(chunk, options).forEach { backup ->
+            backupMangas(
+                mangas = chunk,
+                options = options,
+            ).forEach { backup ->
                 emit(backup)
             }
         }
@@ -62,7 +63,9 @@ class MangaBackupCreator(
         val mangaIds = mangas.map { it.id }
 
         val excludedScanlatorsByMangaId =
-            mangaRepository.getExcludedScanlatorsByMangaIds(mangaIds)
+            mangaRepository.getExcludedScanlatorsByMangaIds(
+                mangaIds,
+            )
 
         val chaptersByMangaId = if (
             options.chapters || options.history
@@ -75,7 +78,9 @@ class MangaBackupCreator(
         }
 
         val categoriesByMangaId = if (options.categories) {
-            categoryRepository.getCategoriesByMangaIds(mangaIds)
+            categoryRepository.getCategoriesByMangaIds(
+                mangaIds,
+            )
         } else {
             emptyMap()
         }
@@ -89,7 +94,9 @@ class MangaBackupCreator(
         }
 
         val historyByMangaId = if (options.history) {
-            historyRepository.getHistoryByMangaIds(mangaIds)
+            historyRepository.getHistoryByMangaIds(
+                mangaIds,
+            )
         } else {
             emptyMap()
         }
@@ -106,9 +113,12 @@ class MangaBackupCreator(
 
             // SY -->
             if (manga.source == MERGED_SOURCE_ID) {
-                backup.mergedMangaReferences = mangaMergeRepository
-                    .getReferencesById(manga.id)
-                    .map { it.toBackupMergedMangaReference() }
+                backup.mergedMangaReferences =
+                    mangaMergeRepository
+                        .getReferencesById(manga.id)
+                        .map {
+                            it.toBackupMergedMangaReference()
+                        }
             }
 
             val source = sourceManager
@@ -119,7 +129,9 @@ class MangaBackupCreator(
                 getFlatMetadataById.await(manga.id)
                     ?.let { flatMetadata ->
                         backup.flatMetadata =
-                            BackupFlatMetadata.copyFrom(flatMetadata)
+                            BackupFlatMetadata.copyFrom(
+                                flatMetadata,
+                            )
                     }
             }
             // SY <--
@@ -134,15 +146,17 @@ class MangaBackupCreator(
             }
 
             if (options.categories) {
-                backup.categories = categoriesByMangaId[manga.id]
-                    .orEmpty()
-                    .map { it.order }
+                backup.categories =
+                    categoriesByMangaId[manga.id]
+                        .orEmpty()
+                        .map { it.order }
             }
 
             if (options.tracking) {
-                backup.tracking = tracksByMangaId[manga.id]
-                    .orEmpty()
-                    .map { it.toBackupTracking() }
+                backup.tracking =
+                    tracksByMangaId[manga.id]
+                        .orEmpty()
+                        .map { it.toBackupTracking() }
             }
 
             if (options.history) {
@@ -153,8 +167,9 @@ class MangaBackupCreator(
                 backup.history = historyByMangaId[manga.id]
                     .orEmpty()
                     .mapNotNull { history ->
-                        val url = chapterUrlsById[history.chapterId]
-                            ?: return@mapNotNull null
+                        val url =
+                            chapterUrlsById[history.chapterId]
+                                ?: return@mapNotNull null
 
                         BackupHistory(
                             url,
@@ -173,7 +188,10 @@ class MangaBackupCreator(
     }
 }
 
-private fun Manga.toBackupManga(
+// KMK -->
+// Internal visibility permits compatibility tests to use the
+// exact same converter as production backup creation.
+internal fun Manga.toBackupManga(
     customMangaInfo: CustomMangaInfo?,
 ) = BackupManga(
     url = url,
@@ -203,7 +221,9 @@ private fun Manga.toBackupManga(
     memo = memo.toByteArray(),
     nextUpdate = nextUpdate.toEpochMillisOrZero(),
 
-    // KMK --> Back up every user-owned chapter setting.
+    // KMK -->
+    lastUpdate = lastUpdate.toEpochMillisOrZero(),
+    fetchInterval = fetchInterval,
     scanlatorPriority = scanlatorPriority,
     blacklistedChapters = blacklistedChapters,
     scanlatorRangeRules = scanlatorRangeRules,
@@ -221,3 +241,4 @@ private fun Manga.toBackupManga(
     }
     // SY <--
 }
+// KMK <--

@@ -2,8 +2,10 @@ package eu.kanade.domain.track.interactor
 
 import dev.zacsweers.metro.Inject
 import eu.kanade.domain.track.model.toDbTrack
+import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
+import kotlinx.coroutines.CancellationException
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -19,8 +21,9 @@ class SyncChapterProgressWithTrack(
     private val upsertTrack: UpsertTrack,
     private val getChaptersByMangaId: GetChaptersByMangaId,
 ) {
+
     /**
-     * Sync chapter progress with the [EnhancedTracker]
+     * Synchronize chapter progress for an enhanced tracker.
      */
     suspend fun await(
         mangaId: Long,
@@ -30,76 +33,103 @@ class SyncChapterProgressWithTrack(
         if (tracker !is EnhancedTracker) {
             return null
         }
-        // KMK -->
-        return sync(mangaId, remoteTrack, tracker)
+
+        return sync(
+            mangaId,
+            remoteTrack,
+            tracker,
+        )
     }
 
     /**
-     * Sync chapter progress with the all trackers.
+     * Synchronize reading progress with any supported tracker.
+     *
+     * Local chapter updates are applied only when the tracker
+     * has actually started reading the series.
      */
     suspend fun sync(
         mangaId: Long,
         remoteTrack: Track,
         tracker: Tracker,
     ): Int? {
-        // KMK <--
-        // Current chapters in database, sort by source's order because database's order is a mess
         val dbChapters = getChaptersByMangaId.await(mangaId)
-            // KMK -->
             .sortedByDescending { it.sourceOrder }
-            // KMK <--
             .filter { it.isRecognizedNumber }
 
-        val sortedChapters = dbChapters
-            .sortedBy { it.chapterNumber }
+        val sortedChapters = dbChapters.sortedBy {
+            it.chapterNumber
+        }
 
-        // KMK -->
-        var lastCheckChapter: Double
         var checkingChapter = 0.0
 
-        /**
-         * Chapters to update to follow tracker: only continuous incremental chapters
-         * any abnormal chapter number will stop it from updating read status further.
-         * Some mangas has name such as Volume 2 Chapter 1 which will corrupt the order
-         * if we sort by chapterNumber.
-         */
         val chapterUpdates = dbChapters
             .takeWhile { chapter ->
-                lastCheckChapter = checkingChapter
+                val lastCheckedChapter = checkingChapter
                 checkingChapter = chapter.chapterNumber
-                chapter.chapterNumber >= lastCheckChapter && chapter.chapterNumber <= remoteTrack.lastChapterRead
-            }
-            .filter { chapter -> !chapter.read }
-            // KMK <--
-            .map { ChapterUpdate(it.id) { read = true } }
 
-        // only take into account continuous reading
-        val localLastRead = sortedChapters.takeWhile { it.read }.lastOrNull()?.chapterNumber ?: 0F
-        // Tracker will update to latest read chapter
-        val lastRead = max(remoteTrack.lastChapterRead, localLastRead.toDouble())
-        val updatedTrack = remoteTrack.copy(lastChapterRead = lastRead)
+                chapter.chapterNumber >= lastCheckedChapter &&
+                    chapter.chapterNumber <= remoteTrack.lastChapterRead
+            }
+            .filterNot { it.read }
+            .map { chapter ->
+                ChapterUpdate(chapter.id) {
+                    read = true
+                }
+            }
+
+        val localLastRead = sortedChapters
+            .takeWhile { it.read }
+            .lastOrNull()
+            ?.chapterNumber
+            ?: 0.0
+
+        val lastRead = max(
+            remoteTrack.lastChapterRead,
+            localLastRead,
+        )
+
+        val updatedTrack = remoteTrack.copy(
+            lastChapterRead = lastRead,
+        )
 
         try {
-            // Update Tracker to localLastRead if needed
             if (lastRead > remoteTrack.lastChapterRead) {
-                tracker.update(updatedTrack.toDbTrack())
-                // update Track in database
-                upsertTrack.await(updatedTrack)
+                // KMK -->
+                // The remote service may update status, start date,
+                // finish date, and other personal tracking data.
+                val remoteResult = tracker.update(
+                    updatedTrack.toDbTrack(),
+                    false,
+                )
+
+                val persisted = remoteResult
+                    .toDomainTrack(idRequired = false)
+                    ?.copy(
+                        id = remoteTrack.id,
+                        mangaId = remoteTrack.mangaId,
+                        trackerId = remoteTrack.trackerId,
+                    )
+                    ?: updatedTrack
+
+                upsertTrack.await(persisted)
+                // KMK <--
             }
-            // KMK -->
-            // Always update local chapters following Tracker even past chapters
-            if (chapterUpdates.isNotEmpty() &&
+
+            if (
+                chapterUpdates.isNotEmpty() &&
                 !tracker.hasNotStartedReading(remoteTrack.status)
             ) {
                 updateChapter.awaitAll(chapterUpdates)
                 return lastRead.toInt()
             }
-            // KMK <--
-        } catch (e: Throwable) {
-            logcat(LogPriority.WARN, e)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN, e) {
+                "Failed to synchronize chapter progress for manga $mangaId"
+            }
         }
-        // KMK -->
+
         return null
-        // KMK <--
     }
 }
