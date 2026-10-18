@@ -63,10 +63,9 @@ class CustomMangaRepositoryImpl(context: Context) : CustomMangaRepository {
 
     private fun saveCustomInfo() {
         val jsonElements = customMangaMap.values.map { it.toJson() }
-        if (jsonElements.isNotEmpty()) {
-            editJson.delete()
-            editJson.writeText(Json.encodeToString(MangaList(jsonElements)))
-        }
+        // KMK --> Persist an empty list so cleared edits do not reappear after reloading.
+        editJson.writeText(Json.encodeToString(MangaList(jsonElements)))
+        // KMK <--
     }
 
     @Serializable

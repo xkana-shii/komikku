@@ -65,9 +65,9 @@ class MangaBakaRelationsTest {
 
 internal fun mangaBakaRelationItem(type: String, id: Long = 7): MangaBakaItem = Json.decodeFromString(
     """
-    {"id":$id,"type":"$type",
-    "cover":{"raw":{"url":"https://example.invalid/cover"},"x150":{"x1":null,"x2":null,"x3":null},"x250":{"x1":null,"x2":null,"x3":null},"x350":{"x1":null,"x2":null,"x3":null}},
-    "authors":null,"artists":null,"description":null,"published":{"start_date":null},"rating":null,"total_chapters":null,
+    {"id":$id,"type":"$type","status":"ongoing",
+    "cover":{"x250":{"x1":"https://example.invalid/cover"}},
+    "authors":null,"artists":null,"description":null,"published":{"start_date":null},"rating":null,
     "titles":[{"language":"en","traits":[],"title":"Novel Hero","is_primary":true}]}
     """.trimIndent(),
 )

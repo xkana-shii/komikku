@@ -40,6 +40,9 @@ class TrackChapter(
                 if (
                     service == null ||
                     !service.isLoggedIn ||
+                    // KMK --> Ignore invalid source chapter numbers rather than publishing them.
+                    !chapterNumber.isFinite() ||
+                    // KMK <--
                     chapterNumber <= track.lastChapterRead /* SY --> */ ||
                     (service is MdList && track.status == FollowStatus.UNFOLLOWED.long)/* SY <-- */
                 ) {
@@ -49,11 +52,16 @@ class TrackChapter(
                 async {
                     runCatching {
                         try {
-                            val updatedTrack = service.refresh(track.toDbTrack())
+                            val refreshedTrack = service.refresh(track.toDbTrack())
                                 .toDomainTrack(idRequired = true)!!
-                                .copy(lastChapterRead = chapterNumber)
-                            service.update(updatedTrack.toDbTrack(), true)
-                            upsertTrack.await(updatedTrack)
+                            // KMK --> Never roll a tracker back when its remote progress is ahead.
+                            val updatedTrack = refreshedTrack.copy(
+                                lastChapterRead = maxOf(refreshedTrack.lastChapterRead, chapterNumber),
+                            )
+                            val persistedTrack = service.update(updatedTrack.toDbTrack(), true)
+                                .toDomainTrack(idRequired = true)!!
+                            // KMK <--
+                            upsertTrack.await(persistedTrack)
                             delayedTrackingStore.remove(track.id)
                         } catch (e: Exception) {
                             delayedTrackingStore.add(track.id, chapterNumber)
