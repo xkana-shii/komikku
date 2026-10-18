@@ -10,7 +10,7 @@ import tachiyomi.core.common.preference.Preference
 /**
  * Common configuration for all viewers.
  */
-abstract class ViewerConfig(readerPreferences: ReaderPreferences, private val scope: CoroutineScope) {
+abstract class ViewerConfig(protected val readerPreferences: ReaderPreferences, private val scope: CoroutineScope) {
 
     var imagePropertyChangedListener: (() -> Unit)? = null
 
@@ -41,40 +41,31 @@ abstract class ViewerConfig(readerPreferences: ReaderPreferences, private val sc
     var dualPageRotateToFitInvert = false
         protected set
 
-    var automationMaxMinutes = readerPreferences.automationMaxMinutes().get()
-    var automationMaxChapters = readerPreferences.automationMaxChapters().get()
-
     abstract var navigator: ViewerNavigation
         protected set
 
     init {
-        readerPreferences.readWithLongTap()
+        readerPreferences.readWithLongTap
             .register({ longTapEnabled = it })
 
-        readerPreferences.doubleTapAnimSpeed()
+        readerPreferences.doubleTapAnimSpeed
             .register({ doubleTapAnimDuration = it })
 
-        readerPreferences.readWithVolumeKeys()
+        readerPreferences.readWithVolumeKeys
             .register({ volumeKeysEnabled = it })
 
-        readerPreferences.readWithVolumeKeysInverted()
+        readerPreferences.readWithVolumeKeysInverted
             .register({ volumeKeysInverted = it })
 
-        readerPreferences.alwaysShowChapterTransition()
+        readerPreferences.alwaysShowChapterTransition
             .register({ alwaysShowChapterTransition = it })
 
-        readerPreferences.automationMaxMinutes()
-            .register({ automationMaxMinutes = it })
-
-        readerPreferences.automationMaxChapters()
-            .register({ automationMaxChapters = it })
-
-        forceNavigationOverlay = readerPreferences.showNavigationOverlayNewUser().get()
+        forceNavigationOverlay = readerPreferences.showNavigationOverlayNewUser.get()
         if (forceNavigationOverlay) {
-            readerPreferences.showNavigationOverlayNewUser().set(false)
+            readerPreferences.showNavigationOverlayNewUser.set(false)
         }
 
-        readerPreferences.showNavigationOverlayOnStart()
+        readerPreferences.showNavigationOverlayOnStart
             .register({ navigationOverlayOnStart = it })
     }
 

@@ -4,18 +4,19 @@ import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
-import tachiyomi.data.MemoColumnAdapter
-import tachiyomi.domain.chapter.service.legacyFillermarkBlacklistKeys
-import tachiyomi.domain.manga.model.CustomMangaInfo
+import mihon.core.common.extensions.toInstantOrNull
+import mihon.core.common.extensions.toJsonObject
 import tachiyomi.domain.manga.model.Manga
 
 @Suppress("DEPRECATION")
 @Serializable
 class BackupManga(
     // in 1.x some of these values have different names
-    @ProtoNumber(1) var source: Long,
+    // SY -->
+    @ProtoNumber(1) var source: Long = 0,
     // url is called key in 1.x
-    @ProtoNumber(2) var url: String,
+    @ProtoNumber(2) var url: String = "",
+    // SY <--
     @ProtoNumber(3) var title: String = "",
     @ProtoNumber(4) var artist: String? = null,
     @ProtoNumber(5) var author: String? = null,
@@ -48,27 +49,8 @@ class BackupManga(
     @ProtoNumber(110) var notes: String = "",
     @ProtoNumber(111) var initialized: Boolean = false,
     @ProtoNumber(112) var memo: ByteArray = JsonObjectEmptyBytes,
-    // KMK --> Scheduling state, compatible with Mihon/Houri backups.
-    @ProtoNumber(113) var lastUpdate: Long = 0,
-    @ProtoNumber(114) var nextUpdate: Long = 0,
-    @ProtoNumber(115) var fetchInterval: Int = 0,
-    // KMK <--
-    // KMK -->
-    // Houri reserves adjacent field numbers for compatible category and scanlator configuration.
-    // Compatible forks may scope category order to a parent, so IDs are the only lossless link.
-    @ProtoNumber(613) var categoryIds: List<Long> = emptyList(),
-    @ProtoNumber(614) var scanlatorPriority: List<String> = emptyList(),
-    // Matches Houri's field number so compatible backups preserve chapter exclusions.
-    @ProtoNumber(615) var blacklistedChapters: List<String> = emptyList(),
-    @ProtoNumber(616) var scanlatorRangeRules: List<String> = emptyList(),
-    // 617 is used by Houri for isLightNovel. Keep per-manga preference state in separate,
-    // nullable fields so old backups do not overwrite a destination's existing preferences.
-    // `global` is explicit: a missing field represents a backup made before this support.
-    @ProtoNumber(618) var smartScanlatorMergeOverride: String? = null,
-    @ProtoNumber(619) var hideBlacklistedChapters: Boolean? = null,
-    // Repeated protobuf fields cannot tell an unset legacy value from an intentional empty list.
-    @ProtoNumber(620) var scanlatorSettingsPresent: Boolean = false,
-    // KMK <--
+
+    @ProtoNumber(113) var nextUpdate: Long = 0,
 
     // SY specific values
     @ProtoNumber(600) var mergedMangaReferences: List<BackupMergedMangaReference> = emptyList(),
@@ -83,33 +65,8 @@ class BackupManga(
     // skipping 803 due to using duplicate value in previous builds
     @ProtoNumber(804) var customDescription: String? = null,
     @ProtoNumber(805) var customGenre: List<String>? = null,
-    // KMK --> Protobuf repeated fields cannot distinguish an empty override from absence.
-    @ProtoNumber(806) var customGenreSet: Boolean = false,
-    // KMK <--
 
 ) {
-    fun getCustomMangaInfo(): CustomMangaInfo? {
-        if (customTitle != null ||
-            customArtist != null ||
-            customAuthor != null ||
-            customThumbnailUrl != null ||
-            customDescription != null ||
-            customGenre != null || customGenreSet ||
-            customStatus != 0
-        ) {
-            return CustomMangaInfo(
-                id = 0L,
-                title = customTitle,
-                author = customAuthor,
-                artist = customArtist,
-                thumbnailUrl = customThumbnailUrl,
-                description = customDescription,
-                genre = customGenre ?: emptyList<String>().takeIf { customGenreSet },
-                status = customStatus.takeUnless { it == 0 }?.toLong(),
-            )
-        }
-        return null
-    }
     fun getMangaImpl(): Manga {
         return Manga.create().copy(
             url = this@BackupManga.url,
@@ -124,7 +81,16 @@ class BackupManga(
             // SY <--
             favorite = this@BackupManga.favorite,
             source = this@BackupManga.source,
-            dateAdded = this@BackupManga.dateAdded,
+            // KUN -->
+            // `favorite_modified_at` is not a fallback for a missing `date_added`: every manga
+            // update rewrote it (see migrations/49.sqm). A missing date-added becomes UNKNOWN.
+            // KUN <--
+            dateAdded = if (this@BackupManga.favorite) {
+                this@BackupManga.dateAdded.toInstantOrNull()
+                    ?: Manga.UNKNOWN_FAVORITE_AT
+            } else {
+                null
+            },
             viewerFlags = (this@BackupManga.viewer_flags ?: this@BackupManga.viewer).toLong(),
             chapterFlags = this@BackupManga.chapterFlags.toLong(),
             updateStrategy = this@BackupManga.updateStrategy,
@@ -133,31 +99,8 @@ class BackupManga(
             version = this@BackupManga.version,
             notes = this@BackupManga.notes,
             initialized = this@BackupManga.initialized,
-            memo = MemoColumnAdapter.decode(this@BackupManga.memo),
-            lastUpdate = this@BackupManga.lastUpdate,
-            nextUpdate = this@BackupManga.nextUpdate,
-            fetchInterval = this@BackupManga.fetchInterval,
-            // KMK -->
-            scanlatorPriority = this@BackupManga.scanlatorPriority,
-            blacklistedChapters = (
-                this@BackupManga.blacklistedChapters +
-                    legacyFillermarkBlacklistKeys(
-                        this@BackupManga.chapters.asSequence()
-                            .filter(BackupChapter::fillermark)
-                            .map(BackupChapter::url)
-                            .asIterable(),
-                    )
-                ).distinct(),
-            scanlatorRangeRules = this@BackupManga.scanlatorRangeRules,
-            // KMK <--
+            memo = this@BackupManga.memo.toJsonObject(),
+            nextUpdate = this@BackupManga.nextUpdate.toInstantOrNull(),
         )
     }
-
-    // KMK -->
-    fun hasExplicitScanlatorSettings(): Boolean =
-        scanlatorSettingsPresent ||
-            scanlatorPriority.isNotEmpty() ||
-            scanlatorRangeRules.isNotEmpty() ||
-            blacklistedChapters.isNotEmpty()
-    // KMK <--
 }

@@ -1,44 +1,40 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
-import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import exh.EXHMigrations
 import exh.util.nullIfBlank
-import tachiyomi.data.Database
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import tachiyomi.domain.source.model.SavedSearch
+import tachiyomi.domain.source.repository.SavedSearchRepository
 
-// KMK -->
-
+@Inject
 class SavedSearchRestorer(
-    private val database: Database = Injekt.get(),
+    private val savedSearchRepository: SavedSearchRepository,
 ) {
     suspend fun restoreSavedSearches(backupSavedSearches: List<BackupSavedSearch>) {
         if (backupSavedSearches.isEmpty()) return
 
-        // KMK -->
-        database.transaction {
-            // KMK <--
-            val currentSavedSearches = // KMK -->
-                // database.saved_searchQueries.selectNamesAndSources()
-                database.saved_searchQueries.selectAll().awaitAsList()
-            // KMK <--
+        val currentSavedSearches = savedSearchRepository.getAll()
 
-            backupSavedSearches.map {
+        val savedSearchesToRestore = backupSavedSearches
+            .map {
                 // KMK -->
                 EXHMigrations.migrateBackupSavedSearch(it)
                 // KMK <--
-            }.filter { backupSavedSearch ->
+            }
+            .filter { backupSavedSearch ->
                 currentSavedSearches.none { currentSavedSearch ->
                     currentSavedSearch.source == backupSavedSearch.source &&
                         currentSavedSearch.name == backupSavedSearch.name &&
                         // KMK -->
                         currentSavedSearch.query.orEmpty() == backupSavedSearch.query &&
-                        (currentSavedSearch.filters_json ?: "[]") == backupSavedSearch.filterList
+                        (currentSavedSearch.filtersJson ?: "[]") == backupSavedSearch.filterList
                     // KMK <--
                 }
-            }.forEach { backupSavedSearch ->
-                database.saved_searchQueries.insert(
+            }
+            .map { backupSavedSearch ->
+                SavedSearch(
+                    id = -1,
                     source = backupSavedSearch.source,
                     name = backupSavedSearch.name,
                     query = backupSavedSearch.query.nullIfBlank(),
@@ -46,7 +42,7 @@ class SavedSearchRestorer(
                         ?.takeUnless { it == "[]" },
                 )
             }
-        }
+
+        savedSearchRepository.insertAll(savedSearchesToRestore)
     }
 }
-// KMK <--

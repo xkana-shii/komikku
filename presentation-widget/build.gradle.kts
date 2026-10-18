@@ -1,7 +1,7 @@
 plugins {
     id("mihon.library")
     id("mihon.library.compose")
-    kotlin("android")
+    alias(libs.plugins.metro)
 }
 
 android {
@@ -22,10 +22,14 @@ dependencies {
     implementation(compose.glance)
     implementation(libs.material)
 
-    implementation(kotlinx.immutables)
-
     implementation(platform(libs.coil.bom))
+
+    implementation(kotlinx.datetime)
+
     implementation(libs.coil.core)
 
     api(libs.injekt)
+
+    implementation(libs.metro.runtime)
+    implementation(projects.core.metro)
 }

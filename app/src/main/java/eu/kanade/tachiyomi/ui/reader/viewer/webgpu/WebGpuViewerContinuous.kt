@@ -84,12 +84,6 @@ class WebGpuViewerContinuous(activity: ReaderActivity, val useGap: Boolean = fal
         state.animateScroll(direction * state.height / 2f)
     }
 
-    // KMK -->
-    internal fun scrollForAutomation(distance: Int) {
-        state.scrollBy(distance.toFloat())
-    }
-    // KMK <--
-
     override fun moveRight() = scrollByHalfPage(1)
 
     override fun moveLeft() = scrollByHalfPage(-1)

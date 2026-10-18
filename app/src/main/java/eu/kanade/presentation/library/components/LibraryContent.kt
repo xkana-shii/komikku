@@ -29,9 +29,7 @@ import kotlin.time.Duration.Companion.seconds
 fun LibraryContent(
     categories: List<Category>,
     // KMK -->
-    subcategoriesByParent: Map<Long, List<Category>>,
-    activeSubCategoryId: Long?,
-    onSelectSubcategory: (Long?) -> Unit,
+    activeCategoryIndex: Int,
     // KMK <--
     searchQuery: String?,
     selection: Set<Long>,
@@ -44,7 +42,7 @@ fun LibraryContent(
     onContinueReadingClicked: ((LibraryManga) -> Unit)?,
     onToggleSelection: (Category, LibraryManga) -> Unit,
     onToggleRangeSelection: (Category, LibraryManga) -> Unit,
-    onRefresh: () -> Boolean,
+    onRefresh: suspend () -> Boolean,
     onGlobalSearchClicked: () -> Unit,
     getItemCountForCategory: (Category) -> Int?,
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
@@ -58,19 +56,22 @@ fun LibraryContent(
             end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
         ),
     ) {
-        // KMK --> SY initializes from a bounded index; navigation stays owned by the pager.
-        val initialPage = currentPage.coerceIn(0, categories.lastIndex.coerceAtLeast(0))
-        val pagerState = rememberPagerState(initialPage) { categories.size }
-        // KMK <--
+        val pagerState = rememberPagerState(currentPage) { categories.size }
 
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
 
         if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
             LaunchedEffect(categories) {
-                // KMK --> Match SY: only repair a page that no longer exists.
-                if (categories.size <= pagerState.currentPage) {
-                    pagerState.scrollToPage(categories.size - 1)
+                // KMK -->
+                val targetPage = when {
+                    categories.isEmpty() -> 0
+                    activeCategoryIndex != pagerState.currentPage -> activeCategoryIndex.coerceAtMost(categories.size - 1)
+                    pagerState.currentPage >= categories.size -> categories.size - 1
+                    else -> pagerState.currentPage
+                }
+                if (targetPage != pagerState.currentPage) {
+                    pagerState.scrollToPage(targetPage)
                 }
                 // KMK <--
             }
@@ -90,9 +91,8 @@ fun LibraryContent(
             refreshing = isRefreshing,
             enabled = selection.isEmpty(),
             onRefresh = {
-                val started = onRefresh()
-                if (!started) return@PullRefresh
                 scope.launch {
+                    if (!onRefresh()) return@launch
                     // Fake refresh status but hide it after a second as it's a long running task
                     isRefreshing = true
                     delay(1.seconds)
@@ -102,19 +102,6 @@ fun LibraryContent(
         ) {
             LibraryPager(
                 state = pagerState,
-                // KMK --> Child navigation belongs to its page, outside the parent tab layout.
-                pageHeader = { category ->
-                    if (showPageTabs) {
-                        LibrarySubcategoryTabs(
-                            subcategories = subcategoriesByParent[category.id].orEmpty(),
-                            selectedSubcategoryId = activeSubCategoryId.takeIf {
-                                category.id == categories.getOrNull(currentPage)?.id
-                            },
-                            onSelectSubcategory = onSelectSubcategory,
-                        )
-                    }
-                },
-                // KMK <--
                 contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
                 hasActiveFilters = hasActiveFilters,
                 selection = selection,
@@ -136,11 +123,8 @@ fun LibraryContent(
             )
         }
 
-        // KMK --> Preserve the source child view throughout the animation. Tab highlighting
-        // still follows currentPage as in SY; persist selection only when navigation settles.
-        LaunchedEffect(pagerState.settledPage, categories) {
-            if (categories.isNotEmpty()) onChangeCurrentPage(pagerState.settledPage)
+        LaunchedEffect(pagerState.currentPage) {
+            onChangeCurrentPage(pagerState.currentPage)
         }
-        // KMK <--
     }
 }

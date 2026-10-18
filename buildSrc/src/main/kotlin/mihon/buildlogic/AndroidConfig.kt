@@ -4,7 +4,8 @@ import org.gradle.api.JavaVersion as GradleJavaVersion
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget as KotlinJvmTarget
 
 object AndroidConfig {
-    const val COMPILE_SDK = 36
+    // Minor API level form, mirrors mihon/main's `android-sdk-compile = "37.2"`.
+    const val COMPILE_SDK = "37.2"
     const val TARGET_SDK = 36
     const val MIN_SDK = 26
 

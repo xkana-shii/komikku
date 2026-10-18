@@ -1,11 +1,11 @@
 package mihon.domain.chapter.interactor
 
+import dev.zacsweers.metro.Inject
 import exh.source.MERGED_SOURCE_ID
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.model.Manga
 
@@ -16,6 +16,7 @@ import tachiyomi.domain.manga.model.Manga
  * @property downloadPreferences User preferences related to chapter downloads.
  * @property getCategories Interactor for retrieving categories associated with a manga.
  */
+@Inject
 class FilterChaptersForDownload(
     private val getChaptersByMangaId: GetChaptersByMangaId,
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
@@ -34,18 +35,13 @@ class FilterChaptersForDownload(
     suspend fun await(manga: Manga, newChapters: List<Chapter>): List<Chapter> {
         if (
             newChapters.isEmpty() ||
-            !downloadPreferences.downloadNewChapters().get() ||
+            !downloadPreferences.downloadNewChapters.get() ||
             !manga.shouldDownloadNewChapters()
         ) {
             return emptyList()
         }
 
-        // KMK --> Exclude before the unread-only early return so automatic and batch downloads
-        // cannot enqueue a chapter the user explicitly blacklisted.
-        val allowedChapters = filterBlacklistedChapters(newChapters, manga.blacklistedChapters)
-        if (allowedChapters.isEmpty()) return emptyList()
-        if (!downloadPreferences.downloadNewUnreadChaptersOnly().get()) return allowedChapters
-        // KMK <--
+        if (!downloadPreferences.downloadNewUnreadChaptersOnly.get()) return newChapters
 
         // SY -->
         val existingChapters = if (manga.source == MERGED_SOURCE_ID) {
@@ -61,7 +57,7 @@ class FilterChaptersForDownload(
             .map { it.chapterNumber }
             .toSet()
 
-        return allowedChapters.filterNot { it.chapterNumber in readChapterNumbers }
+        return newChapters.filterNot { it.chapterNumber in readChapterNumbers }
     }
 
     /**
@@ -74,8 +70,8 @@ class FilterChaptersForDownload(
         if (!favorite) return false
 
         val categories = getCategories.await(id).map { it.id }.ifEmpty { listOf(DEFAULT_CATEGORY_ID) }
-        val includedCategories = downloadPreferences.downloadNewChapterCategories().get().map { it.toLong() }
-        val excludedCategories = downloadPreferences.downloadNewChapterCategoriesExclude().get().map { it.toLong() }
+        val includedCategories = downloadPreferences.downloadNewChapterCategories.get().map { it.toLong() }
+        val excludedCategories = downloadPreferences.downloadNewChapterCategoriesExclude.get().map { it.toLong() }
 
         return when {
             // Default Download from all categories

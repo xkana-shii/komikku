@@ -52,6 +52,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.source.interactor.GetIncognitoState
@@ -63,6 +64,7 @@ import eu.kanade.presentation.components.IndexingBannerBackgroundColor
 import eu.kanade.presentation.components.RestoringBannerBackgroundColor
 import eu.kanade.presentation.components.SyncingBannerBackgroundColor
 import eu.kanade.presentation.components.UpdatingBannerBackgroundColor
+import eu.kanade.presentation.more.AppMigratingScreen
 import eu.kanade.presentation.more.settings.screen.ConfigureExhDialog
 import eu.kanade.presentation.more.settings.screen.about.AboutScreen.Companion.getReleaseNotes
 import eu.kanade.presentation.more.settings.screen.about.WhatsNewDialog
@@ -74,16 +76,15 @@ import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.BackupRestoreStatus
 import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.SyncStatus
-import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
+import eu.kanade.tachiyomi.data.backup.create.BackupCreateWorker
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverMetadata
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.download.DownloadCache
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
-import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
-import eu.kanade.tachiyomi.extension.api.ExtensionApi
+import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.feed.SourceFeedScreen
@@ -94,6 +95,7 @@ import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.more.WhatsNewScreen
+import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.isBenchmarkBuildType
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
@@ -108,6 +110,8 @@ import exh.log.DebugModeOverlay
 import exh.source.ExhPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -117,8 +121,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
+import mihon.app.di.AppGraph
+import mihon.app.di.appGraph
+import mihon.core.metro.metroGraph
 import mihon.core.migration.Migrator
 import mihon.core.migration.Migrator.scope
+import mihon.domain.database.repository.DatabaseRepository
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
@@ -132,32 +140,59 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import java.util.LinkedList
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
+import kotlin.time.TimeSource
+import kotlin.time.times
 
 class MainActivity : BaseActivity() {
 
-    private val libraryPreferences: LibraryPreferences by injectLazy()
-    private val preferences: BasePreferences by injectLazy()
+    private val graph: AppGraph by lazy { metroGraph() }
 
     // SY -->
-    private val exhPreferences: ExhPreferences by injectLazy()
+    @Inject private lateinit var exhPreferences: ExhPreferences
     // SY <--
 
     // KMK -->
-    private val backupPreferences: BackupPreferences by injectLazy()
-    private val syncPreferences: SyncPreferences by injectLazy()
-    private val backupRestoreStatus: BackupRestoreStatus by injectLazy()
-    private val syncStatus: SyncStatus by injectLazy()
-    private val libraryUpdateStatus: LibraryUpdateStatus by injectLazy()
+    @Inject private lateinit var backupPreferences: BackupPreferences
+
+    @Inject private lateinit var syncPreferences: SyncPreferences
+
+    @Inject private lateinit var backupRestoreStatus: BackupRestoreStatus
+
+    @Inject private lateinit var syncStatus: SyncStatus
+
+    @Inject private lateinit var libraryUpdateStatus: LibraryUpdateStatus
     // KMK <--
 
-    private val downloadCache: DownloadCache by injectLazy()
-    private val chapterCache: ChapterCache by injectLazy()
+    @Inject private lateinit var libraryPreferences: LibraryPreferences
 
-    private val getIncognitoState: GetIncognitoState by injectLazy()
+    @Inject private lateinit var preferences: BasePreferences
+
+    @Inject private lateinit var downloadCache: DownloadCache
+
+    @Inject private lateinit var chapterCache: ChapterCache
+
+    @Inject private lateinit var databaseRepository: DatabaseRepository
+
+    private val isAppMigrating = MutableStateFlow(Migrator.isRunning)
+
+    // KUN -->
+    // Komikku reads the migration result for the "What's new" dialog; it is written by the migration
+    // coroutine below before `isAppMigrating` flips so the gated composition always sees the final value.
+    private var didMigration = false
+    // KUN <--
+
+    @Inject private lateinit var getIncognitoState: GetIncognitoState
+
+    @Inject private lateinit var extensionManager: ExtensionManager
+
+    // KUN -->
+    @Inject private lateinit var preferenceStore: PreferenceStore
+    // KUN <--
 
     // To be checked by splash screen. If true then splash screen will be removed.
     var ready = false
@@ -165,7 +200,7 @@ class MainActivity : BaseActivity() {
     private var navigator: Navigator? = null
 
     // AM (CONNECTIONS) -->
-    private val connectionsPreferences: ConnectionsPreferences by injectLazy()
+    @Inject private lateinit var connectionsPreferences: ConnectionsPreferences
     // <-- AM (CONNECTIONS)
 
     init {
@@ -194,6 +229,7 @@ class MainActivity : BaseActivity() {
     // SY <--
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        graph.inject(this)
         val isLaunch = savedInstanceState == null
 
         // Prevent splash screen showing up on configuration changes
@@ -201,11 +237,18 @@ class MainActivity : BaseActivity() {
 
         super.onCreate(savedInstanceState)
 
-        val didMigration = if (isLaunch) {
-            Migrator.awaitAndRelease()
-        } else {
-            false
+        lifecycleScope.launch {
+            // KUN -->
+            // Keep the migration result while letting the app draw the migrating screen instead of
+            // blocking the main thread; set it before releasing the screen below.
+            didMigration = if (isLaunch) Migrator.awaitAndRelease() else false
+            // KUN <--
+            isAppMigrating.value = false
         }
+
+        // Uncaught on purpose: a failed database migration otherwise leaves the migrating screen up for good,
+        // while the crash screen tells what went wrong and lets the logs be shared
+        lifecycleScope.launch { databaseRepository.awaitOpen() }
 
         // Do not let the launcher create a new activity http://stackoverflow.com/questions/16283079
         if (!isTaskRoot) {
@@ -219,18 +262,39 @@ class MainActivity : BaseActivity() {
         // SY <--
 
         setComposeContent {
+            val appMigrating by isAppMigrating.collectAsState()
+            val databaseMigrating by databaseRepository.isMigrating.collectAsState()
+            val migrating = appMigrating || databaseMigrating
+            var migratingSince by remember { mutableStateOf(if (migrating) TimeSource.Monotonic.markNow() else null) }
+            LaunchedEffect(migrating) {
+                val since = migratingSince
+                if (migrating) {
+                    if (since == null) migratingSince = TimeSource.Monotonic.markNow()
+                } else if (since != null) {
+                    // A migration that finishes right away would otherwise only flash the screen
+                    delay(MIGRATING_SCREEN_MIN_DURATION - since.elapsedNow())
+                    migratingSince = null
+                }
+            }
+            if (migrating || migratingSince != null) {
+                AppMigratingScreen()
+                // Release the splash screen so the reason for the wait shows
+                LaunchedEffect(Unit) { ready = true }
+                return@setComposeContent
+            }
+
             val context = LocalContext.current
 
-            var incognito by remember { mutableStateOf(getIncognitoState.await(null)) }
-            val downloadOnly by preferences.downloadedOnly().collectAsState()
+            var incognito by remember { mutableStateOf(false) }
+            val downloadOnly by preferences.downloadedOnly.collectAsState()
             val indexing by downloadCache.isInitializing.collectAsState()
             // KMK -->
             val restoringState by backupRestoreStatus.isRunning.collectAsState()
             val syncingState by syncStatus.isRunning.collectAsState()
             val updatingState by libraryUpdateStatus.isRunning.collectAsState()
-            val restoringProgressBanner by backupPreferences.showRestoringProgressBanner().collectAsState()
-            val syncingProgressBanner by syncPreferences.showSyncingProgressBanner().collectAsState()
-            val updatingProgressBanner by libraryPreferences.showUpdatingProgressBanner().collectAsState()
+            val restoringProgressBanner by backupPreferences.showRestoringProgressBanner.collectAsState()
+            val syncingProgressBanner by syncPreferences.showSyncingProgressBanner.collectAsState()
+            val updatingProgressBanner by libraryPreferences.showUpdatingProgressBanner.collectAsState()
             val restoring = restoringState && restoringProgressBanner
             val syncing = syncingState && syncingProgressBanner
             val updating = updatingState && updatingProgressBanner
@@ -273,13 +337,13 @@ class MainActivity : BaseActivity() {
                         handleIntentAction(intent, navigator)
 
                         // Reset Incognito Mode on relaunch
-                        preferences.incognitoMode().set(false)
+                        preferences.incognitoMode.set(false)
 
                         // SY -->
                         initWhenIdle {
                             // Upload settings
-                            if (exhPreferences.enableExhentai().get() &&
-                                exhPreferences.exhShowSettingsUploadWarning().get()
+                            if (exhPreferences.enableExhentai.get() &&
+                                exhPreferences.exhShowSettingsUploadWarning.get()
                             ) {
                                 runExhConfigureDialog = true
                             }
@@ -347,7 +411,7 @@ class MainActivity : BaseActivity() {
 
                 // Pop source-related screens when incognito mode is turned off
                 LaunchedEffect(Unit) {
-                    preferences.incognitoMode().changes()
+                    preferences.incognitoMode.changes()
                         .drop(1)
                         .filter { !it }
                         .onEach {
@@ -361,7 +425,7 @@ class MainActivity : BaseActivity() {
                         .launchIn(this)
 
                     // AM (DISCORD) -->
-                    connectionsPreferences.enableDiscordRPC().changes()
+                    connectionsPreferences.enableDiscordRPC.changes()
                         .drop(1)
                         .onEach {
                             if (it) {
@@ -371,7 +435,7 @@ class MainActivity : BaseActivity() {
                             }
                         }.launchIn(this)
 
-                    connectionsPreferences.discordRPCStatus().changes()
+                    connectionsPreferences.discordRPCStatus.changes()
                         .drop(1)
                         .onEach {
                             with(DiscordRPCService) {
@@ -388,12 +452,10 @@ class MainActivity : BaseActivity() {
                 // KMK -->
                 RearmJobs()
                 // KMK <--
-                // KMK -->
                 if (!isBenchmarkBuildType) {
                     if (isLaunch) CheckForUpdates()
                     ShowOnboarding()
                 }
-                // KMK <--
             }
 
             // SY -->
@@ -408,7 +470,7 @@ class MainActivity : BaseActivity() {
             // SY <--
 
             // KMK -->
-            val previewLastVersion = Injekt.get<PreferenceStore>().getInt(
+            val previewLastVersion = preferenceStore.getInt(
                 Preference.appStateKey("preview_last_version_code"),
                 0,
             )
@@ -424,9 +486,7 @@ class MainActivity : BaseActivity() {
                     // KMK <--
                 )
             }
-            // KMK -->
-            if (showChangelog && !isBenchmarkBuildType) {
-                // KMK <--
+            if (showChangelog) {
                 // KMK -->
                 WhatsNewDialog(
                     onDismissRequest = { showChangelog = false },
@@ -473,8 +533,8 @@ class MainActivity : BaseActivity() {
         }
         setSplashScreenExitAnimation(splashScreen)
 
-        if (isLaunch && libraryPreferences.autoClearChapterCache().get()) {
-            lifecycleScope.launchIO {
+        if (isLaunch && libraryPreferences.autoClearChapterCache.get()) {
+            lifecycleScope.launch(Dispatchers.IO) {
                 chapterCache.clear()
             }
         }
@@ -483,7 +543,7 @@ class MainActivity : BaseActivity() {
     // KMK -->
     override fun onPause() {
         super.onPause()
-        MangaCoverMetadata.savePrefs()
+        MangaCoverMetadata.savePrefs(libraryPreferences)
     }
     // KMK <--
 
@@ -493,6 +553,16 @@ class MainActivity : BaseActivity() {
             is AssistContentScreen -> {
                 screen.onProvideAssistUrl()?.let { outContent.webUri = it.toUri() }
             }
+        }
+    }
+
+    override fun reportFullyDrawn() {
+        try {
+            super.reportFullyDrawn()
+        } catch (e: SecurityException) {
+            // Some Samsung Android 9 to 11 builds deny the platform's fully drawn broadcast
+            // and the report only feeds startup metrics, so it shouldn't crash the app
+            logcat(LogPriority.WARN, e)
         }
     }
 
@@ -517,8 +587,8 @@ class MainActivity : BaseActivity() {
         LaunchedEffect(Unit) {
             launchIO {
                 try {
-                    if (!LibraryUpdateJob.isPeriodicUpdateScheduled(context)) {
-                        LibraryUpdateJob.setupTask(context)
+                    if (!LibraryUpdateWorker.isPeriodicUpdateScheduled(context)) {
+                        LibraryUpdateWorker.setupTask(context)
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e)
@@ -531,8 +601,8 @@ class MainActivity : BaseActivity() {
                     }
                 }
                 try {
-                    if (!BackupCreateJob.isPeriodicBackupScheduled(context)) {
-                        BackupCreateJob.setupTask(context)
+                    if (!BackupCreateWorker.isPeriodicBackupScheduled(context)) {
+                        BackupCreateWorker.setupTask(context)
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e)
@@ -561,8 +631,11 @@ class MainActivity : BaseActivity() {
                     // KMK -->
                     AppUpdateJob.setupTask(context)
                     // KMK <--
-                    val result = AppUpdateChecker().checkForUpdate(context)
-                    if (result is GetApplicationRelease.Result.NewUpdate) {
+                    val result = context.appGraph.updateChecker.checkForUpdate(context)
+                    if (
+                        result is GetApplicationRelease.Result.NewUpdate &&
+                        result.release.version != preferences.skippedAppUpdate.get()
+                    ) {
                         val updateScreen = NewUpdateScreen(
                             versionName = result.release.version,
                             changelogInfo = result.release.info,
@@ -580,7 +653,7 @@ class MainActivity : BaseActivity() {
         // Extensions updates
         LaunchedEffect(Unit) {
             try {
-                ExtensionApi().checkForUpdates(context)
+                extensionManager.checkForUpdates()
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
             }
@@ -592,7 +665,7 @@ class MainActivity : BaseActivity() {
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) {
-            if (!preferences.shownOnboardingFlow().get() && navigator.lastItem !is OnboardingScreen) {
+            if (!preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
                 navigator.push(OnboardingScreen())
             }
         }
@@ -673,6 +746,11 @@ class MainActivity : BaseActivity() {
                 HomeScreen.Tab.More(toDownloads = false, toLibraryUpdateErrors = true)
             }
             // KMK <--
+            Intent.ACTION_APPLICATION_PREFERENCES -> {
+                navigator.popUntilRoot()
+                navigator.push(SettingsScreen())
+                null
+            }
             Intent.ACTION_SEARCH, Intent.ACTION_SEND, "com.google.android.gms.actions.SEARCH_ACTION" -> {
                 // If the intent match the "standard" Android search intent
                 // or the Google-specific search intent (triggered by saying or typing "search *query* on *Tachiyomi*" in Google Search/Google Assistant)
@@ -736,3 +814,5 @@ class MainActivity : BaseActivity() {
 private const val SPLASH_MIN_DURATION = 500 // ms
 private const val SPLASH_MAX_DURATION = 5000 // ms
 private const val SPLASH_EXIT_ANIM_DURATION = 400L // ms
+
+private val MIGRATING_SCREEN_MIN_DURATION = 1.seconds

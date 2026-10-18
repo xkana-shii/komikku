@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import tachiyomi.domain.chapter.model.BookmarkColor
 
 // KMK -->
-/** Fixed color palette shared by chapter and update bookmark indicators. */
+/** Fixed color palette shared by bookmark indicators and selection controls. */
 fun BookmarkColor.composeColor(): Color? = when (this) {
     BookmarkColor.NONE -> null
     BookmarkColor.RED -> Color(0xFFD32F2F)

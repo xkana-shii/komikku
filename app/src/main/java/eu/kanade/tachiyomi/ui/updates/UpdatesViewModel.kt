@@ -1,59 +1,64 @@
 package eu.kanade.tachiyomi.ui.updates
 
-import android.app.Application
 import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.util.fastFilter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.core.preference.asState
 import eu.kanade.core.util.addOrRemove
-import eu.kanade.core.util.combine
 import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.updates.UpdatesUiModel
-import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.lang.toLocalDate
+import eu.kanade.tachiyomi.util.system.workManager
 import exh.source.EH_SOURCE_ID
 import exh.source.EXH_SOURCE_ID
-import kotlinx.collections.immutable.PersistentList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toPersistentList
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import logcat.LogPriority
+import mihon.core.metro.AppCoroutineScope
 import tachiyomi.core.common.preference.TriState
-import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.core.common.util.lang.SubscriberGate
+import tachiyomi.core.common.util.lang.pausedWhileUnsubscribed
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
-import tachiyomi.domain.chapter.interactor.GetVisibleChaptersByMangaIds
 import tachiyomi.domain.chapter.interactor.UpdateChapter
-import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
@@ -62,55 +67,78 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.updates.interactor.GetUpdates
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.domain.updates.service.UpdatesPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import java.time.ZonedDateTime
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 class UpdatesViewModel(
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
-    private val downloadCache: DownloadCache = Injekt.get(),
-    private val updateChapter: UpdateChapter = Injekt.get(),
-    private val setReadStatus: SetReadStatus = Injekt.get(),
-    private val getUpdates: GetUpdates = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
-    private val getChapter: GetChapter = Injekt.get(),
-    // KMK -->
-    private val getVisibleChaptersByMangaIds: GetVisibleChaptersByMangaIds = Injekt.get(),
-    // KMK <--
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val updatesPreferences: UpdatesPreferences = Injekt.get(),
-    val snackbarHostState: SnackbarHostState = SnackbarHostState(),
+    @AppCoroutineScope private val appScope: CoroutineScope,
+    private val context: Context,
+    private val sourceManager: SourceManager,
+    private val downloadManager: DownloadManager,
+    private val downloadCache: DownloadCache,
+    private val updateChapter: UpdateChapter,
+    private val setReadStatus: SetReadStatus,
+    private val getUpdates: GetUpdates,
+    private val getManga: GetManga,
+    private val getChapter: GetChapter,
+    private val libraryPreferences: LibraryPreferences,
+    private val updatesPreferences: UpdatesPreferences,
     // SY -->
-    readerPreferences: ReaderPreferences = Injekt.get(),
+    readerPreferences: ReaderPreferences,
     // SY <--
-    private val libraryUpdateStatus: LibraryUpdateStatus = Injekt.get(),
 ) : ViewModel() {
+
+    private val subscriberGate = SubscriberGate()
+
+    val snackbarHostState: SnackbarHostState = SnackbarHostState()
 
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
     val events: Flow<Event> = _events.receiveAsFlow()
 
-    val lastUpdated by libraryPreferences.lastUpdatedTimestamp().asState(viewModelScope)
+    val lastUpdated by libraryPreferences.lastUpdatedTimestamp.asState(viewModelScope)
 
     // SY -->
-    val preserveReadingPosition by readerPreferences.preserveReadingPosition().asState(viewModelScope)
+    val preserveReadingPosition by readerPreferences.preserveReadingPosition.asState(viewModelScope)
     // SY <--
 
     // First and last selected index in list
     private val selectedPositions: Array<Int> = arrayOf(-1, -1)
     private val selectedChapterIds = MutableStateFlow(emptySet<Long>())
+
     private val dialog = MutableStateFlow<Dialog?>(null)
+
+    private val downloadStates = MutableStateFlow(emptyMap<Long, Download.State>())
+
+    // Progress ticks often, so only the download indicators that read it recompose instead of every tick rebuilding
+    // the list
+    private val downloadProgress = mutableStateMapOf<Long, Int>()
+
+    // A finished chapter leaves the queue, and its last status change can be lost with it, so its state is left to
+    // the queried item once it's no longer queued
+    private val queuedDownloadStates = combine(downloadStates, downloadManager.queueState) { states, queue ->
+        val queuedChapterIds = queue.mapTo(HashSet()) { it.chapter.id }
+        states.filterKeys { it in queuedChapterIds }
+    }
+
     // KMK -->
     private val expandedState = MutableStateFlow(emptySet<String>())
     // KMK <--
-    private val downloadStates = MutableStateFlow(emptyMap<Long, DownloadProgress>())
 
     init {
-        viewModelScope.launchIO {
-            merge(downloadManager.statusFlow(), downloadManager.progressFlow())
+        viewModelScope.launch {
+            downloadManager.statusFlow()
                 .catch { logcat(LogPriority.ERROR, it) }
                 .collect(this@UpdatesViewModel::updateDownloadState)
+        }
+        viewModelScope.launch {
+            // Each progress tick rebuilds every row of the list, so cap how often that happens
+            downloadManager.progressFlow().sample(200.milliseconds)
+                .catch { logcat(LogPriority.ERROR, it) }
+                .collect { downloadProgress[it.chapter.id] = it.progress }
         }
     }
 
@@ -122,139 +150,117 @@ class UpdatesViewModel(
             if (download.status == Download.State.NOT_DOWNLOADED || download.status == Download.State.DOWNLOADED) {
                 it - chapterId
             } else {
-                it + (chapterId to DownloadProgress(download.status, download.progress))
+                it + (chapterId to download.status)
             }
+        }
+        if (download.status == Download.State.DOWNLOADING) {
+            downloadProgress[chapterId] = download.progress
+        } else {
+            downloadProgress.remove(chapterId)
         }
     }
 
     private val hasActiveFilters = getUpdatesItemPreferenceFlow()
-        .map { preferences ->
+        .map { prefs ->
             listOf(
-                preferences.filterUnread,
-                preferences.filterDownloaded,
-                preferences.filterStarted,
-                preferences.filterBookmarked,
+                prefs.filterUnread,
+                prefs.filterDownloaded,
+                prefs.filterStarted,
+                prefs.filterBookmarked,
             )
-                .any { it != TriState.DISABLED }
+                .any { it != TriState.DISABLED } ||
+                prefs.filterExcludedScanlators ||
+                listOf(
+                    prefs.filterIncludedCategories,
+                    prefs.filterExcludedCategories,
+                )
+                    .any { it.isNotEmpty() }
         }
         .distinctUntilChanged()
 
     private val updateItems = combine(
-        // Set date limit for recent chapters and apply SQL filters.
+        // needed for SQL filters (unread, started, bookmarked, etc)
         getUpdatesItemPreferenceFlow()
             .distinctUntilChanged()
-            .flatMapLatest { preferences ->
+            .flatMapLatest {
                 getUpdates.subscribe(
-                    ZonedDateTime.now().minusMonths(3).toInstant(),
-                    unread = preferences.filterUnread.toBooleanOrNull(),
-                    started = preferences.filterStarted.toBooleanOrNull(),
-                    bookmarked = preferences.filterBookmarked.toBooleanOrNull(),
-                    hideExcludedScanlators = preferences.filterExcludedScanlators,
-                    // KMK -->
-                    includedCategories = preferences.filterIncludedCategories,
-                    excludedCategories = preferences.filterExcludedCategories,
-                    // KMK <--
-                )
-                    .distinctUntilChanged()
-                    // KMK --> Keep hidden duplicates and blacklisted chapters out before rows,
-                    // grouping, selection, and bulk actions are constructed.
-                    .flatMapLatest { updates -> updates.filterByChapterVisibility() }
-                // KMK <--
+                    // Set date limit for recent chapters
+                    Clock.System.now().minus(3, DateTimeUnit.MONTH, TimeZone.currentSystemDefault()),
+                    unread = it.filterUnread.toBooleanOrNull(),
+                    started = it.filterStarted.toBooleanOrNull(),
+                    bookmarked = it.filterBookmarked.toBooleanOrNull(),
+                    hideExcludedScanlators = it.filterExcludedScanlators,
+                    includedCategories = it.filterIncludedCategories,
+                    excludedCategories = it.filterExcludedCategories,
+                ).distinctUntilChanged()
             },
-        downloadCache.changes,
-        downloadManager.queueState,
-        // Apply Kotlin filters for downloaded chapters.
+        downloadCache.changes.pausedWhileUnsubscribed(),
+        downloadManager.queueState.pausedWhileUnsubscribed(),
+        // needed for Kotlin filters (downloaded)
         getUpdatesItemPreferenceFlow().distinctUntilChanged { old, new ->
             old.filterDownloaded == new.filterDownloaded
         },
-    ) { updates, _, _, preferences ->
+    ) { updates, _, _, itemPreferences ->
         updates
             .toUpdateItems()
-            .applyFilters(preferences)
+            .applyFilters(itemPreferences)
             // KMK -->
-            .groupBy { it.update.mangaId }
-            .values
-            .flatMap { mangaUpdates ->
-                val withDate = mangaUpdates.map { it to it.update.dateFetch.toLocalDate() }
-                val latestDate = withDate.maxOf { (_, date) -> date }
-                val latestItems = withDate
-                    .filter { (_, date) -> date == latestDate }
-                    .map { (item, _) -> item }
-                val (unread, read) = latestItems.partition { !it.update.read }
-                unread.sortedBy { it.update.dateFetch } +
-                    read.sortedByDescending { it.update.dateFetch }
+            .groupBy { it.update.dateFetch.toLocalDate() }
+            .flatMap { (_, mangas) ->
+                mangas.groupBy { it.update.mangaId }
+                    .values
+                    .flatMap { mangaChapters ->
+                        val (unread, read) = mangaChapters.partition { !it.update.read }
+                        unread.sortedBy { it.update.dateFetch } +
+                            read.sortedByDescending { it.update.dateFetch }
+                    }
             }
-            .sortedByDescending { it.update.dateFetch.toLocalDate() }
-            .toPersistentList()
         // KMK <--
     }
-        .flowOn(Dispatchers.IO)
-        .catch { error ->
-            logcat(LogPriority.ERROR, error)
+        .catch {
+            logcat(LogPriority.ERROR, it)
             _events.send(Event.InternalError)
-            emit(persistentListOf())
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
-
-    // KMK -->
-    private fun List<UpdatesWithRelations>.filterByChapterVisibility(): Flow<List<UpdatesWithRelations>> {
-        val mangaIds = mapTo(mutableSetOf(), UpdatesWithRelations::mangaId)
-        val visibilityChanges = combine(
-            listOf(libraryPreferences.smartScanlatorMerge().changes().map { }) +
-                mangaIds.map { mangaId ->
-                    libraryPreferences.smartScanlatorMergeOverride(mangaId).changes().map { }
-                },
-        ) { }
-        return visibilityChanges.map {
-            // Updates applies its excluded-scanlator preference in its SQL query.
-            val visibleChapterIds = getVisibleChaptersByMangaIds.await(
-                getManga.await(mangaIds.toList()),
-                applyFilter = false,
-            )
-                .mapValues { (_, chapters) -> chapters.mapTo(mutableSetOf()) { chapter -> chapter.id } }
-            filter { update -> update.chapterId in visibleChapterIds[update.mangaId].orEmpty() }
-        }
-    }
-    // KMK <--
-
-    private val selectionState = combine(selectedChapterIds, expandedState) { selectedIds, expanded ->
-        selectedIds to expanded
-    }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope + subscriberGate, SharingStarted.Eagerly, null)
 
     val state: StateFlow<State> = combine(
-        updateItems,
-        selectionState,
-        downloadStates,
-        dialog,
-        hasActiveFilters,
-    ) { items, selection, downloads, dialog, hasActiveFilters ->
-        val (selectedIds, expanded) = selection
-        State(
-            isLoading = items == null,
-            hasActiveFilters = hasActiveFilters,
-            items = items.orEmpty().map { item ->
-                val download = downloads[item.update.chapterId]
-                item.copy(
-                    selected = item.update.chapterId in selectedIds,
-                    downloadStateProvider = if (download != null) {
-                        { download.status }
-                    } else {
-                        item.downloadStateProvider
-                    },
-                    downloadProgressProvider = if (download != null) {
-                        { download.progress }
-                    } else {
-                        item.downloadProgressProvider
-                    },
-                )
-            }.toPersistentList(),
+        combine(
+            updateItems,
+            selectedChapterIds,
+            queuedDownloadStates.pausedWhileUnsubscribed(),
+            dialog,
             // KMK -->
-            expandedState = expanded,
+            expandedState,
             // KMK <--
-            dialog = dialog,
-        )
+        ) { items, selectedIds, downloads, dialog, expandedState ->
+            State(
+                isLoading = items == null,
+                items = items.orEmpty().map { item ->
+                    val downloadState = downloads[item.update.chapterId]
+                    item.copy(
+                        selected = item.update.chapterId in selectedIds,
+                        downloadStateProvider = if (downloadState != null) {
+                            { downloadState }
+                        } else {
+                            item.downloadStateProvider
+                        },
+                    )
+                }
+                    .toList(),
+                // KMK -->
+                expandedState = expandedState,
+                // KMK <--
+                dialog = dialog,
+            )
+        },
+        hasActiveFilters,
+    ) { state, hasActiveFilters ->
+        state.copy(hasActiveFilters = hasActiveFilters)
     }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), State())
+
     private fun List<UpdatesItem>.applyFilters(
         preferences: ItemPreferences,
     ): List<UpdatesItem> {
@@ -272,9 +278,10 @@ class UpdatesViewModel(
     }
 
     private fun List<UpdatesWithRelations>.toUpdateItems(): List<UpdatesItem> {
+        val queuedDownloads = downloadManager.getQueuedDownloadsByChapterId()
         return this
             .map { update ->
-                val activeDownload = downloadManager.getQueuedDownloadOrNull(update.chapterId)
+                val activeDownload = queuedDownloads[update.chapterId]
                 val downloaded = downloadManager.isChapterDownloaded(
                     update.chapterName,
                     update.scanlator,
@@ -292,29 +299,15 @@ class UpdatesViewModel(
                 UpdatesItem(
                     update = update,
                     downloadStateProvider = { downloadState },
-                    downloadProgressProvider = { activeDownload?.progress ?: 0 },
-                    selected = false,
+                    downloadProgressProvider = { downloadProgress[update.chapterId] ?: 0 },
                 )
             }
     }
 
-    fun updateLibrary(): Boolean {
-        val started = LibraryUpdateJob.startNow(Injekt.get<Application>())
-        viewModelScope.launch {
-            if (started) {
-                libraryUpdateStatus.start()
-            }
-            _events.send(Event.LibraryUpdateTriggered(started))
-        }
+    suspend fun updateLibrary(): Boolean {
+        val started = LibraryUpdateWorker.startNow(context)
+        _events.send(Event.LibraryUpdateTriggered(started))
         return started
-    }
-
-    fun cancelLibraryUpdate(context: Context): Boolean {
-        LibraryUpdateJob.stop(context)
-        viewModelScope.launch {
-            libraryUpdateStatus.stop()
-        }
-        return true
     }
 
     fun downloadChapters(items: List<UpdatesItem>, action: ChapterDownloadAction) {
@@ -343,11 +336,11 @@ class UpdatesViewModel(
         }
     }
 
-    private fun startDownloadingNow(chapterId: Long) {
+    private suspend fun startDownloadingNow(chapterId: Long) {
         downloadManager.startDownloadNow(chapterId)
     }
 
-    private fun cancelDownload(chapterId: Long) {
+    private suspend fun cancelDownload(chapterId: Long) {
         val activeDownload = downloadManager.getQueuedDownloadOrNull(chapterId) ?: return
         downloadManager.cancelQueuedDownloads(listOf(activeDownload))
         updateDownloadState(activeDownload.apply { status = Download.State.NOT_DOWNLOADED })
@@ -359,7 +352,7 @@ class UpdatesViewModel(
      * @param read whether to mark chapters as read or unread.
      */
     fun markUpdatesRead(updates: List<UpdatesItem>, read: Boolean) {
-        viewModelScope.launchIO {
+        appScope.launch {
             setReadStatus.await(
                 read = read,
                 chapters = updates
@@ -375,17 +368,10 @@ class UpdatesViewModel(
      * @param updates the list of chapters to bookmark.
      */
     fun bookmarkUpdates(updates: List<UpdatesItem>, bookmark: Boolean) {
-        viewModelScope.launchIO {
+        viewModelScope.launch {
             updates
                 .filterNot { it.update.bookmark == bookmark }
-                // KMK --> Normal bookmarking never infers a previously selected color.
-                .map {
-                    ChapterUpdate(
-                        id = it.update.chapterId,
-                        bookmark = bookmark,
-                        bookmarkColor = BookmarkColor.NONE,
-                    )
-                }
+                .map { ChapterUpdate(it.update.chapterId) { this.bookmark = bookmark } }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
@@ -396,7 +382,7 @@ class UpdatesViewModel(
      * @param updatesItem the list of chapters to download.
      */
     private fun downloadChapters(updatesItem: List<UpdatesItem>) {
-        viewModelScope.launchNonCancellable {
+        appScope.launch {
             val groupedUpdates = updatesItem.groupBy { it.update.mangaId }.values
             for (updates in groupedUpdates) {
                 val mangaId = updates.first().update.mangaId
@@ -415,7 +401,7 @@ class UpdatesViewModel(
      * @param updatesItem list of chapters
      */
     fun deleteChapters(updatesItem: List<UpdatesItem>) {
-        viewModelScope.launchNonCancellable {
+        appScope.launch {
             updatesItem
                 .groupBy { it.update.mangaId }
                 .entries
@@ -463,25 +449,26 @@ class UpdatesViewModel(
         val selectedIndex = items.indexOfFirst { it.update.chapterId == item.update.chapterId }
         if (selectedIndex < 0) return
 
+        // Read selection from its own flow, not the derived items, which lag behind it.
         val currentSelection = selectedChapterIds.value
         if ((item.update.chapterId in currentSelection) == selected) return
 
-        val firstSelection = items.none { it.selected }
+        // Only visible items count, since the id set can retain ids filtered out of the list
+        val firstSelection = items.none { it.update.chapterId in currentSelection }
         val newSelection = currentSelection.toHashSet()
         newSelection.addOrRemove(item.update.chapterId, selected)
 
         // KMK -->
         if (isGroup && !isExpanded) {
-            val selectedItem = items[selectedIndex]
-            val selectedItemDate = selectedItem.update.dateFetch.toLocalDate()
-            val zone = java.time.ZoneId.systemDefault()
-            val dayStartMillis = selectedItemDate.atStartOfDay(zone).toInstant().toEpochMilli()
-            val dayEndMillis = selectedItemDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val selectedItemDate = item.update.dateFetch.toLocalDate()
+            val zone = TimeZone.currentSystemDefault()
+            val dayStart = selectedItemDate.atStartOfDayIn(zone)
+            val dayEnd = selectedItemDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(zone)
 
             items
                 .filter {
-                    it.update.mangaId == selectedItem.update.mangaId &&
-                        it.update.dateFetch in dayStartMillis..<dayEndMillis
+                    it.update.mangaId == item.update.mangaId &&
+                        it.update.dateFetch in dayStart..<dayEnd
                 }
                 .forEach { newSelection.addOrRemove(it.update.chapterId, selected) }
         }
@@ -492,7 +479,7 @@ class UpdatesViewModel(
                 selectedPositions[0] = selectedIndex
                 selectedPositions[1] = selectedIndex
             } else {
-                // Try to select the items in-between when possible.
+                // Try to select the items in-between when possible
                 val range: IntRange
                 if (selectedIndex < selectedPositions[0]) {
                     range = selectedIndex + 1..<selectedPositions[0]
@@ -501,6 +488,7 @@ class UpdatesViewModel(
                     range = (selectedPositions[1] + 1)..<selectedIndex
                     selectedPositions[1] = selectedIndex
                 } else {
+                    // Just select itself
                     range = IntRange.EMPTY
                 }
 
@@ -529,8 +517,10 @@ class UpdatesViewModel(
         val ids = if (selected) state.value.items.map { it.update.chapterId }.toSet() else emptySet()
         selectedChapterIds.update { ids }
 
+        // KMK -->
         selectedPositions[0] = -1
         selectedPositions[1] = -1
+        // KMK <--
     }
 
     fun invertSelection() {
@@ -541,27 +531,31 @@ class UpdatesViewModel(
             .toSet()
         selectedChapterIds.update { ids }
 
+        // KMK -->
         selectedPositions[0] = -1
         selectedPositions[1] = -1
+        // KMK <--
     }
 
     fun setDialog(dialog: Dialog?) {
         this.dialog.update { dialog }
     }
+
     fun resetNewUpdatesCount() {
-        libraryPreferences.newUpdatesCount().set(0)
+        libraryPreferences.newUpdatesCount.set(0)
     }
 
     // KMK -->
     fun toggleExpandedState(key: String) {
         expandedState.update { current ->
             current.toMutableSet().apply {
-                if (key in current) remove(key) else add(key)
+                if (current.contains(key)) remove(key) else add(key)
             }
         }
     }
-    val chapterSwipeStartAction by libraryPreferences.swipeToEndAction().asState(viewModelScope)
-    val chapterSwipeEndAction by libraryPreferences.swipeToStartAction().asState(viewModelScope)
+
+    val chapterSwipeStartAction by libraryPreferences.swipeToEndAction.asState(viewModelScope)
+    val chapterSwipeEndAction by libraryPreferences.swipeToStartAction.asState(viewModelScope)
 
     /**
      * @throws IllegalStateException if the swipe action is [LibraryPreferences.ChapterSwipeAction.Disabled]
@@ -609,15 +603,13 @@ class UpdatesViewModel(
 
     private fun getUpdatesItemPreferenceFlow(): Flow<ItemPreferences> {
         return combine(
-            updatesPreferences.filterDownloaded().changes(),
-            updatesPreferences.filterUnread().changes(),
-            updatesPreferences.filterStarted().changes(),
-            updatesPreferences.filterBookmarked().changes(),
-            updatesPreferences.filterExcludedScanlators().changes(),
-            // KMK -->
-            updatesPreferences.filterIncludedCategories().changes(),
-            updatesPreferences.filterExcludedCategories().changes(),
-            // KMK <--
+            updatesPreferences.filterDownloaded.changes(),
+            updatesPreferences.filterUnread.changes(),
+            updatesPreferences.filterStarted.changes(),
+            updatesPreferences.filterBookmarked.changes(),
+            updatesPreferences.filterExcludedScanlators.changes(),
+            updatesPreferences.filterIncludedCategories.changes(),
+            updatesPreferences.filterExcludedCategories.changes(),
         ) {
             @Suppress("UNCHECKED_CAST")
             ItemPreferences(
@@ -643,21 +635,17 @@ class UpdatesViewModel(
         val filterStarted: TriState,
         val filterBookmarked: TriState,
         val filterExcludedScanlators: Boolean,
-        // KMK -->
         val filterIncludedCategories: List<Long>,
         val filterExcludedCategories: List<Long>,
-        // KMK <--
     )
-
-    private data class DownloadProgress(val status: Download.State, val progress: Int)
 
     @Immutable
     data class State(
         val isLoading: Boolean = true,
         val hasActiveFilters: Boolean = false,
-        val items: PersistentList<UpdatesItem> = persistentListOf(),
+        val items: List<UpdatesItem> = listOf(),
         // KMK -->
-        val expandedState: Set<String> = persistentSetOf(),
+        val expandedState: Set<String> = setOf(),
         // KMK <--
         val dialog: Dialog? = null,
     ) {
@@ -732,5 +720,5 @@ data class UpdatesItem(
 
 // KMK -->
 /** String to identify which manga's update on which day it is collapsing */
-fun UpdatesWithRelations.groupByDateAndManga() = "${dateFetch.toLocalDate().toEpochDay()}-$mangaId"
+fun UpdatesWithRelations.groupByDateAndManga() = "${dateFetch.toLocalDate().toEpochDays()}-$mangaId"
 // KMK <--

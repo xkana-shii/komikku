@@ -18,27 +18,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.util.fastForEach
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.ViewModel
 import cafe.adriel.voyager.core.screen.Screen
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mihon.domain.migration.models.MigrationFlag
 import mihon.domain.migration.usecases.MigrateMangaUseCase
 import mihon.feature.common.utils.getLabel
-import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 internal fun Screen.MigrateMangaDialog(
@@ -50,17 +56,11 @@ internal fun Screen.MigrateMangaDialog(
 ) {
     val scope = rememberCoroutineScope()
 
-    // KMK -->
-    val screenModel = rememberScreenModel { MigrateDialogScreenModel() }
-    // KMK <--
+    val viewModel = metroViewModel<MigrateDialogViewModel>()
     LaunchedEffect(current, target) {
-        // KMK -->
-        screenModel.init(current, target)
-        // KMK <--
+        viewModel.init(current, target)
     }
-    // KMK -->
-    val state by screenModel.state.collectAsState()
-    // KMK <--
+    val state by viewModel.state.collectAsState()
 
     if (state.isMigrated) return
 
@@ -84,9 +84,7 @@ internal fun Screen.MigrateMangaDialog(
                     LabeledCheckbox(
                         label = stringResource(flag.getLabel()),
                         checked = flag in state.selectedFlags,
-                        // KMK -->
-                        onCheckedChange = { screenModel.toggleSelection(flag) },
-                        // KMK <--
+                        onCheckedChange = { viewModel.toggleSelection(flag) },
                     )
                 }
             }
@@ -111,11 +109,9 @@ internal fun Screen.MigrateMangaDialog(
 
                 TextButton(
                     onClick = {
-                        scope.launchIO {
-                            // KMK -->
-                            screenModel.migrateManga(replace = false)
-                            // KMK <--
-                            withUIContext { onComplete() }
+                        scope.launch(Dispatchers.IO) {
+                            viewModel.migrateManga(replace = false)
+                            withContext(Dispatchers.Main) { onComplete() }
                         }
                     },
                 ) {
@@ -123,11 +119,9 @@ internal fun Screen.MigrateMangaDialog(
                 }
                 TextButton(
                     onClick = {
-                        scope.launchIO {
-                            // KMK -->
-                            screenModel.migrateManga(replace = true)
-                            // KMK <--
-                            withUIContext { onComplete() }
+                        scope.launch(Dispatchers.IO) {
+                            viewModel.migrateManga(replace = true)
+                            withContext(Dispatchers.Main) { onComplete() }
                         }
                     },
                 ) {
@@ -138,14 +132,18 @@ internal fun Screen.MigrateMangaDialog(
     )
 }
 
-// KMK -->
-private class MigrateDialogScreenModel(
-    private val sourcePreference: SourcePreferences = Injekt.get(),
-    private val coverCache: CoverCache = Injekt.get(),
-    private val downloadManager: DownloadManager = Injekt.get(),
-    private val migrateManga: MigrateMangaUseCase = Injekt.get(),
-) : StateScreenModel<MigrateDialogScreenModel.State>(State()) {
-// KMK <--
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
+class MigrateDialogViewModel(
+    private val sourcePreference: SourcePreferences,
+    private val coverCache: CoverCache,
+    private val downloadManager: DownloadManager,
+    private val migrateManga: MigrateMangaUseCase,
+) : ViewModel() {
+
+    val state: StateFlow<MigrateDialogViewModel.State>
+        field = MutableStateFlow<MigrateDialogViewModel.State>(State())
 
     fun init(current: Manga, target: Manga) {
         val applicableFlags = buildList {
@@ -166,10 +164,8 @@ private class MigrateDialogScreenModel(
                 if (applicable) add(it)
             }
         }
-        val selectedFlags = sourcePreference.migrationFlags().get()
-        // KMK -->
-        mutableState.update {
-            // KMK <--
+        val selectedFlags = sourcePreference.migrationFlags.get()
+        state.update {
             State(
                 current = current,
                 target = target,
@@ -180,9 +176,7 @@ private class MigrateDialogScreenModel(
     }
 
     fun toggleSelection(flag: MigrationFlag) {
-        // KMK -->
-        mutableState.update {
-            // KMK <--
+        state.update {
             val selectedFlags = it.selectedFlags.toMutableSet()
                 .apply { if (contains(flag)) remove(flag) else add(flag) }
                 .toSet()
@@ -197,17 +191,13 @@ private class MigrateDialogScreenModel(
         // KMK -->
         // sourcePreference.migrationFlags().set(currentState.selectedFlags)
         // KMK <--
-        // KMK -->
-        mutableState.update { it.copy(isMigrating = true) }
-        // KMK <--
+        state.update { it.copy(isMigrating = true) }
         try {
             migrateManga(current, target, replace, /* KMK --> */ currentState.selectedFlags /* KMK <-- */)
-            // KMK -->
-            mutableState.update { it.copy(isMigrating = false, isMigrated = true) }
-            // KMK <--
+            state.update { it.copy(isMigrating = false, isMigrated = true) }
             // KMK -->
         } catch (_: Throwable) {
-            mutableState.update { it.copy(isMigrating = false, isMigrated = false) }
+            state.update { it.copy(isMigrating = false, isMigrated = false) }
             // KMK <--
         }
     }

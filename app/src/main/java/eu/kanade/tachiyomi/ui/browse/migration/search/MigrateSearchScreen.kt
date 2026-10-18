@@ -4,15 +4,15 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.compose.viewModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.compose.runtime.produceState
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.browse.MigrateSearchScreen
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchViewModel
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
@@ -24,20 +24,16 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        val viewModel = viewModel<MigrateSearchViewModel>(
-            factory = MigrateSearchViewModel.Factory,
-            extras = CreationExtras {
-                set(MigrateSearchViewModel.MANGA_ID_KEY, mangaId)
-            },
-        )
+        val viewModel =
+            assistedMetroViewModel<MigrateSearchViewModel, MigrateSearchViewModel.Factory> { create(mangaId = mangaId) }
         val state by viewModel.state.collectAsState()
 
         // KMK -->
-        val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
-        val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+        val bulkFavoriteViewModel = metroViewModel<BulkFavoriteViewModel>()
+        val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
 
         BackHandler(enabled = bulkFavoriteState.selectionMode) {
-            bulkFavoriteScreenModel.backHandler()
+            bulkFavoriteViewModel.backHandler()
         }
         // KMK <--
 
@@ -46,7 +42,7 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
             fromSourceId = state.from?.source,
             navigateUp = navigator::pop,
             onChangeSearchQuery = viewModel::updateSearchQuery,
-            onSearch = viewModel::search,
+            onSearch = { viewModel.search() },
             getManga = { viewModel.getManga(it) },
             onChangeSearchFilter = viewModel::setSourceFilter,
             onToggleResults = viewModel::toggleFilterResults,
@@ -54,7 +50,7 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
             onClickItem = {
                 // KMK -->
                 if (bulkFavoriteState.selectionMode) {
-                    bulkFavoriteScreenModel.toggleSelection(it)
+                    bulkFavoriteViewModel.toggleSelection(it)
                 } else {
                     // KMK <--
                     val migrateListScreen = navigator.items
@@ -71,8 +67,8 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
             },
             onLongClickItem = { navigator.push(MangaScreen(it.id, true)) },
             // KMK -->
-            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
-            hasPinnedSources = viewModel.hasPinnedSources(),
+            bulkFavoriteViewModel = bulkFavoriteViewModel,
+            hasPinnedSources = produceState(initialValue = false) { value = viewModel.hasPinnedSources() }.value,
             // KMK <--
         )
 
@@ -101,7 +97,7 @@ class MigrateSearchScreen(private val mangaId: Long) : Screen() {
         // KMK -->
         // Bulk-favorite actions only
         BulkFavoriteDialogs(
-            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            bulkFavoriteViewModel = bulkFavoriteViewModel,
             dialog = bulkFavoriteState.dialog,
         )
         // KMK <--

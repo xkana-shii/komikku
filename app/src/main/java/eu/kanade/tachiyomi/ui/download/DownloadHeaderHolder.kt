@@ -25,25 +25,25 @@ class DownloadHeaderHolder(view: View, adapter: FlexibleAdapter<*>) : Expandable
     @SuppressLint("SetTextI18n")
     fun bind(item: DownloadHeaderItem) {
         setDragHandleView(binding.reorder)
-        binding.title.apply {
-            setContent {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = item.name,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f, false),
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Pill(
-                        text = "${item.size}",
-                        color = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 14.sp,
-                    )
-                }
+        // KMK --> The merged layout keeps this title as a ComposeView so long names can truncate safely.
+        binding.title.setContent {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.name,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, false),
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Pill(
+                    text = "${item.size}",
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    fontSize = 14.sp,
+                )
             }
         }
+        // KMK <--
     }
 
     override fun onActionStateChanged(position: Int, actionState: Int) {

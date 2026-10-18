@@ -4,43 +4,46 @@ import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
+import tachiyomi.domain.chapter.model.ChapterSummary
 import tachiyomi.domain.chapter.model.ChapterUpdate
 
 interface ChapterRepository {
 
-    // KMK -->
     suspend fun addAll(chapters: List<Chapter>): List<Chapter>
-    // KMK <--
 
     suspend fun update(chapterUpdate: ChapterUpdate)
 
     suspend fun updateAll(chapterUpdates: List<ChapterUpdate>)
 
-    suspend fun removeChaptersWithIds(chapterIds: List<Long>)
+    suspend fun updateAllRemote(chapterUpdates: List<ChapterRemoteUpdate>)
 
-    // KMK -->
     suspend fun updateFromRemote(
         removedIds: List<Long>,
         added: List<Chapter>,
         updated: List<ChapterRemoteUpdate>,
     ): List<Chapter>
-    // KMK <--
+
+    suspend fun removeChaptersWithIds(chapterIds: List<Long>)
 
     suspend fun getChapterByMangaId(mangaId: Long, applyFilter: Boolean = false): List<Chapter>
 
-    // KMK -->
+    // KUN -->
     suspend fun getChapterByMangaIds(mangaIds: List<Long>, applyFilter: Boolean = false): List<Chapter>
+
+    fun getMangaIdsWithBookmarkColors(bookmarkColors: Set<BookmarkColor>): Flow<Set<Long>>
     // KMK <--
+
+    // KMK -->
+    suspend fun getChaptersByMangaIds(mangaIds: List<Long>): List<Chapter>
+    // KUN <--
+
+    suspend fun getChapterSummaryByMangaId(mangaId: Long): ChapterSummary
 
     suspend fun getScanlatorsByMangaId(mangaId: Long): List<String>
 
     fun getScanlatorsByMangaIdAsFlow(mangaId: Long): Flow<List<String>>
 
     suspend fun getBookmarkedChaptersByMangaId(mangaId: Long): List<Chapter>
-
-    // KMK -->
-    fun getMangaIdsWithBookmarkColors(bookmarkColors: Set<BookmarkColor>): Flow<Set<Long>>
-    // KMK <--
 
     suspend fun getChapterById(id: Long): Chapter?
 

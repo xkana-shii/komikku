@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
@@ -49,9 +50,6 @@ import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TrailingWidgetBuffer
 import eu.kanade.presentation.util.Screen
 import exh.util.capitalize
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -79,7 +77,7 @@ class SettingsDebugScreen : Screen() {
         //     onDispose { navigator.pop() }
         // }
         // KMK <--
-        val functions by produceState<ImmutableList<Pair<KFunction<*>, String>>?>(initialValue = null) {
+        val functions by produceState<List<Pair<KFunction<*>, String>>?>(initialValue = null) {
             value = withContext(Dispatchers.Default) {
                 DebugFunctions::class.declaredFunctions.filter {
                     it.visibility == KVisibility.PUBLIC
@@ -87,12 +85,12 @@ class SettingsDebugScreen : Screen() {
                     it to it.name.replace("(.)(\\p{Upper})".toRegex(), "$1 $2")
                         .lowercase(Locale.getDefault())
                         .capitalize(Locale.getDefault())
-                }.toImmutableList()
+                }.toList()
             }
         }
-        val toggles by produceState(initialValue = persistentListOf()) {
+        val toggles by produceState(initialValue = listOf()) {
             value = withContext(Dispatchers.Default) {
-                DebugToggles.entries.map { DebugToggle(it.name, it.asPref(scope), it.default) }.toImmutableList()
+                DebugToggles.entries.map { DebugToggle(it.name, it.asPref(scope), it.default) }.toList()
             }
         }
         Scaffold(
@@ -106,7 +104,7 @@ class SettingsDebugScreen : Screen() {
             Crossfade(functions == null, label = "debug_functions") {
                 when (it) {
                     true -> LoadingScreen()
-                    false -> FunctionList(paddingValues, functions ?: persistentListOf(), toggles, scope)
+                    false -> FunctionList(paddingValues, functions ?: listOf(), toggles, scope)
                 }
             }
         }
@@ -115,8 +113,8 @@ class SettingsDebugScreen : Screen() {
     @Composable
     fun FunctionList(
         paddingValues: PaddingValues,
-        functions: ImmutableList<Pair<KFunction<*>, String>>,
-        toggles: ImmutableList<DebugToggle>,
+        functions: List<Pair<KFunction<*>, String>>,
+        toggles: List<DebugToggle>,
         scope: CoroutineScope,
     ) {
         Box(Modifier.fillMaxSize()) {

@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +44,8 @@ import com.github.skydoves.colorpicker.compose.ColorPickerController
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import eu.kanade.domain.ui.model.AppTheme
 import kotlinx.coroutines.launch
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowForward
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.Button
 import tachiyomi.presentation.core.components.material.ButtonDefaults.buttonColors
@@ -149,7 +149,7 @@ internal fun ThemeColorPickerWidget(
                     }
 
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                        imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward,
                         tint = Color.Gray,
                         modifier = Modifier
                             .size(64.dp)

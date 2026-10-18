@@ -1,10 +1,10 @@
-import java.util.Date;
+import kotlin.time.Instant;
 
 CREATE TABLE history(
     id INTEGER NOT NULL PRIMARY KEY,
     manga_id INTEGER NOT NULL,
     chapter_id INTEGER NOT NULL UNIQUE,
-    read_at INTEGER AS Date,
+    read_at INTEGER AS Instant,
     read_duration INTEGER NOT NULL,
     FOREIGN KEY(manga_id) REFERENCES manga (id)
     ON DELETE CASCADE,
@@ -29,37 +29,34 @@ SELECT id, chapter_id, read_at, read_duration
 FROM history
 WHERE manga_id = :mangaId;
 
-getHistoryByChapterUrl:
-SELECT
-H.id,
-H.chapter_id,
-H.read_at,
-H.read_duration
-FROM history H
-JOIN chapter C
-ON H.chapter_id = C.id
-WHERE C.remote_url = :chapterUrl AND C.manga_id = :mangaId
-LIMIT 1;
+getHistoryByMangaIds:
+SELECT manga_id, id, chapter_id, read_at, read_duration
+FROM history
+WHERE manga_id IN :mangaIds
+ORDER BY manga_id, id;
+
+-- KMK -->
+-- Removed unused SY query getHistoryByChapterUrlAndMangaId
+-- KMK <--
 
 -- KMK -->
 resetHistoryByIds:
--- KMK <--
 UPDATE history
-SET read_at = 0
+SET read_at = NULL
 WHERE id IN :historyIds;
 
 resetHistoryByMangaIds:
--- KMK <--
 UPDATE history
-SET read_at = 0
+SET read_at = NULL
 WHERE manga_id IN :mangaIds;
+-- KMK <--
 
 removeAllHistory:
 DELETE FROM history;
 
 removeResettedHistory:
 DELETE FROM history
-WHERE read_at = 0;
+WHERE read_at IS NULL;
 
 upsert:
 INSERT INTO history(manga_id, chapter_id, read_at, read_duration)

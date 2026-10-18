@@ -4,12 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.FlipToBack
-import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -24,22 +18,28 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
+import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
-import kotlinx.collections.immutable.persistentListOf
-import mihon.feature.upcoming.DateHeading
+import kotlinx.datetime.LocalDate
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Checklist
+import mihon.icons.materialsymbols.rounded.DeleteSweep
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.FlipToBack
+import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
+import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.active
-import java.time.LocalDate
 
 @Composable
 fun HistoryScreen(
@@ -62,10 +62,6 @@ fun HistoryScreen(
 ) {
     // KMK -->
     BackHandler(enabled = state.selectionMode, onBack = toggleSelectionMode)
-    BackHandler(!state.searchQuery.isNullOrEmpty()) {
-        onSearchQueryChange(null)
-    }
-
     // KMK <--
 
     Scaffold(
@@ -86,11 +82,11 @@ fun HistoryScreen(
                     onChangeSearchQuery = onSearchQueryChange,
                     actions = {
                         AppBarActions(
-                            persistentListOf(
+                            listOf(
                                 // KMK -->
                                 AppBar.Action(
                                     title = stringResource(MR.strings.action_filter),
-                                    icon = Icons.Outlined.FilterList,
+                                    icon = MaterialSymbols.Rounded.FilterList,
                                     iconTint = if (hasActiveFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
                                     onClick = onFilterClicked,
                                 ),
@@ -98,7 +94,7 @@ fun HistoryScreen(
                                 AppBar.Action(
                                     title = stringResource(MR.strings.pref_clear_history),
                                     // KMK -->
-                                    icon = Icons.Outlined.Checklist,
+                                    icon = MaterialSymbols.Rounded.Checklist,
                                     onClick = toggleSelectionMode,
                                     // KMK <--
                                 ),
@@ -173,14 +169,7 @@ private fun HistoryScreenContent(
     ) {
         items(
             items = history,
-            // KNS
-            key = {
-                when (it) {
-                    is HistoryUiModel.Header -> "history-header-${it.date}"
-                    is HistoryUiModel.Item -> "history-item-${it.item.chapterId}-${it.item.mangaId}"
-                }
-            },
-            // KNS
+            key = { "history-${it.hashCode()}" },
             contentType = {
                 when (it) {
                     is HistoryUiModel.Header -> "header"
@@ -190,10 +179,9 @@ private fun HistoryScreenContent(
         ) { item ->
             when (item) {
                 is HistoryUiModel.Header -> {
-                    DateHeading(
+                    ListGroupHeader(
                         modifier = Modifier.animateItemFastScroll(),
-                        date = item.date,
-                        mangaCount = item.mangaCount,
+                        text = relativeDateText(item.date),
                     )
                 }
                 is HistoryUiModel.Item -> {
@@ -251,7 +239,8 @@ private fun HistoryScreenContent(
 }
 
 sealed interface HistoryUiModel {
-    data class Header(val date: LocalDate, val mangaCount: Int) : HistoryUiModel
+    data class Header(val date: LocalDate) : HistoryUiModel
+    // KMK -->
     data class Item(val item: HistoryWithRelations) : HistoryUiModel
     // KMK <--
 }
@@ -269,20 +258,20 @@ private fun HistorySelectionToolbar(
         titleContent = { Text(text = "$selectedCount") },
         actions = {
             AppBarActions(
-                persistentListOf(
+                listOf(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_all),
-                        icon = Icons.Outlined.SelectAll,
+                        icon = MaterialSymbols.Rounded.SelectAll,
                         onClick = onClickSelectAll,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_inverse),
-                        icon = Icons.Outlined.FlipToBack,
+                        icon = MaterialSymbols.Rounded.FlipToBack,
                         onClick = onClickInvertSelection,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.pref_clear_history),
-                        icon = Icons.Outlined.DeleteSweep,
+                        icon = MaterialSymbols.Rounded.DeleteSweep,
                         onClick = onClickClearHistory,
                         enabled = selectedCount > 0,
                     ),

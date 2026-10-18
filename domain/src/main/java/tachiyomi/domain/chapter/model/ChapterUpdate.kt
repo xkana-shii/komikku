@@ -1,45 +1,32 @@
 package tachiyomi.domain.chapter.model
 
-import kotlinx.serialization.json.JsonObject
+import mihon.domain.common.PartialUpdate
+import kotlin.time.Instant
 
-data class ChapterUpdate(
-    val id: Long,
-    val mangaId: Long? = null,
-    val read: Boolean? = null,
-    val bookmark: Boolean? = null,
-    val lastPageRead: Long? = null,
-    val dateFetch: Long? = null,
-    val sourceOrder: Long? = null,
-    val url: String? = null,
-    val name: String? = null,
-    val dateUpload: Long? = null,
-    val chapterNumber: Double? = null,
-    val scanlator: String? = null,
-    val version: Long? = null,
-    val memo: JsonObject? = null,
+class ChapterUpdate(val id: Long, block: ChapterUpdate.() -> Unit) : PartialUpdate() {
+    var read: Boolean? by field(null)
+    var bookmark: Boolean? by field(null)
     // KMK -->
-    val bookmarkColor: BookmarkColor? = null,
+    var bookmarkColor: BookmarkColor? by field(null)
     // KMK <--
-)
+    var lastPageRead: Int? by field(null)
+    var dateFetch: Instant? by field(null)
+    var version: Long? by field(null)
+
+    init {
+        block()
+    }
+}
 
 fun Chapter.toChapterUpdate(): ChapterUpdate {
-    return ChapterUpdate(
-        id,
-        mangaId,
-        read,
-        bookmark,
-        lastPageRead,
-        dateFetch,
-        sourceOrder,
-        url,
-        name,
-        dateUpload,
-        chapterNumber,
-        scanlator,
-        version,
-        memo,
+    return ChapterUpdate(id) {
+        read = this@toChapterUpdate.read
+        bookmark = this@toChapterUpdate.bookmark
         // KMK -->
-        bookmarkColor,
+        bookmarkColor = this@toChapterUpdate.bookmarkColor
         // KMK <--
-    )
+        lastPageRead = this@toChapterUpdate.lastPageRead
+        dateFetch = this@toChapterUpdate.dateFetch
+        version = this@toChapterUpdate.version
+    }
 }

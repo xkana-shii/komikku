@@ -10,36 +10,35 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
+import eu.kanade.tachiyomi.data.backup.create.BackupCreateWorker
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.domain.category.interactor.GetCategories
-import tachiyomi.domain.category.model.Category
+import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.LazyColumnWithAction
 import tachiyomi.presentation.core.components.SectionCard
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 class CreateBackupScreen : Screen() {
 
@@ -47,8 +46,9 @@ class CreateBackupScreen : Screen() {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val viewModel = viewModel<CreateBackupViewModel>()
+        val viewModel = metroViewModel<CreateBackupViewModel>()
         val state by viewModel.state.collectAsState()
+        val scope = rememberCoroutineScope()
 
         val chooseBackupDir = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.CreateDocument("application/*"),
@@ -78,14 +78,16 @@ class CreateBackupScreen : Screen() {
                 actionLabel = stringResource(MR.strings.action_create),
                 actionEnabled = state.options.canCreate(),
                 onClickAction = {
-                    if (!BackupCreateJob.isManualJobRunning(context)) {
-                        try {
-                            chooseBackupDir.launch(BackupCreator.getFilename())
-                        } catch (e: ActivityNotFoundException) {
-                            context.toast(MR.strings.file_picker_error)
+                    scope.launch {
+                        if (!BackupCreateWorker.isManualJobRunning(context)) {
+                            try {
+                                chooseBackupDir.launch(BackupCreator.getFilename())
+                            } catch (_: ActivityNotFoundException) {
+                                context.toast(MR.strings.file_picker_error)
+                            }
+                        } else {
+                            context.toast(MR.strings.backup_in_progress)
                         }
-                    } else {
-                        context.toast(MR.strings.backup_in_progress)
                     }
                 },
             ) {
@@ -102,23 +104,6 @@ class CreateBackupScreen : Screen() {
                 }
 
                 item {
-                    SectionCard(MR.strings.categories) {
-                        LabeledCheckbox(
-                            label = stringResource(KMR.strings.backup_all_categories),
-                            checked = state.options.includedCategoryIds == null,
-                            onCheckedChange = { viewModel.selectAllCategories(it) },
-                        )
-                        state.categories.forEach { category ->
-                            LabeledCheckbox(
-                                label = if (category.isSystemCategory) stringResource(MR.strings.label_default) else category.name,
-                                checked = state.options.includedCategoryIds?.contains(category.id) ?: true,
-                                onCheckedChange = { viewModel.toggleCategory(category.id, it) },
-                            )
-                        }
-                    }
-                }
-
-                item {
                     SectionCard(MR.strings.label_settings) {
                         Options(BackupOptions.settingsOptions, state, viewModel)
                     }
@@ -129,7 +114,7 @@ class CreateBackupScreen : Screen() {
 
     @Composable
     private fun Options(
-        options: ImmutableList<BackupOptions.Entry>,
+        options: List<BackupOptions.Entry>,
         state: CreateBackupViewModel.State,
         model: CreateBackupViewModel,
     ) {
@@ -146,28 +131,13 @@ class CreateBackupScreen : Screen() {
     }
 }
 
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 class CreateBackupViewModel : ViewModel() {
 
     val state: StateFlow<CreateBackupViewModel.State>
         field = MutableStateFlow<CreateBackupViewModel.State>(State())
-
-    init {
-        viewModelScope.launchIO {
-            val categories = Injekt.get<GetCategories>().await().filterNot { it.isSystemCategory }
-            state.update { it.copy(categories = listOf(Category(0, "", 0, 0, false)) + categories) }
-        }
-    }
-
-    fun selectAllCategories(all: Boolean) {
-        state.update { it.copy(options = it.options.copy(includedCategoryIds = if (all) null else emptySet())) }
-    }
-
-    fun toggleCategory(id: Long, selected: Boolean) {
-        state.update {
-            val ids = it.options.includedCategoryIds ?: it.categories.map { category -> category.id }.toSet()
-            it.copy(options = it.options.copy(includedCategoryIds = if (selected) ids + id else ids - id))
-        }
-    }
 
     fun toggle(setter: (BackupOptions, Boolean) -> BackupOptions, enabled: Boolean) {
         state.update {
@@ -178,12 +148,11 @@ class CreateBackupViewModel : ViewModel() {
     }
 
     fun createBackup(context: Context, uri: Uri) {
-        BackupCreateJob.startNow(context, uri, state.value.options)
+        BackupCreateWorker.startNow(context, uri, state.value.options)
     }
 
     @Immutable
     data class State(
         val options: BackupOptions = BackupOptions(),
-        val categories: List<Category> = emptyList(),
     )
 }

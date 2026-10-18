@@ -10,9 +10,8 @@ import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
-import uy.kohesive.injekt.injectLazy
 import java.io.ObjectStreamException
-import java.time.Instant
+import kotlin.time.Instant
 import java.io.Serializable as JavaSerializable
 
 @SuppressLint("UnsafeOptInUsageError")
@@ -22,13 +21,13 @@ data class Manga(
     val id: Long,
     val source: Long,
     val favorite: Boolean,
-    val lastUpdate: Long,
-    val nextUpdate: Long,
+    val lastUpdate: Instant?,
+    val nextUpdate: Instant?,
     val fetchInterval: Int,
-    val dateAdded: Long,
+    val dateAdded: Instant?,
     val viewerFlags: Long,
     val chapterFlags: Long,
-    val coverLastModified: Long,
+    val coverLastModified: Instant?,
     val url: String,
     // SY -->
     val ogTitle: String,
@@ -55,11 +54,16 @@ data class Manga(
 
     // SY -->
     /* KMK --> */ @Transient /* KMK <-- */
-    private val customMangaInfo = if (favorite) {
-        getCustomMangaInfo.get(id)
-    } else {
-        null
+    // KUN -->
+    // Lazy so the bridge is resolved on first access rather than at construction.
+    private val customMangaInfo by lazy {
+        if (favorite) {
+            getCustomMangaInfo?.get(id)
+        } else {
+            null
+        }
     }
+    // KUN <--
 
     val title: String
         get() = customMangaInfo?.title ?: ogTitle
@@ -89,7 +93,6 @@ data class Manga(
             Always predict release date even for Completed entries
             .takeIf { status != SManga.COMPLETED.toLong() }?
              KMK <-- */
-            .let { Instant.ofEpochMilli(it) }
 
     val sorting: Long
         get() = chapterFlags and CHAPTER_SORTING_MASK
@@ -145,14 +148,19 @@ data class Manga(
         const val CHAPTER_BOOKMARKED_MASK = 0x00000060L
 
         const val CHAPTER_SORTING_SOURCE = 0x00000000L
-        const val CHAPTER_SORTING_NUMBER = 0x00000200L
-        const val CHAPTER_SORTING_UPLOAD_DATE = 0x00000400L
-        const val CHAPTER_SORTING_ALPHABET = 0x00000600L
-        const val CHAPTER_SORTING_MASK = 0x00000600L
+        const val CHAPTER_SORTING_NUMBER = 0x00000100L
+        const val CHAPTER_SORTING_UPLOAD_DATE = 0x00000200L
+        const val CHAPTER_SORTING_ALPHABET = 0x00000300L
+        const val CHAPTER_SORTING_MASK = 0x00000300L
 
         const val CHAPTER_DISPLAY_NAME = 0x00000000L
         const val CHAPTER_DISPLAY_NUMBER = 0x00100000L
         const val CHAPTER_DISPLAY_MASK = 0x00100000L
+
+        /**
+         * [dateAdded] of an entry added to the library before the time it was added was recorded.
+         */
+        val UNKNOWN_FAVORITE_AT = Instant.fromEpochMilliseconds(0)
 
         fun create() = Manga(
             id = -1L,
@@ -162,13 +170,13 @@ data class Manga(
             // SY <--
             source = -1L,
             favorite = false,
-            lastUpdate = 0L,
-            nextUpdate = 0L,
+            lastUpdate = null,
+            nextUpdate = null,
             fetchInterval = 0,
-            dateAdded = 0L,
+            dateAdded = null,
             viewerFlags = 0L,
             chapterFlags = 0L,
-            coverLastModified = 0L,
+            coverLastModified = null,
             // SY -->
             ogArtist = null,
             ogAuthor = null,
@@ -187,7 +195,8 @@ data class Manga(
         )
 
         // SY -->
-        private val getCustomMangaInfo: GetCustomMangaInfo by injectLazy()
+        private val getCustomMangaInfo: GetCustomMangaInfo?
+            get() = GetCustomMangaInfo.getInstanceOrNull()
         // SY <--
     }
 

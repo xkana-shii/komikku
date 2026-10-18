@@ -1,68 +1,85 @@
 package eu.kanade.domain.manga.interactor
 
-import eu.kanade.domain.connections.service.WebhookEvent
-import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
+import dev.zacsweers.metro.Inject
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.repository.MangaRepository
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import java.time.Instant
-import java.time.ZonedDateTime
+import kotlin.time.Clock
+import kotlin.time.Instant
 
+@Inject
 class UpdateManga(
     private val mangaRepository: MangaRepository,
     private val fetchInterval: FetchInterval,
 ) {
 
     suspend fun await(mangaUpdate: MangaUpdate): Boolean {
-        val previous = if (mangaUpdate.favorite != null) mangaRepository.getMangaById(mangaUpdate.id) else null
-        return mangaRepository.update(mangaUpdate).also { success ->
-            if (success && previous != null && previous.favorite != mangaUpdate.favorite) {
-                Injekt.get<WebhookNotifier>().notify(if (mangaUpdate.favorite == true) WebhookEvent.MANGA_ADDED else WebhookEvent.MANGA_REMOVED, previous)
-            }
-        }
+        return mangaRepository.update(mangaUpdate)
     }
 
     suspend fun awaitAll(mangaUpdates: List<MangaUpdate>): Boolean {
-        val previous = mangaUpdates.filter { it.favorite != null }.associate { it.id to mangaRepository.getMangaById(it.id) }
-        return mangaRepository.updateAll(mangaUpdates).also { success ->
-            if (success) {
-                mangaUpdates.forEach { update ->
-                    previous[update.id]?.takeIf { it.favorite != update.favorite }?.let {
-                        Injekt.get<WebhookNotifier>().notify(if (update.favorite == true) WebhookEvent.MANGA_ADDED else WebhookEvent.MANGA_REMOVED, it)
-                    }
-                }
-            }
-        }
+        return mangaRepository.updateAll(mangaUpdates)
     }
+
+    // KUN -->
+    // The fork edits a local entry's source-owned metadata directly, which the case-specific
+    // remote update query covers (Mihon only writes it from UpdateMangaFromRemote).
+    suspend fun awaitRemote(mangaRemoteUpdate: MangaRemoteUpdate): Boolean {
+        return mangaRepository.updateRemote(mangaRemoteUpdate)
+    }
+    // KUN <--
 
     suspend fun awaitUpdateFetchInterval(
         manga: Manga,
-        dateTime: ZonedDateTime = ZonedDateTime.now(),
-        window: Pair<Long, Long> = fetchInterval.getWindow(dateTime),
+        timeZone: TimeZone = TimeZone.currentSystemDefault(),
+        dateTime: LocalDateTime = Clock.System.now().toLocalDateTime(timeZone),
+        window: ClosedRange<Instant>? = fetchInterval.getWindow(dateTime.date, timeZone),
+        foundRelease: Boolean = false,
     ): Boolean {
         return mangaRepository.update(
-            fetchInterval.toMangaUpdate(manga, dateTime, window),
+            fetchInterval.withFetchInterval(manga, dateTime, timeZone, window, foundRelease),
         )
     }
 
-    suspend fun awaitUpdateLastUpdate(mangaId: Long): Boolean {
-        return mangaRepository.update(MangaUpdate(id = mangaId, lastUpdate = Instant.now().toEpochMilli()))
+    /**
+     * Updates the fetch interval and marks the chapter list as changed in a single write.
+     */
+    suspend fun awaitUpdateFetchIntervalAndLastUpdate(
+        manga: Manga,
+        timeZone: TimeZone,
+        dateTime: LocalDateTime,
+        window: ClosedRange<Instant>?,
+        foundRelease: Boolean = false,
+    ): Boolean {
+        return mangaRepository.update(
+            fetchInterval.withFetchInterval(manga, dateTime, timeZone, window, foundRelease)
+                .apply { lastUpdate = Clock.System.now() },
+        )
     }
 
     suspend fun awaitUpdateCoverLastModified(mangaId: Long): Boolean {
-        return mangaRepository.update(MangaUpdate(id = mangaId, coverLastModified = Instant.now().toEpochMilli()))
+        return mangaRepository.update(
+            MangaUpdate(mangaId) {
+                coverLastModified = Clock.System.now()
+            },
+        )
     }
 
     suspend fun awaitUpdateFavorite(mangaId: Long, favorite: Boolean): Boolean {
         val dateAdded = when (favorite) {
-            true -> Instant.now().toEpochMilli()
-            false -> 0
+            true -> Clock.System.now()
+            false -> null
         }
-        return await(
-            MangaUpdate(id = mangaId, favorite = favorite, dateAdded = dateAdded),
+        return mangaRepository.update(
+            MangaUpdate(mangaId) {
+                this.favorite = favorite
+                this.dateAdded = dateAdded
+            },
         )
     }
 }

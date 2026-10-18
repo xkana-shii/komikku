@@ -1,5 +1,6 @@
 package tachiyomi.domain.manga.interactor
 
+import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -10,6 +11,7 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
 import kotlin.time.Duration.Companion.seconds
 
+@Inject
 class GetFavorites(
     private val mangaRepository: MangaRepository,
 ) {

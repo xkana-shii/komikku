@@ -10,15 +10,14 @@ import kotlinx.serialization.json.longOrNull
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.SequelPrequelRelation
 
-// KMK --> AniList's MANGA media type includes novels; its format distinguishes them.
+// KMK --> Keep only public manga relation metadata in the local transient cache.
 internal fun JsonObject.toRelatedEntries(): List<SequelPrequelEntry> =
     ((this["data"] as? JsonObject)?.get("Media") as? JsonObject)?.get("relations")?.let { it as? JsonObject }
         ?.get("edges")?.jsonArray.orEmpty().mapNotNull { element ->
             val edge = element.jsonObject
             val node = edge["node"] as? JsonObject ?: return@mapNotNull null
             if (node["type"]?.jsonPrimitive?.contentOrNull != "MANGA") return@mapNotNull null
-            val format = node["format"]?.jsonPrimitive?.contentOrNull
-            if (format == "NOVEL") return@mapNotNull null
+            if (node["format"]?.jsonPrimitive?.contentOrNull == "NOVEL") return@mapNotNull null
             val remoteId = node["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
             val titles = node["title"] as? JsonObject ?: return@mapNotNull null
             val title = listOf("userPreferred", "english", "romaji").firstNotNullOfOrNull {

@@ -10,11 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +20,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.DpOffset
@@ -52,8 +49,8 @@ import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import coil3.size.Size
-import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
@@ -61,16 +58,19 @@ import eu.kanade.presentation.manga.EditCoverAction
 import eu.kanade.tachiyomi.data.coil.ImageDecoder
 import eu.kanade.tachiyomi.data.coil.newDecoder
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.Edit
+import mihon.icons.materialsymbols.rounded.Save
+import mihon.icons.materialsymbols.rounded.Share
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.clickableNoIndication
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun MangaCoverDialog(
@@ -89,7 +89,14 @@ fun MangaCoverDialog(
     val iconColor = contentColorFor(MaterialTheme.colorScheme.secondaryContainer)
     val dropdownBgColor = MaterialTheme.colorScheme.surfaceVariant
     // KMK <--
-    val useNewRenderer = Injekt.get<BasePreferences>().highQualityRenderer().get()
+
+    // KUN -->
+    // Gate on device capability like the reader does (`ReadingMode`): with the preference on but the
+    // WebGPU renderer unavailable, rendering the full-screen cover would show a no-op surface instead of
+    // falling back to the SSIV viewer below.
+    val useNewRenderer = LocalContext.current.appGraph.basePreferences.highQualityRenderer.get() &&
+        runCatching { WebGpuRenderer.isAvailable }.getOrDefault(false)
+    // KUN <--
     val view = LocalView.current
 
     Dialog(
@@ -115,7 +122,7 @@ fun MangaCoverDialog(
                     ActionsPill {
                         IconButton(onClick = onDismissRequest) {
                             Icon(
-                                imageVector = Icons.Outlined.Close,
+                                imageVector = MaterialSymbols.Rounded.Close,
                                 contentDescription = stringResource(MR.strings.action_close),
                                 // KMK -->
                                 tint = iconColor,
@@ -126,10 +133,10 @@ fun MangaCoverDialog(
                     Spacer(modifier = Modifier.weight(1f))
                     ActionsPill {
                         AppBarActions(
-                            actions = persistentListOf(
+                            actions = listOf(
                                 AppBar.Action(
                                     title = stringResource(MR.strings.action_share),
-                                    icon = Icons.Outlined.Share,
+                                    icon = MaterialSymbols.Rounded.Share,
                                     onClick = onShareClick,
                                     // KMK -->
                                     iconTint = iconColor,
@@ -137,7 +144,7 @@ fun MangaCoverDialog(
                                 ),
                                 AppBar.Action(
                                     title = stringResource(MR.strings.action_save),
-                                    icon = Icons.Outlined.Save,
+                                    icon = MaterialSymbols.Rounded.Save,
                                     onClick = onSaveClick,
                                     // KMK -->
                                     iconTint = iconColor,
@@ -158,7 +165,7 @@ fun MangaCoverDialog(
                                     },
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Edit,
+                                        imageVector = MaterialSymbols.Rounded.Edit,
                                         contentDescription = stringResource(MR.strings.action_edit_cover),
                                         // KMK -->
                                         tint = iconColor,
@@ -205,54 +212,53 @@ fun MangaCoverDialog(
             },
         ) { contentPadding ->
             if (useNewRenderer) {
-                val state = ImageViewerState()
-
-                ImageRequest.Builder(view.context)
-                    .data(manga)
-                    .size(Size.ORIGINAL)
-                    .memoryCachePolicy(CachePolicy.DISABLED)
-                    .newDecoder(true)
-                    .target { result ->
-                        val res = (result as ImageDecoder.DecodeResultImage)
-                        // Held, then freed, around the upload: its buffer alone doesn't keep
-                        // the frame's native pixels alive.
-                        val page = res.frame.use {
-                            runBlocking(Dispatchers.Default) {
-                                ImagePage.ImageSingle(
-                                    Image(
-                                        res.image,
-                                        res.width,
-                                        res.height,
-                                        createMipMaps = true,
-                                        backgroundColor = 0,
-                                        hdr = res.isHdr,
-                                        hdrHeadroom = res.hdrHeadroom,
-                                        gainmap = res.gainmap?.let {
-                                            GainmapInput(
-                                                pixels = it.pixels,
-                                                width = it.width,
-                                                height = it.height,
-                                                channels = it.channels,
-                                                gamma = it.gamma,
-                                                minContentBoost = it.minContentBoost,
-                                                maxContentBoost = it.maxContentBoost,
-                                                offsetSdr = it.offsetSdr,
-                                                offsetHdr = it.offsetHdr,
-                                            )
-                                        },
-                                    ),
-                                )
-                            }
-                        }
-                        state.apply {
-                            fetchPage = { index ->
-                                if (index == 0) page else null
-                            }
-                            invalidate()
+                val state = remember(manga) { ImageViewerState() }
+                LaunchedEffect(manga) {
+                    val request = ImageRequest.Builder(view.context)
+                        .data(manga)
+                        .size(Size.ORIGINAL)
+                        .memoryCachePolicy(CachePolicy.DISABLED)
+                        .newDecoder(true)
+                        .build()
+                    val result = view.context.imageLoader.execute(request) as? SuccessResult ?: return@LaunchedEffect
+                    val res = result.image as? ImageDecoder.DecodeResultImage ?: return@LaunchedEffect
+                    // Held, then freed, around the upload: its buffer alone doesn't keep
+                    // the frame's native pixels alive.
+                    val page = res.frame.use {
+                        withContext(Dispatchers.Default) {
+                            ImagePage.ImageSingle(
+                                Image(
+                                    res.image,
+                                    res.width,
+                                    res.height,
+                                    createMipMaps = true,
+                                    backgroundColor = 0,
+                                    hdr = res.isHdr,
+                                    hdrHeadroom = res.hdrHeadroom,
+                                    gainmap = res.gainmap?.let {
+                                        GainmapInput(
+                                            pixels = it.pixels,
+                                            width = it.width,
+                                            height = it.height,
+                                            channels = it.channels,
+                                            gamma = it.gamma,
+                                            minContentBoost = it.minContentBoost,
+                                            maxContentBoost = it.maxContentBoost,
+                                            offsetSdr = it.offsetSdr,
+                                            offsetHdr = it.offsetHdr,
+                                        )
+                                    },
+                                ),
+                            )
                         }
                     }
-                    .build()
-                    .let(view.context.imageLoader::enqueue)
+                    state.apply {
+                        fetchPage = { index ->
+                            if (index == 0) page else null
+                        }
+                        invalidate()
+                    }
+                }
 
                 ImageViewer(state = state)
                 return@Scaffold

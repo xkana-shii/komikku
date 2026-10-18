@@ -1,16 +1,13 @@
 package eu.kanade.tachiyomi.data.backup.create.creators
 
-import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
-import eu.kanade.tachiyomi.data.backup.models.backupFeedMapper
-import tachiyomi.data.Database
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
+import tachiyomi.domain.source.repository.FeedSavedSearchRepository
 
-// KMK -->
-
+@Inject
 class FeedBackupCreator(
-    private val database: Database = Injekt.get(),
+    private val feedSavedSearchRepository: FeedSavedSearchRepository,
 ) {
 
     /**
@@ -20,7 +17,20 @@ class FeedBackupCreator(
      * - Source's feeds from saved searches
      */
     suspend operator fun invoke(): List<BackupFeed> {
-        return database.feed_saved_searchQueries.selectAllFeedWithSavedSearch(backupFeedMapper).awaitAsList()
+        return feedSavedSearchRepository.getAllWithSavedSearch().map { (feed, savedSearch) ->
+            BackupFeed(
+                source = feed.source,
+                global = feed.global,
+                savedSearch = savedSearch?.let {
+                    BackupSavedSearch(
+                        // The joined backup row carries the feed's source, not the saved search's.
+                        source = feed.source,
+                        name = it.name,
+                        query = it.query.orEmpty(),
+                        filterList = it.filtersJson ?: "[]",
+                    )
+                },
+            )
+        }
     }
 }
-// KMK <--

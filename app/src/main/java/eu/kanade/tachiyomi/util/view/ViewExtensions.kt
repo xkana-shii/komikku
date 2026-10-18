@@ -21,7 +21,9 @@ import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import dev.zacsweers.metrox.viewmodel.LocalMetroViewModelFactory
 import eu.kanade.presentation.theme.TachiyomiTheme
+import mihon.app.di.appGraph
 
 inline fun ComponentActivity.setComposeContent(
     parent: CompositionContext? = null,
@@ -32,6 +34,7 @@ inline fun ComponentActivity.setComposeContent(
             CompositionLocalProvider(
                 LocalTextStyle provides MaterialTheme.typography.bodySmall,
                 LocalContentColor provides MaterialTheme.colorScheme.onBackground,
+                LocalMetroViewModelFactory provides appGraph.viewModelFactory,
             ) {
                 content()
             }

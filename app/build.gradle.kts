@@ -12,12 +12,22 @@ plugins {
     id("mihon.android.application.compose")
     kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
-    alias(libs.plugins.aboutLibraries)
+    alias(libs.plugins.apollo)
+    alias(libs.plugins.metro)
     // KMK -->
     alias(libs.plugins.androidx.baselineProfile)
     // KMK <--
     id("com.github.ben-manes.versions")
 }
+
+// KMK --> Keep telemetry opt-in while retaining Komikku's application identity and variants.
+if (Config.includeTelemetry) {
+    pluginManager.apply {
+        apply(libs.plugins.google.services.get().pluginId)
+        apply(libs.plugins.firebase.crashlytics.get().pluginId)
+    }
+}
+// KMK <--
 
 val devSecret = providers.gradleProperty("devSecret").getOrElse("default-secret")
 
@@ -31,6 +41,9 @@ android {
         versionName = "1.24.7"
 
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
+        // KMK --> Used by the telemetry compatibility facade.
+        buildConfigField("boolean", "TELEMETRY_INCLUDED", "${Config.includeTelemetry}")
+        // KMK <--
         buildConfigField("String", "DEV_OPTIONS", "\"${devSecret}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -155,6 +168,10 @@ android {
     }
 }
 
+// KMK --> The AboutLibraries plugin needs the Android application extension created above.
+pluginManager.apply(libs.plugins.aboutLibraries.get().pluginId)
+// KMK <--
+
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
@@ -208,8 +225,12 @@ dependencies {
     // SY -->
     implementation(projects.i18nSy)
     // SY <--
+    implementation(projects.icons.customMaterialSymbols)
+    implementation(projects.icons.materialSymbols)
+    implementation(projects.icons.simpleIcons)
     implementation(projects.core.archive)
     implementation(projects.core.common)
+    implementation(projects.core.metro)
     implementation(projects.coreMetadata)
     implementation(projects.sourceApi)
     implementation(projects.sourceLocal)
@@ -217,6 +238,13 @@ dependencies {
     implementation(projects.domain)
     implementation(projects.presentationCore)
     implementation(projects.presentationWidget)
+    // KMK --> No-op by default; Firebase is only linked when explicitly enabled.
+    implementation(projects.telemetry)
+    // KMK <--
+
+    implementation(libs.metro.runtime)
+    implementation(libs.metrox.viewmodel)
+    implementation(libs.metrox.viewmodel.compose)
 
     // Compose
     implementation(compose.activity)
@@ -273,6 +301,7 @@ dependencies {
 
     // Data serialization (JSON, protobuf, xml)
     implementation(kotlinx.bundles.serialization)
+    implementation(kotlinx.datetime)
 
     // HTML parser
     implementation(libs.jsoup)
@@ -339,6 +368,10 @@ dependencies {
     // String similarity
     implementation(libs.stringSimilarity)
 
+    // GraphQL generation
+    implementation(libs.apollo)
+    implementation(libs.apollo.adapters)
+
     // Tests
     testImplementation(libs.bundles.test)
     // KMK -->
@@ -375,6 +408,59 @@ val currentTime = getCurrentTime()
 
 fun ApplicationVariant.buildConfigField(type: String, name: String, value: Provider<String>) {
     buildConfigFields?.put(name, value.map { BuildConfigField(type, it, null) })
+}
+
+apollo {
+    val schemaBasePath = "src/main/graphql/mihon/graphql"
+    service("anilist") {
+        packageName.set("mihon.graphql.anilist")
+        val srcDir = "$schemaBasePath/anilist"
+        srcDir(file(srcDir))
+        introspection {
+            endpointUrl.set("https://graphql.anilist.co")
+            schemaFile.set(file("$srcDir/anilist.graphqls"))
+        }
+        mapScalarToKotlinString("CountryCode")
+    }
+    service("kitsu") {
+        packageName.set("mihon.graphql.kitsu")
+        val srcDir = "$schemaBasePath/kitsu"
+        srcDir(file(srcDir))
+        introspection {
+            headers.put(
+                "User-Agent",
+                "Komikku v${android.defaultConfig.versionName} (${android.defaultConfig.applicationId})",
+            )
+            endpointUrl.set("https://kitsu.app/api/graphql")
+            schemaFile.set(file("$srcDir/kitsu.graphqls"))
+        }
+        mapScalarToKotlinString("Date")
+        mapScalar("ISO8601DateTime", "kotlin.time.Instant", "com.apollographql.adapter.core.KotlinInstantAdapter")
+        mapScalar(
+            "Map",
+            "kotlin.collections.Map<String, Any?>",
+            "mihon.graphql.kitsu.adapter.KitsuMapAdapter",
+        )
+    }
+    service("shikimori") {
+        packageName.set("mihon.graphql.shikimori")
+        val srcDir = "$schemaBasePath/shikimori"
+        srcDir(file(srcDir))
+        introspection {
+            endpointUrl.set("https://shikimori.io/api/graphql")
+            schemaFile.set(file("$srcDir/shikimori.graphqls"))
+        }
+        mapScalarToKotlinString("ISO8601Date")
+    }
+    service("suwayomi") {
+        packageName.set("mihon.graphql.suwayomi")
+        val srcDir = "$schemaBasePath/suwayomi"
+        srcDir(file(srcDir))
+        introspection {
+            endpointUrl.set("http://localhost:4567/api/graphql")
+            schemaFile.set(file("$srcDir/suwayomi.graphqls"))
+        }
+    }
 }
 
 androidComponents {

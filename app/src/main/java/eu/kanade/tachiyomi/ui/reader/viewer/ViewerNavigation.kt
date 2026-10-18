@@ -7,9 +7,12 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.lang.invert
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.injectLazy
 
-abstract class ViewerNavigation {
+abstract class ViewerNavigation(
+    // KUN -->
+    protected val readerPreferences: ReaderPreferences,
+    // KUN <--
+) {
 
     sealed class NavigationRegion(val nameRes: StringResource, val color: Int) {
         data object MENU : NavigationRegion(MR.strings.action_menu, Color.argb(0xCC, 0x95, 0x81, 0x8D))
@@ -54,9 +57,8 @@ abstract class ViewerNavigation {
     }
 
     // KMK -->
-    private val readerPreferences: ReaderPreferences by injectLazy()
     protected val regionSize1
-        get() = if (readerPreferences.smallerTapZone().get()) 0.25f else 0.33f
+        get() = if (readerPreferences.smallerTapZone.get()) 0.25f else 0.33f
     protected val regionSize2 = 1f - regionSize1
     // KMK <--
 }

@@ -33,30 +33,35 @@ interface MangaRepository {
 
     suspend fun getDuplicateLibraryManga(id: Long, title: String): List<MangaWithChapterCount>
 
-    // KMK -->
     suspend fun getUpcomingManga(
         statuses: Set<Long>,
         excludedCategories: List<Long>,
         includedCategories: List<Long>,
     ): Flow<List<Manga>>
-    // KMK <--
 
     suspend fun resetViewerFlags(): Boolean
 
+    // KMK -->
+    suspend fun updateLibraryChapterFlags(chapterFlags: Long): Boolean
+    // KMK <--
+
+    suspend fun deleteNonLibraryManga(sourceIds: List<Long>, keepReadManga: Boolean)
+
     suspend fun setMangaCategories(mangaId: Long, categoryIds: List<Long>)
+
+    suspend fun getExcludedScanlators(mangaId: Long): Set<String>
+
+    suspend fun getExcludedScanlatorsByMangaIds(mangaIds: List<Long>): Map<Long, List<String>>
+
+    fun getExcludedScanlatorsAsFlow(mangaId: Long): Flow<Set<String>>
+
+    suspend fun setExcludedScanlators(mangaId: Long, excludedScanlators: Set<String>)
 
     suspend fun update(update: MangaUpdate): Boolean
 
-    suspend fun updateAll(mangaUpdates: List<MangaUpdate>): Boolean
-
-    // KMK -->
     suspend fun updateRemote(update: MangaRemoteUpdate): Boolean
-    // KMK <--
 
-    // KMK -->
-    /** Overwrites chapter flags on library entries in one statement. */
-    suspend fun updateLibraryChapterFlags(chapterFlags: Long): Boolean
-    // KMK <--
+    suspend fun updateAll(mangaUpdates: List<MangaUpdate>): Boolean
 
     suspend fun insertNetworkManga(
         manga: List<Manga>,

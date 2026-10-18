@@ -1,14 +1,11 @@
 package eu.kanade.tachiyomi.ui.download
 
 import android.view.LayoutInflater
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,10 +37,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.recyclerview.widget.LinearLayoutManager
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
@@ -51,8 +48,12 @@ import eu.kanade.presentation.components.NestedMenuItem
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.databinding.DownloadListBinding
-import kotlinx.collections.immutable.persistentListOf
-import tachiyomi.core.common.util.lang.launchUI
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Sort
+import mihon.icons.materialsymbols.roundedfilled.Pause
+import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Pill
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -68,13 +69,14 @@ object DownloadQueueScreen : Screen() {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
-        val viewModel = viewModel {
-            DownloadQueueViewModel(
-                // KMK -->
-                navigator = navigator,
-                // KMK <--
-            )
-        }
+        val viewModel =
+            assistedMetroViewModel<DownloadQueueViewModel, DownloadQueueViewModel.Factory> {
+                create(
+                    // KMK -->
+                    navigator = navigator,
+                    // KMK <--
+                )
+            }
         val downloadList by viewModel.state.collectAsStateWithLifecycle()
         val downloadCount by remember {
             derivedStateOf { downloadList.sumOf { it.subItems.size } }
@@ -116,11 +118,12 @@ object DownloadQueueScreen : Screen() {
                                 overflow = TextOverflow.Ellipsis,
                             )
                             if (downloadCount > 0) {
+                                val pillAlpha = if (isSystemInDarkTheme()) 0.12f else 0.08f
                                 Pill(
                                     text = "$downloadCount",
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.padding(start = 4.dp),
+                                    color = MaterialTheme.colorScheme.onBackground
+                                        .copy(alpha = pillAlpha),
                                     fontSize = 14.sp,
                                 )
                             }
@@ -188,10 +191,10 @@ object DownloadQueueScreen : Screen() {
                             }
 
                             AppBarActions(
-                                persistentListOf(
+                                listOf(
                                     AppBar.Action(
                                         title = stringResource(MR.strings.action_sort),
-                                        icon = Icons.AutoMirrored.Outlined.Sort,
+                                        icon = MaterialSymbols.AutoMirroredRounded.Sort,
                                         onClick = { sortExpanded = true },
                                     ),
                                     AppBar.OverflowAction(
@@ -218,9 +221,9 @@ object DownloadQueueScreen : Screen() {
                     },
                     icon = {
                         val icon = if (isRunning) {
-                            Icons.Outlined.Pause
+                            MaterialSymbols.RoundedFilled.Pause
                         } else {
-                            Icons.Filled.PlayArrow
+                            MaterialSymbols.RoundedFilled.PlayArrow
                         }
                         Icon(imageVector = icon, contentDescription = null)
                     },
@@ -275,11 +278,11 @@ object DownloadQueueScreen : Screen() {
 
                         ViewCompat.setNestedScrollingEnabled(viewModel.controllerBinding.root, true)
 
-                        scope.launchUI {
+                        scope.launch(Dispatchers.Main) {
                             viewModel.getDownloadStatusFlow()
                                 .collect(viewModel::onStatusChange)
                         }
-                        scope.launchUI {
+                        scope.launch(Dispatchers.Main) {
                             viewModel.getDownloadProgressFlow()
                                 .collect(viewModel::onUpdateDownloadedPages)
                         }

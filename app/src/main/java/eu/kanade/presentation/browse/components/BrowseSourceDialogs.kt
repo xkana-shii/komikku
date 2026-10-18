@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.window.DialogProperties
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.ImmutableList
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
@@ -88,86 +87,49 @@ fun SavedSearchDeleteDialog(
 @Composable
 fun SavedSearchCreateDialog(
     onDismissRequest: () -> Unit,
-    currentSavedSearches: ImmutableList<String>,
+    currentSavedSearches: List<String>,
     saveSearch: (String) -> Unit,
 ) {
     var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(""))
     }
-    var showOverwriteDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-
-    if (showOverwriteDialog) {
-        AlertDialog(
-            onDismissRequest = { showOverwriteDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        saveSearch(textFieldValue.text.trim())
-                        showOverwriteDialog = false
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(text = stringResource(SYMR.strings.save_search)) },
+        text = {
+            OutlinedTextField(
+                value = textFieldValue,
+                onValueChange = { textFieldValue = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(text = stringResource(SYMR.strings.save_search_hint))
+                },
+            )
+        },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = true,
+        ),
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val searchName = textFieldValue.text.trim()
+                    if (searchName.isNotBlank() && searchName !in currentSavedSearches) {
+                        saveSearch(searchName)
                         onDismissRequest()
-                    },
-                ) {
-                    Text(text = stringResource(MR.strings.action_ok))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showOverwriteDialog = false },
-                ) {
-                    Text(text = stringResource(MR.strings.action_cancel))
-                }
-            },
-            title = {
-                Text(text = stringResource(SYMR.strings.save_search))
-            },
-            text = {
-                Text(text = stringResource(SYMR.strings.save_search_overwrite_confirm))
-            },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = true,
-            ),
-        )
-    } else {
-        AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = { Text(text = stringResource(SYMR.strings.save_search)) },
-            text = {
-                OutlinedTextField(
-                    value = textFieldValue,
-                    onValueChange = { textFieldValue = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(text = stringResource(SYMR.strings.save_search_hint))
-                    },
-                )
-            },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = true,
-            ),
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val searchName = textFieldValue.text.trim()
-                        if (searchName.isBlank()) {
-                            context.toast(SYMR.strings.save_search_invalid_name)
-                        } else if (searchName in currentSavedSearches) {
-                            showOverwriteDialog = true
-                        } else {
-                            saveSearch(searchName)
-                            onDismissRequest()
-                        }
-                    },
-                ) {
-                    Text(text = stringResource(MR.strings.action_ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismissRequest) {
-                    Text(text = stringResource(MR.strings.action_cancel))
-                }
-            },
-        )
-    }
+                    } else {
+                        context.toast(SYMR.strings.save_search_invalid_name)
+                    }
+                },
+            ) {
+                Text(text = stringResource(MR.strings.action_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = stringResource(MR.strings.action_cancel))
+            }
+        },
+    )
 }

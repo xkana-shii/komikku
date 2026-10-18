@@ -2,14 +2,17 @@ package eu.kanade.tachiyomi.data.backup.restore
 
 import android.content.Context
 import android.net.Uri
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
 import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
-import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
+import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import eu.kanade.tachiyomi.data.backup.restore.restorers.CategoriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.ExtensionStoreRestorer
@@ -18,22 +21,29 @@ import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
 import eu.kanade.tachiyomi.data.download.DownloadCache
+import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
-import exh.log.xLogE
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.chunked
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
+import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
-import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.data.Database
+import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.source.repository.StubSourceRepository
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.BitSet
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
@@ -41,63 +51,86 @@ import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 
-// KMK -->
 @OptIn(ExperimentalAtomicApi::class)
+@AssistedInject
 class BackupRestorer(
+    @Assisted private val notifier: BackupNotifier,
+    @Assisted private val isSync: Boolean,
     private val context: Context,
-    private val notifier: BackupNotifier,
-    private val isSync: Boolean,
-
-    private val database: Database = Injekt.get(),
-
-    private val categoriesRestorer: CategoriesRestorer = CategoriesRestorer(),
-    private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context),
-    private val extensionStoreRestorer: ExtensionStoreRestorer = ExtensionStoreRestorer(),
-    private val mangaRestorer: MangaRestorer = MangaRestorer(isSync),
-    // SY -->
-    private val savedSearchRestorer: SavedSearchRestorer = SavedSearchRestorer(),
-    // SY <--
+    private val downloadCache: DownloadCache,
+    private val categoriesRestorer: CategoriesRestorer,
+    private val preferenceRestorer: PreferenceRestorer,
+    private val extensionStoreRestorer: ExtensionStoreRestorer,
+    private val mangaRestorer: MangaRestorer,
+    private val backupDecoder: BackupDecoder,
     // KMK -->
-    private val feedRestorer: FeedRestorer = FeedRestorer(),
+    private val sourceManager: SourceManager,
+    private val stubSourceRepository: StubSourceRepository,
     // KMK <--
+    // SY -->
+    private val savedSearchRestorer: SavedSearchRestorer,
+    private val feedRestorer: FeedRestorer,
+    // SY <--
 ) {
+
+    @AssistedFactory
+    fun interface Factory {
+        fun create(notifier: BackupNotifier, isSync: Boolean): BackupRestorer
+    }
 
     private var restoreAmount = 0
     private val restoreProgress = AtomicInt(0)
     private val errors = CopyOnWriteArrayList<Pair<Date, String>>()
+
+    init {
+        // SY -->
+        mangaRestorer.isSync = isSync
+        categoriesRestorer.isSync = isSync
+        // SY <--
+    }
 
     /**
      * Mapping of source ID to source name from backup data
      */
     private var sourceMapping: Map<Long, String> = emptyMap()
 
-    suspend fun restore(uri: Uri, options: RestoreOptions) = withIOContext {
+    suspend fun restore(uri: Uri, options: RestoreOptions) {
         val startTime = System.currentTimeMillis()
 
         restoreFromFile(uri, options)
+
+        // Invalidate download cache to ensure UI reflects any restored downloads
         if (options.libraryEntries) {
             try {
-                Injekt.get<DownloadCache>().invalidateCache()
-            } catch (e: CancellationException) {
-                throw e
+                downloadCache.invalidateCache()
             } catch (e: Exception) {
-                xLogE("Failed to invalidate download cache after restore", e)
+                logcat(LogPriority.ERROR, e) { "Failed to invalidate download cache after restore" }
             }
         }
+
         val time = System.currentTimeMillis() - startTime
+
         val logFile = writeErrorLog()
-        notifier.showRestoreComplete(time, errors.size, logFile.parent, logFile.name, isSync)
+
+        notifier.showRestoreComplete(
+            time,
+            errors.size,
+            logFile.parent,
+            logFile.name,
+            isSync,
+        )
     }
 
     private suspend fun restoreFromFile(uri: Uri, options: RestoreOptions) {
-        val backup = BackupDecoder(context).decode(uri)
+        val (entryCount, backup) = backupDecoder.decodeMetadata(uri)
 
         // Store source mapping for error messages
         val backupMaps = backup.backupSources
         sourceMapping = backupMaps.associate { it.sourceId to it.name }
 
         if (options.libraryEntries) {
-            restoreAmount += backup.backupManga.size
+            restoreSourceNames(backupMaps)
+            restoreAmount += entryCount
         }
         if (options.categories) {
             restoreAmount += 1
@@ -118,13 +151,16 @@ class BackupRestorer(
         }
 
         coroutineScope {
-            // KMK --> Restore the category tree first so ID-based references can be remapped.
-            val restoredCategoryIds = if (options.categories) {
-                restoreCategories(backup.backupCategories)
+            // SY -->
+            // Manga restore resolves categories by name, so it must not race the
+            // category restore — a delta carrying a new category and a manga in it
+            // would silently skip the assignment.
+            val categoriesRestoreJob = if (options.categories) {
+                launch { restoreCategories(backup.backupCategories) }
             } else {
-                emptyMap()
+                null
             }
-            // KMK <--
+            // SY <--
             // SY -->
             if (options.savedSearchesFeeds) {
                 restoreSavedSearches(
@@ -139,18 +175,20 @@ class BackupRestorer(
                 restoreAppPreferences(
                     backup.backupPreferences,
                     backup.backupCategories.takeIf { options.categories },
-                    restoredCategoryIds,
+                    categoriesRestoreJob,
                 )
             }
             if (options.sourceSettings) {
                 restoreSourcePreferences(backup.backupSourcePreferences)
             }
             if (options.libraryEntries) {
+                // SY -->
                 restoreManga(
-                    backup.backupManga,
+                    uri,
                     if (options.categories) backup.backupCategories else emptyList(),
-                    restoredCategoryIds,
+                    categoriesRestoreJob,
                 )
+                // SY <--
             }
             if (options.extensionStores) {
                 restoreExtensionStores(backup.backupExtensionStores)
@@ -160,19 +198,33 @@ class BackupRestorer(
         }
     }
 
-    private suspend fun restoreCategories(backupCategories: List<BackupCategory>): Map<Long, Long> {
-        val restoredCategoryIds = categoriesRestorer(backupCategories)
+    // Without a stub, a source that isn't installed has no name for the next backup to write
+    private suspend fun restoreSourceNames(backupSources: List<BackupSource>) {
+        backupSources
+            .filter { it.name.isNotBlank() }
+            .filter {
+                sourceManager.get(it.sourceId) == null && stubSourceRepository.getStubSource(it.sourceId) == null
+            }
+            .forEach { stubSourceRepository.upsertStubSource(it.sourceId, lang = "", name = it.name) }
+    }
 
-        restoreProgress.incrementAndFetch()
+    context(scope: CoroutineScope)
+    private /* KMK --> */suspend /* KMK <-- */ fun restoreCategories(backupCategories: List<BackupCategory>) {
+        scope.ensureActive()
+        categoriesRestorer(backupCategories)
+
+        val progress = restoreProgress.incrementAndFetch()
         with(notifier) {
             showRestoreProgress(
                 context.stringResource(MR.strings.categories),
-                restoreProgress.load(),
+                progress,
                 restoreAmount,
                 isSync,
             )
+                // KMK -->
+                .show(Notifications.ID_RESTORE_PROGRESS)
+            // KMK <--
         }
-        return restoredCategoryIds
     }
 
     // SY -->
@@ -188,63 +240,119 @@ class BackupRestorer(
         feedRestorer.restoreFeeds(backupFeeds)
         // KMK <--
 
-        restoreProgress.incrementAndFetch()
+        val progress = restoreProgress.incrementAndFetch()
         with(notifier) {
             showRestoreProgress(
                 context.stringResource(KMR.strings.saved_searches_feeds),
-                restoreProgress.load(),
+                progress,
                 restoreAmount,
                 isSync,
             )
+                // KMK -->
+                .show(Notifications.ID_RESTORE_PROGRESS)
+            // KMK <--
         }
     }
     // SY <--
 
     private fun CoroutineScope.restoreManga(
-        backupMangas: List<BackupManga>,
+        uri: Uri,
         backupCategories: List<BackupCategory>,
-        // KMK -->
-        restoredCategoryIds: Map<Long, Long>,
-        // KMK <--
+        // SY -->
+        categoriesRestoreJob: Job? = null,
+        // SY <--
     ) = launch {
-        mangaRestorer.sortByNew(backupMangas).chunked(100).forEach { chunk ->
-            database.restoreBatch(
-                chunk,
-                restore = { mangaRestorer.restore(it, backupCategories, restoredCategoryIds) },
-                onError = { manga, error ->
-                    val sourceName = sourceMapping[manga.source] ?: manga.source.toString()
-                    errors.add(Date() to "${manga.title} [$sourceName]: ${error.message}")
-                },
-            )
-            repeat(chunk.size) { restoreProgress.incrementAndFetch() }
-            notifier.showRestoreProgress(chunk.last().title, restoreProgress.load(), restoreAmount, isSync)
+        // SY -->
+        categoriesRestoreJob?.join()
+        // SY <--
+
+        // New entries go first, and a merged entry goes last because it resolves its references
+        // against entries that must already be in the database. Rather than hold the entries back in
+        // memory, each group is read again in its own pass.
+        val isExisting = mangaRestorer.getExistingMatcher()
+        val existingIndices = BitSet()
+        val deferredIndices = BitSet()
+        val newMangas = backupDecoder.decodeEntries(uri)
+            .withIndex()
+            .filter { (index, manga) ->
+                val existing = isExisting(manga)
+                val deferred = mangaRestorer.isDeferred(manga)
+                if (deferred) {
+                    deferredIndices.set(index)
+                } else if (existing) {
+                    existingIndices.set(index)
+                }
+                !existing && !deferred
+            }
+            .map { it.value }
+        val backupMangas = flow {
+            emitAll(newMangas)
+            emitAll(backupDecoder.decodeEntries(uri, existingIndices::get))
+            emitAll(backupDecoder.decodeEntries(uri, deferredIndices::get))
         }
+
+        backupMangas
+            .chunked(100)
+            .collect { chunk ->
+                val restoredAsBatch = try {
+                    ensureActive()
+                    mangaRestorer.restore(chunk, backupCategories)
+                    true
+                } catch (e: Exception) {
+                    ensureActive()
+                    logcat(LogPriority.WARN, e) { "Batch restore failed, retrying entry by entry" }
+                    false
+                }
+
+                if (restoredAsBatch) {
+                    restoreProgress.addAndFetch(chunk.size)
+                } else {
+                    chunk.forEach {
+                        ensureActive()
+
+                        try {
+                            mangaRestorer.restore(listOf(it), backupCategories)
+                        } catch (e: Exception) {
+                            ensureActive()
+                            val sourceName = sourceMapping[it.source] ?: it.source.toString()
+                            errors.add(Date() to "${it.title} [$sourceName]: ${e.message}")
+                        }
+
+                        restoreProgress.incrementAndFetch()
+                    }
+                }
+                with(notifier) {
+                    showRestoreProgress(chunk.last().title, restoreProgress.load(), restoreAmount, isSync)
+                        // KMK -->
+                        .show(Notifications.ID_RESTORE_PROGRESS)
+                    // KMK <--
+                }
+            }
     }
 
     private fun CoroutineScope.restoreAppPreferences(
         preferences: List<BackupPreference>,
         categories: List<BackupCategory>?,
-        // KMK -->
-        restoredCategoryIds: Map<Long, Long>,
-        // KMK <--
+        categoriesRestoreJob: Job?,
     ) = launch {
         ensureActive()
+        categoriesRestoreJob?.join()
         preferenceRestorer.restoreApp(
             preferences,
             categories,
-            // KMK -->
-            restoredCategoryIds,
-            // KMK <--
         )
 
-        restoreProgress.incrementAndFetch()
+        val progress = restoreProgress.incrementAndFetch()
         with(notifier) {
             showRestoreProgress(
                 context.stringResource(MR.strings.app_settings),
-                restoreProgress.load(),
+                progress,
                 restoreAmount,
                 isSync,
             )
+                // KMK -->
+                .show(Notifications.ID_RESTORE_PROGRESS)
+            // KMK <--
         }
     }
 
@@ -252,14 +360,17 @@ class BackupRestorer(
         ensureActive()
         preferenceRestorer.restoreSource(preferences)
 
-        restoreProgress.incrementAndFetch()
+        val progress = restoreProgress.incrementAndFetch()
         with(notifier) {
             showRestoreProgress(
                 context.stringResource(MR.strings.source_settings),
-                restoreProgress.load(),
+                progress,
                 restoreAmount,
                 isSync,
             )
+                // KMK -->
+                .show(Notifications.ID_RESTORE_PROGRESS)
+            // KMK <--
         }
     }
 
@@ -269,20 +380,28 @@ class BackupRestorer(
         backupExtensionStores
             .chunked(100)
             .forEach { chunk ->
-                database.restoreBatch(
-                    chunk,
-                    restore = { extensionStoreRestorer(it) },
-                    onError = { store, error ->
-                        errors.add(Date() to "Error adding extension store: ${store.name} : ${error.message}")
-                    },
-                )
-                repeat(chunk.size) { restoreProgress.incrementAndFetch() }
-                notifier.showRestoreProgress(
-                    context.stringResource(MR.strings.extensionStores),
-                    restoreProgress.load(),
-                    restoreAmount,
-                    isSync,
-                )
+                chunk.forEach {
+                    ensureActive()
+
+                    try {
+                        extensionStoreRestorer(it)
+                    } catch (e: Exception) {
+                        errors.add(Date() to "Error adding extension store: ${it.name} : ${e.message}")
+                    }
+
+                    restoreProgress.incrementAndFetch()
+                }
+                with(notifier) {
+                    showRestoreProgress(
+                        context.stringResource(MR.strings.extensionStores),
+                        restoreProgress.load(),
+                        restoreAmount,
+                        isSync,
+                    )
+                        // KMK -->
+                        .show(Notifications.ID_RESTORE_PROGRESS)
+                    // KMK <--
+                }
             }
     }
 
@@ -305,4 +424,3 @@ class BackupRestorer(
         return File("")
     }
 }
-// KMK <--

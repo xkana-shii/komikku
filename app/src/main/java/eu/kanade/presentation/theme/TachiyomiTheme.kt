@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.materialkolor.DynamicMaterialExpressiveTheme
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.AppTheme
 import eu.kanade.presentation.theme.colorscheme.BaseColorScheme
 import eu.kanade.presentation.theme.colorscheme.CatppuccinColorScheme
@@ -36,8 +35,7 @@ import eu.kanade.presentation.theme.colorscheme.TidalWaveColorScheme
 import eu.kanade.presentation.theme.colorscheme.TokyoNightColorScheme
 import eu.kanade.presentation.theme.colorscheme.YinYangColorScheme
 import eu.kanade.presentation.theme.colorscheme.YotsubaColorScheme
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import mihon.app.di.appGraph
 
 @Composable
 fun TachiyomiTheme(
@@ -45,10 +43,11 @@ fun TachiyomiTheme(
     amoled: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>()
+    val context = LocalContext.current
+    val uiPreferences = remember { context.appGraph.uiPreferences }
     BaseTachiyomiTheme(
-        appTheme = appTheme ?: uiPreferences.appTheme().get(),
-        isAmoled = amoled ?: uiPreferences.themeDarkAmoled().get(),
+        appTheme = appTheme ?: uiPreferences.appTheme.get(),
+        isAmoled = amoled ?: uiPreferences.themeDarkAmoled.get(),
         content = content,
     )
 }
@@ -66,12 +65,12 @@ fun TachiyomiTheme(
     if (seedColor == null) {
         TachiyomiTheme(appTheme, amoled, content)
     } else {
-        val uiPreferences = Injekt.get<UiPreferences>()
-        val isAmoled = amoled ?: uiPreferences.themeDarkAmoled().get()
+        val uiPreferences = LocalContext.current.appGraph.uiPreferences
+        val isAmoled = amoled ?: uiPreferences.themeDarkAmoled.get()
         DynamicMaterialExpressiveTheme(
             seedColor = seedColor,
             isAmoled = isAmoled,
-            style = uiPreferences.themeCoverBasedStyle().get(),
+            style = uiPreferences.themeCoverBasedStyle.get(),
             typography = typography,
             animate = true,
             content = content,
@@ -120,10 +119,10 @@ private fun getThemeColorScheme(
         }
         // KMK -->
         AppTheme.CUSTOM -> {
-            val uiPreferences = Injekt.get<UiPreferences>()
+            val uiPreferences = context.appGraph.uiPreferences
             CustomColorScheme(
-                seed = Color(uiPreferences.colorTheme().get()),
-                style = uiPreferences.customThemeStyle().get(),
+                seed = Color(uiPreferences.colorTheme.get()),
+                style = uiPreferences.customThemeStyle.get(),
             )
         }
         // KMK <--
@@ -141,9 +140,7 @@ private fun getThemeColorScheme(
 private val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
     AppTheme.DEFAULT to TachiyomiColorScheme,
     AppTheme.CATPPUCCIN to CatppuccinColorScheme,
-    // KMK -->
     AppTheme.TOKYONIGHT to TokyoNightColorScheme,
-    // KMK <--
     AppTheme.GREEN_APPLE to GreenAppleColorScheme,
     AppTheme.LAVENDER to LavenderColorScheme,
     AppTheme.MIDNIGHT_DUSK to MidnightDuskColorScheme,

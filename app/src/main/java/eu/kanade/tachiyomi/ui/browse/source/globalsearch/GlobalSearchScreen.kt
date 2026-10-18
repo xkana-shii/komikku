@@ -6,25 +6,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.compose.viewModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.core.util.ifSourcesLoaded
-import eu.kanade.domain.source.interactor.GetSourceCategories
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.browse.GlobalSearchScreen
 import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 class GlobalSearchScreen(
     val searchQuery: String = "",
@@ -33,37 +30,25 @@ class GlobalSearchScreen(
 
     @Composable
     override fun Content() {
-        if (!ifSourcesLoaded()) {
-            LoadingScreen()
-            return
-        }
-
         val navigator = LocalNavigator.currentOrThrow
 
-        val viewModel = viewModel<GlobalSearchViewModel>(
-            factory = GlobalSearchViewModel.Factory,
-            extras = CreationExtras {
-                set(GlobalSearchViewModel.INITIAL_QUERY_KEY, searchQuery)
-                set(GlobalSearchViewModel.INITIAL_EXTENSION_FILTER_KEY, extensionFilter)
-            },
-        )
+        val viewModel =
+            assistedMetroViewModel<GlobalSearchViewModel, GlobalSearchViewModel.Factory> {
+                create(initialQuery = searchQuery, initialExtensionFilter = extensionFilter)
+            }
         val state by viewModel.state.collectAsState()
         var showSingleLoadingScreen by remember {
             mutableStateOf(searchQuery.isNotEmpty() && !extensionFilter.isNullOrEmpty() && state.total == 1)
         }
 
         // KMK -->
-        val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
-        val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
-        // KMK --> Categories are owned by source management and update independently of filters.
-        val getSourceCategories = remember { Injekt.get<GetSourceCategories>() }
-        val sourceCategories by remember { getSourceCategories.subscribe() }.collectAsState(initial = emptyList())
-        // KMK <--
+        val bulkFavoriteViewModel = metroViewModel<BulkFavoriteViewModel>()
+        val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
 
         val haptic = LocalHapticFeedback.current
 
         BackHandler(enabled = bulkFavoriteState.selectionMode) {
-            bulkFavoriteScreenModel.backHandler()
+            bulkFavoriteViewModel.backHandler()
         }
         // KMK <--
 
@@ -90,7 +75,7 @@ class GlobalSearchScreen(
                 state = state,
                 navigateUp = navigator::pop,
                 onChangeSearchQuery = viewModel::updateSearchQuery,
-                onSearch = viewModel::search,
+                onSearch = { viewModel.search() },
                 getManga = { viewModel.getManga(it) },
                 onChangeSearchFilter = viewModel::setSourceFilter,
                 onToggleResults = viewModel::toggleFilterResults,
@@ -100,7 +85,7 @@ class GlobalSearchScreen(
                 onClickItem = { manga ->
                     // KMK -->
                     if (bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.toggleSelection(manga)
+                        bulkFavoriteViewModel.toggleSelection(manga)
                     } else {
                         // KMK <--
                         navigator.push(MangaScreen(manga.id, true))
@@ -109,24 +94,22 @@ class GlobalSearchScreen(
                 onLongClickItem = { manga ->
                     // KMK -->
                     if (!bulkFavoriteState.selectionMode) {
-                        bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                        bulkFavoriteViewModel.addRemoveManga(manga, haptic)
                     } else {
                         // KMK <--
                         navigator.push(MangaScreen(manga.id, true))
                     }
                 },
                 // KMK -->
-                bulkFavoriteScreenModel = bulkFavoriteScreenModel,
-                hasPinnedSources = viewModel.hasPinnedSources(),
-                sourceCategories = sourceCategories,
-                onChangeSourceCategory = viewModel::setSourceCategory,
+                bulkFavoriteViewModel = bulkFavoriteViewModel,
+                hasPinnedSources = produceState(initialValue = false) { value = viewModel.hasPinnedSources() }.value,
                 // KMK <--
             )
         }
 
         // KMK -->
         BulkFavoriteDialogs(
-            bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+            bulkFavoriteViewModel = bulkFavoriteViewModel,
             dialog = bulkFavoriteState.dialog,
         )
         // KMK <--

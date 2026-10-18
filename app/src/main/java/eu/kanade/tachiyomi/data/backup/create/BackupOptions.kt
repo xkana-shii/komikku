@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.create
 
 import dev.icerock.moko.resources.StringResource
-import kotlinx.collections.immutable.persistentListOf
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -21,13 +20,7 @@ data class BackupOptions(
     val customInfo: Boolean = true,
     val savedSearchesFeeds: Boolean = true,
     // SY <--
-    // KMK --> Not part of the legacy BooleanArray worker payload.
-    val includedCategoryIds: Set<Long>? = null,
-    // KMK <--
 ) {
-
-    fun includesManga(categoryIds: List<Long>): Boolean =
-        includedCategoryIds?.let { selected -> categoryIds.ifEmpty { listOf(0L) }.any { it in selected } } ?: true
 
     fun asBooleanArray() = booleanArrayOf(
         libraryEntries,
@@ -50,7 +43,7 @@ data class BackupOptions(
         libraryEntries || categories || appSettings || extensionStores || sourceSettings || savedSearchesFeeds
 
     companion object {
-        val libraryOptions = persistentListOf(
+        val libraryOptions = listOf(
             Entry(
                 label = MR.strings.manga,
                 getter = BackupOptions::libraryEntries,
@@ -102,7 +95,7 @@ data class BackupOptions(
             // SY <--
         )
 
-        val settingsOptions = persistentListOf(
+        val settingsOptions = listOf(
             Entry(
                 label = MR.strings.app_settings,
                 getter = BackupOptions::appSettings,

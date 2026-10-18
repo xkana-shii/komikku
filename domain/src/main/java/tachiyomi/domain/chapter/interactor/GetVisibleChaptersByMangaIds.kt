@@ -1,5 +1,6 @@
 package tachiyomi.domain.chapter.interactor
 
+import dev.zacsweers.metro.Inject
 import exh.source.MERGED_SOURCE_ID
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.filterChapterVisibility
@@ -11,6 +12,7 @@ import tachiyomi.domain.manga.model.Manga
  * Resolves chapter visibility for several entries without issuing a chapter query per regular
  * manga. Callers provide the manga records so configuration remains reactive at the UI boundary.
  */
+@Inject
 class GetVisibleChaptersByMangaIds(
     private val getChaptersByMangaIds: GetChaptersByMangaIds,
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,

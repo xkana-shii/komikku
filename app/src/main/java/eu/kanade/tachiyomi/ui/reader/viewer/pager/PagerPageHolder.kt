@@ -5,7 +5,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.view.LayoutInflater
 import androidx.annotation.ColorInt
+import androidx.core.graphics.createBitmap
 import androidx.core.view.isVisible
+import ca.mpreg.imagedecoder.ImageDecoder
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.databinding.ReaderErrorBinding
 import eu.kanade.tachiyomi.source.model.Page
@@ -15,19 +17,18 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.widget.ViewPagerAdapter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import okio.Buffer
 import okio.BufferedSource
 import tachiyomi.core.common.i18n.stringResource
-import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
@@ -119,7 +120,7 @@ class PagerPageHolder(
         // SY <--
         val loader = page.chapter.pageLoader ?: return
         supervisorScope {
-            launchIO {
+            launch(Dispatchers.IO) {
                 loader.loadPage(page)
             }
             page.statusFlow.collectLatest { state ->
@@ -180,32 +181,36 @@ class PagerPageHolder(
         val streamFn2 = extraPage?.stream
 
         try {
-            val (source, isAnimated, background) = withIOContext {
-                streamFn().buffered(16).use { source ->
-                    // SY -->
-                    if (extraPage != null) {
-                        streamFn2?.invoke()
-                            ?.buffered(16)
-                    } else {
-                        null
-                    }.use { source2 ->
-                        val itemSource = if (viewer.config.dualPageSplit) {
-                            process(item.first, Buffer().readFrom(source))
-                        } else {
-                            mergePages(Buffer().readFrom(source), source2?.let { Buffer().readFrom(it) })
-                        }
-                        // SY <--
-                        val isAnimated = ImageUtil.isAnimatedAndSupported(itemSource)
-                        val background = if (!isAnimated && viewer.config.automaticBackground) {
-                            ImageUtil.chooseBackground(context, itemSource.peek())
-                        } else {
-                            null
-                        }
-                        Triple(itemSource, isAnimated, background)
-                    }
-                }
+            val buffer = withContext(Dispatchers.IO) {
+                streamFn().buffered(16).use { Buffer().readFrom(it) }
             }
-            withUIContext {
+            // SY -->
+            val buffer2 = if (extraPage != null) {
+                withContext(Dispatchers.IO) {
+                    streamFn2?.invoke()?.buffered(16)?.use { Buffer().readFrom(it) }
+                }
+            } else {
+                null
+            }
+            // SY <--
+            // Splitting, merging and sampling the background decode the image, which is CPU work
+            val (source, isAnimated, background) = withContext(Dispatchers.Default) {
+                // SY -->
+                val source = if (viewer.config.dualPageSplit) {
+                    process(item.first, buffer)
+                } else {
+                    mergePages(buffer, buffer2)
+                }
+                // SY <--
+                val isAnimated = ImageUtil.isAnimatedAndSupported(source)
+                val background = if (!isAnimated && viewer.config.automaticBackground) {
+                    ImageUtil.chooseBackground(context, source.peek())
+                } else {
+                    null
+                }
+                Triple(source, isAnimated, background)
+            }
+            withContext(Dispatchers.Main) {
                 setImage(
                     source,
                     isAnimated,
@@ -229,7 +234,7 @@ class PagerPageHolder(
             }
         } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e)
-            withUIContext {
+            withContext(Dispatchers.Main) {
                 setError(e)
             }
         }
@@ -348,7 +353,13 @@ class PagerPageHolder(
 
     private fun decodeImage(imageSource: BufferedSource): Bitmap? {
         return try {
-            ImageUtil.decodeBitmap(imageSource.inputStream())
+            // KMK --> migrated off the dropped legacy decoder to the mpreg decoder
+            val res = ImageDecoder.open(imageSource.inputStream()).use { it.decodeNext() }
+            createBitmap(res.width, res.height).also { bitmap ->
+                res.image.rewind()
+                bitmap.copyPixelsFromBuffer(res.image)
+            }.also { res.close() }
+            // KUN <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Cannot decode image" }
             null

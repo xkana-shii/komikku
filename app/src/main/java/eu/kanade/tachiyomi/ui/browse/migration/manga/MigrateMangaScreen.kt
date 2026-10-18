@@ -14,12 +14,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.ZeroCornerSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FindReplace
-import androidx.compose.material.icons.outlined.FlipToBack
-import androidx.compose.material.icons.outlined.SelectAll
-import androidx.compose.material.icons.outlined.VerticalAlignBottom
-import androidx.compose.material.icons.outlined.VerticalAlignTop
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -39,10 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.manga.components.BaseMangaListItem
@@ -51,13 +44,18 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mihon.feature.migration.config.MigrationConfigScreen
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.FindReplace
+import mihon.icons.materialsymbols.rounded.FlipToBack
+import mihon.icons.materialsymbols.rounded.SelectAll
+import mihon.icons.materialsymbols.rounded.VerticalAlignBottom
+import mihon.icons.materialsymbols.rounded.VerticalAlignTop
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -77,12 +75,8 @@ data class MigrateMangaScreen(
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val viewModel = viewModel<MigrateMangaViewModel>(
-            factory = MigrateMangaViewModel.Factory,
-            extras = CreationExtras {
-                set(MigrateMangaViewModel.SOURCE_ID_KEY, sourceId)
-            },
-        )
+        val viewModel =
+            assistedMetroViewModel<MigrateMangaViewModel, MigrateMangaViewModel.Factory> { create(sourceId = sourceId) }
 
         val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -265,10 +259,10 @@ data class MigrateMangaScreen(
             actions = {
                 if (itemCnt > 0) {
                     AppBarActions(
-                        persistentListOf(
+                        listOf(
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_select_all),
-                                icon = Icons.Outlined.SelectAll,
+                                icon = MaterialSymbols.Rounded.SelectAll,
                                 onClick = onClickSelectAll,
                             ),
                         ),
@@ -279,15 +273,15 @@ data class MigrateMangaScreen(
             onCancelActionMode = onClickUnselectAll,
             actionModeActions = {
                 AppBarActions(
-                    persistentListOf(
+                    listOf(
                         AppBar.Action(
                             title = stringResource(MR.strings.action_select_all),
-                            icon = Icons.Outlined.SelectAll,
+                            icon = MaterialSymbols.Rounded.SelectAll,
                             onClick = onClickSelectAll,
                         ),
                         AppBar.Action(
                             title = stringResource(MR.strings.action_select_inverse),
-                            icon = Icons.Outlined.FlipToBack,
+                            icon = MaterialSymbols.Rounded.FlipToBack,
                             onClick = onClickInvertSelection,
                         ),
                     ),
@@ -345,7 +339,7 @@ data class MigrateMangaScreen(
             ) {
                 Button(
                     title = stringResource(KMR.strings.action_scroll_to_top),
-                    icon = Icons.Outlined.VerticalAlignTop,
+                    icon = MaterialSymbols.Rounded.VerticalAlignTop,
                     toConfirm = confirm[0],
                     onLongClick = { onLongClickItem(0) },
                     onClick = scrollToTop,
@@ -353,7 +347,7 @@ data class MigrateMangaScreen(
                 )
                 Button(
                     title = stringResource(MR.strings.migrate),
-                    icon = Icons.Outlined.FindReplace,
+                    icon = MaterialSymbols.Rounded.FindReplace,
                     toConfirm = confirm[1],
                     onLongClick = { onLongClickItem(1) },
                     onClick = onMultiMigrateClicked,
@@ -361,7 +355,7 @@ data class MigrateMangaScreen(
                 )
                 Button(
                     title = stringResource(KMR.strings.action_scroll_to_bottom),
-                    icon = Icons.Outlined.VerticalAlignBottom,
+                    icon = MaterialSymbols.Rounded.VerticalAlignBottom,
                     toConfirm = confirm[2],
                     onLongClick = { onLongClickItem(2) },
                     onClick = scrollToBottom,

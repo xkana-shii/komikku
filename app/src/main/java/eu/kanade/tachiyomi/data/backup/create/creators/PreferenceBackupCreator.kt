@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.create.creators
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import eu.kanade.tachiyomi.data.backup.models.BooleanPreferenceValue
@@ -8,16 +9,17 @@ import eu.kanade.tachiyomi.data.backup.models.IntPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.LongPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringPreferenceValue
 import eu.kanade.tachiyomi.data.backup.models.StringSetPreferenceValue
+import eu.kanade.tachiyomi.source.ConfigurableSource
+import eu.kanade.tachiyomi.source.preferenceKey
 import eu.kanade.tachiyomi.source.sourcePreferences
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
+@Inject
 class PreferenceBackupCreator(
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val preferenceStore: PreferenceStore = Injekt.get(),
+    private val sourceManager: SourceManager,
+    private val preferenceStore: PreferenceStore,
 ) {
 
     fun createApp(includePrivatePreferences: Boolean): List<BackupPreference> {
@@ -25,14 +27,13 @@ class PreferenceBackupCreator(
             .withPrivatePreferences(includePrivatePreferences)
     }
 
-    fun createSource(includePrivatePreferences: Boolean): List<BackupSourcePreferences> {
+    suspend fun createSource(includePrivatePreferences: Boolean): List<BackupSourcePreferences> {
         return sourceManager.getAll()
-            .map { source ->
-                val key = "source_${source.id}"
-                val prefs = sourcePreferences(key).all
+            .filterIsInstance<ConfigurableSource>()
+            .map {
                 BackupSourcePreferences(
-                    key,
-                    prefs.toBackupPreferences()
+                    it.preferenceKey(),
+                    it.sourcePreferences().all.toBackupPreferences()
                         .withPrivatePreferences(includePrivatePreferences),
                 )
             }

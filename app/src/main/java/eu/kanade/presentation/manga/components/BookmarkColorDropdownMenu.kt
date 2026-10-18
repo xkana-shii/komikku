@@ -5,18 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.i18n.kmk.KMR
@@ -30,10 +26,7 @@ fun BookmarkColorDropdownMenu(
     onSelect: (BookmarkColor) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-    ) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
         BookmarkColor.entries.forEach { color ->
             DropdownMenuItem(
                 text = {
@@ -48,19 +41,6 @@ fun BookmarkColorDropdownMenu(
                                 .background(color.composeColor() ?: MaterialTheme.colorScheme.surfaceVariant),
                         )
                         Text(color.label())
-                    }
-                },
-                trailingIcon = {
-                    if (color == selected) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null,
-                            tint = if (color == BookmarkColor.NONE) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                Color.Unspecified
-                            },
-                        )
                     }
                 },
                 onClick = { onSelect(color) },

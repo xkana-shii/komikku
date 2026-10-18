@@ -1,8 +1,8 @@
 package tachiyomi.domain.manga.model
 
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
-import uy.kohesive.injekt.injectLazy
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Instant
 
 /**
  * Contains the required data for MangaCoverFetcher
@@ -14,15 +14,20 @@ data class MangaCover(
     // SY -->
     val ogUrl: String?,
     // SY <--
-    val lastModified: Long,
+    val lastModified: Instant?,
 ) {
     // SY -->
-    private val customThumbnailUrl = if (isMangaFavorite) {
-        getCustomMangaInfo.get(mangaId)?.thumbnailUrl
-    } else {
-        null
+    // KUN -->
+    // Lazy so the bridge is resolved on first access rather than at construction.
+    private val customThumbnailUrl by lazy {
+        if (isMangaFavorite) {
+            getCustomMangaInfo?.get(mangaId)?.thumbnailUrl
+        } else {
+            null
+        }
     }
-    val url: String? = customThumbnailUrl ?: ogUrl
+    // KUN <--
+    val url: String? by lazy { customThumbnailUrl ?: ogUrl }
     // SY <--
 
     // KMK -->
@@ -88,7 +93,8 @@ data class MangaCover(
         // KMK <--
 
         // SY -->
-        private val getCustomMangaInfo: GetCustomMangaInfo by injectLazy()
+        private val getCustomMangaInfo: GetCustomMangaInfo?
+            get() = GetCustomMangaInfo.getInstanceOrNull()
         // SY <--
     }
 }

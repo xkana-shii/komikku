@@ -25,10 +25,10 @@ WHERE source = :oldId;
 
 getChaptersByMangaIds:
 SELECT
-    id, manga_id, remote_url, remote_name, remote_scanlator, user_read, user_bookmark,
-    user_bookmark_color, user_last_page_read, remote_chapter_number, remote_order,
-    state_date_fetch, remote_date_upload, state_last_modified_at, state_version,
-    state_is_syncing, remote_memo
+    id, manga_id, remote_url, remote_name, remote_scanlator, remote_chapter_number,
+    remote_date_upload, remote_order, remote_memo, user_read, user_bookmark,
+    user_fillermark, user_bookmark_color, user_last_page_read, state_date_fetch,
+    last_modified_at, version, is_syncing
 FROM chapter
 WHERE manga_id IN :mangaIds;
 
@@ -48,4 +48,4 @@ WHERE user_reader_flags = -1;
 
 addAllMangaInDatabaseToLibrary:
 UPDATE manga
-SET user_favorite_at = coalesce(user_favorite_at, strftime('%s', 'now'));
+SET user_favorite_at = strftime('%s', 'now') * 1000;

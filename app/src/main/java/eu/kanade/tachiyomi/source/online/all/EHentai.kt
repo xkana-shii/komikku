@@ -70,6 +70,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import mihon.app.di.appGraph
 import okhttp3.CacheControl
 import okhttp3.Headers
 import okhttp3.HttpUrl
@@ -88,7 +89,6 @@ import org.jsoup.nodes.TextNode
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
 import tachiyomi.core.common.util.lang.withIOContext
-import uy.kohesive.injekt.injectLazy
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URLEncoder
@@ -131,25 +131,13 @@ class EHentai(
     // true if lang is a "natural human language"
     private fun isLangNatural(): Boolean = lang !in listOf("none", "other", "all")
 
-    private fun languageTag(enforceLanguageFilter: Boolean = getEnforceLanguagePref()): String {
-        return if (enforceLanguageFilter) "language:$ehLang" else ""
-    }
-
-    private val enforceLanguagePreferences by lazy {
-        context.getSharedPreferences(ENFORCE_LANGUAGE_PREF_FILE, Context.MODE_PRIVATE)
-    }
-
-    private fun getEnforceLanguagePref(): Boolean {
-        return enforceLanguagePreferences.getBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", true)
-    }
-
-    private fun setEnforceLanguagePref(value: Boolean) {
-        enforceLanguagePreferences.edit().putBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", value).apply()
+    private fun languageTag(): String {
+        return "language:$ehLang"
     }
     // KMK <--
 
-    private val exhPreferences: ExhPreferences by injectLazy()
-    private val updateHelper: EHentaiUpdateHelper by injectLazy()
+    private val exhPreferences: ExhPreferences get() = context.appGraph.exhPreferences
+    private val updateHelper: EHentaiUpdateHelper get() = context.appGraph.ehEntaiUpdateHelper
 
     /**
      * Gallery list entry
@@ -160,17 +148,7 @@ class EHentai(
         // Parse mangas (supports compact + extended layout)
         val parsedMangas = select(".itg > tbody > tr").filter { element ->
             // Do not parse header and ads
-            element.selectFirst("th") == null &&
-                element.selectFirst(".itd") == null &&
-                (
-                    !isLangNatural() ||
-                        !getEnforceLanguagePref() ||
-                        (
-                            element.select("div[title^=language]").firstOrNull()?.let {
-                                it.text().equals(ehLang, ignoreCase = true)
-                            } ?: true
-                            )
-                    )
+            element.selectFirst("th") == null && element.selectFirst(".itd") == null
         }.map { body ->
             val thumbnailElement = body.selectFirst(".gl1e img, .gl2c .glthumb img")!!
             val column2 = body.selectFirst(".gl3e, .gl2c")!!
@@ -188,11 +166,7 @@ class EHentai(
                 ),
                 manga = SManga.create().apply {
                     // Get title
-                    title = if (exhPreferences.useCleanTitle().get()) {
-                        thumbnailElement.attr("title").replace(cleanTitleRegex, "").trim()
-                    } else {
-                        thumbnailElement.attr("title")
-                    }
+                    title = thumbnailElement.attr("title")
                     url = EHentaiSearchMetadata.normalizeUrl(linkElement.attr("href"))
                     // Get image
                     thumbnail_url = thumbnailElement.attr("src")
@@ -540,7 +514,7 @@ class EHentai(
     }
 
     private fun <T : MangasPage> T.checkValid(): MangasPage =
-        if (exh && mangas.isEmpty() && exhPreferences.igneousVal().get().equals("mystery", true)) {
+        if (exh && mangas.isEmpty() && exhPreferences.igneousVal.get().equals("mystery", true)) {
             throw Exception(
                 "Invalid igneous cookie, try re-logging or finding a correct one to input in the login menu",
             )
@@ -583,10 +557,6 @@ class EHentai(
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val enforceLanguageFilter = filters.firstNotNullOfOrNull { (it as? EnforceLanguageFilter)?.state }
-            ?: getEnforceLanguagePref()
-        setEnforceLanguagePref(enforceLanguageFilter)
-
         val toplist = ToplistOption.entries[filters.firstNotNullOfOrNull { (it as? ToplistOptions)?.state } ?: 0]
         if (toplist != ToplistOption.NONE) {
             val uri = "https://e-hentai.org".toUri().buildUpon()
@@ -601,14 +571,8 @@ class EHentai(
         val isReverseFilterEnabled = filters.any { it is ReverseFilter && it.state }
         val jumpSeekValue = filters.firstNotNullOfOrNull { (it as? JumpSeekFilter)?.state?.nullIfBlank() }
 
-        val searchQuery = (query + " " + combineQuery(filters)).trim()
-        val languageQuery = if (isLangNatural()) languageTag(enforceLanguageFilter) else ""
-
         uri.appendQueryParameter("f_apply", "Apply+Filter")
-        uri.appendQueryParameter(
-            "f_search",
-            listOf(languageQuery, searchQuery).filter { it.isNotBlank() }.joinToString(","),
-        )
+        uri.appendQueryParameter("f_search", (query + " " + combineQuery(filters)).trim())
         filters.forEach {
             if (it is UriFilter) it.addToUri(uri)
         }
@@ -773,17 +737,9 @@ class EHentai(
                 gToken = EHentaiSearchMetadata.galleryToken(url)
 
                 exh = this@EHentai.exh
-                title = if (exhPreferences.useCleanTitle().get()) {
-                    select("#gn").text().trimOrNull()?.replace(cleanTitleRegex, "")?.trim()
-                } else {
-                    select("#gn").text().trimOrNull()
-                }
+                title = select("#gn").text().trimOrNull()
 
-                altTitle = if (exhPreferences.useCleanTitle().get()) {
-                    select("#gj").text().trimOrNull()?.replace(cleanTitleRegex, "")?.trim()
-                } else {
-                    select("#gj").text().trimOrNull()
-                }
+                altTitle = select("#gj").text().trimOrNull()
 
                 thumbnailUrl = select("#gd1 div").attr("style").nullIfBlank()?.let {
                     it.substring(it.indexOf('(') + 1 until it.lastIndexOf(')'))
@@ -952,30 +908,30 @@ class EHentai(
     }
 
     fun spPref() = if (exh) {
-        exhPreferences.exhSettingsProfile()
+        exhPreferences.exhSettingsProfile
     } else {
-        exhPreferences.ehSettingsProfile()
+        exhPreferences.ehSettingsProfile
     }
 
     private fun rawCookies(sp: Int): Map<String, String> {
         val cookies: MutableMap<String, String> = mutableMapOf()
-        if (exhPreferences.enableExhentai().get()) {
-            cookies[EhLoginActivity.MEMBER_ID_COOKIE] = exhPreferences.memberIdVal().get()
-            cookies[EhLoginActivity.PASS_HASH_COOKIE] = exhPreferences.passHashVal().get()
-            cookies[EhLoginActivity.IGNEOUS_COOKIE] = exhPreferences.igneousVal().get()
+        if (exhPreferences.enableExhentai.get()) {
+            cookies[EhLoginActivity.MEMBER_ID_COOKIE] = exhPreferences.memberIdVal.get()
+            cookies[EhLoginActivity.PASS_HASH_COOKIE] = exhPreferences.passHashVal.get()
+            cookies[EhLoginActivity.IGNEOUS_COOKIE] = exhPreferences.igneousVal.get()
             cookies["sp"] = sp.toString()
 
-            val sessionKey = exhPreferences.exhSettingsKey().get()
+            val sessionKey = exhPreferences.exhSettingsKey.get()
             if (sessionKey.isNotBlank()) {
                 cookies["sk"] = sessionKey
             }
 
-            val sessionCookie = exhPreferences.exhSessionCookie().get()
+            val sessionCookie = exhPreferences.exhSessionCookie.get()
             if (sessionCookie.isNotBlank()) {
                 cookies["s"] = sessionCookie
             }
 
-            val hathPerksCookie = exhPreferences.exhHathPerksCookies().get()
+            val hathPerksCookie = exhPreferences.exhHathPerksCookies.get()
             if (hathPerksCookie.isNotBlank()) {
                 cookies["hath_perks"] = hathPerksCookie
             }
@@ -1042,12 +998,11 @@ class EHentai(
     // Filters
     override fun getFilterList(): FilterList {
         return FilterList(
-            EnforceLanguageFilter(getEnforceLanguagePref()),
             Filter.Header("Note: Will ignore other parameters!"),
             ToplistOptions(),
             Filter.Separator(),
             AutoCompleteTags(),
-            Watched(isEnabled = exhPreferences.exhWatchedListDefaultState().get()),
+            Watched(isEnabled = exhPreferences.exhWatchedListDefaultState.get()),
             GenreGroup(),
             AdvancedGroup(),
             ReverseFilter(),
@@ -1056,8 +1011,6 @@ class EHentai(
             Filter.Header("or Jump by number of days/weeks/months/years: 7d, 4w, 12m, 10y"),
         )
     }
-
-    class EnforceLanguageFilter(default: Boolean) : Filter.CheckBox("Enforce language", default)
 
     class Watched(val isEnabled: Boolean) : Filter.CheckBox("Watched List", isEnabled), UriFilter {
         override fun addToUri(builder: Uri.Builder) {
@@ -1162,7 +1115,7 @@ class EHentai(
             if (entry.or) stringBuilder.append("~")
             val namespace = entry.search.first?.let { "$it:" }.orEmpty()
             if (entry.search.second.contains(" ")) {
-                stringBuilder.append(("""$namespace"${entry.search.second}$"""))
+                stringBuilder.append(("""$namespace"${entry.search.second}$""""))
             } else {
                 stringBuilder.append("$namespace${entry.search.second}$")
             }
@@ -1210,7 +1163,7 @@ class EHentai(
     class AdvancedGroup : UriGroup<Filter<*>>(
         "Advanced Options",
         listOf(
-            AdvancedOption("Browse Expunged Galleries", "f_sh").apply { state = false },
+            AdvancedOption("Browse Expunged Galleries", "f_sh"),
             AdvancedOption("Require Gallery Torrent", "f_sto"),
             RatingOption(),
             MinPagesOption(),
@@ -1454,15 +1407,12 @@ class EHentai(
 
     companion object {
         private const val TR_SUFFIX = "TR"
-        private const val ENFORCE_LANGUAGE_PREF_FILE = "ehentai_language_preferences"
-        private const val ENFORCE_LANGUAGE_PREF_KEY = "enforce_language"
         private const val REVERSE_PARAM = "TEH_REVERSE"
         private val PAGE_COUNT_REGEX = "[0-9]*".toRegex()
         private val RATING_REGEX = "([0-9]*)px".toRegex()
         private const val THUMB_DOMAIN = "ehgt.org"
         private const val BLANK_THUMB = "blank.gif"
         private const val BLANK_PREVIEW_THUMB = "https://$THUMB_DOMAIN/g/$BLANK_THUMB"
-        private val cleanTitleRegex = Regex("""(\[[^]]*]|[({][^)}]*[)}])""")
 
         private val MATCH_YEAR_REGEX = "^\\d{4}$".toRegex()
         private val MATCH_SEEK_REGEX = "^\\d{2,4}-\\d{1,2}(-\\d{1,2})?$".toRegex()

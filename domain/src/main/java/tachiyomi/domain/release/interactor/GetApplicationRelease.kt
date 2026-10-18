@@ -1,5 +1,6 @@
 package tachiyomi.domain.release.interactor
 
+import dev.zacsweers.metro.Inject
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.release.model.Release
@@ -7,52 +8,37 @@ import tachiyomi.domain.release.service.ReleaseService
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
+@Inject
 class GetApplicationRelease(
     private val service: ReleaseService,
+    // KMK -->
     private val preferenceStore: PreferenceStore,
+    // KMK <--
 ) {
-
+    // KMK -->
     private val lastChecked: Preference<Long> by lazy {
         preferenceStore.getLong(Preference.appStateKey("last_app_check"), 0)
     }
+    // KMK <--
 
     suspend fun await(arguments: Arguments): Result {
+        // KMK -->
         val now = Instant.now()
-
-        // Limit checks to once every 3 days at most
         val nextCheckTime = Instant.ofEpochMilli(lastChecked.get()).plus(2, ChronoUnit.DAYS)
         if (!arguments.forceCheck && now.isBefore(nextCheckTime)) {
             return Result.NoNewUpdate
         }
 
-        // KMK -->
         val releases = service.releaseNotes(arguments)
             .filter {
                 !it.preRelease &&
-                    isNewVersion(
-                        arguments.isPreview,
-                        arguments.commitCount,
-                        arguments.versionName,
-                        it.version,
-                    )
+                    isNewVersion(arguments.isPreview, arguments.commitCount, arguments.versionName, it.version)
             }
 
         val latest = releases.getLatest() ?: return Result.NoNewUpdate
-        // KMK <--
-
         lastChecked.set(now.toEpochMilli())
-
-        // Check if latest version is different from current version
-        val isNewVersion = isNewVersion(
-            isPreview = arguments.isPreview,
-            commitCount = arguments.commitCount,
-            versionName = arguments.versionName,
-            versionTag = latest.version,
-        )
-        return when {
-            isNewVersion -> Result.NewUpdate(latest)
-            else -> Result.NoNewUpdate
-        }
+        return Result.NewUpdate(latest)
+        // KMK <--
     }
 
     // KMK -->
@@ -63,16 +49,15 @@ class GetApplicationRelease(
         val latest = releases.getLatest() ?: return Result.NoNewUpdate
         return Result.NewUpdate(latest)
     }
-    // KMK <--
 
     /**
-     * [isPreview] is if current version is Preview (beta) build
+     * [isPreview] is if current version is Preview build
      *
      * [versionTag] is the version of new release
      *
      * Release (stable) version will compare with current's [versionName] ("v0.1.2")
      *
-     * Preview (beta) version will compare with current's [commitCount] ("r1234")
+     * Preview version will compare with current's [commitCount] ("r1234")
      */
     private fun isNewVersion(
         isPreview: Boolean,
@@ -83,11 +68,11 @@ class GetApplicationRelease(
         // Removes prefixes like "r" or "v"
         val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
         return if (isPreview) {
-            // Preview builds: based on releases in "komikku-app/komikku-preview" repo
+            // Preview builds use the dedicated Komikku preview repository.
             // tagged as something like "r1234"
             newVersion.toInt() > commitCount
         } else {
-            // Release builds: based on releases in "komikku-app/komikku" repo
+            // Release builds use the Komikku release repository.
             // tagged as something like "v0.1.2"
             val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
 
@@ -107,7 +92,7 @@ class GetApplicationRelease(
 
     data class Arguments(
         val isFoss: Boolean,
-        /** If current version is Preview (beta) build */
+        /** If current version is Preview build */
         val isPreview: Boolean,
         /** Commit count of current version */
         val commitCount: Int,
@@ -126,7 +111,7 @@ class GetApplicationRelease(
     }
 }
 
-// KMK --.
+// KMK -->
 internal fun List<Release>.getLatest(): Release? {
     return firstOrNull()
         ?.copy(

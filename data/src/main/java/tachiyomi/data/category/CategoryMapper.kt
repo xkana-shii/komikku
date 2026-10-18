@@ -9,6 +9,7 @@ object CategoryMapper {
         order: Long,
         flags: Long,
         // KMK -->
+        @Suppress("UNUSED_PARAMETER") mangaOrder: List<Long>,
         hidden: Long,
         parentId: Long,
         dateAdded: Long,
@@ -16,6 +17,9 @@ object CategoryMapper {
         trackStatus: Long?,
         updateInterval: Long?,
         // KMK <--
+        version: Long,
+        uid: Long,
+        lastModifiedAt: Long,
     ): Category {
         return Category(
             id = id,
@@ -30,6 +34,11 @@ object CategoryMapper {
             trackStatus = trackStatus?.toInt(),
             updateInterval = updateInterval?.toInt(),
             // KMK <--
+            // SY -->
+            version = version,
+            uid = uid,
+            lastModifiedAt = lastModifiedAt,
+            // SY <--
         )
     }
 }

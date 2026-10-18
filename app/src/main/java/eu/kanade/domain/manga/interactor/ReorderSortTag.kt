@@ -1,7 +1,9 @@
 package eu.kanade.domain.manga.interactor
 
+import dev.zacsweers.metro.Inject
 import tachiyomi.domain.library.service.LibraryPreferences
 
+@Inject
 class ReorderSortTag(
     private val preferences: LibraryPreferences,
     private val getSortTag: GetSortTag,
@@ -23,7 +25,7 @@ class ReorderSortTag(
         val reorderedTag = reorderedTags.removeAt(currentIndex)
         reorderedTags.add(newPosition, reorderedTag)
 
-        preferences.sortTagsForLibrary().set(
+        preferences.sortTagsForLibrary.set(
             reorderedTags.mapIndexed { index, s ->
                 CreateSortTag.encodeTag(index, s)
             }.toSet(),

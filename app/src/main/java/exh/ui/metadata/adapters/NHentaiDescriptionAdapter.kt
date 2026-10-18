@@ -27,6 +27,7 @@ import tachiyomi.i18n.sy.SYMR
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 @Composable
 fun NHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
@@ -65,7 +66,7 @@ fun NHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
                 if (it == 0L) return@let
                 binding.favorites.text = it.toString()
                 // KMK -->
-                binding.favorites.bindDrawable(context, R.drawable.ic_book_24dp, iconColor)
+                binding.favorites.bindDrawable(context, MaterialSymbolsR.drawable.rounded_book, iconColor)
                 binding.favorites.setTextColor(textColor)
                 // KMK <--
             }
@@ -94,7 +95,7 @@ fun NHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
             // KMK -->
             binding.id.setTextColor(textColor)
 
-            binding.moreInfo.bindDrawable(context, R.drawable.ic_info_24dp, iconColor)
+            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info, iconColor)
             binding.moreInfo.text = context.stringResource(SYMR.strings.more_info)
             binding.moreInfo.setTextColor(iconColor)
             // KMK <--

@@ -1,11 +1,9 @@
 package tachiyomi.domain.category.interactor
 
 import logcat.LogPriority
-import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
-import tachiyomi.domain.category.service.CategoryTreeHandler
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 
@@ -13,51 +11,44 @@ class DeleteCategory(
     private val categoryRepository: CategoryRepository,
     private val libraryPreferences: LibraryPreferences,
     private val downloadPreferences: DownloadPreferences,
+    // SY -->
+    /** Called with the deleted category's sync uid, so sync can send a tombstone. */
+    private val onCategoryDeleted: (uid: Long) -> Unit = {},
+    // SY <--
 ) {
 
-    suspend fun await(categoryId: Long) = withNonCancellableContext {
+    suspend fun await(categoryId: Long): Result {
         try {
-            // KMK --> Preserve child categories and their manga memberships. The deleted
-            // category's own memberships are removed by the existing foreign key, while direct
-            // children move one level up instead of becoming orphaned.
-            val categories = categoryRepository.getAll()
-            val parentId = categories.firstOrNull { it.id == categoryId }?.parentId ?: Category.UNCATEGORIZED_ID
-            val children = CategoryTreeHandler.childrenOf(categoryId, categories)
-            val childIds = children.mapTo(HashSet(), Category::id)
-            val destinationNames = CategoryTreeHandler.childrenOf(parentId, categories)
-                .filterNot { it.id == categoryId || it.id in childIds }
-                .map { CategoryTreeHandler.normalizeName(it.name) }
-                .toSet()
-            val childNames = children.map { CategoryTreeHandler.normalizeName(it.name) }
-            if (childNames.size != childNames.distinct().size || childNames.any { it in destinationNames }) {
-                return@withNonCancellableContext Result.InternalError(
-                    IllegalArgumentException("Deleting category would create duplicate sibling names"),
-                )
-            }
-            categoryRepository.reparentChildren(categoryId, parentId)
-            // KMK <--
+            // SY -->
+            val uid = categoryRepository.get(categoryId)?.uid
+            // SY <--
             categoryRepository.delete(categoryId)
+            // SY -->
+            if (uid != null) onCategoryDeleted(uid)
+            // SY <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
-            return@withNonCancellableContext Result.InternalError(e)
+            return Result.InternalError(e)
         }
 
-        val orderedIds = categoryRepository.getAll().map { it.id }
+        val orderedIds = categoryRepository.getAll()
+            .filterNot(Category::isSystemCategory)
+            .map { it.id }
 
-        val defaultCategory = libraryPreferences.defaultCategory().get()
+        val defaultCategory = libraryPreferences.defaultCategory.get()
         if (defaultCategory == categoryId.toInt()) {
-            libraryPreferences.defaultCategory().delete()
+            libraryPreferences.defaultCategory.delete()
         }
 
         val categoryPreferences = listOf(
-            libraryPreferences.updateCategories(),
-            libraryPreferences.updateCategoriesExclude(),
-            downloadPreferences.removeExcludeCategories(),
-            downloadPreferences.downloadNewChapterCategories(),
-            downloadPreferences.downloadNewChapterCategoriesExclude(),
+            libraryPreferences.updateCategories,
+            libraryPreferences.updateCategoriesExclude,
+            downloadPreferences.removeExcludeCategories,
+            downloadPreferences.downloadNewChapterCategories,
+            downloadPreferences.downloadNewChapterCategoriesExclude,
             // KMK -->
-            libraryPreferences.filterCategoriesInclude(),
-            libraryPreferences.filterCategoriesExclude(),
+            libraryPreferences.filterCategoriesInclude,
+            libraryPreferences.filterCategoriesExclude,
             // KMK <--
         )
         val categoryIdString = categoryId.toString()
@@ -67,7 +58,7 @@ class DeleteCategory(
             preference.set(ids.minus(categoryIdString))
         }
 
-        try {
+        return try {
             categoryRepository.updateAllOrders(orderedIds = orderedIds)
             Result.Success
         } catch (e: Exception) {

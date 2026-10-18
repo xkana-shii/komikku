@@ -38,30 +38,24 @@ import com.kevinnzou.web.LoadingState
 import com.kevinnzou.web.WebView
 import com.kevinnzou.web.rememberWebViewNavigator
 import com.kevinnzou.web.rememberWebViewState
-import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.data.connections.ConnectionsManager
 import eu.kanade.tachiyomi.data.connections.discord.DiscordAccount
-import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.setDefaultSettings
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import logcat.LogPriority
+import mihon.app.di.appGraph
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 private const val DISCORD_DOMAIN = "https://discord.com"
 private const val DISCORD_LOGIN_URL = "$DISCORD_DOMAIN/login"
@@ -192,14 +186,14 @@ class DiscordLoginScreen : Screen() {
                             navigateUp = { navigator.pop() },
                             actions = {
                                 AppBarActions(
-                                    persistentListOf(
+                                    listOf(
                                         AppBar.OverflowAction(
                                             title = stringResource(MR.strings.action_webview_refresh),
                                             onClick = { webViewNavigator.reload() },
                                         ),
                                         AppBar.OverflowAction(
                                             title = stringResource(MR.strings.pref_clear_cookies),
-                                            onClick = { clearCookies(currentUrl) },
+                                            onClick = { clearCookies(currentUrl, context) },
                                         ),
                                     ),
                                 )
@@ -240,7 +234,7 @@ class DiscordLoginScreen : Screen() {
                         WebView.setWebContentsDebuggingEnabled(true)
                     }
 
-                    clearCookies(DISCORD_LOGIN_URL)
+                    clearCookies(DISCORD_LOGIN_URL, context)
 
                     WebStorage.getInstance().deleteOrigin(DISCORD_DOMAIN)
 
@@ -268,10 +262,10 @@ class DiscordLoginScreen : Screen() {
     }
 
     private fun login(token: String, context: Context) {
-        val connectionsManager: ConnectionsManager by lazy { Injekt.get() }
-        val connectionsPreferences: ConnectionsPreferences by lazy { Injekt.get() }
-        val networkHelper: NetworkHelper by lazy { Injekt.get() }
-        val json: Json by lazy { Injekt.get<Json>() }
+        val connectionsManager = context.appGraph.connectionsManager
+        val connectionsPreferences = context.appGraph.connectionsPreferences
+        val networkHelper = context.appGraph.networkHelper
+        val json = context.appGraph.json
 
         @Suppress("OPT_IN_USAGE")
         launchIO {
@@ -314,8 +308,8 @@ class DiscordLoginScreen : Screen() {
         }
     }
 
-    private fun clearCookies(url: String) {
-        val networkHelper: NetworkHelper by lazy { Injekt.get() }
+    private fun clearCookies(url: String, context: Context) {
+        val networkHelper = context.appGraph.networkHelper
 
         url.toHttpUrlOrNull()?.let {
             val cleared = networkHelper.cookieJar.remove(it)

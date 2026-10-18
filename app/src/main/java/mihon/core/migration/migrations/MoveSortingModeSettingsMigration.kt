@@ -3,15 +3,12 @@ package mihon.core.migration.migrations
 import android.app.Application
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import app.cash.sqldelight.async.coroutines.awaitAsList
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.data.Database
-import tachiyomi.data.category.CategoryMapper
+import tachiyomi.domain.category.model.CategoryUpdate
+import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
-
-// KMK -->
 
 class MoveSortingModeSettingsMigration : Migration {
     override val version: Float = 38f
@@ -20,10 +17,10 @@ class MoveSortingModeSettingsMigration : Migration {
         val context = migrationContext.get<Application>() ?: return@withIOContext false
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val libraryPreferences = migrationContext.get<LibraryPreferences>() ?: return@withIOContext false
-        val database = migrationContext.get<Database>() ?: return@withIOContext false
+        val categoryRepository = migrationContext.get<CategoryRepository>() ?: return@withIOContext false
         // Handle renamed enum values
         val newSortingMode = when (
-            val oldSortingMode = prefs.getString(libraryPreferences.sortingMode().key(), "ALPHABETICAL")
+            val oldSortingMode = prefs.getString(libraryPreferences.sortingMode.key(), "ALPHABETICAL")
         ) {
             "LAST_CHECKED" -> "LAST_MANGA_UPDATE"
             "UNREAD" -> "UNREAD_COUNT"
@@ -32,22 +29,19 @@ class MoveSortingModeSettingsMigration : Migration {
             else -> oldSortingMode
         }
         prefs.edit {
-            putString(libraryPreferences.sortingMode().key(), newSortingMode)
+            putString(libraryPreferences.sortingMode.key(), newSortingMode)
         }
-        database.transaction {
-            database.categoryQueries.getCategories(CategoryMapper::mapCategory).awaitAsList()
+        categoryRepository.updatePartial(
+            categoryRepository.getAll()
                 .filter { (it.flags and 0b00111100L) == 0b00100000L }
-                .forEach {
-                    // KMK -->
-                    database.categoryQueries.updateFlags(
+                .map {
+                    CategoryUpdate(
                         id = it.id,
                         flags = it.flags and 0b00111100L.inv(),
                     )
-                    // KMK <--
-                }
-        }
+                },
+        )
 
         return@withIOContext true
     }
 }
-// KMK <--

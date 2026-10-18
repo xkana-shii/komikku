@@ -8,7 +8,6 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.WindowManager
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -62,14 +61,12 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
+import mihon.app.di.appGraph
 import tachiyomi.core.common.util.system.logcat
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.io.FilterInputStream
 import java.lang.ref.WeakReference
 import java.util.TreeSet
@@ -95,11 +92,11 @@ open class WebGpuViewer(
 
     open val isContinuous: Boolean = false
 
-    val readerPreferences by lazy { Injekt.get<ReaderPreferences>() }
-
     /** Resolved once: render() asks per frame, and createReaderThemeContext builds a Resources. */
     @Volatile
     private var cachedBackgroundColor: Int? = null
+
+    val readerPreferences by lazy { activity.appGraph.readerPreferences }
 
     @Volatile
     private var cachedOnBackgroundColor: Int? = null
@@ -115,10 +112,6 @@ open class WebGpuViewer(
     ).also { cachedOnBackgroundColor = it }
 
     protected val scope = MainScope()
-
-    // KMK -->
-    override val automationInProgress = MutableStateFlow(false)
-    // KMK <--
 
     // Dedicated thread for decode worker to avoid blocking Dispatchers.Default pool
     private val decodeExecutor = Executors.newSingleThreadExecutor { r ->
@@ -280,7 +273,7 @@ open class WebGpuViewer(
     /**
      * Configuration used by the pager, like allow taps, scale mode on images, page transitions...
      */
-    val config = WebGpuConfig(this, scope)
+    val config = WebGpuConfig(this, scope, readerPreferences)
 
     // Read from the render and decode threads, via the prevChapter/nextChapter getters.
     @Volatile
@@ -489,7 +482,7 @@ open class WebGpuViewer(
             if (!chapterPreloadsInFlight.add(chapterId)) return
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             try {
                 activity.viewModel.preload(chapter)
                 repeat(25) {
@@ -963,9 +956,6 @@ open class WebGpuViewer(
             }
 
             onTap = { offset ->
-                // KMK -->
-                automationInProgress.value = false
-                // KMK <--
                 when (config.navigator.getAction(PointF(offset.x, offset.y))) {
                     NavigationRegion.MENU -> activity.toggleMenu()
                     NavigationRegion.NEXT -> moveToNext()
@@ -1062,19 +1052,11 @@ open class WebGpuViewer(
             val showOnStart = config.navigationOverlayOnStart || config.forceNavigationOverlay
             activity.binding.navigationOverlay.setNavigation(config.navigator, showOnStart)
         }
-
-        // KMK -->
-        automateWebGpu(activity, this, automationInProgress, config, scope)
-        // KMK <--
     }
 
     override fun destroy() {
         // Before the interrupt: taken mid-decode, only the flag stops the worker parking.
         destroyed = true
-        // KMK -->
-        automationInProgress.value = false
-        activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        // KMK <--
         scope.cancel()
 
         // shutdownNow interrupts the worker out of lock.wait().
@@ -1872,14 +1854,6 @@ open class WebGpuViewer(
         }
     }
 
-    // KMK -->
-    internal fun currentChapterId(): Long? = when (val page = currentPage) {
-        is ViewerReaderPage -> page.page.chapter.chapter.id
-        is ViewerTransitionPage -> page.nextChapter?.chapter?.id ?: page.prevChapter?.chapter?.id
-        else -> null
-    }
-    // KMK <--
-
     /**
      * Tells this viewer to move to the given [page].
      * In dual page mode, aligns to the start of the spread containing the page.
@@ -1904,9 +1878,6 @@ open class WebGpuViewer(
         (newPage as? ViewerTransitionPage)?.let { ViewerTransitionPage ->
             if (ViewerTransitionPage.prevChapter == null || ViewerTransitionPage.nextChapter == null) {
                 activity.showMenu()
-                // KMK -->
-                if (ViewerTransitionPage.nextChapter == null) automationInProgress.value = false
-                // KMK <--
             }
         }
 

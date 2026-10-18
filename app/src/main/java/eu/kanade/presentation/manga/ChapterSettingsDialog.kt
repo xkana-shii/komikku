@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PeopleAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -27,24 +25,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.manga.model.downloadedFilter
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
-import kotlinx.collections.immutable.persistentListOf
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Group
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.RadioItem
 import tachiyomi.presentation.core.components.SortItem
 import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun ChapterSettingsDialog(
@@ -56,6 +55,7 @@ fun ChapterSettingsDialog(
     // KMK -->
     bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
     onBookmarkColorFilterChanged: (Set<BookmarkColor>) -> Unit = {},
+    onManageBlacklist: (() -> Unit)? = null,
     // KMK <--
     scanlatorFilterActive: Boolean,
     onScanlatorFilterClicked: () -> Unit,
@@ -72,11 +72,12 @@ fun ChapterSettingsDialog(
         )
     }
 
-    val downloadedOnly = remember { Injekt.get<BasePreferences>().downloadedOnly().get() }
+    val context = LocalContext.current
+    val downloadedOnly = remember { context.appGraph.basePreferences.downloadedOnly.get() }
 
     TabbedDialog(
         onDismissRequest = onDismissRequest,
-        tabTitles = persistentListOf(
+        tabTitles = listOf(
             stringResource(MR.strings.action_filter),
             stringResource(MR.strings.action_sort),
             stringResource(MR.strings.action_display),
@@ -116,6 +117,7 @@ fun ChapterSettingsDialog(
                         // KMK -->
                         bookmarkColorFilter = bookmarkColorFilter,
                         onBookmarkColorFilterChanged = onBookmarkColorFilterChanged,
+                        onManageBlacklist = onManageBlacklist,
                         // KMK <--
                         scanlatorFilterActive = scanlatorFilterActive,
                         onScanlatorFilterClicked = onScanlatorFilterClicked,
@@ -150,6 +152,7 @@ private fun ColumnScope.FilterPage(
     // KMK -->
     bookmarkColorFilter: Set<BookmarkColor>,
     onBookmarkColorFilterChanged: (Set<BookmarkColor>) -> Unit,
+    onManageBlacklist: (() -> Unit)?,
     // KMK <--
     scanlatorFilterActive: Boolean,
     onScanlatorFilterClicked: () -> Unit,
@@ -180,10 +183,7 @@ private fun ColumnScope.FilterPage(
         onClick = onUnreadFilterChanged,
     )
     // KMK -->
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.weight(1f)) {
             TriStateItem(
                 label = stringResource(MR.strings.action_filter_bookmarked),
@@ -200,6 +200,13 @@ private fun ColumnScope.FilterPage(
         active = scanlatorFilterActive,
         onClick = onScanlatorFilterClicked,
     )
+    // KMK -->
+    if (onManageBlacklist != null) {
+        TextButton(onClick = onManageBlacklist) {
+            Text(stringResource(KMR.strings.blacklisted_chapters))
+        }
+    }
+    // KMK <--
 }
 
 @Composable
@@ -216,7 +223,7 @@ fun ScanlatorFilterItem(
         horizontalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Icon(
-            imageVector = Icons.Outlined.PeopleAlt,
+            imageVector = MaterialSymbols.Rounded.Group,
             contentDescription = null,
             tint = if (active) {
                 MaterialTheme.colorScheme.active

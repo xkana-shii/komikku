@@ -15,6 +15,10 @@ pluginManagement {
     }
 }
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 dependencyResolutionManagement {
     versionCatalogs {
         create("kotlinx") {
@@ -59,6 +63,7 @@ include(":app")
 include(":core-metadata")
 include(":core:archive")
 include(":core:common")
+include(":core:metro")
 include(":data")
 include(":domain")
 include(":i18n")
@@ -69,6 +74,9 @@ include(":flagkit")
 // SY -->
 include(":i18n-sy")
 // SY <--
+include(":icons:custom-material-symbols")
+include(":icons:material-symbols")
+include(":icons:simple-icons")
 // KMK -->
 include(":baseline-profile")
 // KMK <--
@@ -76,3 +84,6 @@ include(":presentation-core")
 include(":presentation-widget")
 include(":source-api")
 include(":source-local")
+// KMK --> Provides no-op or opt-in telemetry APIs required by the integrated app graph.
+include(":telemetry")
+// KMK <--

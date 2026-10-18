@@ -1,8 +1,8 @@
 # Komikku – AI Agent Guide
 
-Komikku is an Android manga reader (min SDK 26, target SDK 36, JVM target 17 / Kotlin) forked from **Mihon** + **TachiyomiSY**. `applicationId`: `app.komikku` (debug: `app.komikku.dev`).
+Komikku is an Android manga reader (min SDK 26, target SDK 36, JVM target 17 / Kotlin) forked from **Mihon** + **TachiyomiSY**. Its application ID is `app.komikku.kns` (`app.komikku.kns.dev` for debug).
 
-Features: configurable reader, downloads/offline reading, trackers (MyAnimeList, AniList, Kitsu, MangaUpdates, Bangumi, Kavita, Komga, MangaDex, Shikimori, Suwayomi), recommendations, metadata editing, library categories/tags/filters, multi-source browsing and feed tabs.
+Features: configurable reader, downloads/offline reading, trackers (MyAnimeList, AniList, Kitsu, MangaUpdates, Bangumi, Comick, Hikka, Kavita, Komga, MangaBaka, MangaDex, Shikimori, Suwayomi), recommendations, metadata editing, library categories/tags/filters, multi-source browsing and feed tabs.
 
 ### Upstreams
 
@@ -10,13 +10,20 @@ Features: configurable reader, downloads/offline reading, trackers (MyAnimeList,
 |----------|-------------|---------|
 | Mihon | none (base code) | `MR` (`i18n/`) |
 | TachiyomiSY | `// SY -->` … `// SY <--` (legacy `// EXH` blocks also come from SY) | `SYMR` (`i18n-sy/`) |
-| **Komikku** (this repo) | `// KMK -->` … `// KMK <--` | `KMR` (`i18n-kmk/`) |
+| **Komikku** (this repository) | `// KMK -->` … `// KMK <--` | `KMR` (`i18n-kmk/`) |
+| Komi-kun integration | `// KUN -->` … `// KUN <--` | `KMR` (`i18n-kmk/`) |
+
+Mihon is the unmarked base. `// SY` marks TachiyomiSY-derived code, `// KMK` marks original Komikku additions and adaptations, and `// KUN` records code retained from the Komi-kun integration.
 
 ---
 
 ## Mandatory rules for AI agents
 
 **Read this section before every change.** These rules override shortcuts (e.g. copying nearby `MR` imports or only running `compileDebugKotlin`).
+
+### Keep this guide current
+
+`AGENTS.md` documents the repo **as it is right now** (the tip of `master`). It is living documentation: whenever a change makes any statement here false — architecture, DI, module layout, markers, i18n, build flags, key files, workflows — update this file in the **same** change/PR. If you are on a feature branch that diverges from `master`, describe the branch's state (it is the future `master`). Prefer the current state over history, and delete guidance that no longer applies instead of leaving it stale.
 
 ### Git
 
@@ -38,15 +45,23 @@ Every Komikku addition or modification to existing code **must** be wrapped:
 // KMK <--
 ```
 
-- Use `// KMK` for all new code. Never add new `// SY` or `// EXH` blocks.
-- Keep upstream `// SY` / `// EXH` blocks intact; when changing code inside one, wrap your change in a nested `// KMK` block.
-- Markers apply to `.sq` queries and mappers too.
+| Code origin | Marker |
+|-------------|--------|
+| Komikku code | `// KMK -->` … `// KMK <--` |
+| Retained Komi-kun code | `// KUN -->` … `// KUN <--` |
+| TachiyomiSY upstream | `// SY -->` … `// SY <--` (legacy `// EXH` blocks also come from SY) |
+| Mihon (base upstream) | none |
+
+- Retain `// KUN` markers when code is imported from Komi-kun. Do not mechanically relabel those blocks as `// KMK`.
+- Use `// KMK` for original Komikku changes or adaptations. When adapting retained Komi-kun code, nest the changed portion in a `// KMK` block instead of changing the enclosing `// KUN` provenance.
+- Keep existing upstream `// SY` / `// EXH` blocks intact; when changing code inside one, wrap the change in a nested `// KMK` block.
+- Markers apply to `.sq` queries and mappers too (use `-- KMK -->` / `-- KMK <--`).
 
 ### Internationalization (strings)
 
 | String kind | Module | Resource class | Base folder only |
 |-------------|--------|----------------|------------------|
-| **Komikku-only** (new features, KMK UI, library-update errors, WebDAV, Discord, etc.) | `i18n-kmk/` | **`KMR`** | `i18n-kmk/src/commonMain/moko-resources/base/` |
+| **Komikku** new features (library-update errors, WebDAV, Discord, etc.) | `i18n-kmk/` | **`KMR`** | `i18n-kmk/src/commonMain/moko-resources/base/` |
 | Mihon upstream | `i18n/` | `MR` | `i18n/src/commonMain/moko-resources/base/` |
 | TachiyomiSY upstream | `i18n-sy/` | `SYMR` | `i18n-sy/src/commonMain/moko-resources/base/` |
 
@@ -54,9 +69,9 @@ Every Komikku addition or modification to existing code **must** be wrapped:
 
 - **All new strings go to `i18n-kmk/`** (`import tachiyomi.i18n.kmk.KMR`). `MR` / `SYMR` are upstream-owned; reuse existing entries, but only add or change them when syncing upstream.
 - **Never** edit non-`base` locale `strings.xml` or `plurals.xml` files in `i18n-kmk/`, `i18n/`, or `i18n-sy/` — [Weblate](https://hosted.weblate.org/engage/komikku-app/) owns translations.
-- Inside a `// KMK` block or for Komikku-only behavior, default to **`KMR`** even if nearby code imports `MR`.
+- Inside a `// KMK` block, default to **`KMR`** even if nearby code imports `MR`.
 
-**Examples (→ `i18n-kmk`, not `i18n`):** library update error UI, sync-before-update messages, WebDAV/Discord settings, updater notifications, `mihon/feature/*` Komikku screens.
+**Examples (→ `i18n-kmk`, not `i18n`):** library update error UI, sync-before-update messages, WebDAV/Discord settings, updater notifications, `mihon/feature/*` screens.
 
 **Self-check before finishing:** `git diff` must not add new `<string name="…">` or `<plurals name="…">` entries under non-`base` locales in `i18n-kmk/src/`, `i18n/src/`, or `i18n-sy/src/`.
 
@@ -79,13 +94,13 @@ Every Komikku addition or modification to existing code **must** be wrapped:
 ## Tech stack
 
 - **UI:** Jetpack Compose + Material 3, [Voyager](https://voyager.adriel.cafe/) navigation, Coil 3 for images
-- **DI:** Injekt (`uy.kohesive.injekt`)
+- **DI:** [Metro](https://zacsweers.github.io/metro/) (`dev.zacsweers.metro`) — compile-time DI (`@Inject`, `@AssistedInject`, `@DependencyGraph`, `@ContributesIntoMap` / `@ContributesIntoSet`); an **Injekt** (`uy.kohesive.injekt`) interop bridge survives for extension-facing code (`mihon/app/di/injekt/`)
 - **Database:** SQLDelight, SQLCipher encryption
 - **Network:** OkHttp 5 with DNS-over-HTTPS
 - **Serialization:** Kotlinx Serialization (JSON/Protobuf)
 - **JS engine:** QuickJS (used by sources)
 - **Concurrency:** Kotlin coroutines + Flow for new code; RxJava 1 remains in `source-api` for extension compatibility
-- **Toolchain:** JDK 21 to build (matches `.github/.java-version`), bytecode targets Java 17, Gradle 9.3+, compileSdk 36
+- **Toolchain:** JDK 21 to build (matches `.github/.java-version`), bytecode targets Java 17, Gradle 9.8.1, compileSdk 37.2
 
 Version catalogs in `gradle/`: `libs.versions.toml`, `kotlinx.versions.toml`, `androidx.versions.toml`, `compose.versions.toml`, `sy.versions.toml`.
 
@@ -95,10 +110,11 @@ Version catalogs in `gradle/`: `libs.versions.toml`, `kotlinx.versions.toml`, `a
 
 | Module | Purpose |
 |--------|---------|
-| `app/` | UI (`eu.kanade.*`, `exh/`, `mihon/`), ScreenModels, DI, workers, build variants |
+| `app/` | UI (`eu.kanade.*`, `exh/`, `mihon/`), Metro ViewModels, the DI graph, workers, build variants |
 | `domain/` | Use cases in `…/interactor/` (e.g. `GetManga`), models, repo interfaces |
 | `data/` | SQLDelight DB, `*RepositoryImpl` (`tachiyomi.data.*`) |
 | `core:common/` | Network (OkHttp), security, storage, shared utils |
+| `core:metro/` | Shared Metro helpers (`mihon.core.metro`: `GraphProvider`, `AppCoroutineScope`, `IsDebugBuild`) |
 | `core:archive/` | CBZ/archive reading with optional encryption |
 | `core-metadata/` | Comic-info metadata parsing |
 | `source-api/` / `source-local/` | Extension `Source` API + local source |
@@ -106,27 +122,28 @@ Version catalogs in `gradle/`: `libs.versions.toml`, `kotlinx.versions.toml`, `a
 | `presentation-widget/` | Home-screen Glance widget |
 | `i18n/` / `i18n-sy/` / `i18n-kmk/` | Strings → `MR` / `SYMR` / `KMR` (see [Internationalization](#internationalization-strings)) |
 | `flagkit/` | Country-flag drawables |
+| `icons:material-symbols/`, `icons:custom-material-symbols/`, `icons:simple-icons/` | Generated icon packs (`MaterialSymbols`, custom Material Symbols, Simple Icons) |
 | `telemetry/` | Firebase/Crashlytics (noop unless `-Pinclude-telemetry`) |
-| `macrobenchmark/` | Macrobenchmark tests (CI-only) |
+| `baseline-profile/` | Baseline profile and startup benchmark generation (CI-only) |
 | `buildSrc/` | Convention plugins and build logic |
 
 Dependency flow: `app` → `domain` → `source-api`; `data` implements `domain` repos.
 
-Package roots: `eu.kanade.tachiyomi.*` (legacy UI), `tachiyomi.*` (domain/data), `mihon.*` (Mihon upstream), `exh.*` (enhanced sources, SY).
+Package roots: `eu.kanade.tachiyomi.*` (legacy UI), `tachiyomi.*` (domain/data), `mihon.*` (Mihon's newer package root, also used by `mihon.feature.*`), `exh.*` (enhanced sources, SY).
 
 ---
 
 ## Architecture
 
-**DI** – Injekt, not Hilt. Register in `AppModule.kt`, `DomainModule.kt`, `KMKDomainModule.kt`, `SYDomainModule.kt` (imported in `App.kt`): `addSingleton` / `addSingletonFactory` for repositories and services, `addFactory` for interactors. Resolve with `injectLazy<T>()` in class fields or `Injekt.get<T>()` in functions.
+**DI** – [Metro](https://zacsweers.github.io/metro/), not Hilt/Injekt. The graph is `mihon/app/di/AppGraph.kt` (`@DependencyGraph`) with providers/bindings in `mihon/app/di/AppBindings.kt`; it is built in `App.kt` (`createGraphFactory<AppGraph.Factory>().create(...)`) and reached as `context.appGraph` or by injecting `AppGraph`. Most classes need only `@Inject` on the constructor (interactors, repositories, services); use `@Provides`/`@Binds` in `AppBindings` for third-party or interface types, and `@ContributesIntoMap` / `@ContributesIntoSet` for maps/sets. Parameterised types use `@AssistedInject` + `@AssistedFactory`. Extension-facing code still resolves through the Injekt interop bridge (`mihon/app/di/injekt/`).
 
-**UI & navigation** – Voyager `Screen`s in `eu.kanade.tachiyomi.ui.*`, composables in `eu.kanade.presentation.*`. Base type: `eu.kanade.presentation.util.Screen`. State via `rememberScreenModel { … }`; most models extend `StateScreenModel<State>` or bases like `SearchScreenModel`; some use plain `ScreenModel`. Example: `DeepLinkScreen` + `DeepLinkScreenModel` in `app/src/main/java/eu/kanade/tachiyomi/ui/deeplink/`.
+**UI & navigation** – Voyager `Screen`s in `eu.kanade.tachiyomi.ui.*`, composables in `eu.kanade.presentation.*`. Base type: `eu.kanade.presentation.util.Screen` (in `Navigator.kt`). State lives in **Metro ViewModels** obtained with `metroViewModel<VM>()` or `assistedMetroViewModel<VM, Factory> { create(...) }`; they extend `androidx.lifecycle.ViewModel`, expose a `StateFlow` / `MutableStateFlow` (often a `State` data class) and run work in `viewModelScope`. Example: `NewUpdateScreen` + `NewUpdateViewModel` in `app/src/main/java/eu/kanade/tachiyomi/ui/more/`.
 
-**Coroutines** – In ScreenModels use `screenModelScope` / `ioCoroutineScope`. Helpers in `tachiyomi.core.common.util.lang`: `withIOContext`, `withUIContext`, `CoroutineScope.launchIO` (on a given scope). The top-level `launchIO` / `launchNow` run on **GlobalScope** — avoid them for lifecycle-bound work. `rememberCoroutineScope()` is fine in Compose; long-lived services may own their own `CoroutineScope`.
+**Coroutines** – In ViewModels use `viewModelScope`. Helpers in `tachiyomi.core.common.util.lang`: `withIOContext`, `withUIContext`, `CoroutineScope.launchIO` (on a given scope). The top-level `launchIO` / `launchNow` run on **GlobalScope** — avoid them for lifecycle-bound work. `rememberCoroutineScope()` is fine in Compose; long-lived services may own their own scope (`AppCoroutineScope` in `mihon.core.metro`).
 
 **Activities (not Voyager)** – `MainActivity` (shell / Voyager host), `ReaderActivity` + `ReaderViewModel`, `WebViewActivity`, `UnlockActivity`, OAuth login activities, `DeepLinkActivity`. Reader: `ReaderActivity.newIntent(context, mangaId, chapterId)`. Web: both `WebViewScreen` (Voyager) and `WebViewActivity.newIntent(...)`.
 
-**Domain / data** – One class per operation under `domain/src/main/java/tachiyomi/domain/*/interactor/` (verb names like `GetTracksPerManga`, `HideCategory`; no `*Interactor` suffix). App-specific cases go in `app/src/main/java/eu/kanade/domain/…/interactor/`. `Manga` / `Chapter` are domain models; `SManga` / `SChapter` are source-layer types — convert at the boundary (`SManga.toDomainManga()`, `Manga.toSManga()`, `Chapter.toSChapter()`).
+**Domain / data** – One class per operation under `domain/src/main/java/tachiyomi/domain/*/interactor/` (verb names like `GetTracksPerManga`, `HideCategory`; no `*Interactor` suffix), annotated `@Inject` so Metro resolves it directly — no module registration. App-specific cases go in `app/src/main/java/eu/kanade/domain/…/interactor/`. `Manga` / `Chapter` are domain models; `SManga` / `SChapter` are source-layer types — convert at the boundary (`SManga.toDomainManga()`, `Manga.toSManga()`, `Chapter.toSChapter()`).
 
 **Database** – SQLDelight in `data/src/main/sqldelight/tachiyomi/`. For schema changes:
 1. Add a new `migrations/*.sqm` file
@@ -152,13 +169,12 @@ Package roots: `eu.kanade.tachiyomi.*` (legacy UI), `tachiyomi.*` (domain/data),
 
 ## Adding a Komikku feature
 
-1. **Interactor:** `domain/src/main/java/tachiyomi/domain/<area>/interactor/MyFeature.kt`
-2. **DI:** `addFactory { MyFeature(get()) }` in `KMKDomainModule.kt` (or inside a `// KMK` block in `DomainModule.kt`)
-3. **UI:** ScreenModel + Screen under `app/src/main/java/eu/kanade/tachiyomi/ui/`
-4. **Strings:** `i18n-kmk/src/commonMain/moko-resources/base/strings.xml`, referenced via `KMR`
-5. **Markers:** wrap edits to existing files in `// KMK -->` / `// KMK <--`
+1. **Interactor:** `domain/src/main/java/tachiyomi/domain/<area>/interactor/MyFeature.kt`, annotated `@Inject` (Metro resolves it; add a `@Provides` / `@Binds` to `mihon/app/di/AppBindings.kt` only if it needs manual wiring)
+2. **UI:** Metro ViewModel + `Screen` under `app/src/main/java/eu/kanade/tachiyomi/ui/` (see [Architecture](#architecture))
+3. **Strings:** `i18n-kmk/src/commonMain/moko-resources/base/strings.xml`, referenced via `KMR`
+4. **Markers:** wrap edits to existing files in `// KMK -->` / `// KMK <--`
 
-Reference: `domain/src/main/java/tachiyomi/domain/category/interactor/HideCategory.kt` and its registration in `DomainModule.kt`.
+Reference: `domain/src/main/java/tachiyomi/domain/category/interactor/HideCategory.kt` (an `@Inject` interactor) and `app/src/main/java/eu/kanade/tachiyomi/ui/more/NewUpdateScreen.kt` + `NewUpdateViewModel.kt` (ViewModel + Screen).
 
 ---
 
@@ -192,26 +208,28 @@ Gradle `-P` flags (`buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`):
 **Workflows** (`.github/workflows/`):
 - `build_pull_request.yml` – PR validation: dependency review → wrapper validation → `spotlessCheck` → `assemblePreview` → `testReleaseUnitTest` → APK signing (authorized forks)
 - `build_push.yml` – push to `master`: full build + signing
-- `build_release.yml` – release builds from `v*` tags
-- `build_preview.yml` – manual preview builder
+- `build_preview.yml` – manual preview build.
+- `build_release.yml` – release builds from `v*` tags.
 - `build_benchmark.yml` – manual benchmark builder
+
+Preview and release builds retain Komikku's existing versioning and updater configuration.
 
 ---
 
 ## Tests
 
 - **Framework:** JUnit (Jupiter) + Kotest assertions + MockK
-- **Locations:** `domain/src/test/`, `app/src/test/` (e.g. `MigratorTest.kt`). No broad UI test suite — focus on domain and critical logic.
+- **Locations:** `domain/src/test/`, `app/src/test/` (e.g. `app/src/test/java/mihon/core/migration/MigratorTest.kt`). No broad UI test suite — focus on domain and critical logic.
 - **Single class:** `./gradlew :domain:testReleaseUnitTest --tests "*.ClassName"`
 
 ---
 
 ## Key files
 
-- `App.kt` – Injekt bootstrap, logging setup, Coil initialization
+- `App.kt` – Metro graph bootstrap, logging setup, Coil initialization
 - `MainActivity.kt` – Voyager navigation host
-- `app/src/main/java/eu/kanade/tachiyomi/di/AppModule.kt` – core DI
-- `app/src/main/java/eu/kanade/domain/DomainModule.kt` – domain interactors
+- `app/src/main/java/mihon/app/di/AppGraph.kt` – Metro `@DependencyGraph` (the DI graph)
+- `app/src/main/java/mihon/app/di/AppBindings.kt` – `@Provides` / `@Binds` / contributed bindings
 - `buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`, `AndroidConfig.kt` – flags, SDK versions
 - `app/build.gradle.kts`, `settings.gradle.kts`
 - `CONTRIBUTING.md` – prerequisites and contribution process
@@ -220,16 +238,16 @@ Gradle `-P` flags (`buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`):
 
 ## Upstream cherry-pick log
 
-`cherrypick_log.md` (repo root) lists upstream commits since 2024-01-01 with their cherry-pick status on `master`. The main upstream is `mihon/main`, the additional upstream is `tachiyomiSY/master`, and Renovate commits are excluded. All of these are set in `.claude/skills/cherrypick-log/config.json`, and `--since` overrides the start date.
+`cherrypick_log.md` (repo root) lists upstream commits since 2024-01-01 with their cherry-pick status on `master`. The main upstream is `mihon/main`, the additional upstream is `tachiyomiSY/master`, and Renovate commits are excluded. All of these are set in `.agents/skills/cherrypick-log/config.json`, and `--since` overrides the start date.
 
-- The list is generated by `.claude/skills/cherrypick-log/update_cherrypick_log.py`.
+- The list is generated by `.agents/skills/cherrypick-log/update_cherrypick_log.py`.
 - `?` rows are reviewed with the `cherrypick-log` skill.
 - `X` means "won't pick". The maintainer sets it by hand, and the skill sets it for version-bump-only commits.
 - Commits that cancel each other out (revert chains the fork has none of) are flagged `?` by the script with a `Cancels out (script):` note, for review.
 - Pre-2024 rows at the end come from a one-off pass and may be deleted by hand.
 - Never hand-edit columns other than Status and Notes; use the script's `mark` command.
 
-Rules, commands and the porting guide: `.claude/skills/cherrypick-log/README.md`.
+Rules, commands and the porting guide: `.agents/skills/cherrypick-log/README.md`.
 
 ---
 

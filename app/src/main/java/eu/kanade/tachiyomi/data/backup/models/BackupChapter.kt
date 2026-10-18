@@ -1,27 +1,26 @@
 package eu.kanade.tachiyomi.data.backup.models
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
-import tachiyomi.data.MemoColumnAdapter
-import tachiyomi.domain.chapter.model.BookmarkColor
+import mihon.core.common.extensions.toByteArray
+import mihon.core.common.extensions.toEpochMillisOrZero
+import mihon.core.common.extensions.toInstantOrNull
+import mihon.core.common.extensions.toJsonObject
 import tachiyomi.domain.chapter.model.Chapter
+import kotlin.time.Instant
 
 @Serializable
 class BackupChapter(
     // in 1.x some of these values have different names
     // url is called key in 1.x
-    @ProtoNumber(1) var url: String,
-    @ProtoNumber(2) var name: String,
+    // SY -->
+    @ProtoNumber(1) var url: String = "",
+    @ProtoNumber(2) var name: String = "",
+    // SY <--
     @ProtoNumber(3) var scanlator: String? = null,
     @ProtoNumber(4) var read: Boolean = false,
     @ProtoNumber(5) var bookmark: Boolean = false,
-    // KMK -->
-    @ProtoNumber(14) var bookmarkColor: Int = BookmarkColor.NONE.value,
-    // Kept only to decode pre-blacklist Komikku backups.
-    @ProtoNumber(15) var fillermark: Boolean = false,
-    // KMK <--
     // lastPageRead is called progress in 1.x
     @ProtoNumber(6) var lastPageRead: Long = 0,
     @ProtoNumber(7) var dateFetch: Long = 0,
@@ -41,57 +40,30 @@ class BackupChapter(
             scanlator = this@BackupChapter.scanlator,
             read = this@BackupChapter.read,
             bookmark = this@BackupChapter.bookmark,
-            // KMK -->
-            bookmarkColor = BookmarkColor.fromValue(this@BackupChapter.bookmarkColor.toLong()),
-            // KMK <--
-            lastPageRead = this@BackupChapter.lastPageRead,
-            dateFetch = this@BackupChapter.dateFetch,
-            dateUpload = this@BackupChapter.dateUpload,
+            // Only untrusted source of this value, and a truncating narrow can land negative
+            lastPageRead = this@BackupChapter.lastPageRead.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
+            dateFetch = Instant.fromEpochMilliseconds(this@BackupChapter.dateFetch),
+            dateUpload = this@BackupChapter.dateUpload.toInstantOrNull(),
             sourceOrder = this@BackupChapter.sourceOrder,
             lastModifiedAt = this@BackupChapter.lastModifiedAt,
             version = this@BackupChapter.version,
-            memo = MemoColumnAdapter.decode(this@BackupChapter.memo),
+            memo = this@BackupChapter.memo.toJsonObject(),
         )
     }
 }
 
-val backupChapterMapper = {
-        _: Long,
-        _: Long,
-        url: String,
-        name: String,
-        scanlator: String?,
-        read: Boolean,
-        bookmark: Boolean,
-        // KMK -->
-        bookmarkColor: Long,
-        // KMK <--
-        lastPageRead: Long,
-        chapterNumber: Double,
-        sourceOrder: Long,
-        dateFetch: Long,
-        dateUpload: Long,
-        lastModifiedAt: Long,
-        version: Long,
-        _: Long,
-        memo: JsonObject,
-    ->
-    BackupChapter(
-        url = url,
-        name = name,
-        chapterNumber = chapterNumber.toFloat(),
-        scanlator = scanlator,
-        read = read,
-        bookmark = bookmark,
-        // KMK -->
-        bookmarkColor = bookmarkColor.toInt(),
-        // KMK <--
-        lastPageRead = lastPageRead,
-        dateFetch = dateFetch,
-        dateUpload = dateUpload,
-        sourceOrder = sourceOrder,
-        lastModifiedAt = lastModifiedAt,
-        version = version,
-        memo = MemoColumnAdapter.encode(memo),
-    )
-}
+fun Chapter.toBackupChapter() = BackupChapter(
+    url = url,
+    name = name,
+    chapterNumber = chapterNumber.toFloat(),
+    scanlator = scanlator,
+    read = read,
+    bookmark = bookmark,
+    lastPageRead = lastPageRead.toLong(),
+    dateFetch = dateFetch.toEpochMilliseconds(),
+    dateUpload = dateUpload.toEpochMillisOrZero(),
+    sourceOrder = sourceOrder,
+    lastModifiedAt = lastModifiedAt,
+    version = version,
+    memo = memo.toByteArray(),
+)

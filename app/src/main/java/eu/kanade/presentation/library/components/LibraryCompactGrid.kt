@@ -31,9 +31,6 @@ internal fun LibraryCompactGrid(
 
         items(
             items = items,
-            // KMK -->
-            key = { it.id },
-            // KMK <--
             contentType = { "library_compact_grid_item" },
         ) { libraryItem ->
             val manga = libraryItem.libraryManga.manga
@@ -48,17 +45,13 @@ internal fun LibraryCompactGrid(
                     lastModified = manga.coverLastModified,
                 ),
                 coverBadgeStart = {
-                    // KMK -->
                     DownloadsBadge(count = libraryItem.badges.downloadCount)
                     UnreadBadge(count = libraryItem.badges.unreadCount)
-                    // KMK <--
                 },
                 coverBadgeEnd = {
                     LanguageBadge(
-                        // KMK -->
                         isLocal = libraryItem.badges.isLocal,
                         sourceLanguage = libraryItem.badges.sourceLanguage,
-                        // KMK <--
                         // KMK -->
                         useLangIcon = libraryItem.useLangIcon,
                         // KMK <--

@@ -4,9 +4,14 @@ import android.content.Context
 import android.os.Build
 import android.os.FileUtils
 import com.hippo.unifile.UniFile
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import java.io.BufferedOutputStream
 import java.io.File
 
+@Inject
+@SingleIn(AppScope::class)
 class UniFileTempFileManager(
     private val context: Context,
 ) {

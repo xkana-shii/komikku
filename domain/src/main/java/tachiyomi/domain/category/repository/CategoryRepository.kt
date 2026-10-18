@@ -2,6 +2,7 @@ package tachiyomi.domain.category.repository
 
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.model.CategoryUpdate
 
 interface CategoryRepository {
 
@@ -15,8 +16,16 @@ interface CategoryRepository {
 
     fun getCategoriesByMangaIdAsFlow(mangaId: Long): Flow<List<Category>>
 
+    suspend fun getCategoriesByMangaIds(mangaIds: List<Long>): Map<Long, List<Category>>
+
     // SY -->
-    suspend fun insert(category: Category): Long
+    suspend fun insert(category: Category): Long?
+
+    /**
+     * Restores [categories] from a backup or sync delta, matching existing entries by uid (or name),
+     * updating them in place and inserting the rest. Returns the categories as they now stand.
+     */
+    suspend fun restoreCategories(categories: List<Category>, isSync: Boolean): List<Category>
     // SY <--
 
     suspend fun updateName(categoryId: Long, name: String)
@@ -46,6 +55,10 @@ interface CategoryRepository {
     suspend fun updateAllFlags(flags: Long)
 
     suspend fun updateAllOrders(orderedIds: List<Long>)
+
+    suspend fun updatePartial(update: CategoryUpdate)
+
+    suspend fun updatePartial(updates: List<CategoryUpdate>)
 
     suspend fun delete(categoryId: Long)
 }

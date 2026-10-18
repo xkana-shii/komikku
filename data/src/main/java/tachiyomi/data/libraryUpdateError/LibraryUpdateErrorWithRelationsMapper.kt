@@ -1,9 +1,10 @@
 package tachiyomi.data.libraryUpdateError
 
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateErrorWithRelations
+import kotlin.time.Instant
 
 val libraryUpdateErrorWithRelationsMapper:
-    (Long, String, Long, Boolean, String?, Long, Long, Long, Long) -> LibraryUpdateErrorWithRelations =
+    (Long, String, Long, Boolean, String?, Instant?, Long, Long, Long) -> LibraryUpdateErrorWithRelations =
     { mangaId, mangaTitle, mangaSource, favorite, mangaThumbnail, coverLastModified, errorId, messageId, lastUpdate ->
         LibraryUpdateErrorWithRelations(
             mangaId = mangaId,

@@ -1,12 +1,19 @@
 package eu.kanade.tachiyomi.ui.reader.model
 
-import eu.kanade.domain.chapter.model.toDbChapter
-import eu.kanade.tachiyomi.data.database.models.Chapter
 import eu.kanade.tachiyomi.ui.reader.loader.PageLoader
 import kotlinx.coroutines.flow.MutableStateFlow
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.chapter.model.Chapter
 
-data class ReaderChapter(val chapter: Chapter) {
+data class ReaderChapter(private val loadedChapter: Chapter) {
+
+    /**
+     * The chapter as it currently stands, which drifts from [loadedChapter] as the reader records
+     * progress against it. Equality stays on the chapter it was loaded with, so a chapter held by
+     * the viewers keeps comparing equal to itself while being read.
+     */
+    var chapter: Chapter = loadedChapter
+        private set
 
     val stateFlow = MutableStateFlow<State>(State.Wait)
     var state: State
@@ -24,15 +31,21 @@ data class ReaderChapter(val chapter: Chapter) {
 
     private var references = 0
 
-    // KMK --> Keep database bookmark changes in the cached Reader model without replacing the
-    // chapter object that owns page-loader state.
-    fun syncBookmarkState(latest: tachiyomi.domain.chapter.model.Chapter) {
-        chapter.bookmark = latest.bookmark
-        chapter.bookmarkColor = latest.bookmarkColor
+    fun update(transform: (Chapter) -> Chapter) {
+        chapter = transform(chapter)
+    }
+
+    // KMK --> Preserve the ReaderChapter instance that owns pages and loaders while reflecting
+    // bookmark changes made from a different screen or through the database stream.
+    fun syncBookmarkState(latest: Chapter) {
+        update {
+            it.copy(
+                bookmark = latest.bookmark,
+                bookmarkColor = latest.bookmarkColor,
+            )
+        }
     }
     // KMK <--
-
-    constructor(chapter: tachiyomi.domain.chapter.model.Chapter) : this(chapter.toDbChapter())
 
     fun ref() {
         references++

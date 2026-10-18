@@ -10,19 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.automirrored.outlined.Label
-import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.CloudOff
-import androidx.compose.material.icons.outlined.GetApp
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.NewReleases
-import androidx.compose.material.icons.outlined.QueryStats
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,8 +29,20 @@ import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.more.DownloadQueueState
 import eu.kanade.tachiyomi.util.system.openInBrowser
-import exh.pref.DelegateSourcePreferences
-import exh.source.ExhPreferences
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Help
+import mihon.icons.materialsymbols.automirroredrounded.Label
+import mihon.icons.materialsymbols.automirroredrounded.PlaylistAdd
+import mihon.icons.materialsymbols.rounded.CloudOff
+import mihon.icons.materialsymbols.rounded.Download
+import mihon.icons.materialsymbols.rounded.History
+import mihon.icons.materialsymbols.rounded.Info
+import mihon.icons.materialsymbols.rounded.QueryStats
+import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.Storage
+import mihon.icons.materialsymbols.rounded.Verified
+import mihon.icons.materialsymbols.roundedfilled.Favorite
 import tachiyomi.core.common.Constants
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -54,8 +53,6 @@ import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun MoreScreen(
@@ -83,8 +80,9 @@ fun MoreScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     // SY -->
-    val exhPreferences = remember { Injekt.get<ExhPreferences>() }
-    val delegateSourcePreferences = remember { Injekt.get<DelegateSourcePreferences>() }
+    val context = LocalContext.current
+    val exhPreferences = remember { context.appGraph.exhPreferences }
+    val delegateSourcePreferences = remember { context.appGraph.delegateSourcePreferences }
     // SY <--
 
     Scaffold { contentPadding ->
@@ -99,7 +97,7 @@ fun MoreScreen(
                 SwitchPreferenceWidget(
                     title = stringResource(MR.strings.label_downloaded_only),
                     subtitle = stringResource(MR.strings.downloaded_only_summary),
-                    icon = Icons.Outlined.CloudOff,
+                    icon = MaterialSymbols.Rounded.CloudOff,
                     checked = downloadedOnly,
                     onCheckedChanged = onDownloadedOnlyChange,
                 )
@@ -126,7 +124,7 @@ fun MoreScreen(
                 item {
                     TextPreferenceWidget(
                         title = stringResource(MR.strings.label_recent_updates),
-                        icon = Icons.Outlined.NewReleases,
+                        icon = MaterialSymbols.Rounded.Verified,
                         onPreferenceClick = onClickUpdates,
                     )
                 }
@@ -135,7 +133,7 @@ fun MoreScreen(
                 item {
                     TextPreferenceWidget(
                         title = stringResource(MR.strings.label_recent_manga),
-                        icon = Icons.Outlined.History,
+                        icon = MaterialSymbols.Rounded.History,
                         onPreferenceClick = onClickHistory,
                     )
                 }
@@ -167,21 +165,21 @@ fun MoreScreen(
                             pluralStringResource(MR.plurals.download_queue_summary, count = pending, pending)
                         }
                     },
-                    icon = Icons.Outlined.GetApp,
+                    icon = MaterialSymbols.Rounded.Download,
                     onPreferenceClick = onClickDownloadQueue,
                 )
             }
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.categories),
-                    icon = Icons.AutoMirrored.Outlined.Label,
+                    icon = MaterialSymbols.AutoMirroredRounded.Label,
                     onPreferenceClick = onClickCategories,
                 )
             }
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_stats),
-                    icon = Icons.Outlined.QueryStats,
+                    icon = MaterialSymbols.Rounded.QueryStats,
                     onPreferenceClick = onClickStats,
                 )
             }
@@ -189,7 +187,7 @@ fun MoreScreen(
             item {
                 TextPreferenceWidget(
                     title = stringResource(KMR.strings.option_label_library_update_errors),
-                    icon = Icons.Outlined.NewReleases,
+                    icon = MaterialSymbols.Rounded.Verified,
                     onPreferenceClick = onClickLibraryUpdateErrors,
                 )
             }
@@ -197,16 +195,16 @@ fun MoreScreen(
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_data_storage),
-                    icon = Icons.Outlined.Storage,
+                    icon = MaterialSymbols.Rounded.Storage,
                     onPreferenceClick = onClickDataAndStorage,
                 )
             }
             // SY -->
-            if (exhPreferences.isHentaiEnabled().get() || delegateSourcePreferences.delegateSources().get()) {
+            if (exhPreferences.isHentaiEnabled.get() || delegateSourcePreferences.delegateSources.get()) {
                 item {
                     TextPreferenceWidget(
                         title = stringResource(SYMR.strings.eh_batch_add),
-                        icon = Icons.AutoMirrored.Outlined.PlaylistAdd,
+                        icon = MaterialSymbols.AutoMirroredRounded.PlaylistAdd,
                         onPreferenceClick = onClickBatchAdd,
                     )
                 }
@@ -218,21 +216,22 @@ fun MoreScreen(
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_settings),
-                    icon = Icons.Outlined.Settings,
+                    icon = MaterialSymbols.Rounded.Settings,
                     onPreferenceClick = onClickSettings,
                 )
             }
             item {
                 TextPreferenceWidget(
+
                     title = stringResource(MR.strings.pref_category_about),
-                    icon = Icons.Outlined.Info,
+                    icon = MaterialSymbols.Rounded.Info,
                     onPreferenceClick = onClickAbout,
                 )
             }
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_help),
-                    icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                    icon = MaterialSymbols.AutoMirroredRounded.Help,
                     onPreferenceClick = { uriHandler.openUri(Constants.URL_HELP) },
                 )
             }
@@ -268,7 +267,7 @@ fun Sponsor() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Favorite,
+                    imageVector = MaterialSymbols.RoundedFilled.Favorite,
                     contentDescription = stringResource(KMR.strings.sponsor_me),
                     tint = MaterialTheme.colorScheme.primary,
                 )

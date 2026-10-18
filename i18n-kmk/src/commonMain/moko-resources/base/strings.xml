@@ -4,6 +4,7 @@
     <string name="action_search_for_source">Search for sources</string>
     <string name="action_source_search">Search in source</string>
     <string name="action_library_search">Library search</string>
+    <string name="action_enable">Enable</string>
     <string name="action_toggle_nsfw_only">Toggle NSFW only</string>
     <string name="action_cancel_update">Cancel update</string>
     <string name="action_bulk_select">Bulk selection mode</string>
@@ -35,6 +36,8 @@
     <string name="scale_type_double">Double zoom</string>
     <string name="pref_webtoon_scale_type">Smart scale on wide screen</string>
     <string name="pref_smart_scale_long_strip_gap">Apply Smart scale to Long strip with gaps</string>
+    <string name="pref_always_decode_long_strip_with_ssiv">Always decode long strip images with SSIV</string>
+    <string name="pref_always_decode_long_strip_with_ssiv_summary">Affects performance. Only enable if reducing bitmap threshold doesn\'t fix blank image issues</string>
     <string name="scale_type_16_9">16:9</string>
     <string name="scale_type_20_9">20:9</string>
     <string name="scale_type_4_3">4:3</string>

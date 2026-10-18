@@ -4,34 +4,50 @@ SELECT
     M.*,
     coalesce(C.total, 0) AS totalCount,
     coalesce(C.readCount, 0) AS readCount,
-    coalesce(C.latestUpload, 0) AS latestUpload,
-    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
-    coalesce(C.lastRead, 0) AS lastRead,
+    C.latestUpload AS latestUpload,
+    C.fetchedAt AS chapterFetchedAt,
+    -- Joining history to every chapter is the slowest part of the query, and only entries with excluded
+    -- scanlators need the chapters to leave theirs out
+    CASE WHEN EXISTS (SELECT 0 FROM excluded_scanlator WHERE excluded_scanlator.manga_id = M.id)
+    THEN (
+        SELECT max(history.read_at)
+        FROM history
+        JOIN chapter
+        ON chapter.id = history.chapter_id
+        WHERE history.manga_id = M.id
+        AND NOT EXISTS (
+            SELECT 0 FROM excluded_scanlator
+            WHERE excluded_scanlator.manga_id = M.id
+            AND excluded_scanlator.scanlator = chapter.remote_scanlator
+        )
+    )
+    ELSE (SELECT max(history.read_at) FROM history WHERE history.manga_id = M.id)
+    END AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     -- KMK -->
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
     -- KMK <--
-    coalesce(MC.categories, '0') AS categories
+    coalesce(MC.categories, '0') AS categories,
+    -- KMK --> Preserve per-entry invalidation tokens in the library query.
+    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
+    -- KMK <--
 FROM manga M
 LEFT JOIN (
     SELECT
         chapter.manga_id,
         count(*) AS total,
         sum(user_read) AS readCount,
-        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
-        coalesce(max(history.read_at), 0) AS lastRead,
-        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
-        sum(chapter.user_bookmark) AS bookmarkCount,
+        max(chapter.remote_date_upload) AS latestUpload,
+        max(chapter.state_date_fetch) AS fetchedAt,
+        sum(user_bookmark) AS bookmarkCount,
         -- KMK -->
-        sum(CASE WHEN chapter.user_bookmark = 1 AND chapter.user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
         -- KMK <--
         excluded_scanlator.scanlator AS ex_scanlator
     FROM chapter
     LEFT JOIN excluded_scanlator
     ON chapter.manga_id = excluded_scanlator.manga_id
     AND chapter.remote_scanlator = excluded_scanlator.scanlator
-    LEFT JOIN history
-    ON chapter.id = history.chapter_id
     WHERE ex_scanlator IS NULL
     GROUP BY chapter.manga_id
 ) AS C
@@ -48,14 +64,41 @@ SELECT
     M.*,
     coalesce(C.total, 0) AS totalCount,
     coalesce(C.readCount, 0) AS readCount,
-    coalesce(C.latestUpload, 0) AS latestUpload,
-    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
-    coalesce(C.lastRead, 0) AS lastRead,
+    C.latestUpload AS latestUpload,
+    C.fetchedAt AS chapterFetchedAt,
+    -- KMK -->
+    -- Same as the non-merged branch above, but over every manga of the merge group
+    CASE WHEN EXISTS (
+        SELECT 0 FROM excluded_scanlator
+        WHERE excluded_scanlator.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+    )
+    THEN (
+        SELECT max(history.read_at)
+        FROM history
+        JOIN chapter
+        ON chapter.id = history.chapter_id
+        WHERE history.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+        AND NOT EXISTS (
+            SELECT 0 FROM excluded_scanlator
+            WHERE excluded_scanlator.manga_id = history.manga_id
+            AND excluded_scanlator.scanlator = chapter.remote_scanlator
+        )
+    )
+    ELSE (
+        SELECT max(history.read_at)
+        FROM history
+        WHERE history.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+    )
+    END AS lastRead,
+    -- KMK <--
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
     -- KMK -->
     coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
     -- KMK <--
-    coalesce(MC.categories, '0') AS categories
+    coalesce(MC.categories, '0') AS categories,
+    -- KMK -->
+    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
+    -- KMK <--
 FROM manga M
 LEFT JOIN (
     SELECT merged.manga_id,merged.merge_id
@@ -68,20 +111,17 @@ LEFT JOIN(
         ME.merge_id,
         count(*) AS total,
         sum(user_read) AS readCount,
-        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
-        coalesce(max(history.read_at), 0) AS lastRead,
-        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
-        sum(chapter.user_bookmark) AS bookmarkCount,
+        max(chapter.remote_date_upload) AS latestUpload,
+        max(chapter.state_date_fetch) AS fetchedAt,
+        sum(user_bookmark) AS bookmarkCount,
         -- KMK -->
-        sum(CASE WHEN chapter.user_bookmark = 1 AND chapter.user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
         -- KMK <--
         excluded_scanlator.scanlator AS ex_scanlator
     FROM chapter
     LEFT JOIN excluded_scanlator
     ON chapter.manga_id = excluded_scanlator.manga_id
     AND chapter.remote_scanlator = excluded_scanlator.scanlator
-    LEFT JOIN history
-    ON chapter.id = history.chapter_id
     LEFT JOIN merged ME
     ON ME.manga_id = chapter.manga_id
     WHERE ex_scanlator IS NULL
@@ -97,243 +137,11 @@ ON MC.manga_id = M.id
 WHERE M.source_id = 6969;
 
 library:
--- KMK -->
--- Replaces `SELECT * FROM libraryView WHERE user_favorite_at IS NOT NULL`, which aggregated every chapter in the
--- database before filtering. `libraryView` above is left as upstream has it, unused, to keep
--- merges simple.
-SELECT
-    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
-    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
-    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
-    -- KMK -->
-    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
-    -- KMK <--
-    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
-    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
-    M.state_last_modified_at, M.state_version, M.state_is_syncing,
-    -- `C` only aggregates entries without a cached `manga_chapter_stats` row, so one side is null.
-    coalesce(C.total, S.total_count, 0) AS totalCount,
-    coalesce(C.readCount, S.read_count, 0) AS readCount,
-    coalesce(C.latestUpload, S.latest_upload, 0) AS latestUpload,
-    coalesce(C.fetchedAt, S.chapter_fetched_at, 0) AS chapterFetchedAt,
-    coalesce(C.lastRead, S.last_read, 0) AS lastRead,
-    coalesce(C.bookmarkCount, S.bookmark_count, 0) AS bookmarkCount,
-    coalesce(C.bookmarkReadCount, S.bookmark_read_count, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories,
-    -- KMK -->
-    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
-    -- KMK <--
-FROM manga M
-LEFT JOIN manga_chapter_stats S
-ON S.manga_id = M.id
-LEFT JOIN (
-    SELECT
-        chapter.manga_id,
-        count(*) AS total,
-        sum(user_read) AS readCount,
-        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
-        coalesce(max(history.read_at), 0) AS lastRead,
-        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
-        sum(chapter.user_bookmark) AS bookmarkCount,
-        sum(CASE WHEN chapter.user_bookmark = 1 AND chapter.user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
-        excluded_scanlator.scanlator AS ex_scanlator
-    FROM chapter
-    LEFT JOIN excluded_scanlator
-    ON chapter.manga_id = excluded_scanlator.manga_id
-    AND chapter.remote_scanlator = excluded_scanlator.scanlator
-    LEFT JOIN history
-    ON chapter.id = history.chapter_id
-    WHERE ex_scanlator IS NULL
-    -- Aggregate only the entries this query returns; `IN` beats a join for the small favourite list.
-    AND chapter.manga_id IN (
-        SELECT id FROM manga WHERE user_favorite_at IS NOT NULL
-        -- Skip entries with cached aggregates.
-        AND id NOT IN (SELECT manga_id FROM manga_chapter_stats)
-    )
-    GROUP BY chapter.manga_id
-) AS C
-ON M.id = C.manga_id
-LEFT JOIN (
-    SELECT manga_id, group_concat(category_id) AS categories
-    FROM manga_category
-    GROUP BY manga_id
-) AS MC
-ON MC.manga_id = M.id
-WHERE M.user_favorite_at IS NOT NULL AND M.source_id <> 6969
-
-UNION ALL
-
--- Merged entries aggregate their children's chapter live.
-SELECT
-    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
-    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
-    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
-    -- KMK -->
-    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
-    -- KMK <--
-    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
-    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
-    M.state_last_modified_at, M.state_version, M.state_is_syncing,
-    coalesce(C.total, 0) AS totalCount,
-    coalesce(C.readCount, 0) AS readCount,
-    coalesce(C.latestUpload, 0) AS latestUpload,
-    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
-    coalesce(C.lastRead, 0) AS lastRead,
-    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
-    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories,
-    -- KMK -->
-    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
-    -- KMK <--
-FROM manga M
-LEFT JOIN (
-    SELECT
-        ME.merge_id,
-        count(*) AS total,
-        sum(user_read) AS readCount,
-        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
-        coalesce(max(history.read_at), 0) AS lastRead,
-        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
-        sum(chapter.user_bookmark) AS bookmarkCount,
-        sum(CASE WHEN chapter.user_bookmark = 1 AND chapter.user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
-        excluded_scanlator.scanlator AS ex_scanlator
-    -- Driving from `merged` restricts the scan to merged chapter.
-    FROM merged ME
-    JOIN chapter
-    ON chapter.manga_id = ME.manga_id
-    LEFT JOIN excluded_scanlator
-    ON chapter.manga_id = excluded_scanlator.manga_id
-    AND chapter.remote_scanlator = excluded_scanlator.scanlator
-    LEFT JOIN history
-    ON chapter.id = history.chapter_id
-    WHERE ex_scanlator IS NULL
-    GROUP BY ME.merge_id
-) AS C
-ON M.id = C.merge_id
-LEFT JOIN (
-    SELECT manga_id, group_concat(category_id) AS categories
-    FROM manga_category
-    GROUP BY manga_id
-) AS MC
-ON MC.manga_id = M.id
-WHERE M.user_favorite_at IS NOT NULL AND M.source_id = 6969;
--- KMK <--
+SELECT *
+FROM libraryView
+WHERE user_favorite_at IS NOT NULL;
 
 readMangaNonLibrary:
--- KMK -->
-SELECT
-    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
-    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
-    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
-    -- KMK -->
-    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
-    -- KMK <--
-    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
-    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
-    M.state_last_modified_at, M.state_version, M.state_is_syncing,
-    coalesce(C.total, 0) AS totalCount,
-    coalesce(C.readCount, 0) AS readCount,
-    coalesce(C.latestUpload, 0) AS latestUpload,
-    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
-    coalesce(C.lastRead, 0) AS lastRead,
-    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
-    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories,
-    -- KMK -->
-    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
-    -- KMK <--
-FROM manga M
-LEFT JOIN (
-    SELECT
-        chapter.manga_id,
-        count(*) AS total,
-        sum(user_read) AS readCount,
-        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
-        coalesce(max(history.read_at), 0) AS lastRead,
-        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
-        sum(chapter.user_bookmark) AS bookmarkCount,
-        sum(CASE WHEN chapter.user_bookmark = 1 AND chapter.user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
-        excluded_scanlator.scanlator AS ex_scanlator
-    FROM chapter
-    -- Aggregate only the entries this query returns.
-    JOIN manga MF
-    ON MF.id = chapter.manga_id
-    AND MF.user_favorite_at IS NULL
-    LEFT JOIN excluded_scanlator
-    ON chapter.manga_id = excluded_scanlator.manga_id
-    AND chapter.remote_scanlator = excluded_scanlator.scanlator
-    LEFT JOIN history
-    ON chapter.id = history.chapter_id
-    WHERE ex_scanlator IS NULL
-    GROUP BY chapter.manga_id
-) AS C
-ON M.id = C.manga_id
-LEFT JOIN (
-    SELECT manga_id, group_concat(category_id) AS categories
-    FROM manga_category
-    GROUP BY manga_id
-) AS MC
-ON MC.manga_id = M.id
-WHERE M.user_favorite_at IS NULL AND M.source_id <> 6969 AND coalesce(C.readCount, 0) != 0
-
-UNION ALL
-
--- Merged entries aggregate their children's chapter live.
-SELECT
-    M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
-    M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
-    M.remote_update_strategy, M.remote_memo, M.user_favorite_at, M.user_notes,
-    M.user_reader_flags, M.user_chapter_flags, M.user_filtered_scanlators,
-    -- KMK -->
-    M.user_scanlator_priority, M.user_blacklisted_chapters, M.user_scanlator_range_rules,
-    -- KMK <--
-    M.state_chapter_last_update, M.state_chapter_next_update, M.state_chapter_fetch_interval,
-    M.state_cover_last_modified, M.state_initialized, M.state_date_added,
-    M.state_last_modified_at, M.state_version, M.state_is_syncing,
-    coalesce(C.total, 0) AS totalCount,
-    coalesce(C.readCount, 0) AS readCount,
-    coalesce(C.latestUpload, 0) AS latestUpload,
-    coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
-    coalesce(C.lastRead, 0) AS lastRead,
-    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
-    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
-    coalesce(MC.categories, '0') AS categories,
-    -- KMK -->
-    coalesce((SELECT revision FROM library_visibility_revision WHERE manga_id = M.id), 0) AS visibilityRevision
-    -- KMK <--
-FROM manga M
-LEFT JOIN (
-    SELECT
-        ME.merge_id,
-        count(*) AS total,
-        sum(user_read) AS readCount,
-        coalesce(max(chapter.remote_date_upload), 0) AS latestUpload,
-        coalesce(max(history.read_at), 0) AS lastRead,
-        coalesce(max(chapter.state_date_fetch), 0) AS fetchedAt,
-        sum(chapter.user_bookmark) AS bookmarkCount,
-        sum(CASE WHEN chapter.user_bookmark = 1 AND chapter.user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
-        excluded_scanlator.scanlator AS ex_scanlator
-    -- Driving from `merged` restricts the scan to merged chapter.
-    FROM merged ME
-    JOIN chapter
-    ON chapter.manga_id = ME.manga_id
-    LEFT JOIN excluded_scanlator
-    ON chapter.manga_id = excluded_scanlator.manga_id
-    AND chapter.remote_scanlator = excluded_scanlator.scanlator
-    LEFT JOIN history
-    ON chapter.id = history.chapter_id
-    WHERE ex_scanlator IS NULL
-    GROUP BY ME.merge_id
-) AS C
-ON M.id = C.merge_id
-LEFT JOIN (
-    SELECT manga_id, group_concat(category_id) AS categories
-    FROM manga_category
-    GROUP BY manga_id
-) AS MC
-ON MC.manga_id = M.id
-WHERE M.user_favorite_at IS NULL AND M.source_id = 6969 AND coalesce(C.readCount, 0) != 0;
--- KMK <--
+SELECT *
+FROM libraryView
+WHERE user_favorite_at IS NULL AND readCount != 0;

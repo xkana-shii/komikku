@@ -1,19 +1,16 @@
 package eu.kanade.tachiyomi.ui.browse.source
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.TravelExplore
-import androidx.compose.material.icons.outlined._18UpRating
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.domain.source.model.installedExtension
 import eu.kanade.presentation.browse.SourceCategoriesDialog
 import eu.kanade.presentation.browse.SourceOptionsDialog
@@ -27,9 +24,12 @@ import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
 import eu.kanade.tachiyomi.ui.browse.source.feed.SourceFeedScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import exh.ui.smartsearch.SmartSearchScreen
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.`18UpRating`
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.TravelExplore
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -40,7 +40,10 @@ fun Screen.sourcesTab(
     smartSearchConfig: SmartSearchConfig? = null,
 ): TabContent {
     val navigator = LocalNavigator.currentOrThrow
-    val viewModel = viewModel { SourcesViewModel(smartSearchConfig = smartSearchConfig) }
+    val viewModel =
+        assistedMetroViewModel<SourcesViewModel, SourcesViewModel.Factory> {
+            create(smartSearchConfig = smartSearchConfig)
+        }
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     return TabContent(
@@ -49,16 +52,16 @@ fun Screen.sourcesTab(
             true -> MR.strings.label_sources
             false -> SYMR.strings.find_in_another_source
         },
-        actions = persistentListOf(
+        actions = listOf(
             AppBar.Action(
                 title = stringResource(MR.strings.action_global_search),
-                icon = Icons.Outlined.TravelExplore,
+                icon = MaterialSymbols.Rounded.TravelExplore,
                 onClick = { navigator.push(GlobalSearchScreen(smartSearchConfig?.origTitle ?: "")) },
             ),
             // KMK -->
             AppBar.Action(
                 title = stringResource(KMR.strings.action_toggle_nsfw_only),
-                icon = Icons.Outlined._18UpRating,
+                icon = MaterialSymbols.Rounded.`18UpRating`,
                 iconTint = if (state.nsfwOnly) MaterialTheme.colorScheme.error else LocalContentColor.current,
                 onClick = { viewModel.toggleNsfwOnly() },
             ),
@@ -66,12 +69,10 @@ fun Screen.sourcesTab(
         ).let {
             when (smartSearchConfig) {
                 null -> {
-                    it.add(
-                        AppBar.Action(
-                            title = stringResource(MR.strings.action_filter),
-                            icon = Icons.Outlined.FilterList,
-                            onClick = { navigator.push(SourcesFilterScreen()) },
-                        ),
+                    it + AppBar.Action(
+                        title = stringResource(MR.strings.action_filter),
+                        icon = MaterialSymbols.Rounded.FilterList,
+                        onClick = { navigator.push(SourcesFilterScreen()) },
                     )
                 }
                 // Merge: find in another source

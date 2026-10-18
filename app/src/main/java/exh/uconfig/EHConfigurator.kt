@@ -15,12 +15,13 @@ import okhttp3.Request
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.sy.SYMR
-import uy.kohesive.injekt.injectLazy
 import java.util.Locale
 
-class EHConfigurator(val context: Context) {
-    private val exhPreferences: ExhPreferences by injectLazy()
-    private val sourceManager: SourceManager by injectLazy()
+class EHConfigurator(
+    val context: Context,
+    private val exhPreferences: ExhPreferences,
+    private val sourceManager: SourceManager,
+) {
 
     private val configuratorClient = OkHttpClient.Builder()
         .maybeInjectEHLogger()
@@ -123,7 +124,7 @@ class EHConfigurator(val context: Context) {
         )
 
         // Build new profile
-        val form = EhUConfigBuilder().build(hathPerks)
+        val form = EhUConfigBuilder(exhPreferences).build(hathPerks)
 
         // Send new profile to server
         configuratorClient.newCall(
@@ -147,13 +148,13 @@ class EHConfigurator(val context: Context) {
         }?.removePrefix("hath_perks=")?.substringBefore(';')
 
         if (keyCookie != null) {
-            exhPreferences.exhSettingsKey().set(keyCookie)
+            exhPreferences.exhSettingsKey.set(keyCookie)
         }
         if (sessionCookie != null) {
-            exhPreferences.exhSessionCookie().set(sessionCookie)
+            exhPreferences.exhSessionCookie.set(sessionCookie)
         }
         if (hathPerksCookie != null) {
-            exhPreferences.exhHathPerksCookies().set(hathPerksCookie)
+            exhPreferences.exhHathPerksCookies.set(hathPerksCookie)
         }
     }
 

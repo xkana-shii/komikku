@@ -5,48 +5,46 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.util.fastFilter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.presentation.history.HistoryUiModel
 import eu.kanade.tachiyomi.util.lang.toLocalDate
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import logcat.LogPriority
 import mihon.core.common.utils.mutate
+import mihon.core.metro.AppCoroutineScope
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.mapAsCheckboxState
-import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.lang.SubscriberGate
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.chapter.interactor.GetVisibleChaptersByMangaIds
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.model.visibleChapterStats
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.history.interactor.RemoveHistory
@@ -58,130 +56,124 @@ import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import java.time.LocalDate
 import kotlin.time.Duration.Companion.seconds
 
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 class HistoryViewModel(
-    private val addTracks: AddTracks = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val getDuplicateLibraryManga: GetDuplicateLibraryManga = Injekt.get(),
-    private val getHistory: GetHistory = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
+    @AppCoroutineScope private val appScope: CoroutineScope,
+    private val addTracks: AddTracks,
+    private val getCategories: GetCategories,
+    private val getDuplicateLibraryManga: GetDuplicateLibraryManga,
+    private val getHistory: GetHistory,
+    private val getManga: GetManga,
+    private val getNextChapters: GetNextChapters,
+    private val libraryPreferences: LibraryPreferences,
+    private val removeHistory: RemoveHistory,
+    private val setMangaCategories: SetMangaCategories,
+    private val updateManga: UpdateManga,
+    private val sourceManager: SourceManager,
     // KMK -->
-    private val getVisibleChaptersByMangaIds: GetVisibleChaptersByMangaIds = Injekt.get(),
-    // KMK <--
-    private val getNextChapters: GetNextChapters = Injekt.get(),
-    private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    private val removeHistory: RemoveHistory = Injekt.get(),
-    private val setMangaCategories: SetMangaCategories = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
-    val snackbarHostState: SnackbarHostState = SnackbarHostState(),
-    private val sourceManager: SourceManager = Injekt.get(),
-    // KMK -->
-    private val historyPreferences: HistoryPreferences = Injekt.get(),
+    private val historyPreferences: HistoryPreferences,
     // KMK <--
 ) : ViewModel() {
 
-    private val uiState = MutableStateFlow(State())
+    private val subscriberGate = SubscriberGate()
+
+    val snackbarHostState: SnackbarHostState = SnackbarHostState()
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
     val events: Flow<Event> = _events.receiveAsFlow()
 
+    private val searchQuery = MutableStateFlow<String?>(null)
+
+    private val dialog = MutableStateFlow<Dialog?>(null)
+
     // KMK -->
     // First and last selected index in list
     private val selectedPositions: Array<Int> = arrayOf(-1, -1)
+
+    private val selection = MutableStateFlow(emptySet<Long>())
+
+    private val selectionMode = MutableStateFlow(false)
     // KMK <--
 
     private val history = combine(
-        uiState.map { it.searchQuery }.distinctUntilChanged(),
-        getHistoryItemPreferenceFlow().distinctUntilChanged(),
-    ) { query, preferences -> query to preferences }
-        .flatMapLatest { (query, preferences) ->
+        searchQuery,
+        // KMK -->
+        getHistoryItemPreferenceFlow()
+            .distinctUntilChanged(),
+        // KMK <--
+    ) { query, itemPreferences -> query to itemPreferences }
+        .flatMapLatest { (query, pref) ->
             getHistory.subscribe(
                 query ?: "",
-                // KMK --> Visibility-dependent counts are calculated below from shared chapter rules.
-                unfinishedManga = null,
+                // KMK -->
+                unfinishedManga = pref.filterUnfinishedManga.toBooleanOrNull(),
+                unfinishedChapter = pref.filterUnfinishedChapter.toBooleanOrNull(),
+                nonLibraryEntries = pref.filterNonLibraryManga.toBooleanOrNull(),
                 // KMK <--
-                unfinishedChapter = preferences.filterUnfinishedChapter.toBooleanOrNull(),
-                nonLibraryEntries = preferences.filterNonLibraryManga.toBooleanOrNull(),
             )
                 .distinctUntilChanged()
-                // KMK --> SQL history counts are raw; map them to the same visible chapters as the
-                // manga, reader, and Library screens before deciding whether an entry is unfinished.
-                .flatMapLatest { histories ->
-                    histories.withVisibleChapterStats()
-                        .map { visibleHistory ->
-                            visibleHistory.filter { history ->
-                                when (preferences.filterUnfinishedManga) {
-                                    TriState.ENABLED_IS -> history.unreadCount > 0
-                                    TriState.ENABLED_NOT -> history.unreadCount <= 0
-                                    TriState.DISABLED -> true
-                                }
-                            }
-                        }
-                }
-                // KMK <--
-                .map<List<HistoryWithRelations>, List<HistoryWithRelations>?> { it }
-                .onStart { emit(null) }
                 .catch { error ->
                     logcat(LogPriority.ERROR, error)
                     _events.send(Event.InternalError)
-                    emit(emptyList())
                 }
+                .map { it.toList() }
                 .flowOn(Dispatchers.IO)
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
 
     // KMK -->
-    private fun List<HistoryWithRelations>.withVisibleChapterStats(): Flow<List<HistoryWithRelations>> {
-        val mangaIds = mapTo(mutableSetOf(), HistoryWithRelations::mangaId)
-        val visibilityChanges = combine(
-            listOf(libraryPreferences.smartScanlatorMerge().changes().map { }) +
-                mangaIds.map { mangaId ->
-                    libraryPreferences.smartScanlatorMergeOverride(mangaId).changes().map { }
-                },
-        ) { }
-        return visibilityChanges.map {
-            val mangas = getManga.await(mangaIds.toList())
-            val statsByMangaId = getVisibleChaptersByMangaIds.await(mangas)
-                .mapValues { (_, chapters) -> chapters.visibleChapterStats() }
-            map { history ->
-                statsByMangaId[history.mangaId]?.let { stats ->
-                    history.copy(
-                        totalCountCalculated = stats.total,
-                        readCountCalculated = stats.read,
-                    )
-                } ?: history
-            }
+    private val hasActiveFilters = getHistoryItemPreferenceFlow()
+        .map { prefs ->
+            listOf(
+                prefs.filterUnfinishedManga,
+                prefs.filterUnfinishedChapter,
+                prefs.filterNonLibraryManga,
+            )
+                .any { it != TriState.DISABLED }
         }
-    }
+        .distinctUntilChanged()
     // KMK <--
 
     val state: StateFlow<State> = combine(
-        uiState,
-        history,
-        getHistoryItemPreferenceFlow().map { preferences ->
-            listOf(preferences.filterUnfinishedManga, preferences.filterUnfinishedChapter, preferences.filterNonLibraryManga)
-                .any { it != TriState.DISABLED }
-        }.distinctUntilChanged(),
-    ) { uiState, history, hasActiveFilters ->
-        uiState.copy(
-            isLoading = history == null,
-            list = history?.toImmutableList() ?: persistentListOf(),
-            hasActiveFilters = hasActiveFilters,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())
+        combine(
+            searchQuery,
+            history,
+            dialog,
+            // KMK -->
+            selection,
+            selectionMode,
+            // KMK <--
+        ) { searchQuery, history, dialog, selection, selectionMode ->
+            State(
+                searchQuery = searchQuery,
+                // KMK -->
+                list = history,
+                isLoading = false,
+                // KMK <--
+                dialog = dialog,
+                // KMK -->
+                selection = selection,
+                selectionMode = selectionMode,
+                // KMK <--
+            )
+        },
+        // KMK -->
+        hasActiveFilters,
+        // KMK <--
+    ) { state, hasActiveFilters ->
+        state.copy(hasActiveFilters = hasActiveFilters)
+    }
+        .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), State())
 
     suspend fun getNextChapter(): Chapter? {
-        // KMK -->
-        return withIOContext { getNextChapters.awaitFirstReadable() }
-        // KMK <--
+        return getNextChapters.await(onlyUnread = false).firstOrNull()
     }
 
     fun getNextChapterForManga(mangaId: Long, chapterId: Long) {
-        viewModelScope.launchIO {
+        viewModelScope.launch {
             sendNextChapterEvent(getNextChapters.await(mangaId, chapterId, onlyUnread = false))
         }
     }
@@ -193,14 +185,14 @@ class HistoryViewModel(
 
     // KMK -->
     fun removeFromHistory(toDelete: List<HistoryWithRelations>) {
-        viewModelScope.launchIO {
+        viewModelScope.launch(Dispatchers.IO) {
             removeHistory.await(toDelete.map { it.id })
         }
         toggleSelectionMode(false)
     }
 
     fun removeAllFromHistory(toDelete: List<HistoryWithRelations>) {
-        viewModelScope.launchIO {
+        viewModelScope.launch(Dispatchers.IO) {
             removeHistory.awaitManga(toDelete.map { it.mangaId })
         }
         toggleSelectionMode(false)
@@ -208,20 +200,20 @@ class HistoryViewModel(
     // KMK <--
 
     fun removeAllHistory() {
-        viewModelScope.launchIO {
+        viewModelScope.launch {
             val result = removeHistory.awaitAll()
-            if (!result) return@launchIO
+            if (!result) return@launch
             _events.send(Event.HistoryCleared)
         }
         toggleSelectionMode(false)
     }
 
     fun updateSearchQuery(query: String?) {
-        uiState.update { it.copy(searchQuery = query) }
+        searchQuery.update { query }
     }
 
     fun setDialog(dialog: Dialog?) {
-        uiState.update { it.copy(dialog = dialog) }
+        this.dialog.update { dialog }
     }
 
     /**
@@ -239,7 +231,7 @@ class HistoryViewModel(
     }
 
     private fun moveMangaToCategory(mangaId: Long, categoryIds: List<Long>) {
-        viewModelScope.launchIO {
+        viewModelScope.launch {
             setMangaCategories.await(mangaId, categoryIds)
         }
     }
@@ -248,7 +240,7 @@ class HistoryViewModel(
         moveMangaToCategory(manga.id, categories)
         if (manga.favorite) return
 
-        viewModelScope.launchIO {
+        viewModelScope.launch {
             updateManga.awaitUpdateFavorite(manga.id, true)
         }
     }
@@ -259,13 +251,13 @@ class HistoryViewModel(
     }
 
     fun addFavorite(mangaId: Long) {
-        viewModelScope.launchIO {
-            val manga = getManga.await(mangaId) ?: return@launchIO
+        viewModelScope.launch {
+            val manga = getManga.await(mangaId) ?: return@launch
 
             val duplicates = getDuplicateLibraryManga(manga)
             if (duplicates.isNotEmpty()) {
-                uiState.update { it.copy(dialog = Dialog.DuplicateManga(manga, duplicates)) }
-                return@launchIO
+                dialog.update { Dialog.DuplicateManga(manga, duplicates) }
+                return@launch
             }
 
             addFavorite(manga)
@@ -273,24 +265,24 @@ class HistoryViewModel(
     }
 
     fun addFavorite(manga: Manga) {
-        viewModelScope.launchIO {
+        viewModelScope.launch {
             // Move to default category if applicable
             val categories = getCategories()
-            val defaultCategoryId = libraryPreferences.defaultCategory().get().toLong()
+            val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
             val defaultCategory = categories.find { it.id == defaultCategoryId }
 
             when {
                 // Default category set
                 defaultCategory != null -> {
                     val result = updateManga.awaitUpdateFavorite(manga.id, true)
-                    if (!result) return@launchIO
+                    if (!result) return@launch
                     moveMangaToCategory(manga.id, defaultCategory)
                 }
 
                 // Automatic 'Default' or no categories
                 defaultCategoryId == 0L || categories.isEmpty() -> {
                     val result = updateManga.awaitUpdateFavorite(manga.id, true)
-                    if (!result) return@launchIO
+                    if (!result) return@launch
                     moveMangaToCategory(manga.id, null)
                 }
 
@@ -299,26 +291,22 @@ class HistoryViewModel(
             }
 
             // Sync with tracking services if applicable
-            addTracks.bindEnhancedTrackers(manga, sourceManager.getOrStub(manga.source))
+            appScope.launch { addTracks.bindEnhancedTrackers(manga, sourceManager.getOrStub(manga.source)) }
         }
     }
 
     fun showMigrateDialog(target: Manga, current: Manga) {
-        uiState.update { currentState ->
-            currentState.copy(dialog = Dialog.Migrate(target = target, current = current))
-        }
+        dialog.update { Dialog.Migrate(target = target, current = current) }
     }
 
     private fun showChangeCategoryDialog(manga: Manga) {
         viewModelScope.launch {
             val categories = getCategories()
             val selection = getMangaCategoryIds(manga)
-            uiState.update { currentState ->
-                currentState.copy(
-                    dialog = Dialog.ChangeCategory(
-                        manga = manga,
-                        initialSelection = categories.mapAsCheckboxState { it.id in selection }.toImmutableList(),
-                    ),
+            dialog.update {
+                Dialog.ChangeCategory(
+                    manga = manga,
+                    initialSelection = categories.mapAsCheckboxState { it.id in selection }.toList(),
                 )
             }
         }
@@ -335,16 +323,17 @@ class HistoryViewModel(
         selectionOptions: HistorySelectionOptions,
     ) {
         val (selected, fromLongPress) = selectionOptions
+        val list = state.value.list
 
-        uiState.update { state ->
-            if (item.chapterId in state.selection == selected) return@update state
-            val selectedIndex = state.list.indexOfFirst { it.chapterId == item.chapterId }
-            if (selectedIndex < 0) return@update state
+        val newSelection = selection.updateAndGet { currentSelection ->
+            if (item.chapterId in currentSelection == selected) return@updateAndGet currentSelection
+            val selectedIndex = list.indexOfFirst { it.chapterId == item.chapterId }
+            if (selectedIndex < 0) return@updateAndGet currentSelection
 
-            val selection = state.selection.mutate { list ->
-                state.list.run {
-                    val firstSelection = list.isEmpty()
-                    if (selected) list.add(item.chapterId) else list.remove(item.chapterId)
+            currentSelection.mutate { selection ->
+                list.run {
+                    val firstSelection = selection.isEmpty()
+                    if (selected) selection.add(item.chapterId) else selection.remove(item.chapterId)
 
                     if (firstSelection) {
                         // Since it can go into selectionMode from toolbar (without long press), we need to set both positions here
@@ -366,16 +355,16 @@ class HistoryViewModel(
 
                         range.forEach {
                             val inBetweenItem = get(it)
-                            if (inBetweenItem.chapterId !in list) {
-                                list.add(inBetweenItem.chapterId)
+                            if (inBetweenItem.chapterId !in selection) {
+                                selection.add(inBetweenItem.chapterId)
                             }
                         }
                     } else if (!fromLongPress) {
                         if (!selected) {
                             if (selectedIndex == selectedPositions[0]) {
-                                selectedPositions[0] = indexOfFirst { it.chapterId in list }
+                                selectedPositions[0] = indexOfFirst { it.chapterId in selection }
                             } else if (selectedIndex == selectedPositions[1]) {
-                                selectedPositions[1] = indexOfLast { it.chapterId in list }
+                                selectedPositions[1] = indexOfLast { it.chapterId in selection }
                             }
                         } else {
                             if (selectedIndex < selectedPositions[0]) {
@@ -387,56 +376,50 @@ class HistoryViewModel(
                     }
                 }
             }
-            state.copy(
-                selection = selection,
-                selectionMode = selected || selection.isNotEmpty(),
-            )
         }
+        selectionMode.value = selected || newSelection.isNotEmpty()
     }
 
     fun toggleAllSelection(selected: Boolean) {
-        uiState.update { state ->
-            val selection = if (selected) {
-                state.list.mapTo(mutableSetOf()) { it.chapterId }
-            } else {
-                emptySet()
-            }
-            selectedPositions[0] = -1
-            selectedPositions[1] = -1
-            state.copy(
-                selection = selection,
-                selectionMode = selected,
-            )
+        val list = state.value.list
+        selection.value = if (selected) {
+            list.mapTo(mutableSetOf()) { it.chapterId }
+        } else {
+            emptySet()
         }
+        selectedPositions[0] = -1
+        selectedPositions[1] = -1
+        selectionMode.value = selected
     }
 
     fun invertSelection() {
-        uiState.update { state ->
-            val selection = state.selection.mutate { list ->
-                state.list.forEach { item ->
-                    if (!list.remove(item.chapterId)) list.add(item.chapterId)
+        val list = state.value.list
+        selection.update { currentSelection ->
+            currentSelection.mutate { selection ->
+                list.forEach { item ->
+                    if (!selection.remove(item.chapterId)) selection.add(item.chapterId)
                 }
             }
-            selectedPositions[0] = -1
-            selectedPositions[1] = -1
-            state.copy(selection = selection)
         }
+        selectedPositions[0] = -1
+        selectedPositions[1] = -1
     }
 
     fun toggleSelectionMode(newMode: Boolean? = null) {
-        if (newMode == false || uiState.value.selectionMode) {
+        if (newMode == false || selectionMode.value) {
             toggleAllSelection(false)
         } else {
-            uiState.update { it.copy(selectionMode = newMode ?: !it.selectionMode) }
+            selectionMode.value = newMode ?: !selectionMode.value
         }
     }
     // KMK <--
 
+    // KMK -->
     private fun getHistoryItemPreferenceFlow(): Flow<ItemPreferences> {
         return combine(
-            historyPreferences.filterUnfinishedManga().changes(),
-            historyPreferences.filterUnfinishedChapter().changes(),
-            historyPreferences.filterNonLibraryManga().changes(),
+            historyPreferences.filterUnfinishedManga.changes(),
+            historyPreferences.filterUnfinishedChapter.changes(),
+            historyPreferences.filterNonLibraryManga.changes(),
         ) { unfinishedManga, unfinishedChapter, nonLibraryManga ->
             ItemPreferences(
                 filterUnfinishedManga = unfinishedManga,
@@ -447,7 +430,7 @@ class HistoryViewModel(
     }
 
     fun showFilterDialog() {
-        uiState.update { it.copy(dialog = Dialog.FilterSheet) }
+        dialog.update { Dialog.FilterSheet }
     }
 
     @Immutable
@@ -462,11 +445,11 @@ class HistoryViewModel(
     data class State(
         val searchQuery: String? = null,
         // KMK -->
-        val list: ImmutableList<HistoryWithRelations> = persistentListOf(),
+        val list: List<HistoryWithRelations> = listOf(),
         val isLoading: Boolean = true,
         // KMK <--
         val dialog: Dialog? = null,
-        // KMk -->
+        // KMK -->
         val selection: Set<Long> = emptySet(),
         val hasActiveFilters: Boolean = false,
         val selectionMode: Boolean = false,
@@ -474,14 +457,16 @@ class HistoryViewModel(
         val selected
             get() = list.fastFilter { it.chapterId in selection }
 
-        fun getUiModel(): List<HistoryUiModel> {
-            return list
-                .groupBy { it.readAt?.time?.toLocalDate() ?: LocalDate.now() }
-                .flatMap { (date, histories) ->
-                    val mangaCount = histories.map { it.mangaId }.distinct().size
-                    listOf(HistoryUiModel.Header(date, mangaCount)) + histories.map { HistoryUiModel.Item(it) }
+        fun getUiModel() = list.map { HistoryUiModel.Item(it) }
+            .insertSeparators { before, after ->
+                val beforeDate = before?.item?.readAt?.toLocalDate()
+                val afterDate = after?.item?.readAt?.toLocalDate()
+                when {
+                    beforeDate != afterDate && afterDate != null -> HistoryUiModel.Header(afterDate)
+                    // Return null to avoid adding a separator between two items.
+                    else -> null
                 }
-        }
+            }
     }
     // KMK <--
 
@@ -495,7 +480,7 @@ class HistoryViewModel(
         data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class ChangeCategory(
             val manga: Manga,
-            val initialSelection: ImmutableList<CheckboxState<Category>>,
+            val initialSelection: List<CheckboxState<Category>>,
         ) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
         // KMK -->

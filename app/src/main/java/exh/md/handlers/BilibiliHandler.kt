@@ -22,10 +22,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
-import uy.kohesive.injekt.injectLazy
 import kotlin.time.Duration.Companion.seconds
 
-class BilibiliHandler(currentClient: OkHttpClient) {
+class BilibiliHandler(currentClient: OkHttpClient, val json: Json) {
     val baseUrl = "https://www.bilibilicomics.com"
     val headers = Headers.Builder()
         .add("Accept", ACCEPT_JSON)
@@ -36,8 +35,6 @@ class BilibiliHandler(currentClient: OkHttpClient) {
     val client: OkHttpClient = currentClient.newBuilder()
         .rateLimit(1, 1.seconds)
         .build()
-
-    val json by injectLazy<Json>()
 
     suspend fun fetchPageList(externalUrl: String, chapterNumber: String): List<Page> {
         // Sometimes the urls direct it to the manga page instead, so we try to find the correct chapter

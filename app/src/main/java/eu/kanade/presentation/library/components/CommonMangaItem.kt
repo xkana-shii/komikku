@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -45,6 +43,8 @@ import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.manga.components.MangaCoverHide
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import exh.debug.DebugToggles
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.BadgeGroup
 import tachiyomi.presentation.core.i18n.stringResource
@@ -520,7 +520,7 @@ private fun ContinueReadingButton(
             modifier = Modifier.size(size),
         ) {
             Icon(
-                imageVector = Icons.Filled.PlayArrow,
+                imageVector = MaterialSymbols.RoundedFilled.PlayArrow,
                 contentDescription = stringResource(MR.strings.action_resume),
                 modifier = Modifier.size(iconSize),
             )

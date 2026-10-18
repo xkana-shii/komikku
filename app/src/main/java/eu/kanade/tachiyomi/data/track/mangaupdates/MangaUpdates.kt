@@ -7,20 +7,14 @@ import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MUListItem
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MURating
-import eu.kanade.tachiyomi.data.track.mangaupdates.dto.copyTo
-import eu.kanade.tachiyomi.data.track.mangaupdates.dto.toTrackSearch
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
-import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.util.lang.htmlDecode
-import eu.kanade.tachiyomi.util.lang.prepareDescription
 import exh.log.xLogW
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.i18n.MR
 import tachiyomi.domain.track.model.Track as DomainTrack
 
-class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) : BaseTracker(id, "MangaUpdates"), DeletableTracker {
+class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker {
 
     companion object {
         const val READING_LIST = 0L
@@ -39,18 +33,14 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
                     }
                 }
             }
-            .toImmutableList()
+            .toList()
 
-        // KMK -->
         private const val SEARCH_ID_PREFIX = "id:"
-        // KMK <--
     }
-
-    private val sessionLock = Any()
 
     private val interceptor by lazy { MangaUpdatesInterceptor(this) }
 
-    private val api by lazy { apiOverride ?: MangaUpdatesApi(interceptor, client) }
+    private val api by lazy { MangaUpdatesApi(client, interceptor) }
 
     override fun getLogo(): Int = R.drawable.brand_mangaupdates
 
@@ -73,7 +63,7 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
 
     override fun getCompletionStatus(): Long = COMPLETE_LIST
 
-    override fun getScoreList(): ImmutableList<String> = SCORE_LIST
+    override fun getScoreList(): List<String> = SCORE_LIST
 
     override fun indexToScore(index: Int): Double = if (index == 0) 0.0 else SCORE_LIST[index].toDouble()
 
@@ -92,28 +82,17 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
     }
 
     override suspend fun bind(track: Track, hasReadChapters: Boolean): Track {
-        // KMK --> A successful lookup is not proof of list membership (list_id is optional).
-        require(track.remote_id > 0) { "Invalid MangaUpdates series ID" }
-        val remote = try {
-            api.getSeriesListItem(track)
-        } catch (e: HttpException) {
-            if (e.code != 404) throw e
-            null
-        }
-        if (remote?.first?.listId == null) {
+        return try {
+            val (series, rating) = api.getSeriesListItem(track)
+            track.copyFrom(series, rating)
+        } catch (_: Exception) {
             track.score = 0.0
             api.addSeriesToList(track, hasReadChapters)
-        } else {
-            track.copyFrom(remote.first, remote.second)
-            // Preserve an existing list/status, but commit binding/progress changes remotely too.
-            update(track, hasReadChapters)
+            track
         }
-        return track
-        // KMK <--
     }
 
     override suspend fun search(query: String): List<TrackSearch> {
-        // KMK -->
         if (query.startsWith(SEARCH_ID_PREFIX)) {
             return try {
                 val stringId = query.substringAfter(SEARCH_ID_PREFIX).trim()
@@ -124,7 +103,6 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
                 emptyList()
             }
         }
-        // KMK <--
 
         return api.search(query)
             .map {
@@ -133,23 +111,21 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
     }
 
     override suspend fun refresh(track: Track): Track {
-        val (item, rating) = api.getSeriesListItem(track)
-        val remoteTitle = item.series?.title?.takeIf { it.isNotBlank() }?.htmlDecode()
-        return track.copyFrom(item, rating, remoteTitle)
+        val (series, rating) = api.getSeriesListItem(track)
+        return track.copyFrom(series, rating)
     }
 
-    private fun Track.copyFrom(item: MUListItem, rating: MURating?, remoteTitle: String? = null): Track = apply {
-        item.copyTo(this, remoteTitle)
+    private fun Track.copyFrom(item: MUListItem, rating: MURating?): Track = apply {
+        item.copyTo(this)
         score = rating?.rating ?: 0.0
     }
 
     override suspend fun login(username: String, password: String) {
         val authenticated = api.authenticate(username, password)
-        synchronized(sessionLock) {
-            saveCredentials(authenticated.uid.toString(), authenticated.sessionToken)
-        }
+        interceptor.newAuth(authenticated.sessionToken)
         val currentUser = api.getCurrentUser()
-        synchronized(sessionLock) { saveDisplayUsername(currentUser.username) }
+        saveDisplayUsername(currentUser.username)
+        saveCredentials(authenticated.uid.toString(), authenticated.sessionToken)
     }
 
     override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
@@ -159,7 +135,7 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
                 it.seriesId,
                 it.title?.htmlDecode(),
                 it.image?.url?.original,
-                prepareDescription(it.description),
+                it.description?.htmlDecode(),
                 it.authors?.filter { it.type != null && "Author" in it.type }
                     ?.joinToString(separator = ", ") { it.name ?: "" },
                 it.authors?.filter { it.type != null && "Artist" in it.type }
@@ -196,15 +172,14 @@ class MangaUpdates(id: Long, private val apiOverride: MangaUpdatesApi? = null) :
     }
     // SY <--
 
-    fun restoreSession(): String? = synchronized(sessionLock) {
-        trackPreferences.trackPassword(this).get().ifBlank { null }
+    override suspend fun updateUserConfig() {
+        val currentUser = api.getCurrentUser()
+        saveDisplayUsername(currentUser.username)
     }
 
-    internal fun invalidateSession(rejectedToken: String) = synchronized(sessionLock) {
-        if (restoreSession() == rejectedToken) super.logout()
+    fun restoreSession(): String? {
+        return trackPreferences.trackPassword(this).get().ifBlank { null }
     }
-
-    override fun logout() = synchronized(sessionLock) { super.logout() }
 
     // KMK -->
     override fun hasNotStartedReading(status: Long): Boolean = status == WISH_LIST

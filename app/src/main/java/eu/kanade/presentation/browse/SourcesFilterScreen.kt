@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
@@ -27,8 +26,6 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.icons.FlagEmoji
 import tachiyomi.presentation.core.screens.EmptyScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun SourcesFilterScreen(
@@ -78,7 +75,6 @@ private fun SourcesFilterContent(
     onClickSources: (Boolean, List<Source>) -> Unit,
     // SY <--
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>()
     FastScrollLazyColumn(
         // KMK -->
         // Using modifier instead of contentPadding so we can use stickyHeader
@@ -102,7 +98,6 @@ private fun SourcesFilterContent(
                     language = language,
                     enabled = enabled,
                     onClickItem = onClickLanguage,
-                    uiPreferences = uiPreferences,
                 )
             }
             if (enabled) {
@@ -130,7 +125,6 @@ private fun SourcesFilterContent(
                         onClickItem = {
                             onClickSources(!toggleEnabled, sources)
                         },
-                        uiPreferences = uiPreferences,
                     )
                 }
                 // SY <--
@@ -160,25 +154,17 @@ private fun SourcesFilterHeader(
     language: String,
     enabled: Boolean,
     onClickItem: (String) -> Unit,
-    uiPreferences: UiPreferences,
     modifier: Modifier = Modifier,
 ) {
-    val showFlags = uiPreferences.showFlags().get()
-    val context = LocalContext.current
-    val title = if (showFlags) {
-        LocaleHelper.getSourceDisplayName(language, context) +
+    SwitchPreferenceWidget(
+        modifier = modifier,
+        title = LocaleHelper.getSourceDisplayName(language, LocalContext.current) +
             // KMK -->
             (
                 " (${LocaleHelper.getDisplayName(language)} ${FlagEmoji.getEmojiLangFlag(language)})"
                     .takeIf { language !in listOf("all", "other") } ?: " (${FlagEmoji.getEmojiLangFlag(language)})"
-                )
+                ),
         // KMK <--
-    } else {
-        LocaleHelper.getSourceDisplayName(language, context)
-    }
-    SwitchPreferenceWidget(
-        modifier = modifier,
-        title = title,
         checked = enabled,
         onCheckedChanged = { onClickItem(language) },
     )
@@ -193,19 +179,13 @@ fun SourcesFilterToggle(
     language: String,
     // KMK <--
     onClickItem: () -> Unit,
-    uiPreferences: UiPreferences,
 ) {
-    val showFlags = uiPreferences.showFlags().get()
-    val title = if (showFlags) {
-        stringResource(SYMR.strings.pref_category_all_sources) +
-            // KMK -->
-            " (${FlagEmoji.getEmojiLangFlag(language)})"
-    } else {
-        stringResource(SYMR.strings.pref_category_all_sources)
-    }
     SwitchPreferenceWidget(
         modifier = modifier,
-        title = title,
+        title = stringResource(SYMR.strings.pref_category_all_sources) +
+            // KMK -->
+            " (${FlagEmoji.getEmojiLangFlag(language)})",
+        // KMK <--
         checked = isEnabled,
         onCheckedChanged = { onClickItem() },
     )

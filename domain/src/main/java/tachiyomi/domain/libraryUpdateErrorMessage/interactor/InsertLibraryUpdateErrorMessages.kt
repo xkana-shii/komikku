@@ -1,8 +1,10 @@
 package tachiyomi.domain.libraryUpdateErrorMessage.interactor
 
+import dev.zacsweers.metro.Inject
 import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.libraryUpdateErrorMessage.repository.LibraryUpdateErrorMessageRepository
 
+@Inject
 class InsertLibraryUpdateErrorMessages(
     private val libraryUpdateErrorMessageRepository: LibraryUpdateErrorMessageRepository,
 ) {

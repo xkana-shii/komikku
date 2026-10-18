@@ -67,7 +67,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ScanlatorCoverage
 import tachiyomi.domain.chapter.model.ScanlatorRangeRule
@@ -76,6 +75,7 @@ import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.model.scanlatorCoverage
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.manga.interactor.GetMangaWithChapters
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.i18n.MR
@@ -466,8 +466,7 @@ private data class ScanlatorState(
 
 class ScanlatorPreferenceScreenModel(
     private val mangaId: Long,
-    private val getManga: GetManga = Injekt.get(),
-    private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
+    private val getMangaAndChapters: GetMangaWithChapters = Injekt.get(),
     private val getExcludedScanlators: GetExcludedScanlators = Injekt.get(),
     private val setExcludedScanlators: SetExcludedScanlators = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
@@ -489,15 +488,20 @@ class ScanlatorPreferenceScreenModel(
     init {
         screenModelScope.launch {
             combine(
-                getManga.subscribe(mangaId),
-                getChaptersByMangaId.subscribe(mangaId),
+                getMangaAndChapters.subscribe(mangaId),
                 libraryPreferences.smartScanlatorMerge().changes(),
                 libraryPreferences.smartScanlatorMergeOverride(mangaId).changes(),
                 // KMK -->
                 libraryPreferences.hideBlacklistedChapters(mangaId).changes(),
                 // KMK <--
-            ) { manga, chapters, globalEnabled, override, hideBlacklistedChapters ->
-                ScanlatorState(manga, chapters, globalEnabled, override, hideBlacklistedChapters)
+            ) { mangaAndChapters, globalEnabled, override, hideBlacklistedChapters ->
+                ScanlatorState(
+                    manga = mangaAndChapters.first,
+                    chapters = mangaAndChapters.second,
+                    globalEnabled = globalEnabled,
+                    override = override,
+                    hideBlacklistedChapters = hideBlacklistedChapters,
+                )
             }
                 .collectLatest { scanlatorState ->
                     val manga = scanlatorState.manga
@@ -560,7 +564,7 @@ class ScanlatorPreferenceScreenModel(
 
     fun setPriority(scanlators: List<String>) {
         screenModelScope.launch {
-            updateManga.await(MangaUpdate(id = mangaId, scanlatorPriority = scanlators))
+            updateManga.await(MangaUpdate(mangaId) { scanlatorPriority = scanlators })
         }
     }
 
@@ -577,10 +581,9 @@ class ScanlatorPreferenceScreenModel(
     fun removeBlacklisted(key: String) {
         screenModelScope.launch {
             updateManga.await(
-                MangaUpdate(
-                    id = mangaId,
-                    blacklistedChapters = state.value.blacklist.map(ChapterBlacklistEntry::key) - key,
-                ),
+                MangaUpdate(mangaId) {
+                    blacklistedChapters = state.value.blacklist.map(ChapterBlacklistEntry::key) - key
+                },
             )
         }
     }
@@ -591,7 +594,7 @@ class ScanlatorPreferenceScreenModel(
             val rule = encodeScanlatorRangeRule(ScanlatorRangeRule(from, to, scanlator))
             val rules = state.value.rangeRules
             if (rule !in rules) {
-                updateManga.await(MangaUpdate(id = mangaId, scanlatorRangeRules = rules + rule))
+                updateManga.await(MangaUpdate(mangaId) { scanlatorRangeRules = rules + rule })
             }
         }
     }
@@ -599,7 +602,7 @@ class ScanlatorPreferenceScreenModel(
     fun removeRangeRule(rule: String) {
         screenModelScope.launch {
             updateManga.await(
-                MangaUpdate(id = mangaId, scanlatorRangeRules = state.value.rangeRules - rule),
+                MangaUpdate(mangaId) { scanlatorRangeRules = state.value.rangeRules - rule },
             )
         }
     }

@@ -1,8 +1,10 @@
 package tachiyomi.domain.manga.interactor
 
+import dev.zacsweers.metro.Inject
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
 
+@Inject
 class NetworkToLocalManga(
     private val mangaRepository: MangaRepository,
 ) {
@@ -10,7 +12,7 @@ class NetworkToLocalManga(
     /**
      * @param updateInfo Default: `true`. If `true`, it will update the manga's information in the database if it already exists.
      * If `false`, it will only insert the manga if it doesn't exist in the database. This is used to avoid the case when fetching
-     * related mangas from within `MangaViewModel` would overwrite current manga's `getDetails` info with info from browsing.
+     * related mangas from within `MangaScreenModel` would overwrite current manga's `getDetails` info with info from browsing.
      */
     suspend operator fun invoke(
         manga: Manga,
@@ -29,7 +31,7 @@ class NetworkToLocalManga(
     /**
      * @param updateInfo Default: `true`. If `true`, it will update the manga's information in the database if it already exists.
      * If `false`, it will only insert the manga if it doesn't exist in the database. This is used to avoid the case when fetching
-     * related mangas from within `MangaViewModel` would overwrite current manga's `getDetails` info with info from browsing.
+     * related mangas from within `MangaScreenModel` would overwrite current manga's `getDetails` info with info from browsing.
      */
     suspend operator fun invoke(
         manga: List<Manga>,

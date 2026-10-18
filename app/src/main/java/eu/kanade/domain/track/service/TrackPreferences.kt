@@ -1,15 +1,21 @@
 package eu.kanade.domain.track.service
 
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.track.model.AutoRereadResetMode
 import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
+import eu.kanade.tachiyomi.data.track.kitsu.Kitsu
 import eu.kanade.tachiyomi.data.track.mangabaka.MangaBaka
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
 import tachiyomi.domain.track.service.PreferredTrackerMap
 
+@Inject
+@SingleIn(AppScope::class)
 class TrackPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
@@ -42,50 +48,65 @@ class TrackPreferences(
 
     fun trackToken(tracker: Tracker) = preferenceStore.getString(Preference.privateKey("track_token_${tracker.id}"), "")
 
-    fun anilistScoreType() = preferenceStore.getString("anilist_score_type", Anilist.POINT_10)
+    val anilistScoreType = preferenceStore.getString("anilist_score_type", Anilist.POINT_10)
+
+    val kitsuScoreType: Preference<String> = preferenceStore.getString("kitsu_score_type", Kitsu.RATING_ADVANCED)
 
     val mangabakaScoreType: Preference<String> = preferenceStore.getString("mangabaka_score_type", MangaBaka.STEP_1)
-    fun autoUpdateTrack() = preferenceStore.getBoolean("pref_auto_update_manga_sync_key", true)
 
-    fun trackOnAddingToLibrary() = preferenceStore.getBoolean("track_on_adding_to_library", true)
+    val autoUpdateTrack = preferenceStore.getBoolean("pref_auto_update_manga_sync_key", true)
 
-    fun autoUpdateTrackOnMarkRead() = preferenceStore.getEnum(
+    val trackOnAddingToLibrary = preferenceStore.getBoolean("track_on_adding_to_library", true)
+
+    val autoUpdateTrackOnMarkRead = preferenceStore.getEnum(
         "pref_auto_update_manga_on_mark_read",
         AutoTrackState.ALWAYS,
     )
 
-    // Auto reread behavior preference
-    fun autoRereadBehavior() = preferenceStore.getEnum(
+    // KMK --> These keys are retained for existing Auto Reread settings and backups.
+    val autoRereadBehavior = preferenceStore.getEnum(
         "pref_auto_reread_behavior",
         AutoTrackState.ASK,
     )
 
-    // Auto reread reset mode preference
-    fun autoRereadResetMode() = preferenceStore.getEnum(
+    val autoRereadResetMode = preferenceStore.getEnum(
         "pref_auto_reread_reset_mode",
         AutoRereadResetMode.RESET_TO_CURRENT_CHAPTER,
     )
+    // KMK <--
 
     // SY -->
-    fun resolveUsingSourceMetadata() = preferenceStore.getBoolean(
+    val resolveUsingSourceMetadata = preferenceStore.getBoolean(
         "pref_resolve_using_source_metadata_key",
         true,
     )
     // SY <--
 
     // KMK -->
-    fun autoSyncProgressFromTrackers() = preferenceStore.getBoolean("pref_auto_sync_progress_from_trackers_key", true)
-    fun preferredTrackerForManga() = preferenceStore.getString(Preference.appStateKey("pref_preferred_tracker_for_manga"), "")
+    val autoSyncProgressFromTrackers = preferenceStore.getBoolean("pref_auto_sync_progress_from_trackers_key", true)
+
+    fun preferredTrackerForManga() = preferenceStore.getString(
+        Preference.appStateKey("pref_preferred_tracker_for_manga"),
+        "",
+    )
 
     private val preferredTrackerLock = Any()
-    fun getPreferredTrackerForManga(mangaId: Long): Long? = PreferredTrackerMap.decode(preferredTrackerForManga().get())[mangaId]
+
+    fun getPreferredTrackerForManga(mangaId: Long): Long? =
+        PreferredTrackerMap.decode(preferredTrackerForManga().get())[mangaId]
 
     fun setPreferredTrackerForManga(mangaId: Long, trackerId: Long?) = synchronized(preferredTrackerLock) {
-        if (mangaId > 0) preferredTrackerForManga().set(PreferredTrackerMap.update(preferredTrackerForManga().get(), mangaId, trackerId))
+        if (mangaId > 0) {
+            preferredTrackerForManga().set(
+                PreferredTrackerMap.update(preferredTrackerForManga().get(), mangaId, trackerId),
+            )
+        }
     }
 
     fun priorityTrackerId() = preferenceStore.getLong("pref_priority_tracker_id", 0L)
+
     fun getPriorityTrackerId(): Long? = priorityTrackerId().get().takeIf { it > 0 }
+
     fun setPriorityTrackerId(trackerId: Long?) = priorityTrackerId().set(trackerId?.takeIf { it > 0 } ?: 0L)
 
     fun resolvePreferredTracker(mangaId: Long, applicable: Set<Long>): Long? =

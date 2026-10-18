@@ -1,6 +1,10 @@
 package tachiyomi.data.manga
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
@@ -8,8 +12,9 @@ import tachiyomi.domain.manga.model.FavoriteEntry
 import tachiyomi.domain.manga.model.FavoriteEntryAlternative
 import tachiyomi.domain.manga.repository.FavoritesEntryRepository
 
-// KMK -->
-
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class FavoritesEntryRepositoryImpl(
     private val database: Database,
 ) : FavoritesEntryRepository {
@@ -31,7 +36,9 @@ class FavoritesEntryRepositoryImpl(
     }
 
     override suspend fun selectAll(): List<FavoriteEntry> {
-        return database.eh_favoritesQueries.selectAll(::mapFavoriteEntry).awaitAsList()
+        return database.eh_favoritesQueries
+            .selectAll(::mapFavoriteEntry)
+            .awaitAsList()
     }
 
     override suspend fun addAlternative(favoriteEntryAlternative: FavoriteEntryAlternative) {
@@ -65,4 +72,3 @@ class FavoritesEntryRepositoryImpl(
         )
     }
 }
-// KMK <--

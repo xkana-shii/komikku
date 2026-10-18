@@ -5,18 +5,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.tachiyomi.databinding.RecommendationSearchBottomSheetBinding
-import uy.kohesive.injekt.injectLazy
+import mihon.app.di.appGraph
 
 @Composable
 fun RecommendationSearchBottomSheetDialog(
     onDismissRequest: () -> Unit,
     onSearchRequest: () -> Unit,
 ) {
-    val state = remember { RecommendationSearchBottomSheetDialogState(onSearchRequest) }
+    val sourcePreferences = LocalContext.current.appGraph.sourcePreferences
+    val state = remember { RecommendationSearchBottomSheetDialogState(onSearchRequest, sourcePreferences) }
     AdaptiveSheet(onDismissRequest = onDismissRequest) {
         AndroidView(
             factory = { factoryContext ->
@@ -29,11 +31,13 @@ fun RecommendationSearchBottomSheetDialog(
     }
 }
 
-class RecommendationSearchBottomSheetDialogState(private val onSearchRequest: () -> Unit) {
-    private val preferences: SourcePreferences by injectLazy()
+class RecommendationSearchBottomSheetDialogState(
+    private val onSearchRequest: () -> Unit,
+    private val preferences: SourcePreferences,
+) {
 
     fun initPreferences(binding: RecommendationSearchBottomSheetBinding) {
-        val flags = preferences.recommendationSearchFlags().get()
+        val flags = preferences.recommendationSearchFlags.get()
 
         binding.recSources.isChecked = SearchFlags.hasIncludeSources(flags)
         binding.recTrackers.isChecked = SearchFlags.hasIncludeTrackers(flags)
@@ -53,7 +57,7 @@ class RecommendationSearchBottomSheetDialogState(private val onSearchRequest: ()
         if (binding.recSources.isChecked) flags = flags or SearchFlags.INCLUDE_SOURCES
         if (binding.recTrackers.isChecked) flags = flags or SearchFlags.INCLUDE_TRACKERS
         if (binding.recHideLibraryEntries.isChecked) flags = flags or SearchFlags.HIDE_LIBRARY_RESULTS
-        preferences.recommendationSearchFlags().set(flags)
+        preferences.recommendationSearchFlags.set(flags)
 
         validate(binding)
     }

@@ -8,17 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.BookmarkAdd
-import androidx.compose.material.icons.outlined.BookmarkRemove
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Done
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.FileDownloadOff
-import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +29,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.data.download.model.Download
 import me.saket.swipe.SwipeableActionsBox
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Block
+import mihon.icons.materialsymbols.rounded.BookmarkAdd
+import mihon.icons.materialsymbols.rounded.BookmarkRemove
+import mihon.icons.materialsymbols.rounded.Check
+import mihon.icons.materialsymbols.rounded.Delete
+import mihon.icons.materialsymbols.rounded.Download
+import mihon.icons.materialsymbols.rounded.FileDownloadOff
+import mihon.icons.materialsymbols.rounded.RemoveDone
+import mihon.icons.materialsymbols.roundedfilled.Bookmark
+import mihon.icons.materialsymbols.roundedfilled.Circle
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
@@ -60,7 +60,7 @@ fun MangaChapterListItem(
     // SY <--
     read: Boolean,
     bookmark: Boolean,
-    // KMK --> A color is only a local reason tag for an existing bookmark.
+    // KMK -->
     bookmarkColor: BookmarkColor = BookmarkColor.NONE,
     blacklisted: Boolean = false,
     // KMK <--
@@ -76,8 +76,10 @@ fun MangaChapterListItem(
     onChapterSwipe: (LibraryPreferences.ChapterSwipeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // KMK -->
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
     val swipeStart = remember(chapterSwipeStartAction, read, bookmark, downloadStateProvider()) {
+        // KMK <--
         getSwipeAction(
             action = chapterSwipeStartAction,
             read = read,
@@ -87,7 +89,9 @@ fun MangaChapterListItem(
             onSwipe = { onChapterSwipe(chapterSwipeStartAction) },
         )
     }
+    // KMK -->
     val swipeEnd = remember(chapterSwipeEndAction, read, bookmark, downloadStateProvider()) {
+        // KMK <--
         getSwipeAction(
             action = chapterSwipeEndAction,
             read = read,
@@ -125,7 +129,7 @@ fun MangaChapterListItem(
                     var textHeight by remember { mutableIntStateOf(0) }
                     if (!read) {
                         Icon(
-                            imageVector = Icons.Filled.Circle,
+                            imageVector = MaterialSymbols.RoundedFilled.Circle,
                             contentDescription = stringResource(MR.strings.unread),
                             modifier = Modifier
                                 .height(8.dp)
@@ -133,10 +137,21 @@ fun MangaChapterListItem(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    // KMK --> A revealed chapter remains blacklisted outside this display list.
+                    if (bookmark) {
+                        Icon(
+                            imageVector = MaterialSymbols.RoundedFilled.Bookmark,
+                            contentDescription = stringResource(MR.strings.action_filter_bookmarked),
+                            modifier = Modifier
+                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                            // KMK -->
+                            tint = bookmarkColor.composeColor() ?: MaterialTheme.colorScheme.primary,
+                            // KMK <--
+                        )
+                    }
+                    // KMK --> Revealed chapters retain a visible blacklist state.
                     if (blacklisted) {
                         Icon(
-                            imageVector = Icons.Outlined.Block,
+                            imageVector = MaterialSymbols.Rounded.Block,
                             contentDescription = stringResource(KMR.strings.action_blacklist_chapter),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
@@ -144,15 +159,6 @@ fun MangaChapterListItem(
                         )
                     }
                     // KMK <--
-                    if (bookmark) {
-                        Icon(
-                            imageVector = Icons.Filled.Bookmark,
-                            contentDescription = stringResource(MR.strings.action_filter_bookmarked),
-                            modifier = Modifier
-                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
-                            tint = bookmarkColor.composeColor() ?: MaterialTheme.colorScheme.primary,
-                        )
-                    }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium,
@@ -234,22 +240,22 @@ internal fun getSwipeAction(
 ): me.saket.swipe.SwipeAction? {
     return when (action) {
         LibraryPreferences.ChapterSwipeAction.ToggleRead -> swipeAction(
-            icon = if (!read) Icons.Outlined.Done else Icons.Outlined.RemoveDone,
+            icon = if (!read) MaterialSymbols.Rounded.Check else MaterialSymbols.Rounded.RemoveDone,
             background = background,
             isUndo = read,
             onSwipe = onSwipe,
         )
         LibraryPreferences.ChapterSwipeAction.ToggleBookmark -> swipeAction(
-            icon = if (!bookmark) Icons.Outlined.BookmarkAdd else Icons.Outlined.BookmarkRemove,
+            icon = if (!bookmark) MaterialSymbols.Rounded.BookmarkAdd else MaterialSymbols.Rounded.BookmarkRemove,
             background = background,
             isUndo = bookmark,
             onSwipe = onSwipe,
         )
         LibraryPreferences.ChapterSwipeAction.Download -> swipeAction(
             icon = when (downloadState) {
-                Download.State.NOT_DOWNLOADED, Download.State.ERROR -> Icons.Outlined.Download
-                Download.State.QUEUE, Download.State.DOWNLOADING -> Icons.Outlined.FileDownloadOff
-                Download.State.DOWNLOADED -> Icons.Outlined.Delete
+                Download.State.NOT_DOWNLOADED, Download.State.ERROR -> MaterialSymbols.Rounded.Download
+                Download.State.QUEUE, Download.State.DOWNLOADING -> MaterialSymbols.Rounded.FileDownloadOff
+                Download.State.DOWNLOADED -> MaterialSymbols.Rounded.Delete
             },
             background = background,
             onSwipe = onSwipe,

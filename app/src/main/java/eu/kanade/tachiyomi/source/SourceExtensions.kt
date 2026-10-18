@@ -1,11 +1,12 @@
 package eu.kanade.tachiyomi.source
 
+import android.content.Context
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import exh.source.EH_PACKAGE
 import exh.source.LOCAL_SOURCE_PACKAGE
 import exh.source.isEhBasedSource
+import mihon.app.di.appGraph
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.presentation.core.icons.FlagEmoji
 import tachiyomi.source.local.isLocal
@@ -16,21 +17,18 @@ fun Source.getNameForMangaInfo(
     // SY -->
     mergeSources: List<Source>? = null,
     // SY <--
-    uiPreferences: UiPreferences,
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
-    val enabledLanguages = preferences.enabledLanguages().get()
-        .filterNot { it in listOf("none") }
+    val enabledLanguages = preferences.enabledLanguages.get()
+        .filterNot { it in listOf("all", "other") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
-    val showFlags = uiPreferences.showFlags().get()
     return when {
         // SY -->
         !mergeSources.isNullOrEmpty() -> getMergedSourcesString(
             mergeSources,
             enabledLanguages,
             hasOneActiveLanguages,
-            showFlags,
         )
         // SY <--
         // KMK -->
@@ -39,21 +37,13 @@ fun Source.getNameForMangaInfo(
         // For edge cases where user disables a source they got manga of in their library.
         hasOneActiveLanguages && !isInEnabledLanguages ->
             // KMK -->
-            if (showFlags) {
-                "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
-            } else {
-                "$name (${lang.uppercase()})"
-            }
+            "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
         // KMK <--
         // Hide the language tag when only one language is used.
-        hasOneActiveLanguages && isInEnabledLanguages -> "$name (${lang.uppercase()})"
+        hasOneActiveLanguages && isInEnabledLanguages -> name
         else ->
             // KMK -->
-            if (showFlags) {
-                "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
-            } else {
-                "$name (${lang.uppercase()})"
-            }
+            "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
         // KMK <--
     }
 }
@@ -63,7 +53,6 @@ private fun getMergedSourcesString(
     mergeSources: List<Source>,
     enabledLangs: List<String>,
     onlyName: Boolean,
-    showFlags: Boolean = true,
 ): String {
     return if (onlyName) {
         mergeSources.joinToString { source ->
@@ -73,14 +62,10 @@ private fun getMergedSourcesString(
                 // KMK <--
                 source.lang !in enabledLangs ->
                     // KMK -->
-                    if (showFlags) {
-                        "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
-                    } else {
-                        "${source.name} (${source.lang.uppercase()})"
-                    }
+                    "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
                 // KMK <--
                 else ->
-                    "${source.name} (${source.lang.uppercase()})"
+                    source.name
             }
         }
     } else {
@@ -89,11 +74,7 @@ private fun getMergedSourcesString(
             if (source.isLocalOrStub()) {
                 source.toString()
             } else {
-                if (showFlags) {
-                    "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
-                } else {
-                    "${source.name} (${source.lang.uppercase()})"
-                }
+                "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
             }
             // KMK <--
         }
@@ -104,12 +85,12 @@ private fun getMergedSourcesString(
 fun Source.isLocalOrStub(): Boolean = isLocal() || this is StubSource
 
 // KMK -->
-fun Source.isIncognitoModeEnabled(incognitoExtensions: Set<String>? = null): Boolean {
+suspend fun Source.isIncognitoModeEnabled(incognitoExtensions: Set<String>? = null): Boolean {
     val extensionPackage = when {
         isLocal() -> LOCAL_SOURCE_PACKAGE
         isEhBasedSource() -> EH_PACKAGE
         else -> Injekt.get<ExtensionManager>().getExtensionPackage(id)
     }
-    return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions().get())
+    return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions.get())
 }
 // KMK <--

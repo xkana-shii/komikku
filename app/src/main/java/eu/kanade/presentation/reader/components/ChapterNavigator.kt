@@ -12,19 +12,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalSlider
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,26 +36,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.isTabletUi
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.SkipNext
+import mihon.icons.materialsymbols.rounded.SkipPrevious
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.Slider
 import tachiyomi.presentation.core.i18n.stringResource
+import kotlin.math.roundToInt
+
+enum class ChapterNavigatorType {
+    HORIZONTAL_LTR,
+    HORIZONTAL_RTL,
+    VERTICAL_LEFT,
+    VERTICAL_RIGHT,
+    ;
+
+    fun isHorizontal() = this in setOf(HORIZONTAL_LTR, HORIZONTAL_RTL)
+}
 
 @Composable
 fun ChapterNavigator(
-    isRtl: Boolean,
-    isVerticalSlider: Boolean,
+    type: ChapterNavigatorType,
     onNextChapter: () -> Unit,
     enabledNext: Boolean,
     onPreviousChapter: () -> Unit,
@@ -63,32 +75,38 @@ fun ChapterNavigator(
     // SY <--
     totalPages: Int,
     onPageIndexChange: (Int) -> Unit,
-    // KMK -->
     onPageIndexChangeFinished: () -> Unit,
-    // KMK <--
+    modifier: Modifier = Modifier,
 ) {
-    // SY -->
-    if (isVerticalSlider) {
-        ChapterNavigatorVert(
-            onNextChapter = onNextChapter,
-            enabledNext = enabledNext,
-            onPreviousChapter = onPreviousChapter,
-            enabledPrevious = enabledPrevious,
-            currentPage = currentPage,
-            currentPageText = currentPageText,
-            totalPages = totalPages,
-            onPageIndexChange = onPageIndexChange,
-            // KMK -->
-            onPageIndexChangeFinished = onPageIndexChangeFinished,
-            // KMK <--
-        )
-        return
-    }
-    // SY <--
-    val isTabletUi = isTabletUi()
-    val horizontalPadding = if (isTabletUi) 24.dp else 8.dp
-    val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
     val haptic = LocalHapticFeedback.current
+
+    val onPageChange: (Int) -> Unit = { onPageIndexChange(it - 1) }
+
+    val state = if (totalPages > 1) {
+        key(totalPages) {
+            rememberSliderState(
+                value = currentPage.toFloat(),
+                steps = totalPages - 2,
+                trackRange = 1f..totalPages.toFloat(),
+            )
+        }
+            .also { sliderState ->
+                sliderState.value = currentPage.toFloat()
+            }
+    } else {
+        null
+    }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val sliderDragged by interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(currentPage) {
+        if (sliderDragged) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    val isTabletUi = isTabletUi()
+    val mainAxisPadding = if (isTabletUi) 24.dp else 8.dp
 
     // Match with toolbar background color set in ReaderActivity
     val backgroundColor = MaterialTheme.colorScheme
@@ -103,12 +121,85 @@ fun ChapterNavigator(
     )
     val textColor = MaterialTheme.colorScheme.onSurface
 
+    if (type.isHorizontal()) {
+        HorizontalChapterNavigator(
+            isRtl = type == ChapterNavigatorType.HORIZONTAL_RTL,
+            state = state,
+            onPageChange = onPageChange,
+            onPageChangeFinished = onPageIndexChangeFinished,
+            onNextChapter = onNextChapter,
+            enabledNext = enabledNext,
+            onPreviousChapter = onPreviousChapter,
+            enabledPrevious = enabledPrevious,
+            // SY -->
+            currentPageText = currentPageText,
+            // SY <--
+            totalPages = totalPages,
+            interactionSource = interactionSource,
+            mainAxisPadding = mainAxisPadding,
+            backgroundColor = backgroundColor,
+            buttonColor = buttonColor,
+            // KUN -->
+            textColor = textColor,
+            // KUN <--
+            modifier = modifier,
+        )
+    } else {
+        VerticalChapterNavigator(
+            state = state,
+            onPageChange = onPageChange,
+            onPageChangeFinished = onPageIndexChangeFinished,
+            onNextChapter = onNextChapter,
+            enabledNext = enabledNext,
+            onPreviousChapter = onPreviousChapter,
+            enabledPrevious = enabledPrevious,
+            // SY -->
+            currentPageText = currentPageText,
+            // SY <--
+            totalPages = totalPages,
+            interactionSource = interactionSource,
+            mainAxisPadding = mainAxisPadding,
+            backgroundColor = backgroundColor,
+            buttonColor = buttonColor,
+            // KUN -->
+            textColor = textColor,
+            // KUN <--
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+fun HorizontalChapterNavigator(
+    isRtl: Boolean,
+    state: SliderState?,
+    onPageChange: (Int) -> Unit,
+    onPageChangeFinished: () -> Unit,
+    onNextChapter: () -> Unit,
+    enabledNext: Boolean,
+    onPreviousChapter: () -> Unit,
+    enabledPrevious: Boolean,
+    // SY -->
+    currentPageText: String,
+    // SY <--
+    totalPages: Int,
+    interactionSource: MutableInteractionSource,
+    mainAxisPadding: Dp,
+    backgroundColor: Color,
+    buttonColor: IconButtonColors,
+    // KUN -->
+    textColor: Color,
+    // KUN <--
+    modifier: Modifier = Modifier,
+) {
+    val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+
     // We explicitly handle direction based on the reader viewer rather than the system direction
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
-                .padding(horizontal = horizontalPadding),
+                .padding(horizontal = mainAxisPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FilledIconButton(
@@ -117,14 +208,14 @@ fun ChapterNavigator(
                 colors = buttonColor,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.SkipPrevious,
+                    imageVector = MaterialSymbols.Rounded.SkipPrevious,
                     contentDescription = stringResource(
                         if (isRtl) MR.strings.action_next_chapter else MR.strings.action_previous_chapter,
                     ),
                 )
             }
 
-            if (totalPages > 1) {
+            if (state != null) {
                 CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
                     Row(
                         modifier = Modifier
@@ -147,26 +238,13 @@ fun ChapterNavigator(
                             Text(text = totalPages.toString(), color = Color.Transparent)
                         }
 
-                        val interactionSource = remember { MutableInteractionSource() }
-                        val sliderDragged by interactionSource.collectIsDraggedAsState()
-                        LaunchedEffect(currentPage) {
-                            if (sliderDragged) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                        }
                         Slider(
+                            state = state,
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(horizontal = 8.dp),
-                            value = currentPage,
-                            valueRange = 1..totalPages,
-                            onValueChange = f@{
-                                if (it == currentPage) return@f
-                                onPageIndexChange(it - 1)
-                            },
-                            // KMK -->
-                            onValueChangeFinished = onPageIndexChangeFinished,
-                            // KMK <--
+                            onValueChange = { onPageChange(it.roundToInt()) },
+                            onValueChangeFinished = onPageChangeFinished,
                             interactionSource = interactionSource,
                         )
 
@@ -188,7 +266,7 @@ fun ChapterNavigator(
                 colors = buttonColor,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.SkipNext,
+                    imageVector = MaterialSymbols.Rounded.SkipNext,
                     contentDescription = stringResource(
                         if (isRtl) MR.strings.action_previous_chapter else MR.strings.action_next_chapter,
                     ),
@@ -199,58 +277,46 @@ fun ChapterNavigator(
 }
 
 @Composable
-fun ChapterNavigatorVert(
+fun VerticalChapterNavigator(
+    state: SliderState?,
+    onPageChange: (Int) -> Unit,
+    onPageChangeFinished: () -> Unit,
     onNextChapter: () -> Unit,
     enabledNext: Boolean,
     onPreviousChapter: () -> Unit,
     enabledPrevious: Boolean,
-    currentPage: Int,
     // SY -->
     currentPageText: String,
     // SY <--
     totalPages: Int,
-    onPageIndexChange: (Int) -> Unit,
-    // KMK -->
-    onPageIndexChangeFinished: () -> Unit,
-    // KMK <--
+    interactionSource: MutableInteractionSource,
+    mainAxisPadding: Dp,
+    backgroundColor: Color,
+    buttonColor: IconButtonColors,
+    // KUN -->
+    textColor: Color,
+    // KUN <--
+    modifier: Modifier = Modifier,
 ) {
-    val isTabletUi = isTabletUi()
-    val verticalPadding = if (isTabletUi) 24.dp else 8.dp
-
-    val haptic = LocalHapticFeedback.current
-
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxHeight()
-            .padding(vertical = verticalPadding, horizontal = 8.dp),
+            .padding(vertical = mainAxisPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Match with toolbar background color set in ReaderActivity
-        val backgroundColor = MaterialTheme.colorScheme
-            .surfaceColorAtElevation(3.dp)
-            .copy(alpha = if (isSystemInDarkTheme()) 0.9f else 0.95f)
-        val buttonColor = IconButtonDefaults.filledIconButtonColors(
-            containerColor = backgroundColor,
-            disabledContainerColor = backgroundColor,
-            // KMK -->
-            contentColor = MaterialTheme.colorScheme.primary,
-            // KMK <--
-        )
-        val textColor = MaterialTheme.colorScheme.onSurface
-
         FilledIconButton(
             enabled = enabledPrevious,
             onClick = onPreviousChapter,
             colors = buttonColor,
         ) {
             Icon(
-                imageVector = Icons.Outlined.SkipPrevious,
+                imageVector = MaterialSymbols.Rounded.SkipPrevious,
                 contentDescription = stringResource(MR.strings.action_previous_chapter),
                 modifier = Modifier.rotate(90f),
             )
         }
 
-        if (totalPages > 1) {
+        if (state != null) {
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -268,43 +334,13 @@ fun ChapterNavigatorVert(
                     // KMK <--
                 )
 
-                val interactionSource = remember { MutableInteractionSource() }
-                val sliderDragged by interactionSource.collectIsDraggedAsState()
-                LaunchedEffect(currentPage) {
-                    if (sliderDragged) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                }
-                Slider(
+                VerticalSlider(
+                    state = state,
                     modifier = Modifier
-                        .padding(vertical = 8.dp)
-                        .graphicsLayer {
-                            rotationZ = 90f
-                            transformOrigin = TransformOrigin(0f, 0f)
-                        }
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(
-                                Constraints(
-                                    minWidth = constraints.minHeight,
-                                    maxWidth = constraints.maxHeight,
-                                    minHeight = constraints.minWidth,
-                                    maxHeight = constraints.maxWidth,
-                                ),
-                            )
-                            layout(placeable.height, placeable.width) {
-                                placeable.place(0, -placeable.height)
-                            }
-                        }
-                        .weight(1f),
-                    value = currentPage,
-                    valueRange = 1..totalPages,
-                    onValueChange = f@{
-                        if (it == currentPage) return@f
-                        onPageIndexChange(it - 1)
-                    },
-                    // KMK -->
-                    onValueChangeFinished = onPageIndexChangeFinished,
-                    // KMK <--
+                        .weight(1f)
+                        .padding(vertical = 8.dp),
+                    onValueChange = { onPageChange(it.roundToInt()) },
+                    onValueChangeFinished = onPageChangeFinished,
                     interactionSource = interactionSource,
                 )
 
@@ -325,7 +361,7 @@ fun ChapterNavigatorVert(
             colors = buttonColor,
         ) {
             Icon(
-                imageVector = Icons.Outlined.SkipNext,
+                imageVector = MaterialSymbols.Rounded.SkipNext,
                 contentDescription = stringResource(MR.strings.action_next_chapter),
                 modifier = Modifier.rotate(90f),
             )
@@ -339,7 +375,7 @@ private fun ChapterNavigatorPreview() {
     var currentPage by remember { mutableIntStateOf(1) }
     TachiyomiPreviewTheme {
         ChapterNavigator(
-            isRtl = false,
+            type = ChapterNavigatorType.VERTICAL_RIGHT,
             onNextChapter = {},
             enabledNext = true,
             onPreviousChapter = {},
@@ -347,17 +383,14 @@ private fun ChapterNavigatorPreview() {
             currentPage = currentPage,
             totalPages = 10,
             onPageIndexChange = { currentPage = (it + 1) },
-            // KMK -->
             onPageIndexChangeFinished = {},
-            // KMK <--
             // SY -->
             currentPageText = "1",
-            isVerticalSlider = false,
             // SY <--
         )
         // KMK -->
         ChapterNavigator(
-            isRtl = false,
+            type = ChapterNavigatorType.HORIZONTAL_LTR,
             onNextChapter = {},
             enabledNext = true,
             onPreviousChapter = {},
@@ -365,11 +398,8 @@ private fun ChapterNavigatorPreview() {
             currentPage = currentPage,
             totalPages = 10,
             onPageIndexChange = { currentPage = (it + 1) },
-            // KMK -->
             onPageIndexChangeFinished = {},
-            // KMK <--
             currentPageText = "1",
-            isVerticalSlider = true,
         )
         // KMK <--
     }

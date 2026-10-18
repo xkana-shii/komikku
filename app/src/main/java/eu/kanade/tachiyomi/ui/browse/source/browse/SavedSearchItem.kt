@@ -13,13 +13,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.SuggestionChip
 import eu.kanade.presentation.components.SuggestionChipDefaults
-import kotlinx.collections.immutable.ImmutableList
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.presentation.core.components.SettingsItemsPaddings
 
 @Composable
 fun SavedSearchItem(
-    savedSearches: ImmutableList<EXHSavedSearch>,
+    savedSearches: List<EXHSavedSearch>,
     onSavedSearch: (EXHSavedSearch) -> Unit,
     onSavedSearchPress: (EXHSavedSearch) -> Unit,
     // KMK -->

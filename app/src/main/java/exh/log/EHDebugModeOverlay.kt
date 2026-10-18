@@ -33,13 +33,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.core.preference.asState
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
+import mihon.app.di.appGraph
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -87,10 +85,10 @@ private fun FpsDebugModeOverlay() {
 @Composable
 private fun EHDebugModeOverlay() {
     val scope = rememberCoroutineScope()
-    val enableSourceBlacklist by remember {
-        Injekt.get<SourcePreferences>().enableSourceBlacklist().asState(scope)
-    }
     val context = LocalContext.current
+    val enableSourceBlacklist by remember {
+        context.appGraph.sourcePreferences.enableSourceBlacklist.asState(scope)
+    }
     Text(
         text = remember(enableSourceBlacklist) {
             buildInfo(context, enableSourceBlacklist)

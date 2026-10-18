@@ -1,14 +1,9 @@
 package eu.kanade.presentation.browse
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -28,10 +23,10 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.components.SearchToolbar
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.feed.FeedRequest
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.Public
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
@@ -52,37 +47,30 @@ sealed class SourceFeedUI {
 
     abstract val results: List<Manga>?
 
-    abstract val error: String?
-    abstract val loading: Boolean
-    abstract val request: FeedRequest?
+    abstract fun withResults(results: List<Manga>?): SourceFeedUI
 
-    abstract fun withResults(results: List<Manga>?, error: String? = null, loading: Boolean = false, request: FeedRequest? = this.request): SourceFeedUI
-
-    data class Latest(override val results: List<Manga>?, override val error: String? = null, override val loading: Boolean = results == null, override val request: FeedRequest? = null) : SourceFeedUI() {
+    data class Latest(override val results: List<Manga>?) : SourceFeedUI() {
         override val id: Long = -1
         override val title: StringResource
             get() = MR.strings.latest
 
-        override fun withResults(results: List<Manga>?, error: String?, loading: Boolean, request: FeedRequest?): SourceFeedUI {
-            return copy(results = results, error = error, loading = loading, request = request)
+        override fun withResults(results: List<Manga>?): SourceFeedUI {
+            return copy(results = results)
         }
     }
-    data class Browse(override val results: List<Manga>?, override val error: String? = null, override val loading: Boolean = results == null, override val request: FeedRequest? = null) : SourceFeedUI() {
+    data class Browse(override val results: List<Manga>?) : SourceFeedUI() {
         override val id: Long = -2
         override val title: StringResource
             get() = MR.strings.browse
 
-        override fun withResults(results: List<Manga>?, error: String?, loading: Boolean, request: FeedRequest?): SourceFeedUI {
-            return copy(results = results, error = error, loading = loading, request = request)
+        override fun withResults(results: List<Manga>?): SourceFeedUI {
+            return copy(results = results)
         }
     }
     data class SourceSavedSearch(
         val feed: FeedSavedSearch,
         val savedSearch: SavedSearch,
         override val results: List<Manga>?,
-        override val error: String? = null,
-        override val loading: Boolean = results == null,
-        override val request: FeedRequest? = null,
     ) : SourceFeedUI() {
         override val id: Long
             get() = feed.id
@@ -90,8 +78,8 @@ sealed class SourceFeedUI {
         override val title: String
             get() = savedSearch.name
 
-        override fun withResults(results: List<Manga>?, error: String?, loading: Boolean, request: FeedRequest?): SourceFeedUI {
-            return copy(results = results, error = error, loading = loading, request = request)
+        override fun withResults(results: List<Manga>?): SourceFeedUI {
+            return copy(results = results)
         }
     }
 }
@@ -100,7 +88,7 @@ sealed class SourceFeedUI {
 fun SourceFeedScreen(
     name: String,
     isLoading: Boolean,
-    items: ImmutableList<SourceFeedUI>,
+    items: List<SourceFeedUI>,
     hasFilters: Boolean,
     onFabClick: () -> Unit,
     onClickBrowse: () -> Unit,
@@ -111,7 +99,6 @@ fun SourceFeedScreen(
     onLongClickFeed: (SourceFeedUI.SourceSavedSearch) -> Unit,
     // KMK <--
     onClickManga: (Manga) -> Unit,
-    onRetry: (SourceFeedUI) -> Unit,
     onClickSearch: (String) -> Unit,
     searchQuery: String?,
     onSearchQueryChange: (String?) -> Unit,
@@ -123,11 +110,11 @@ fun SourceFeedScreen(
     onSourceSettingClick: (() -> Unit?)?,
     onSortFeedClick: (() -> Unit)?,
     onLongClickManga: (Manga) -> Unit,
-    bulkFavoriteScreenModel: BulkFavoriteScreenModel,
+    bulkFavoriteViewModel: BulkFavoriteViewModel,
     // KMK <--
 ) {
     // KMK -->
-    val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+    val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
     // KMK <--
 
     Scaffold(
@@ -137,17 +124,17 @@ fun SourceFeedScreen(
                 BulkSelectionToolbar(
                     selectedCount = bulkFavoriteState.selection.size,
                     isRunning = bulkFavoriteState.isRunning,
-                    onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                    onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                    onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                    onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                     onSelectAll = {
                         items.mapNotNull { it.results }
                             .flatten()
-                            .forEach { bulkFavoriteScreenModel.select(it) }
+                            .forEach { bulkFavoriteViewModel.select(it) }
                     },
                     onReverseSelection = {
                         items.mapNotNull { it.results }
                             .flatten()
-                            .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                            .let { bulkFavoriteViewModel.reverseSelection(it) }
                     },
                 )
             } else {
@@ -164,7 +151,7 @@ fun SourceFeedScreen(
                     onToggleIncognito = onToggleIncognito,
                     onSourceSettingClick = onSourceSettingClick,
                     onSortFeedClick = onSortFeedClick,
-                    toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
+                    toggleSelectionMode = bulkFavoriteViewModel::toggleSelectionMode,
                     isRunning = bulkFavoriteState.isRunning,
                     // KMK <--
                 )
@@ -182,7 +169,7 @@ fun SourceFeedScreen(
                         },
                     )
                 },
-                icon = { Icon(Icons.Outlined.FilterList, contentDescription = "") },
+                icon = { Icon(MaterialSymbols.Rounded.FilterList, contentDescription = "") },
                 onClick = onFabClick,
             )
             // KMK <--
@@ -204,7 +191,6 @@ fun SourceFeedScreen(
                         onLongClickFeed = onLongClickFeed,
                         // KMK <--
                         onClickManga = onClickManga,
-                        onRetry = onRetry,
                         // KMK -->
                         onLongClickManga = onLongClickManga,
                         selection = bulkFavoriteState.selection,
@@ -218,7 +204,7 @@ fun SourceFeedScreen(
 
 @Composable
 fun SourceFeedList(
-    items: ImmutableList<SourceFeedUI>,
+    items: List<SourceFeedUI>,
     paddingValues: PaddingValues,
     getMangaState: @Composable ((Manga) -> State<Manga>),
     onClickBrowse: () -> Unit,
@@ -229,7 +215,6 @@ fun SourceFeedList(
     onLongClickFeed: (SourceFeedUI.SourceSavedSearch) -> Unit,
     // KMK <--
     onClickManga: (Manga) -> Unit,
-    onRetry: (SourceFeedUI) -> Unit,
     // KMK -->
     onLongClickManga: (Manga) -> Unit,
     selection: List<Manga>,
@@ -245,7 +230,6 @@ fun SourceFeedList(
         ) { item ->
             // KMK <--
             GlobalSearchResultItem(
-                onRetry = { onRetry(item) }.takeIf { item.error != null && !item.loading },
                 modifier = Modifier.animateItem(),
                 title =
                 // KMK -->
@@ -297,37 +281,26 @@ fun SourceFeedItem(
     selection: List<Manga>,
     // KMK <--
 ) {
-    // KMK --> Snapshot presentation only; retained cards stay visible during refresh.
-    Crossfade(
-        targetState = Triple(item.error, item.results, item.loading && item.results.isNullOrEmpty()),
-        label = "sourceFeedItem",
-    ) { (error, results, loading) ->
-        Column {
-            if (error != null) {
-                GlobalSearchErrorResultItem(message = error.orEmpty())
-            }
-            when {
-                loading && results.isNullOrEmpty() -> {
-                    GlobalSearchLoadingResultItem()
-                }
-                results.isNullOrEmpty() && error == null -> {
-                    GlobalSearchErrorResultItem(message = stringResource(MR.strings.no_results_found))
-                }
-                !results.isNullOrEmpty() -> {
-                    GlobalSearchCardRow(
-                        titles = results.orEmpty(),
-                        getManga = getMangaState,
-                        onClick = onClickManga,
-                        // KMK -->
-                        onLongClick = onLongClickManga,
-                        selection = selection,
-                        // KMK <--
-                    )
-                }
-            }
+    val results = item.results
+    when {
+        results == null -> {
+            GlobalSearchLoadingResultItem()
+        }
+        results.isEmpty() -> {
+            GlobalSearchErrorResultItem(message = stringResource(MR.strings.no_results_found))
+        }
+        else -> {
+            GlobalSearchCardRow(
+                titles = item.results.orEmpty(),
+                getManga = getMangaState,
+                onClick = onClickManga,
+                // KMK -->
+                onLongClick = onLongClickManga,
+                selection = selection,
+                // KMK <--
+            )
         }
     }
-    // KMK <--
 }
 
 @Composable
@@ -361,7 +334,7 @@ fun SourceFeedToolbar(
         // KMK -->
         actions = {
             AppBarActions(
-                actions = persistentListOf<AppBar.AppBarAction>().builder().apply {
+                actions = buildList {
                     add(bulkSelectionButton(isRunning, toggleSelectionMode))
 
                     onWebViewClick?.let { func ->
@@ -369,7 +342,7 @@ fun SourceFeedToolbar(
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_web_view),
                                 onClick = { func() },
-                                icon = Icons.Outlined.Public,
+                                icon = MaterialSymbols.Rounded.Public,
                             ),
                         )
                     }
@@ -400,8 +373,7 @@ fun SourceFeedToolbar(
                             ),
                         )
                     }
-                }
-                    .build(),
+                },
             )
         },
         // KMK <--

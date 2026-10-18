@@ -5,137 +5,142 @@ import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMapIndexedNotNull
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.core.util.insertSeparatorsReversed
-import eu.kanade.tachiyomi.util.lang.toLocalDate
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.yearMonth
 import mihon.domain.upcoming.interactor.GetUpcomingManga
 import tachiyomi.core.common.preference.getAndSet
+import tachiyomi.core.common.util.lang.SubscriberGate
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.upcoming.service.UpcomingPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 class UpcomingViewModel(
-    private val getUpcomingManga: GetUpcomingManga = Injekt.get(),
+    private val getUpcomingManga: GetUpcomingManga,
+    val getCategories: GetCategories,
+    val upcomingPreferences: UpcomingPreferences,
     // KMK -->
-    val getCategories: GetCategories = Injekt.get(),
-    val upcomingPreferences: UpcomingPreferences = Injekt.get(),
+    private val libraryPreferences: LibraryPreferences,
     // KMK <--
 ) : ViewModel() {
 
-    // KMK -->
-    private val libraryPreferences: LibraryPreferences = Injekt.get()
-    private val updatingState = MutableStateFlow(UpdatingState())
-    private val dialog = MutableStateFlow<Dialog?>(null)
+    private val subscriberGate = SubscriberGate()
 
     val excludedCategories = upcomingPreferences.filterExcludedCategories
     val includedCategories = upcomingPreferences.filterIncludedCategories
-    // KMK <--
 
-    private val selectedYearMonth = MutableStateFlow(YearMonth.now())
+    private val selectedYearMonth = MutableStateFlow(
+        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.yearMonth,
+    )
+
+    private val dialog = MutableStateFlow<Dialog?>(null)
 
     // KMK -->
-    private val itemPreferences = combine(
-        excludedCategories.changes(),
-        includedCategories.changes(),
-    ) { excluded, included ->
-        ItemPreferences(
-            excludedCategories = excluded,
-            includedCategories = included,
-        )
-    }
-        .distinctUntilChanged()
+    private val showingUpdatingMangas = MutableStateFlow(false)
+    // KMK <--
 
-    private val upcoming = itemPreferences
-        .flatMapLatest { preferences ->
+    private val upcoming = getUpcomingItemPreferenceFlow()
+        .distinctUntilChanged()
+        .flatMapLatest {
             getUpcomingManga.subscribe(
-                excludedCategories = preferences.excludedCategories,
-                includedCategories = preferences.includedCategories,
+                excludedCategories = it.filterExcludedCategories,
+                includedCategories = it.filterIncludedCategories,
             )
         }
-        // KMK <--
+        .distinctUntilChanged()
         .map { it.toUpcomingUIModels() }
         .flowOn(Dispatchers.IO)
-        .stateIn<ImmutableList<UpcomingUIModel>?>(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5.seconds),
-            null,
-        )
+
+    // KMK -->
+    private val updating = flow { emit(getUpcomingManga.updatingMangas()) }
+        .map { it.toUpcomingUIModels() }
+        .flowOn(Dispatchers.IO)
+    // KMK <--
+
+    private val hasActiveFilters = getUpcomingItemPreferenceFlow()
+        .map { prefs ->
+            listOf(
+                prefs.filterIncludedCategories,
+                prefs.filterExcludedCategories,
+            ).any { it.isNotEmpty() }
+        }
+        .distinctUntilChanged()
 
     val state: StateFlow<State> = combine(
-        upcoming,
-        selectedYearMonth,
-        updatingState,
-        // KMK -->
-        itemPreferences,
-        dialog,
-        // KMK <--
-    ) { upcoming, selectedYearMonth, updating, preferences, dialog ->
-        val upcomingItems = upcoming ?: persistentListOf()
-        State(
-            selectedYearMonth = selectedYearMonth,
-            items = upcomingItems,
-            events = upcomingItems.toEvents(),
-            headerIndexes = upcomingItems.getHeaderIndexes(),
+        combine(
+            upcoming,
             // KMK -->
-            hasActiveFilters = preferences.hasActiveFilters,
-            dialog = dialog,
-            isLoadingUpcoming = upcoming == null,
-            isShowingUpdatingMangas = updating.isShowing,
-            updatingItems = updating.items,
-            updatingEvents = updating.items.toEvents(),
-            updatingHeaderIndexes = updating.items.getHeaderIndexes(),
-            isLoadingUpdating = updating.isLoading,
+            updating,
             // KMK <--
-        )
-    }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5.seconds),
-            State(selectedYearMonth = selectedYearMonth.value),
-        )
-
-    init {
+            hasActiveFilters,
+            selectedYearMonth,
+            dialog,
+        ) { upcoming, updating, hasActiveFilters, selectedYearMonth, dialog ->
+            State(
+                selectedYearMonth = selectedYearMonth,
+                items = upcoming,
+                events = upcoming.toEvents(),
+                headerIndexes = upcoming.getHeaderIndexes(),
+                // KMK -->
+                isLoadingUpcoming = false,
+                updatingItems = updating,
+                updatingEvents = updating.toEvents(),
+                updatingHeaderIndexes = updating.getHeaderIndexes(),
+                isLoadingUpdating = false,
+                // KMK <--
+                hasActiveFilters = hasActiveFilters,
+                dialog = dialog,
+            )
+        },
         // KMK -->
-        viewModelScope.launch {
-            val items = getUpcomingManga.updatingMangas().toUpcomingUIModels()
-            updatingState.update { UpdatingState(isLoading = false, items = items) }
-        }
+        showingUpdatingMangas,
         // KMK <--
+    ) { partial, isShowingUpdatingMangas ->
+        partial.copy(isShowingUpdatingMangas = isShowingUpdatingMangas)
     }
+        .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), State())
 
-    private fun List<Manga>.toUpcomingUIModels(): ImmutableList<UpcomingUIModel> {
+    private fun List<Manga>.toUpcomingUIModels(): List<UpcomingUIModel> {
         var mangaCount = 0
         return fastMap { UpcomingUIModel.Item(it) }
             .insertSeparatorsReversed { before, after ->
                 if (after != null) mangaCount++
 
-                val beforeDate = before?.manga?.expectedNextUpdate?.toLocalDate()
-                val afterDate = after?.manga?.expectedNextUpdate?.toLocalDate()
+                val beforeDate = before?.manga
+                    ?.expectedNextUpdate
+                    ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                    ?.date
+                val afterDate = after?.manga
+                    ?.expectedNextUpdate
+                    ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                    ?.date
 
                 if (beforeDate != afterDate && afterDate != null) {
                     UpcomingUIModel.Header(afterDate, mangaCount).also { mangaCount = 0 }
@@ -143,32 +148,49 @@ class UpcomingViewModel(
                     null
                 }
             }
-            .toImmutableList()
+            .toList()
     }
 
-    private fun List<UpcomingUIModel>.toEvents(): ImmutableMap<LocalDate, Int> =
-        filterIsInstance<UpcomingUIModel.Header>()
+    private fun List<UpcomingUIModel>.toEvents(): Map<LocalDate, Int> {
+        return filterIsInstance<UpcomingUIModel.Header>()
             .associate { it.date to it.mangaCount }
-            .toImmutableMap()
+            .toMap()
+    }
 
-    private fun List<UpcomingUIModel>.getHeaderIndexes(): ImmutableMap<LocalDate, Int> =
-        fastMapIndexedNotNull { index, upcomingUIModel ->
-            if (upcomingUIModel is UpcomingUIModel.Header) upcomingUIModel.date to index else null
+    private fun List<UpcomingUIModel>.getHeaderIndexes(): Map<LocalDate, Int> {
+        return fastMapIndexedNotNull { index, upcomingUIModel ->
+            if (upcomingUIModel is UpcomingUIModel.Header) {
+                upcomingUIModel.date to index
+            } else {
+                null
+            }
         }
             .toMap()
-            .toImmutableMap()
-
-    fun setSelectedYearMonth(yearMonth: YearMonth) {
-        selectedYearMonth.update { yearMonth }
+            .toMap()
     }
 
-    // KMK -->
+    fun setSelectedYearMonth(yearMonth: YearMonth) {
+        selectedYearMonth.value = yearMonth
+    }
+
+    private fun getUpcomingItemPreferenceFlow(): Flow<ItemPreferences> {
+        return combine(
+            upcomingPreferences.filterExcludedCategories.changes(),
+            upcomingPreferences.filterIncludedCategories.changes(),
+        ) { excluded, included ->
+            ItemPreferences(
+                filterExcludedCategories = excluded,
+                filterIncludedCategories = included,
+            )
+        }
+    }
+
     fun resetDialog() {
-        dialog.update { null }
+        dialog.value = null
     }
 
     fun showFilterDialog() {
-        dialog.update { Dialog.FilterSheet }
+        dialog.value = Dialog.FilterSheet
     }
 
     fun cycleCategory(category: Category) {
@@ -183,51 +205,45 @@ class UpcomingViewModel(
         }
     }
 
-    val restriction by lazy { libraryPreferences.autoUpdateMangaRestrictions().get() }
-
-    fun showUpdatingMangas() {
-        updatingState.update { it.copy(isShowing = true) }
-    }
-
-    fun hideUpdatingMangas() {
-        updatingState.update { it.copy(isShowing = false) }
-    }
-
     @Immutable
     private data class ItemPreferences(
-        val excludedCategories: List<Long>,
-        val includedCategories: List<Long>,
-    ) {
-        val hasActiveFilters = excludedCategories.isNotEmpty() || includedCategories.isNotEmpty()
-    }
-
-    private data class UpdatingState(
-        val isShowing: Boolean = false,
-        val isLoading: Boolean = true,
-        val items: ImmutableList<UpcomingUIModel> = persistentListOf(),
-    )
-    // KMK <--
-
-    data class State(
-        val selectedYearMonth: YearMonth = YearMonth.now(),
-        val items: ImmutableList<UpcomingUIModel> = persistentListOf(),
-        val events: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        val headerIndexes: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        // KMK -->
-        val hasActiveFilters: Boolean = false,
-        val dialog: Dialog? = null,
-        val isLoadingUpcoming: Boolean = true,
-        val isShowingUpdatingMangas: Boolean = false,
-        val updatingItems: ImmutableList<UpcomingUIModel> = persistentListOf(),
-        val updatingEvents: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        val updatingHeaderIndexes: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        val isLoadingUpdating: Boolean = true,
-        // KMK <--
+        val filterExcludedCategories: List<Long>,
+        val filterIncludedCategories: List<Long>,
     )
 
     // KMK -->
+    val restriction by lazy { libraryPreferences.autoUpdateMangaRestrictions.get() }
+
+    fun showUpdatingMangas() {
+        showingUpdatingMangas.value = true
+    }
+
+    fun hideUpdatingMangas() {
+        showingUpdatingMangas.value = false
+    }
+    // KMK <--
+
+    data class State(
+        val selectedYearMonth: YearMonth = Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .date
+            .yearMonth,
+        val items: List<UpcomingUIModel> = listOf(),
+        val events: Map<LocalDate, Int> = mapOf(),
+        val headerIndexes: Map<LocalDate, Int> = mapOf(),
+        // KMK -->
+        val isLoadingUpcoming: Boolean = true,
+        val isShowingUpdatingMangas: Boolean = false,
+        val updatingItems: List<UpcomingUIModel> = listOf(),
+        val updatingEvents: Map<LocalDate, Int> = mapOf(),
+        val updatingHeaderIndexes: Map<LocalDate, Int> = mapOf(),
+        val isLoadingUpdating: Boolean = true,
+        // KMK <--
+        val hasActiveFilters: Boolean = false,
+        val dialog: Dialog? = null,
+    )
+
     sealed interface Dialog {
         data object FilterSheet : Dialog
     }
-    // KMK <--
 }

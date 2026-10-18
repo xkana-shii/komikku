@@ -1,8 +1,8 @@
 plugins {
     id("mihon.library")
-    kotlin("android")
     kotlin("plugin.serialization")
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.metro)
 }
 
 android {
@@ -46,10 +46,14 @@ dependencies {
     implementation(projects.sourceApi)
     implementation(projects.domain)
     implementation(projects.core.common)
+    implementation(projects.core.metro)
+
+    implementation(libs.metro.runtime)
 
     implementation(kotlinx.serialization.json)
     implementation(kotlinx.serialization.json.okio)
     implementation(kotlinx.serialization.protobuf)
+    implementation(kotlinx.datetime)
 
     api(libs.bundles.sqldelight)
 

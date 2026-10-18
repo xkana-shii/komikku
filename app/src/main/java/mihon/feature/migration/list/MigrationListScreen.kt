@@ -10,10 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.browse.migration.search.MigrateSearchScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
@@ -49,7 +48,16 @@ class MigrationListScreen(
         // KMK -->
         val singleEntryNoSmartSearch = mangaIds.size == 1 && !isSmartSearchSingleEntry
         // KMK <--
-        val viewModel = viewModel { MigrationListViewModel(mangaIds, extraSearchQuery, /* KMK --> */ singleEntryNoSmartSearch /* KMK <-- */) }
+        val viewModel =
+            assistedMetroViewModel<MigrationListViewModel, MigrationListViewModel.Factory> {
+                create(
+                    mangaIds = mangaIds,
+                    extraSearchQuery = extraSearchQuery,
+                    // KMK -->
+                    runManually = singleEntryNoSmartSearch,
+                    // KMK <--
+                )
+            }
         val state by viewModel.state.collectAsState()
         val context = LocalContext.current
 

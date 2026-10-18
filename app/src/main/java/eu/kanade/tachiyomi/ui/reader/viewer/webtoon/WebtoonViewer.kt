@@ -14,8 +14,6 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.WebtoonLayoutManager
-import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -25,11 +23,8 @@ import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
+import mihon.app.di.appGraph
 import tachiyomi.core.common.util.system.logcat
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.Duration
@@ -43,15 +38,14 @@ class WebtoonViewer(
     private val tapByPage: Boolean = false,
     // KMK -->
     @param:ColorInt private val seedColor: Int? = null,
-    private val readerPreferences: ReaderPreferences = Injekt.get(),
     // KMK <--
 ) : Viewer {
 
-    val downloadManager: DownloadManager by injectLazy()
+    val graph by lazy { activity.appGraph }
+    val downloadManager by lazy { graph.downloadManager }
+    val readerPreferences by lazy { graph.readerPreferences }
 
     private val scope = MainScope()
-
-    private val sourcePreferences: SourcePreferences = Injekt.get()
 
     /**
      * Recycler view used by this viewer.
@@ -76,7 +70,7 @@ class WebtoonViewer(
     /**
      * Configuration used by this viewer, like allow taps, or crop image borders.
      */
-    val config = WebtoonConfig(scope)
+    val config = WebtoonConfig(scope, readerPreferences)
 
     /**
      * Adapter of the recycler view.
@@ -98,13 +92,12 @@ class WebtoonViewer(
         // KMK -->
         readerPreferences
             // KMK <--
-            .readerHideThreshold()
+            .readerHideThreshold
             .get()
             .threshold
 
-    override val automationInProgress = MutableStateFlow(false)
-
     init {
+        recycler.sidePaddingPercent = config.sidePadding
         recycler.setItemViewCacheSize(RECYCLER_VIEW_CACHE_SIZE)
         recycler.isVisible = false // Don't let the recycler layout yet
         recycler.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
@@ -133,13 +126,11 @@ class WebtoonViewer(
                     val lastItem = adapter.items.getOrNull(lastIndex)
                     if (lastItem is ChapterTransition.Next && lastItem.to == null) {
                         activity.showMenu()
-                        automationInProgress.value = false
                     }
                 }
             },
         )
         recycler.tapListener = { event ->
-            automationInProgress.value = false
             val viewPosition = IntArray(2)
             recycler.getLocationOnScreen(viewPosition)
             val viewPositionRelativeToWindow = IntArray(2)
@@ -170,6 +161,7 @@ class WebtoonViewer(
         }
 
         config.imagePropertyChangedListener = {
+            recycler.sidePaddingPercent = config.sidePadding
             refreshAdapter()
         }
 
@@ -187,7 +179,7 @@ class WebtoonViewer(
         }
 
         config.webtoonScaleTypeChangedListener = f@{ scaleType ->
-            if (!isContinuous && !readerPreferences.longStripGapSmartScale().get()) return@f
+            if (!isContinuous && !readerPreferences.longStripGapSmartScale.get()) return@f
 
             recycler.post {
                 recycler.doOnLayout doOnLayout@{
@@ -226,10 +218,6 @@ class WebtoonViewer(
 
         frame.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
         frame.addView(recycler)
-
-        if (config.autoScrollEnabled) {
-            automateWebtoon(activity, recycler, adapter, automationInProgress, config, scope)
-        }
     }
 
     private fun checkAllowPreload(page: ReaderPage?): Boolean {
@@ -276,15 +264,14 @@ class WebtoonViewer(
         logcat { "onPageSelected: ${page.number}/${pages.size}" }
         activity.onPageSelected(page)
 
-        // Preload next chapter once we're within the last 20 pages of the current chapter
-        val preloadThreshold = if (sourcePreferences.devOptionsEnabled().get()) 20 else 5
-        val inPreloadRange = pages.size - page.number < preloadThreshold
+        // Preload next chapter once we're within the last 5 pages of the current chapter
+        val inPreloadRange = pages.size - page.number < 5
         if (inPreloadRange && allowPreload && page.chapter == adapter.currentChapter) {
             logcat { "Request preload next chapter because we're at page ${page.number} of ${pages.size}" }
             val nextItem = adapter.items.getOrNull(adapter.items.size - 1)
             val transitionChapter = (nextItem as? ChapterTransition.Next)?.to ?: (nextItem as?ReaderPage)?.chapter
             if (transitionChapter != null) {
-                logcat { "Requesting to preload chapter ${transitionChapter.chapter.chapter_number}" }
+                logcat { "Requesting to preload chapter ${transitionChapter.chapter.chapterNumber}" }
                 activity.requestPreloadChapter(transitionChapter)
             }
         }

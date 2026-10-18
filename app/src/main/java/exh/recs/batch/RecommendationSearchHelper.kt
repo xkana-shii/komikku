@@ -5,6 +5,7 @@ import android.net.wifi.WifiManager
 import android.os.PowerManager
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.source.model.SManga
@@ -36,17 +37,19 @@ import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.model.Track
-import uy.kohesive.injekt.injectLazy
 import java.io.Serializable
 import java.util.Collections
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-class RecommendationSearchHelper(val context: Context) {
-    private val getLibraryManga: GetLibraryManga by injectLazy()
-    private val getTracks: GetTracks by injectLazy()
-    private val networkToLocalManga: NetworkToLocalManga by injectLazy()
-    private val preferences: SourcePreferences by injectLazy()
+@Inject
+class RecommendationSearchHelper(
+    val context: Context,
+    private val getLibraryManga: GetLibraryManga,
+    private val getTracks: GetTracks,
+    private val networkToLocalManga: NetworkToLocalManga,
+    private val preferences: SourcePreferences,
+) {
 
     private var wifiLock: WifiManager.WifiLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
@@ -71,7 +74,7 @@ class RecommendationSearchHelper(val context: Context) {
     }
 
     private suspend fun beginSearch(mangaList: List<Manga>) {
-        val flags = preferences.recommendationSearchFlags().get()
+        val flags = preferences.recommendationSearchFlags.get()
         val libraryManga = getLibraryManga.await()
         val tracks = getTracks.await()
 
@@ -195,7 +198,7 @@ class RecommendationSearchHelper(val context: Context) {
         libraryManga: List<LibraryManga>,
         tracks: List<Track>,
     ): List<SManga> {
-        val flags = preferences.recommendationSearchFlags().get()
+        val flags = preferences.recommendationSearchFlags.get()
 
         if (!SearchFlags.hasHideLibraryResults(flags)) {
             return this

@@ -13,15 +13,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * Configuration used by webtoon viewers.
  */
 class WebtoonConfig(
     scope: CoroutineScope,
-    readerPreferences: ReaderPreferences = Injekt.get(),
+    readerPreferences: ReaderPreferences,
 ) : ViewerConfig(readerPreferences, scope) {
 
     var themeChangedListener: (() -> Unit)? = null
@@ -48,7 +46,7 @@ class WebtoonConfig(
 
     var pinchToZoomChangedListener: ((Boolean) -> Unit)? = null
 
-    var webtoonScaleType = readerPreferences.webtoonScaleType().get()
+    var webtoonScaleType = readerPreferences.webtoonScaleType.get()
         private set
 
     var webtoonScaleTypeChangedListener: ((ReaderPreferences.WebtoonScaleType) -> Unit)? = null
@@ -61,94 +59,86 @@ class WebtoonConfig(
         private set
 
     // SY <--
-    var autoScrollEnabled = readerPreferences.autoScroll().get()
-    var autoScrollSpeed = readerPreferences.autoScrollSpeed().get()
-
     init {
-        readerPreferences.cropBordersWebtoon()
+        readerPreferences.cropBordersWebtoon
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.webtoonSidePadding()
+        readerPreferences.webtoonSidePadding
             .register({ sidePadding = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigationModeWebtoon()
+        readerPreferences.navigationModeWebtoon
             .register({ navigationMode = it }, { updateNavigation(it) })
 
-        readerPreferences.webtoonNavInverted()
+        readerPreferences.webtoonNavInverted
             .register({ tappingInverted = it }, { navigator.invertMode = it })
-        readerPreferences.webtoonNavInverted().changes()
+        readerPreferences.webtoonNavInverted.changes()
             .drop(1)
             .onEach { navigationModeChangedListener?.invoke() }
             .launchIn(scope)
         // KMK -->
-        readerPreferences.smallerTapZone().changes()
+        readerPreferences.smallerTapZone.changes()
             .drop(1)
             .onEach { updateNavigation(navigationMode) }
             .launchIn(scope)
         // KMK <--
 
-        readerPreferences.dualPageSplitWebtoon()
+        readerPreferences.dualPageSplitWebtoon
             .register({ dualPageSplit = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.dualPageInvertWebtoon()
+        readerPreferences.dualPageInvertWebtoon
             .register({ dualPageInvert = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.dualPageRotateToFitWebtoon()
+        readerPreferences.dualPageRotateToFitWebtoon
             .register(
                 { dualPageRotateToFit = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.dualPageRotateToFitInvertWebtoon()
+        readerPreferences.dualPageRotateToFitInvertWebtoon
             .register(
                 { dualPageRotateToFitInvert = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.webtoonDisableZoomOut()
+        readerPreferences.webtoonDisableZoomOut
             .register(
                 { zoomOutDisabled = it },
                 { zoomPropertyChangedListener?.invoke(it) },
             )
 
-        readerPreferences.webtoonDoubleTapZoomEnabled()
+        readerPreferences.webtoonDoubleTapZoomEnabled
             .register(
                 { doubleTapZoom = it },
                 { doubleTapZoomChangedListener?.invoke(it) },
             )
 
         // KMK -->
-        readerPreferences.webtoonPinchToZoomEnabled()
+        readerPreferences.webtoonPinchToZoomEnabled
             .register(
                 { pinchToZoom = it },
                 { pinchToZoomChangedListener?.invoke(it) },
             )
 
-        readerPreferences.webtoonScaleType()
+        readerPreferences.webtoonScaleType
             .register(
                 { webtoonScaleType = it },
                 { webtoonScaleTypeChangedListener?.invoke(it) },
             )
         // KMK <--
 
-        readerPreferences.readerTheme().changes()
+        readerPreferences.readerTheme.changes()
             .drop(1)
             .distinctUntilChanged()
             .onEach { themeChangedListener?.invoke() }
             .launchIn(scope)
 
         // SY -->
-        readerPreferences.cropBordersContinuousVertical()
+        readerPreferences.cropBordersContinuousVertical
             .register({ continuousCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.pageTransitionsWebtoon()
+        readerPreferences.pageTransitionsWebtoon
             .register({ usePageTransitions = it }, { imagePropertyChangedListener?.invoke() })
         // SY <--
-        readerPreferences.autoScroll()
-            .register({ autoScrollEnabled = it })
-
-        readerPreferences.autoScrollSpeed()
-            .register({ autoScrollSpeed = it })
     }
 
     override var navigator: ViewerNavigation = defaultNavigation()
@@ -157,17 +147,17 @@ class WebtoonConfig(
         }
 
     override fun defaultNavigation(): ViewerNavigation {
-        return LNavigation()
+        return LNavigation(readerPreferences)
     }
 
     override fun updateNavigation(navigationMode: Int) {
         this.navigator = when (navigationMode) {
             0 -> defaultNavigation()
-            1 -> LNavigation()
-            2 -> KindlishNavigation()
-            3 -> EdgeNavigation()
-            4 -> RightAndLeftNavigation()
-            5 -> DisabledNavigation()
+            1 -> LNavigation(readerPreferences)
+            2 -> KindlishNavigation(readerPreferences)
+            3 -> EdgeNavigation(readerPreferences)
+            4 -> RightAndLeftNavigation(readerPreferences)
+            5 -> DisabledNavigation(readerPreferences)
             else -> defaultNavigation()
         }
         navigationModeChangedListener?.invoke()

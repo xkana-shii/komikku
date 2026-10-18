@@ -3,7 +3,7 @@ package tachiyomi.domain.updates.model
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.model.MangaCover
-import uy.kohesive.injekt.injectLazy
+import kotlin.time.Instant
 
 data class UpdatesWithRelations(
     val mangaId: Long,
@@ -19,16 +19,19 @@ data class UpdatesWithRelations(
     // KMK -->
     val bookmarkColor: BookmarkColor,
     // KMK <--
-    val lastPageRead: Long,
+    val lastPageRead: Int,
     val sourceId: Long,
-    val dateFetch: Long,
+    val dateFetch: Instant,
     val coverData: MangaCover,
 ) {
     // SY -->
-    val mangaTitle: String = getCustomMangaInfo.get(mangaId)?.title ?: ogMangaTitle
+    // KMK --> lazy so the bridge resolves on first access
+    val mangaTitle: String by lazy { getCustomMangaInfo?.get(mangaId)?.title ?: ogMangaTitle }
+    // KUN <--
 
     companion object {
-        private val getCustomMangaInfo: GetCustomMangaInfo by injectLazy()
+        private val getCustomMangaInfo: GetCustomMangaInfo?
+            get() = GetCustomMangaInfo.getInstanceOrNull()
     }
     // SY <--
 }

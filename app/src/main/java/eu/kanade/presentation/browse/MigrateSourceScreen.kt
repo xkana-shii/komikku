@@ -8,14 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowDownward
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.NewReleases
-import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -32,9 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.model.installedExtension
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.components.AnimatedFloatingSearchBox
@@ -42,9 +37,14 @@ import eu.kanade.presentation.components.SOURCE_SEARCH_BOX_HEIGHT
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceViewModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
-import exh.source.ExhPreferences
 import exh.source.eHentaiSourceIds
-import kotlinx.collections.immutable.ImmutableList
+import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.ArrowDownward
+import mihon.icons.materialsymbols.rounded.ArrowUpward
+import mihon.icons.materialsymbols.rounded.Numbers
+import mihon.icons.materialsymbols.rounded.SortByAlpha
+import mihon.icons.materialsymbols.rounded.Verified
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -58,8 +58,6 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.secondaryItemAlpha
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun MigrateSourceScreen(
@@ -105,7 +103,7 @@ fun MigrateSourceScreen(
 
 @Composable
 private fun MigrateSourceList(
-    list: ImmutableList<Pair<Source, Long>>,
+    list: List<Pair<Source, Long>>,
     contentPadding: PaddingValues,
     onClickItem: (Source) -> Unit,
     onLongClickItem: (Source) -> Unit,
@@ -121,7 +119,8 @@ private fun MigrateSourceList(
     // KMK -->
     val lazyListState = rememberLazyListState()
     var filterObsoleteSource by rememberSaveable { mutableStateOf(false) }
-    val isHentaiEnabled = remember { Injekt.get<ExhPreferences>().isHentaiEnabled().get() }
+    val context = LocalContext.current
+    val isHentaiEnabled = remember { context.appGraph.exhPreferences.isHentaiEnabled.get() }
 
     BackHandler(enabled = !state.searchQuery.isNullOrBlank()) {
         onChangeSearchQuery("")
@@ -146,7 +145,7 @@ private fun MigrateSourceList(
             // KMK -->
             IconButton(onClick = { filterObsoleteSource = !filterObsoleteSource }) {
                 Icon(
-                    Icons.Outlined.NewReleases,
+                    MaterialSymbols.Rounded.Verified,
                     contentDescription = stringResource(MR.strings.ext_obsolete),
                     tint = MaterialTheme.colorScheme.error
                         .takeIf { filterObsoleteSource } ?: LocalContentColor.current,
@@ -156,11 +155,11 @@ private fun MigrateSourceList(
             IconButton(onClick = onToggleSortingMode) {
                 when (sortingMode) {
                     SetMigrateSorting.Mode.ALPHABETICAL -> Icon(
-                        Icons.Outlined.SortByAlpha,
+                        MaterialSymbols.Rounded.SortByAlpha,
                         contentDescription = stringResource(MR.strings.action_sort_alpha),
                     )
                     SetMigrateSorting.Mode.TOTAL -> Icon(
-                        Icons.Outlined.Numbers,
+                        MaterialSymbols.Rounded.Numbers,
                         contentDescription = stringResource(MR.strings.action_sort_count),
                     )
                 }
@@ -168,11 +167,11 @@ private fun MigrateSourceList(
             IconButton(onClick = onToggleSortingDirection) {
                 when (sortingDirection) {
                     SetMigrateSorting.Direction.ASCENDING -> Icon(
-                        Icons.Outlined.ArrowUpward,
+                        MaterialSymbols.Rounded.ArrowUpward,
                         contentDescription = stringResource(MR.strings.action_asc),
                     )
                     SetMigrateSorting.Direction.DESCENDING -> Icon(
-                        Icons.Outlined.ArrowDownward,
+                        MaterialSymbols.Rounded.ArrowDownward,
                         contentDescription = stringResource(MR.strings.action_desc),
                     )
                 }
@@ -245,14 +244,13 @@ private fun MigrateSourceItem(
     onLongClickItem: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>()
     BaseSourceItem(
         modifier = modifier,
         source = source,
         showLanguageInContent = source.lang != "",
         onClickItem = onClickItem,
         onLongClickItem = onLongClickItem,
-        icon = { SourceIcon(source = source) },
+        icon = { SourceIcon(source = source, modifier = Modifier.size(48.dp)) },
         action = {
             BadgeGroup {
                 Badge(text = "$count")
@@ -274,16 +272,11 @@ private fun MigrateSourceItem(
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val showFlags = uiPreferences.showFlags().get()
                     if (sourceLangString != null) {
                         Text(
                             modifier = Modifier.secondaryItemAlpha(),
-                            text = if (showFlags) {
-                                /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
-                                    sourceLangString
-                            } else {
-                                sourceLangString
-                            },
+                            text = /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
+                                sourceLangString,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall,

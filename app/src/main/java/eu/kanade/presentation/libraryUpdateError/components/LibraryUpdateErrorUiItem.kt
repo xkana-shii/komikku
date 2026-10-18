@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
@@ -32,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.libraryUpdateError.LibraryUpdateErrorItem
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Delete
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateErrorWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.ListGroupHeader
@@ -215,7 +215,7 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
         contentAlignment = alignment,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Delete,
+            imageVector = MaterialSymbols.Rounded.Delete,
             contentDescription = stringResource(MR.strings.action_delete),
             tint = MaterialTheme.colorScheme.onErrorContainer,
         )
