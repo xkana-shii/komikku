@@ -1,29 +1,28 @@
 package eu.kanade.domain.track.interactor
 
 import android.content.Context
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.model.toDomainTrack
-import eu.kanade.domain.track.service.DelayedTrackingUpdateJob
+import eu.kanade.domain.track.service.DelayedTrackingUpdateWorker
 import eu.kanade.domain.track.store.DelayedTrackingStore
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.mdlist.MdList
 import exh.md.utils.FollowStatus
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import logcat.LogPriority
-import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.track.interactor.GetTracks
-import tachiyomi.domain.track.interactor.InsertTrack
+import tachiyomi.domain.track.interactor.UpsertTrack
 
+@Inject
 class TrackChapter(
     private val getTracks: GetTracks,
     private val trackerManager: TrackerManager,
-    private val insertTrack: InsertTrack,
+    private val upsertTrack: UpsertTrack,
     private val delayedTrackingStore: DelayedTrackingStore,
-    // KMK -->
-    private val syncCategoryTrackStatus: SyncCategoryTrackStatus? = null,
-    // KMK <--
 ) {
 
     /**
@@ -31,30 +30,18 @@ class TrackChapter(
      * Then update chapter progress to all trackers.
      * This does not update local chapters' read status.
      */
-    suspend fun await(
-        context: Context,
-        mangaId: Long,
-        chapterNumber: Double,
-        setupJobOnFailure: Boolean = true,
-    ) {
-        withNonCancellableContext {
+    suspend fun await(context: Context, mangaId: Long, chapterNumber: Double, setupJobOnFailure: Boolean = true) {
+        coroutineScope {
             val tracks = getTracks.await(mangaId)
-            if (
-                tracks.isEmpty() ||
-                !chapterNumber.isFinite() ||
-                chapterNumber < 0
-            ) {
-                return@withNonCancellableContext
-            }
+            if (tracks.isEmpty()) return@coroutineScope
 
             tracks.mapNotNull { track ->
                 val service = trackerManager.get(track.trackerId)
-
                 if (
                     service == null ||
                     !service.isLoggedIn ||
-                    chapterNumber <= track.lastChapterRead ||
-                    (service is MdList && track.status == FollowStatus.UNFOLLOWED.long)
+                    chapterNumber <= track.lastChapterRead /* SY --> */ ||
+                    (service is MdList && track.status == FollowStatus.UNFOLLOWED.long)/* SY <-- */
                 ) {
                     return@mapNotNull null
                 }
@@ -62,34 +49,17 @@ class TrackChapter(
                 async {
                     runCatching {
                         try {
-                            val updatedTrack = service
-                                .refresh(track.toDbTrack())
+                            val updatedTrack = service.refresh(track.toDbTrack())
                                 .toDomainTrack(idRequired = true)!!
-                                .let {
-                                    it.copy(
-                                        lastChapterRead = maxOf(
-                                            it.lastChapterRead,
-                                            chapterNumber,
-                                        ),
-                                    )
-                                }
-
-                            val result = service
-                                .update(updatedTrack.toDbTrack(), true)
-                                .toDomainTrack(idRequired = true)!!
-
-                            insertTrack.await(result)
+                                .copy(lastChapterRead = chapterNumber)
+                            service.update(updatedTrack.toDbTrack(), true)
+                            upsertTrack.await(updatedTrack)
                             delayedTrackingStore.remove(track.id)
                         } catch (e: Exception) {
-                            delayedTrackingStore.add(
-                                track.id,
-                                chapterNumber,
-                            )
-
+                            delayedTrackingStore.add(track.id, chapterNumber)
                             if (setupJobOnFailure) {
-                                DelayedTrackingUpdateJob.setupTask(context)
+                                DelayedTrackingUpdateWorker.setupTask(context)
                             }
-
                             throw e
                         }
                     }
@@ -97,15 +67,7 @@ class TrackChapter(
             }
                 .awaitAll()
                 .mapNotNull { it.exceptionOrNull() }
-                .forEach {
-                    logcat(
-                        priority = LogPriority.WARN,
-                        throwable = it,
-                    )
-                }
-            // KMK --> Uses the just-persisted local values; it does not make a second tracker request.
-            syncCategoryTrackStatus?.await(mangaId)
-            // KMK <--
+                .forEach { logcat(LogPriority.WARN, it) }
         }
     }
 }

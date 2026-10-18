@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.data.SyncStatus
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
@@ -11,27 +12,24 @@ import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notify
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
-import eu.kanade.tachiyomi.R as AppR
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 import tachiyomi.i18n.R as I18nR
 import tachiyomi.i18n.sy.R as SyR
 
-class SyncNotifier(private val context: Context) {
-
-    private val preferences: SecurityPreferences by injectLazy()
-
+class SyncNotifier(
+    private val context: Context,
+    private val preferences: SecurityPreferences,
     // KMK -->
-    private val syncStatus: SyncStatus = Injekt.get()
+    private val syncStatus: SyncStatus,
     // KMK <--
+) {
 
     private val progressNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_SYNC_LIBRARY,
     ) {
-        setSmallIcon(AppR.drawable.ic_komikku)
-        setColor(ContextCompat.getColor(context, AppR.color.ic_launcher))
-        setLargeIcon(BitmapFactory.decodeResource(context.resources, AppR.drawable.komikku))
+        setSmallIcon(R.drawable.ic_komikku)
+        setColor(ContextCompat.getColor(context, R.color.ic_launcher))
+        setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.komikku))
         setAutoCancel(false)
         setOngoing(true)
         setOnlyAlertOnce(true)
@@ -40,9 +38,9 @@ class SyncNotifier(private val context: Context) {
     private val completeNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_SYNC_LIBRARY,
     ) {
-        setSmallIcon(AppR.drawable.ic_komikku)
-        setColor(ContextCompat.getColor(context, AppR.color.ic_launcher))
-        setLargeIcon(BitmapFactory.decodeResource(context.resources, AppR.drawable.komikku))
+        setSmallIcon(R.drawable.ic_komikku)
+        setColor(ContextCompat.getColor(context, R.color.ic_launcher))
+        setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.komikku))
         setAutoCancel(false)
     }
 
@@ -58,7 +56,7 @@ class SyncNotifier(private val context: Context) {
         val builder = with(progressNotificationBuilder) {
             setContentTitle(context.getString(I18nR.string.syncing_library))
 
-            if (!preferences.hideNotificationContent().get()) {
+            if (!preferences.hideNotificationContent.get()) {
                 setContentText(content)
             }
 
@@ -70,7 +68,7 @@ class SyncNotifier(private val context: Context) {
 
             clearActions()
             addAction(
-                AppR.drawable.ic_close_24dp,
+                MaterialSymbolsR.drawable.rounded_close,
                 context.getString(I18nR.string.action_cancel),
                 NotificationReceiver.cancelSyncPendingBroadcast(context, Notifications.ID_SYNC_PROGRESS),
             )

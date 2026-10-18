@@ -2,17 +2,19 @@ package eu.kanade.tachiyomi.ui.webview
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.webview.WebViewScreenContent
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.DiscordScreen
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.presentation.core.screens.LoadingScreen
 
 class WebViewScreen(
     private val url: String,
@@ -28,21 +30,21 @@ class WebViewScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
-        val viewModel = viewModel<WebViewViewModel>(
-            factory = WebViewViewModel.Factory,
-            extras = CreationExtras {
-                set(WebViewViewModel.SOURCE_ID_KEY, sourceId)
-            },
-        )
+        val viewModel =
+            assistedMetroViewModel<WebViewViewModel, WebViewViewModel.Factory> { create(sourceId = sourceId) }
+
+        val headers by viewModel.headers.collectAsState()
+        if (headers == null) {
+            LoadingScreen()
+            return
+        }
 
         WebViewScreenContent(
             onNavigateUp = { navigator.pop() },
             initialTitle = initialTitle,
             url = url,
-            headers = viewModel.headers,
-            // KMK -->
+            headers = headers.orEmpty(),
             defaultUserAgentProvider = viewModel::defaultUserAgentProvider,
-            // KMK <--
             onUrlChange = { assistUrl = it },
             onShare = { viewModel.shareWebpage(context, it) },
             onOpenInBrowser = { viewModel.openInBrowser(context, it) },

@@ -1,8 +1,8 @@
 plugins {
     id("mihon.library")
-    kotlin("android")
     kotlin("plugin.serialization")
     id("com.github.ben-manes.versions")
+    alias(libs.plugins.metro)
 }
 
 android {
@@ -24,6 +24,9 @@ dependencies {
     implementation(projects.i18nSy)
     // SY <--
 
+    implementation(libs.metro.runtime)
+    implementation(projects.core.metro)
+
     api(libs.logcat)
 
     api(libs.rxjava)
@@ -33,6 +36,7 @@ dependencies {
     api(libs.okhttp.brotli)
     api(libs.okhttp.dnsoverhttps)
     api(libs.okio)
+    api(libs.apollo)
 
     implementation(libs.image.decoder)
 

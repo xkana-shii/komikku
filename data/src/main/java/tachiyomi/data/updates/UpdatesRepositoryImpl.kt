@@ -2,6 +2,10 @@ package tachiyomi.data.updates
 
 import app.cash.sqldelight.Query
 import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.data.Database
@@ -10,60 +14,59 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.domain.updates.repository.UpdatesRepository
+import kotlin.time.Instant
 
-// KMK -->
-
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class UpdatesRepositoryImpl(
     private val database: Database,
 ) : UpdatesRepository {
 
     override suspend fun awaitWithRead(
         read: Boolean,
-        after: Long,
+        after: Instant,
         limit: Long,
     ): List<UpdatesWithRelations> {
         return getUpdatesByReadStatus(read = read, after = after, limit = limit).awaitAsList()
     }
 
     override fun subscribeAll(
-        after: Long,
+        after: Instant,
         limit: Long,
         unread: Boolean?,
         started: Boolean?,
         bookmarked: Boolean?,
         hideExcludedScanlators: Boolean,
-        // KMK -->
         includedCategories: List<Long>,
         excludedCategories: List<Long>,
-        // KMK <--
     ): Flow<List<UpdatesWithRelations>> {
-        return database.updatesViewQueries.getRecentUpdatesWithFilters(
-            after = after,
-            limit = limit,
-            // invert because unread in Kotlin -> read column in SQL
-            read = unread?.let { !it },
-            started = started?.toLong(),
-            bookmarked = bookmarked,
-            hideExcludedScanlators = hideExcludedScanlators.toLong(),
-            // KMK -->
-            includedEmpty = includedCategories.isEmpty(),
-            excludedEmpty = excludedCategories.isEmpty(),
-            includedCategories = includedCategories,
-            excludedCategories = excludedCategories,
-            // KMK <--
-            mapper = ::mapUpdatesWithRelations,
-        ).subscribeToList()
+        return database.updatesViewQueries
+            .getRecentUpdatesWithFilters(
+                after = after,
+                limit = limit,
+                read = unread?.let { !it },
+                started = started?.toLong(),
+                bookmarked = bookmarked,
+                hideExcludedScanlators = hideExcludedScanlators.toLong(),
+                includedEmpty = includedCategories.isEmpty(),
+                excludedEmpty = excludedCategories.isEmpty(),
+                includedCategories = includedCategories,
+                excludedCategories = excludedCategories,
+                mapper = ::mapUpdatesWithRelations,
+            )
+            .subscribeToList()
     }
 
     override fun subscribeWithRead(
         read: Boolean,
-        after: Long,
+        after: Instant,
         limit: Long,
     ): Flow<List<UpdatesWithRelations>> {
         return getUpdatesByReadStatus(read = read, after = after, limit = limit).subscribeToList()
     }
 
-    private fun getUpdatesByReadStatus(read: Boolean, after: Long, limit: Long): Query<UpdatesWithRelations> {
+    private fun getUpdatesByReadStatus(read: Boolean, after: Instant, limit: Long): Query<UpdatesWithRelations> {
         return if (read) {
             database.updatesViewQueries.getReadUpdates(
                 after = after,
@@ -79,6 +82,7 @@ class UpdatesRepositoryImpl(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun mapUpdatesWithRelations(
         mangaId: Long,
         mangaTitle: String,
@@ -88,14 +92,16 @@ class UpdatesRepositoryImpl(
         chapterUrl: String,
         read: Boolean,
         bookmark: Boolean,
+        // KMK -->
         bookmarkColor: Long,
-        lastPageRead: Long,
+        // KMK <--
+        lastPageRead: Int,
         sourceId: Long,
         favorite: Boolean,
         thumbnailUrl: String?,
-        coverLastModified: Long,
-        @Suppress("UNUSED_PARAMETER") dateUpload: Long,
-        dateFetch: Long,
+        coverLastModified: Instant?,
+        dateUpload: Instant?,
+        dateFetch: Instant,
         excludedScanlator: String?,
     ): UpdatesWithRelations = UpdatesWithRelations(
         mangaId = mangaId,
@@ -123,4 +129,3 @@ class UpdatesRepositoryImpl(
         ),
     )
 }
-// KMK <--

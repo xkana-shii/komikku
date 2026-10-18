@@ -4,14 +4,21 @@ import android.view.MenuItem
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.navigator.Navigator
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.databinding.DownloadListBinding
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
@@ -19,19 +26,29 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@AssistedInject
 class DownloadQueueViewModel(
-    private val downloadManager: DownloadManager = Injekt.get(),
+    private val downloadManager: DownloadManager,
     // KMK -->
-    private val navigator: Navigator? = null,
+    @Assisted private val navigator: Navigator?,
     // KMK <--
 ) : ViewModel() {
+
+    @AssistedFactory
+    @ManualViewModelAssistedFactoryKey
+    @ContributesIntoMap(AppScope::class)
+    interface Factory : ManualViewModelAssistedFactory {
+        fun create(navigator: Navigator?): DownloadQueueViewModel
+    }
 
     val state: StateFlow<List<DownloadHeaderItem>> = downloadManager.queueState
         .map { downloads ->
@@ -43,6 +60,7 @@ class DownloadQueueViewModel(
                     }
                 }
         }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), emptyList())
 
     lateinit var controllerBinding: DownloadListBinding
@@ -154,19 +172,19 @@ class DownloadQueueViewModel(
     }
 
     fun pauseDownloads() {
-        downloadManager.pauseDownloads()
+        viewModelScope.launch { downloadManager.pauseDownloads() }
     }
 
     fun clearQueue() {
-        downloadManager.clearQueue()
+        viewModelScope.launch { downloadManager.clearQueue() }
     }
 
     fun reorder(downloads: List<Download>) {
-        downloadManager.reorderQueue(downloads)
+        viewModelScope.launch { downloadManager.reorderQueue(downloads) }
     }
 
     fun cancel(downloads: List<Download>) {
-        downloadManager.cancelQueuedDownloads(downloads)
+        viewModelScope.launch { downloadManager.cancelQueuedDownloads(downloads) }
     }
 
     // KMK -->
@@ -175,7 +193,7 @@ class DownloadQueueViewModel(
     }
     // KMK <--
 
-    fun <R : Comparable<R>> reorderQueue(selector: (DownloadItem) -> R, reverse: Boolean = false) {
+    fun <R : Comparable<R>> reorderQueue(selector: (DownloadItem) -> R?, reverse: Boolean = false) {
         val adapter = adapter ?: return
         val newDownloads = mutableListOf<Download>()
         adapter.headerItems.forEach { headerItem ->
@@ -221,14 +239,11 @@ class DownloadQueueViewModel(
      */
     private fun launchProgressJob(download: Download) {
         val job = viewModelScope.launch {
-            while (download.pages == null) {
-                delay(50)
-            }
-
-            val progressFlows = download.pages!!.map(Page::progressFlow)
+            val pages = download.pagesFlow.filterNotNull().first()
+            val progressFlows = pages.map(Page::progressFlow)
             combine(progressFlows, Array<Int>::sum)
                 .distinctUntilChanged()
-                .debounce(50)
+                .debounce(50.milliseconds)
                 .collectLatest {
                     onUpdateProgress(download)
                 }

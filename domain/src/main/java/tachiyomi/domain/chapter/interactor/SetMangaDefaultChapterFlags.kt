@@ -1,57 +1,41 @@
 package tachiyomi.domain.chapter.interactor
 
-import tachiyomi.core.common.util.lang.withNonCancellableContext
+import dev.zacsweers.metro.Inject
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.repository.MangaRepository
 
+@Inject
 class SetMangaDefaultChapterFlags(
     private val libraryPreferences: LibraryPreferences,
     private val setMangaChapterFlags: SetMangaChapterFlags,
-    private val mangaRepository: MangaRepository,
+    private val getFavorites: GetFavorites,
 ) {
 
     suspend fun await(manga: Manga) {
-        withNonCancellableContext {
-            with(libraryPreferences) {
-                setMangaChapterFlags.awaitSetAllFlags(
-                    mangaIds = listOf(manga.id),
-                    unreadFilter = filterChapterByRead().get(),
-                    downloadedFilter = filterChapterByDownloaded().get(),
-                    bookmarkedFilter = filterChapterByBookmarked().get(),
-                    sortingMode = sortChapterBySourceOrNumber().get(),
-                    sortingDirection = sortChapterByAscendingOrDescending().get(),
-                    displayMode = displayChapterByNameOrNumber().get(),
-                )
-            }
-        }
+        setDefaultFlags(listOf(manga.id))
     }
 
-    // KMK -->
-    /** Applies one preference snapshot without loading library manga or opening a transaction per entry. */
     suspend fun awaitAll() {
-        withNonCancellableContext {
-            mangaRepository.updateLibraryChapterFlags(
-                setMangaChapterFlags.buildAllFlags(
-                    unreadFilter = libraryPreferences.filterChapterByRead().get(),
-                    downloadedFilter = libraryPreferences.filterChapterByDownloaded().get(),
-                    bookmarkedFilter = libraryPreferences.filterChapterByBookmarked().get(),
-                    sortingMode = libraryPreferences.sortChapterBySourceOrNumber().get(),
-                    sortingDirection = libraryPreferences.sortChapterByAscendingOrDescending().get(),
-                    displayMode = libraryPreferences.displayChapterByNameOrNumber().get(),
-                ),
+        setDefaultFlags(getFavorites.await().map { it.id })
+    }
+
+    // KUN -->
+    // Ported from Mihon 2d1d2e4cab ("Rework database queries for the new schema"):
+    // apply the default flags to every library entry in a single transaction.
+    // KUN <--
+    private suspend fun setDefaultFlags(mangaIds: List<Long>) {
+        with(libraryPreferences) {
+            setMangaChapterFlags.awaitSetAllFlags(
+                mangaIds = mangaIds,
+                unreadFilter = filterChapterByRead.get(),
+                downloadedFilter = filterChapterByDownloaded.get(),
+                bookmarkedFilter = filterChapterByBookmarked.get(),
+                sortingMode = sortChapterBySourceOrNumber.get(),
+                sortingDirection = sortChapterByAscendingOrDescending.get(),
+                displayMode = displayChapterByNameOrNumber.get(),
             )
         }
     }
-
-    suspend fun setAsDefault(manga: Manga, applyToExisting: Boolean) {
-        withNonCancellableContext {
-            libraryPreferences.setChapterSettingsDefault(manga)
-            if (applyToExisting) {
-                awaitAll()
-            }
-        }
-    }
-    // KMK <--
 }

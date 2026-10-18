@@ -2,37 +2,36 @@ package eu.kanade.tachiyomi.data.updater
 
 import android.content.Context
 import android.os.Build
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.util.system.isFossBuildType
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import exh.source.ExhPreferences
-import tachiyomi.core.common.util.lang.withIOContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import tachiyomi.domain.release.interactor.GetApplicationRelease
 import tachiyomi.domain.release.service.AppUpdatePolicy
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 
+@Inject
+@SingleIn(AppScope::class)
 class AppUpdateChecker(
+    private val getApplicationRelease: GetApplicationRelease,
     // KMK -->
-    private val peekIntoPreview: Boolean = false,
+    private val exhPreferences: ExhPreferences,
     // KMK <--
 ) {
-
-    private val getApplicationRelease: GetApplicationRelease by injectLazy()
-
-    // KMK -->
-    private val exhPreferences by lazy { Injekt.get<ExhPreferences>() }
-    // KMK <--
 
     suspend fun checkForUpdate(
         context: Context,
         forceCheck: Boolean = false,
         // KMK -->
-        autoUpdate: Boolean = AppUpdatePolicy.DISABLE_AUTO_DOWNLOAD !in exhPreferences.appShouldAutoUpdate().get(),
+        peekIntoPreview: Boolean = false,
+        autoUpdate: Boolean = AppUpdatePolicy.DISABLE_AUTO_DOWNLOAD !in exhPreferences.appShouldAutoUpdate.get(),
         // KMK <--
     ): GetApplicationRelease.Result {
-        return withIOContext {
+        return withContext(Dispatchers.IO) {
             val result = getApplicationRelease.await(
                 GetApplicationRelease.Arguments(
                     isFoss = isFossBuildType,
@@ -45,21 +44,11 @@ class AppUpdateChecker(
             )
 
             // KMK -->
-            if (!peekIntoPreview) {
-                // KMK <--
-                when (result) {
-                    is GetApplicationRelease.Result.NewUpdate -> {
-                        // KMK -->
-                        AppUpdateNotifier.releasePageUrl = result.release.releaseLink
-                        // KMK <--
-                        AppUpdateNotifier(context).promptUpdate(result.release)
-                    }
+            if (!peekIntoPreview && result is GetApplicationRelease.Result.NewUpdate) {
+                AppUpdateNotifier.releasePageUrl = result.release.releaseLink
+                AppUpdateNotifier(context).promptUpdate(result.release)
 
-                    else -> {}
-                }
-
-                // KMK -->
-                if (autoUpdate && result is GetApplicationRelease.Result.NewUpdate) {
+                if (autoUpdate) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         AppUpdateDownloadJob.start(
                             context = context,
@@ -69,16 +58,16 @@ class AppUpdateChecker(
                         )
                     }
                 }
-                // KMK <--
             }
+            // KMK <--
 
             result
         }
     }
 
     // KMK -->
-    suspend fun getReleaseNotes(): GetApplicationRelease.Result {
-        return withIOContext {
+    suspend fun getReleaseNotes(peekIntoPreview: Boolean = false): GetApplicationRelease.Result {
+        return withContext(Dispatchers.IO) {
             getApplicationRelease.awaitReleaseNotes(
                 GetApplicationRelease.Arguments(
                     isFoss = isFossBuildType,
@@ -95,12 +84,14 @@ class AppUpdateChecker(
 
 val GITHUB_REPO: String by lazy { getGithubRepo() }
 
+// KMK -->
 fun getGithubRepo(peekIntoPreview: Boolean = false): String =
     if (isPreviewBuildType || peekIntoPreview) {
         "xkana-shii/komikku-preview"
     } else {
         "xkana-shii/komikku"
     }
+// KMK <--
 
 val RELEASE_TAG: String by lazy { getReleaseTag() }
 

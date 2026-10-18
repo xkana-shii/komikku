@@ -3,20 +3,20 @@ package mihon.feature.migration.list
 import androidx.annotation.FloatRange
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import exh.source.MERGED_SOURCE_ID
 import exh.util.ThrottleManager
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -29,56 +29,47 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.domain.migration.usecases.MigrateMangaUseCase
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import mihon.feature.migration.list.models.MigratingManga
 import mihon.feature.migration.list.models.MigratingManga.SearchResult
 import mihon.feature.migration.list.search.SmartSourceSearchEngine
-import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetChapterSummaryByMangaId
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
+@AssistedInject
 class MigrationListViewModel(
-    mangaIds: Collection<Long>,
-    extraSearchQuery: String?,
+    @Assisted mangaIds: Collection<Long>,
+    @Assisted extraSearchQuery: String?,
     // KMK -->
-    runManually: Boolean = false,
+    @Assisted runManually: Boolean,
     // KMK <--
-    val preferences: SourcePreferences = Injekt.get(),
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
-    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
-    private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
-    private val migrateManga: MigrateMangaUseCase = Injekt.get(),
-    private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get(),
+    val preferences: SourcePreferences,
+    private val sourceManager: SourceManager,
+    private val getManga: GetManga,
+    private val networkToLocalManga: NetworkToLocalManga,
+    private val getChapterSummaryByMangaId: GetChapterSummaryByMangaId,
+    private val migrateManga: MigrateMangaUseCase,
+    private val updateMangaFromRemote: UpdateMangaFromRemote,
 ) : ViewModel() {
 
     val state: StateFlow<MigrationListViewModel.State>
         field = MutableStateFlow<MigrationListViewModel.State>(State())
 
-    companion object {
-        val MANGA_IDS_KEY = CreationExtras.Key<Collection<Long>>()
-
-        val EXTRA_SEARCH_QUERY_KEY = CreationExtras.Key<String?>()
-
-        val Factory = viewModelFactory {
-            initializer {
-                MigrationListViewModel(
-                    mangaIds = get(MANGA_IDS_KEY)!!,
-                    extraSearchQuery = get(EXTRA_SEARCH_QUERY_KEY),
-                )
-            }
-        }
+    @AssistedFactory
+    @ManualViewModelAssistedFactoryKey
+    @ContributesIntoMap(AppScope::class)
+    interface Factory : ManualViewModelAssistedFactory {
+        fun create(mangaIds: Collection<Long>, extraSearchQuery: String?, runManually: Boolean): MigrationListViewModel
     }
 
     private val smartSearchEngine = SmartSourceSearchEngine(extraSearchQuery)
@@ -90,11 +81,11 @@ class MigrationListViewModel(
     val items
         inline get() = state.value.items
 
-    private var hideUnmatched = preferences.migrationHideUnmatched().get()
-    private var hideWithoutUpdates = preferences.migrationHideWithoutUpdates().get()
+    private var hideUnmatched = preferences.migrationHideUnmatched.get()
+    private var hideWithoutUpdates = preferences.migrationHideWithoutUpdates.get()
     // KMK -->
-    private var prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
-    private var deepSearchMode = preferences.migrationDeepSearchMode().get()
+    private var prioritizeByChapters = preferences.migrationPrioritizeByChapters.get()
+    private var deepSearchMode = preferences.migrationDeepSearchMode.get()
     // KMK <--
 
     private val navigateBackChannel = Channel<Unit>()
@@ -102,10 +93,8 @@ class MigrationListViewModel(
 
     private var migrateJob: Job? = null
 
-    val uiPreferences = Injekt.get<UiPreferences>()
-
     init {
-        viewModelScope.launchIO {
+        viewModelScope.launch(Dispatchers.IO) {
             val manga = mangaIds
                 .map {
                     async {
@@ -122,7 +111,6 @@ class MigrationListViewModel(
                                 } else {
                                     null
                                 },
-                                uiPreferences = uiPreferences,
                                 // KMK <--
                             ),
                             parentContext = viewModelScope.coroutineContext,
@@ -135,26 +123,24 @@ class MigrationListViewModel(
                 }
                 .awaitAll()
                 .filterNotNull()
-            state.update { it.copy(items = manga.toImmutableList()) }
+            state.update { it.copy(items = manga.toList()) }
             // KMK -->
-            if (runManually) return@launchIO
+            if (runManually) return@launch
             // KMK <--
             runMigrations(manga)
         }
     }
 
-    private suspend fun getChapterInfo(id: Long) = getChaptersByMangaId.await(id).let { chapters ->
+    private suspend fun getChapterInfo(id: Long) = getChapterSummaryByMangaId.await(id).let { summary ->
         ChapterInfo(
-            latestChapter = chapters.maxOfOrNull { it.chapterNumber },
-            chapterCount = chapters.size,
+            latestChapter = summary.latestChapterNumber,
+            chapterCount = summary.chapterCount.toInt(),
         )
     }
 
     private suspend fun Manga.toSuccessSearchResult(): SearchResult.Success {
         val chapterInfo = getChapterInfo(id)
-        val source = sourceManager.getOrStub(source).getNameForMangaInfo(
-            uiPreferences = uiPreferences,
-        )
+        val source = sourceManager.getOrStub(source).getNameForMangaInfo()
         return SearchResult.Success(
             manga = this,
             chapterCount = chapterInfo.chapterCount,
@@ -172,7 +158,7 @@ class MigrationListViewModel(
         // val deepSearchMode = preferences.migrationDeepSearchMode().get()
         // KMK <--
 
-        val sources = preferences.migrationSources().get()
+        val sources = preferences.migrationSources.get()
             .mapNotNull { sourceManager.get(it) }
 
         for (manga in mangas) {
@@ -296,7 +282,7 @@ class MigrationListViewModel(
     fun useMangaForMigration(current: Long, target: Long, onMissingChapters: () -> Unit) {
         val migratingManga = items.find { it.manga.id == current } ?: return
         migratingManga.searchResult.value = SearchResult.Searching
-        viewModelScope.launchIO {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = migratingManga.migrationScope.async {
                 val manga = getManga.await(target) ?: return@async null
                 try {
@@ -317,8 +303,8 @@ class MigrationListViewModel(
 
             if (result == null) {
                 migratingManga.searchResult.value = SearchResult.NotFound
-                withUIContext { onMissingChapters() }
-                return@launchIO
+                withContext(Dispatchers.Main) { onMissingChapters() }
+                return@launch
             }
 
             migratingManga.searchResult.value = result.toSuccessSearchResult()
@@ -335,7 +321,7 @@ class MigrationListViewModel(
     }
 
     private fun migrateMangas(replace: Boolean) {
-        migrateJob = viewModelScope.launchIO {
+        migrateJob = viewModelScope.launch(Dispatchers.IO) {
             state.update { it.copy(dialog = Dialog.Progress(0f)) }
             val items = items
             try {
@@ -386,9 +372,9 @@ class MigrationListViewModel(
     }
 
     fun migrateNow(mangaId: Long, replace: Boolean) {
-        viewModelScope.launchIO {
-            val manga = items.find { it.manga.id == mangaId } ?: return@launchIO
-            val target = (manga.searchResult.value as? SearchResult.Success)?.manga ?: return@launchIO
+        viewModelScope.launch(Dispatchers.IO) {
+            val manga = items.find { it.manga.id == mangaId } ?: return@launch
+            val target = (manga.searchResult.value as? SearchResult.Success)?.manga ?: return@launch
             migrateManga(current = manga.manga, target = target, replace = replace)
 
             removeManga(mangaId)
@@ -398,8 +384,8 @@ class MigrationListViewModel(
     // KMK -->
     /** Cancel searching without remove it from list so user can perform manual search */
     fun cancelManga(mangaId: Long) {
-        viewModelScope.launchIO {
-            val item = items.find { it.manga.id == mangaId } ?: return@launchIO
+        viewModelScope.launch(Dispatchers.IO) {
+            val item = items.find { it.manga.id == mangaId } ?: return@launch
             item.searchingJob?.cancel()
             item.searchingJob = null
             item.searchResult.value = SearchResult.NotFound
@@ -409,8 +395,8 @@ class MigrationListViewModel(
     // KMK <--
 
     fun removeManga(mangaId: Long) {
-        viewModelScope.launchIO {
-            val item = items.find { it.manga.id == mangaId } ?: return@launchIO
+        viewModelScope.launch(Dispatchers.IO) {
+            val item = items.find { it.manga.id == mangaId } ?: return@launch
             removeManga(item)
             item.migrationScope.cancel()
             updateMigrationProgress()
@@ -418,7 +404,7 @@ class MigrationListViewModel(
     }
 
     private fun removeManga(item: MigratingManga) {
-        state.update { it.copy(items = items.toPersistentList().remove(item)) }
+        state.update { it.copy(items = items.toMutableList().apply { remove(item) }) }
     }
 
     override fun onCleared() {
@@ -459,10 +445,10 @@ class MigrationListViewModel(
     }
 
     fun updateOptions() {
-        hideUnmatched = preferences.migrationHideUnmatched().get()
-        hideWithoutUpdates = preferences.migrationHideWithoutUpdates().get()
-        prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
-        deepSearchMode = preferences.migrationDeepSearchMode().get()
+        hideUnmatched = preferences.migrationHideUnmatched.get()
+        hideWithoutUpdates = preferences.migrationHideWithoutUpdates.get()
+        prioritizeByChapters = preferences.migrationPrioritizeByChapters.get()
+        deepSearchMode = preferences.migrationDeepSearchMode.get()
     }
     // KMK <--
 
@@ -482,7 +468,7 @@ class MigrationListViewModel(
     }
 
     data class State(
-        val items: ImmutableList<MigratingManga> = persistentListOf(),
+        val items: List<MigratingManga> = listOf(),
         val finishedCount: Int = 0,
         val migrationComplete: Boolean = false,
         val dialog: Dialog? = null,

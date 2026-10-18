@@ -18,21 +18,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import eu.kanade.domain.extension.interactor.GetExtensionLanguages.Companion.getLanguageIconID
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterState
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun ExtensionFilterScreen(
@@ -71,7 +66,6 @@ private fun ExtensionFilterContent(
     onClickLang: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    val uiPreferences = Injekt.get<UiPreferences>()
     LazyColumn(
         contentPadding = contentPadding,
         // KMK -->
@@ -84,33 +78,25 @@ private fun ExtensionFilterContent(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val showFlags = uiPreferences.showFlags().get()
-                if (showFlags) {
-                    val iconResId = getLanguageIconID(language) ?: R.drawable.globe
-                    Icon(
-                        painter = painterResource(id = iconResId),
-                        tint = Color.Unspecified,
-                        contentDescription = language,
-                        modifier = Modifier
-                            .width(48.dp)
-                            .height(32.dp),
-                    )
-                }
+                val iconResId = getLanguageIconID(language) ?: R.drawable.globe
+                Icon(
+                    painter = painterResource(id = iconResId),
+                    tint = Color.Unspecified,
+                    contentDescription = language,
+                    modifier = Modifier
+                        .width(48.dp)
+                        .height(32.dp),
+                )
                 // KMK <--
-                val title = if (showFlags) {
-                    LocaleHelper.getSourceDisplayName(language, context) +
+                SwitchPreferenceWidget(
+                    modifier = Modifier.animateItem(),
+                    title = LocaleHelper.getSourceDisplayName(language, context) +
                         // KMK -->
                         (
                             " (${LocaleHelper.getDisplayName(language)})"
                                 .takeIf { language !in listOf("all", "other") } ?: ""
-                            )
+                            ),
                     // KMK <--
-                } else {
-                    LocaleHelper.getSourceDisplayName(language, context)
-                }
-                SwitchPreferenceWidget(
-                    modifier = Modifier.animateItem(),
-                    title = title,
                     checked = language in state.enabledLanguages,
                     onCheckedChanged = { onClickLang(language) },
                 )
@@ -127,7 +113,7 @@ private fun ExtensionFilterContentPreview() {
     ExtensionFilterContent(
         contentPadding = PaddingValues(),
         state = ExtensionFilterState.Success(
-            languages = persistentListOf(
+            languages = listOf(
                 "all",
                 "other",
                 "af",
@@ -242,7 +228,7 @@ private fun ExtensionFilterContentPreview() {
                 "zh",
                 "zu",
             ),
-            enabledLanguages = persistentSetOf("en"),
+            enabledLanguages = setOf("en"),
         ),
         onClickLang = {},
     )

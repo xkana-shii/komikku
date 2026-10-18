@@ -10,10 +10,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,48 +43,34 @@ fun BookmarkColorSelectionDialog(
                 modifier = Modifier.size(width = 248.dp, height = 132.dp),
             ) {
                 items(BookmarkColor.entries) { color ->
-                    val selectedColor = color in selected
+                    val isSelected = color in selected
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .background(
-                                color = color.composeColor() ?: MaterialTheme.colorScheme.surfaceVariant,
-                                shape = CircleShape,
-                            )
+                            .background(color.composeColor() ?: MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                             .border(
-                                width = if (selectedColor) 3.dp else 0.dp,
+                                width = if (isSelected) 3.dp else 0.dp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 shape = CircleShape,
                             )
-                            .clickable {
-                                onChanged(if (selectedColor) selected - color else selected + color)
-                            },
+                            .clickable { onChanged(if (isSelected) selected - color else selected + color) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        when {
-                            selectedColor -> Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = if (color == BookmarkColor.NONE) {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    Color.White
-                                },
-                            )
-                            color == BookmarkColor.NONE -> Text(
-                                text = "–",
+                        if (isSelected) {
+                            Text(
+                                text = "✓",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (color == BookmarkColor.NONE) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
                             )
+                        } else if (color == BookmarkColor.NONE) {
+                            Text("–", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(MR.strings.action_close))
-            }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_close)) }
         },
     )
 }

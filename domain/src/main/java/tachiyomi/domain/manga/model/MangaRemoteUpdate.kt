@@ -2,8 +2,8 @@ package tachiyomi.domain.manga.model
 
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.json.JsonObject
+import kotlin.time.Instant
 
-// KMK -->
 data class MangaRemoteUpdate(
     val id: Long,
     val title: String?,
@@ -16,6 +16,5 @@ data class MangaRemoteUpdate(
     val updateStrategy: UpdateStrategy,
     val memo: JsonObject,
     val initialized: Boolean,
-    val coverLastModified: Long?,
+    val coverLastModified: Instant?,
 )
-// KMK <--

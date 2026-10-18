@@ -11,12 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import eu.kanade.presentation.components.SpinnerAdapter
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.tachiyomi.databinding.EditMergedSettingsHeaderBinding
+import eu.kanade.tachiyomi.source.getOrStubOrNull
 import exh.log.xLogD
+import mihon.app.di.appGraph
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.manga.model.MergedMangaReference
-import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.sy.SYMR
-import uy.kohesive.injekt.injectLazy
 
 class EditMergedSettingsHeaderAdapter(
     private val state: EditMergedSettingsState,
@@ -25,8 +25,6 @@ class EditMergedSettingsHeaderAdapter(
     private val colorScheme: AndroidViewColorScheme,
     // KMK <--
 ) : RecyclerView.Adapter<EditMergedSettingsHeaderAdapter.HeaderViewHolder>() {
-
-    private val sourceManager: SourceManager by injectLazy()
 
     private lateinit var binding: EditMergedSettingsHeaderBinding
 
@@ -114,7 +112,15 @@ class EditMergedSettingsHeaderAdapter(
                 android.R.layout.simple_spinner_dropdown_item,
                 // KMK <--
                 mergedMangas.map {
-                    sourceManager.getOrStub(it.second.mangaSourceId).toString() + " " + it.first?.title
+                    // KUN -->
+                    // This ArrayAdapter has no coroutine scope. Read the already-loaded source
+                    // snapshot instead of blocking the main thread; while the sources are still
+                    // loading, fall back to showing the manga title alone.
+                    val sourceName = view.context.appGraph.sourceManager
+                        .getOrStubOrNull(it.second.mangaSourceId)
+                        ?.toString()
+                    if (sourceName != null) "$sourceName ${it.first?.title}" else it.first?.title.orEmpty()
+                    // KUN <--
                 },
                 // KMK -->
                 colorScheme,

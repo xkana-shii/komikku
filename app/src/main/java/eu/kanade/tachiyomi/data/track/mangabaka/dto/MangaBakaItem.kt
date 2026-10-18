@@ -21,22 +21,18 @@ data class MangaBakaItem(
     val cover: MangaBakaCover,
     val authors: List<String>?,
     val artists: List<String>?,
-    val genres: List<String>? = null,
-    val tags: List<String>? = null,
     val description: String?,
     val published: MangaBakaPublishData,
-    val status: String? = null,
-    val type: String? = null,
+    val status: String,
+    val type: String,
     val rating: Double?,
-    @SerialName("total_chapters")
-    val totalChapters: String?,
-    val state: String? = null,
+    val titles: List<MangaBakaItemTitle>?,
+    // KMK --> MangaBaka exposes relations and merged IDs on series detail responses.
     @SerialName("merged_with")
     val mergedWith: Long? = null,
-    val source: MangaBakaSources? = null,
-    val titles: List<MangaBakaItemTitle>?,
     @SerialName("relationships_v2")
     val relationships: List<MangaBakaRelationship>? = null,
+    // KMK <--
 ) {
     fun chooseBestTitle(): String {
         // based on https://mangabaka.org/pages/announcements/15-titles-v2#finding-the-title-you-want
@@ -60,48 +56,22 @@ data class MangaBakaItem(
     }
 }
 
+// KMK -->
 @Serializable
 data class MangaBakaRelationship(
     @SerialName("to_series_id") val seriesId: Long,
     @SerialName("relation_type") val relationType: String,
 )
-
-@Serializable
-data class MangaBakaSources(
-    @SerialName("manga_updates")
-    val mangaUpdates: MangaBakaStringSource? = null,
-    @SerialName("my_anime_list")
-    val myAnimeList: MangaBakaLongSource? = null,
-)
-
-@Serializable
-data class MangaBakaStringSource(
-    val id: String? = null,
-)
-
-@Serializable
-data class MangaBakaLongSource(
-    val id: Long? = null,
-)
+// KMK <--
 
 @Serializable
 data class MangaBakaCover(
-    val raw: MangaBakaRawCover,
-    val x150: MangaBakaScaledCover,
     val x250: MangaBakaScaledCover,
-    val x350: MangaBakaScaledCover,
-)
-
-@Serializable
-data class MangaBakaRawCover(
-    val url: String?,
 )
 
 @Serializable
 data class MangaBakaScaledCover(
     val x1: String?,
-    val x2: String?,
-    val x3: String?,
 )
 
 @Serializable

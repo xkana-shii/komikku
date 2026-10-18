@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -38,12 +39,12 @@ import coil3.transform.RoundedCornersTransformation
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.SpinnerAdapter
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.presentation.track.components.TrackLogoIcon
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.databinding.EditMangaDialogBinding
@@ -64,6 +65,7 @@ import exh.util.trimOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.app.di.appGraph
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
@@ -73,8 +75,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.source.local.isLocal
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun EditMangaDialog(
@@ -94,12 +94,13 @@ fun EditMangaDialog(
     ) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var binding by remember {
         mutableStateOf<EditMangaDialogBinding?>(null)
     }
     val showTrackerSelectionDialogue = remember { mutableStateOf(false) }
-    val getTracks = remember { Injekt.get<GetTracks>() }
-    val trackerManager = remember { Injekt.get<TrackerManager>() }
+    val getTracks = remember { context.appGraph.getTracks }
+    val trackerManager = remember { context.appGraph.trackerManager }
     val tracks = remember { mutableStateOf(emptyList<Pair<Track, Tracker>>()) }
 
     // KMK -->
@@ -183,7 +184,7 @@ fun EditMangaDialog(
             onDismissRequest = { showTrackerSelectionDialogue.value = false },
             onTrackerSelect = { tracker, track ->
                 scope.launch {
-                    autofillFromTracker(binding!!, track, tracker, scope, colorScheme)
+                    autofillFromTracker(binding!!, track, tracker)
                 }
             },
         )
@@ -246,6 +247,7 @@ private fun onViewCreated(
 ) {
     loadCover(
         manga,
+        context,
         binding,
         // KMK -->
         coverRatio,
@@ -389,16 +391,16 @@ private fun onViewCreated(
     binding.resetInfo.setOnClickListener { resetInfo(manga, binding, scope, colorScheme) }
     binding.autofillFromTracker.setOnClickListener {
         scope.launch {
-            getTrackers(manga, binding, context, getTracks, trackerManager, tracks, showTrackerSelectionDialogue, scope, colorScheme)
+            getTrackers(manga, binding, context, getTracks, trackerManager, tracks, showTrackerSelectionDialogue)
         }
     }
 }
 
-private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, context: Context, getTracks: GetTracks, trackerManager: TrackerManager, tracks: MutableState<List<Pair<Track, Tracker>>>, showTrackerSelectionDialogue: MutableState<Boolean>, scope: CoroutineScope, colorScheme: AndroidViewColorScheme) {
+private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, context: Context, getTracks: GetTracks, trackerManager: TrackerManager, tracks: MutableState<List<Pair<Track, Tracker>>>, showTrackerSelectionDialogue: MutableState<Boolean>) {
     tracks.value = getTracks.await(manga.id).mapNotNull { track ->
         track to (trackerManager.get(track.trackerId) ?: return@mapNotNull null)
     }
-        .filter { (_, tracker) -> tracker.isLoggedIn }
+        .filterNot { (_, tracker) -> tracker is EnhancedTracker }
 
     if (tracks.value.isEmpty()) {
         context.toast(context.stringResource(SYMR.strings.entry_not_tracked))
@@ -410,14 +412,14 @@ private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, c
         return
     }
 
-    autofillFromTracker(binding, tracks.value.first().first, tracks.value.first().second, scope, colorScheme)
+    autofillFromTracker(binding, tracks.value.first().first, tracks.value.first().second)
 }
 
 private fun setTextIfNotBlank(field: (String) -> Unit, value: String?) {
     value?.takeIf { it.isNotBlank() }?.let { field(it) }
 }
 
-private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: Track, tracker: Tracker, scope: CoroutineScope, colorScheme: AndroidViewColorScheme) {
+private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: Track, tracker: Tracker) {
     try {
         val trackerMangaMetadata = tracker.getMangaMetadata(track)
 
@@ -426,14 +428,6 @@ private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: 
         setTextIfNotBlank(binding.mangaArtist::setText, trackerMangaMetadata.artists)
         setTextIfNotBlank(binding.thumbnailUrl::setText, trackerMangaMetadata.thumbnailUrl)
         setTextIfNotBlank(binding.mangaDescription::setText, trackerMangaMetadata.description)
-        trackerMangaMetadata.tags?.takeIf { it.isNotEmpty() }?.let { tags ->
-            binding.mangaGenresTags.setChips((binding.mangaGenresTags.getTextStrings() + tags).distinct(), scope, colorScheme)
-        }
-        trackerMangaMetadata.status?.let { status ->
-            val statuses = listOf(SManga.ONGOING, SManga.COMPLETED, SManga.LICENSED, SManga.PUBLISHING_FINISHED, SManga.CANCELLED, SManga.ON_HIATUS)
-            val index = statuses.indexOf(status.toInt())
-            if (index >= 0) binding.status.setSelection(index + 1)
-        }
     } catch (e: Throwable) {
         tracker.logcat(LogPriority.ERROR, e)
         binding.root.context.toast(
@@ -454,7 +448,7 @@ private fun resetTags(
     colorScheme: AndroidViewColorScheme,
     // KMK <--
 ) {
-    if (manga.isLocal()) {
+    if (manga.genre.isNullOrEmpty() || manga.isLocal()) {
         binding.mangaGenresTags.setChips(emptyList(), scope, colorScheme)
     } else {
         binding.mangaGenresTags.setChips(manga.ogGenre.orEmpty(), scope, colorScheme)
@@ -463,13 +457,14 @@ private fun resetTags(
 
 private fun loadCover(
     manga: Manga,
+    context: Context,
     binding: EditMangaDialogBinding,
     // KMK -->
     coverRatio: MutableFloatState,
     // KMK <--
 ) {
     // KMK -->
-    if (Injekt.get<UiPreferences>().usePanoramaCoverAlways().get() && coverRatio.floatValue <= RatioSwitchToPanorama) {
+    if (context.appGraph.uiPreferences.usePanoramaCoverAlways.get() && coverRatio.floatValue <= RatioSwitchToPanorama) {
         binding.mangaCover.visibility = View.GONE
         binding.mangaCoverPanorama.visibility = View.VISIBLE
         binding.mangaCoverPanorama.load(manga) {
@@ -491,7 +486,6 @@ private fun resetInfo(
     colorScheme: AndroidViewColorScheme,
     // KMK <--
 ) {
-    binding.status.setSelection(0)
     binding.title.text?.clear()
     binding.mangaAuthor.text?.clear()
     binding.mangaArtist.text?.clear()
@@ -568,7 +562,7 @@ private fun ChipGroup.setChips(
                     // KMK <--
                     val newTags = it.trimOrNull()
                     newTags?.let { tags ->
-                        setChips((getTextStrings() + tags.split(",").mapNotNull { tag -> tag.trimOrNull() }).distinct(), scope, colorScheme)
+                        setChips(items + tags.split(",").mapNotNull { tag -> tag.trimOrNull() }, scope, colorScheme)
                     }
                     // KMK -->
                 }
@@ -588,7 +582,7 @@ private fun ChipGroup.setChips(
 }
 
 private fun ChipGroup.getTextStrings(): List<String> = children.mapNotNull {
-    if (it is Chip && it.isCloseIconVisible) {
+    if (it is Chip && !it.text.toString().contains(context.stringResource(SYMR.strings.add_tags), ignoreCase = true)) {
         it.text.toString()
     } else {
         null

@@ -23,6 +23,7 @@ import exh.ui.metadata.adapters.MetadataUIUtil.getRatingString
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.sy.SYMR
 import kotlin.math.round
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 @Composable
 fun MangaDexDescription(state: State.Success, openMetadataViewer: () -> Unit) {
@@ -57,7 +58,7 @@ fun MangaDexDescription(state: State.Success, openMetadataViewer: () -> Unit) {
             binding.ratingBar.supportSecondaryProgressTintList = ColorStateList.valueOf(ratingBarSecondaryColor)
             binding.rating.setTextColor(textColor)
 
-            binding.moreInfo.bindDrawable(context, R.drawable.ic_info_24dp, iconColor)
+            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info, iconColor)
             binding.moreInfo.text = context.stringResource(SYMR.strings.more_info)
             binding.moreInfo.setTextColor(iconColor)
             // KMK <--

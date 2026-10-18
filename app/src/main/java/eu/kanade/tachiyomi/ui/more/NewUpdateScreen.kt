@@ -3,11 +3,10 @@ package eu.kanade.tachiyomi.ui.more
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.more.NewUpdateScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.util.system.openInBrowser
@@ -23,20 +22,29 @@ class NewUpdateScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
-        val changelogInfoNoChecksum = remember {
-            changelogInfo
+        val viewModel = assistedMetroViewModel<NewUpdateViewModel, NewUpdateViewModel.Factory> {
+            create(changelogInfo = changelogInfo, downloadLink = downloadLink)
         }
-
-        val model = viewModel { NewUpdateScreenModel(downloadLink, versionName) }
-        val downloadState by model.state.collectAsState()
+        val state by viewModel.state.collectAsState()
 
         NewUpdateScreen(
-            downloadState = downloadState,
             versionName = versionName,
-            changelogInfo = changelogInfoNoChecksum,
+            stage = state.stage,
+            downloadProgress = { state.downloadProgress },
+            changelogInfo = state.changelogInfo,
             onOpenInBrowser = { context.openInBrowser(releaseLink) },
+            onAcceptUpdate = {
+                when (state.stage) {
+                    NewUpdateViewModel.Stage.Available, NewUpdateViewModel.Stage.Failed -> viewModel.startDownload()
+                    NewUpdateViewModel.Stage.Downloaded -> viewModel.installUpdate()
+                    else -> Unit
+                }
+            },
             onRejectUpdate = navigator::pop,
-            onAcceptUpdate = model::accept,
+            onSkipUpdate = {
+                viewModel.skipUpdate(versionName)
+                navigator.pop()
+            },
         )
     }
 }

@@ -1,6 +1,7 @@
 package tachiyomi.domain.library.model
 
 import tachiyomi.domain.manga.model.Manga
+import kotlin.time.Instant
 
 data class LibraryManga(
     val manga: Manga,
@@ -12,9 +13,9 @@ data class LibraryManga(
     val bookmarkReadCount: Long,
     val chapterFlags: Long,
     // KMK <--
-    val latestUpload: Long,
-    val chapterFetchedAt: Long,
-    val lastRead: Long,
+    val latestUpload: Instant?,
+    val chapterFetchedAt: Instant?,
+    val lastRead: Instant?,
     // KMK -->
     val visibilityRevision: Long = 0,
     // KMK <--

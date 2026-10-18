@@ -55,6 +55,12 @@ class InMemoryPreferenceStore(
         preference(key, defaultValue)
     override fun <T> getObjectFromInt(key: String, defaultValue: T, serializer: (T) -> Int, deserializer: (Int) -> T) =
         preference(key, defaultValue)
+    override fun <T> getObjectSetFromStringSet(
+        key: String,
+        defaultValue: Set<T>,
+        serializer: (T) -> String,
+        deserializer: (String) -> T?,
+    ) = preference(key, defaultValue)
 
     override fun keyChanges(predicate: (String) -> Boolean): Flow<String?> = callbackFlow {
         val listener: (String?) -> Unit = { key ->

@@ -1,28 +1,28 @@
 package eu.kanade.tachiyomi.ui.updates
 
 import androidx.lifecycle.ViewModel
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.updates.service.UpdatesPreferences
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class)
 class UpdatesSettingsViewModel(
-    val updatesPreferences: UpdatesPreferences = Injekt.get(),
-    // KMK -->
-    val getCategories: GetCategories = Injekt.get(),
-    // KMK <--
+    val updatesPreferences: UpdatesPreferences,
+    val getCategories: GetCategories,
 ) : ViewModel() {
 
-    // KMK -->
-    val includedCategories = updatesPreferences.filterIncludedCategories()
-    val excludedCategories = updatesPreferences.filterExcludedCategories()
-    // KMK <--
+    val includedCategories = updatesPreferences.filterIncludedCategories
+    val excludedCategories = updatesPreferences.filterExcludedCategories
 
-    // KMK -->
     fun cycleCategory(category: Category) {
         when (category.id) {
             in includedCategories.get() -> {
@@ -34,7 +34,6 @@ class UpdatesSettingsViewModel(
             else -> includedCategories.getAndSet { it + category.id }
         }
     }
-    // KMK <--
 
     fun toggleFilter(preference: (UpdatesPreferences) -> Preference<TriState>) {
         preference(updatesPreferences).getAndSet {

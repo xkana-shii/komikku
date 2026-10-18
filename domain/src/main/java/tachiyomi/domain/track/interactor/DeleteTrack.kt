@@ -1,9 +1,11 @@
 package tachiyomi.domain.track.interactor
 
+import dev.zacsweers.metro.Inject
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.track.repository.TrackRepository
 
+@Inject
 class DeleteTrack(
     private val trackRepository: TrackRepository,
 ) {
@@ -15,9 +17,4 @@ class DeleteTrack(
             logcat(LogPriority.ERROR, e)
         }
     }
-    // KMK --> Callers reporting per-tracker failures must observe database errors.
-    suspend fun awaitOrThrow(mangaId: Long, trackerId: Long) {
-        trackRepository.delete(mangaId, trackerId)
-    }
-    // KMK <--
 }

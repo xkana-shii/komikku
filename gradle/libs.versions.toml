@@ -1,5 +1,6 @@
 [versions]
 aboutlib_version = "13.2.1"
+firebase-bom = "34.15.0"
 leakcanary = "2.14"
 moko = "0.26.4"
 # KMK -->
@@ -22,10 +23,23 @@ junit = "6.1.3"
 webgpuviewer = "52"
 # KMK -->
 materialKolor = "5.0.0"
+apollo = "5.2.0"
+apollo-adapters = "0.8.0"
+metro = "1.4.2"
+metrox-viewmodel = "1.4.2"
+metrox-viewmodel-compose = "1.4.2"
+valkyrie = "0.5.2"
 # KMK <--
 
 [libraries]
 desugar = "com.android.tools:desugar_jdk_libs:2.1.5"
+
+apollo = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
+apollo-adapters = { module = "com.apollographql.adapters:apollo-adapters-core", version.ref = "apollo-adapters" }
+
+metro-runtime = { module = "dev.zacsweers.metro:runtime", version.ref = "metro" }
+metrox-viewmodel = { module = "dev.zacsweers.metro:metrox-viewmodel", version.ref = "metrox-viewmodel" }
+metrox-viewmodel-compose = { module = "dev.zacsweers.metro:metrox-viewmodel-compose", version.ref = "metrox-viewmodel-compose" }
 
 rxjava = "io.reactivex:rxjava:1.3.8"
 
@@ -55,7 +69,7 @@ sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sql
 
 preferencektx = "androidx.preference:preference-ktx:1.2.1"
 # KMK -->
-androidx-webkit = "androidx.webkit:webkit:1.15.0"
+androidx-webkit = "androidx.webkit:webkit:1.16.0"
 # KMK <--
 
 injekt = "com.github.mihonapp:injekt:91edab2317"
@@ -80,7 +94,9 @@ photoview = "com.github.chrisbanes:PhotoView:2.3.0"
 directionalviewpager = "com.github.tachiyomiorg:DirectionalViewPager:1.0.0"
 compose-materialmotion = "io.github.fornewid:material-motion-compose-core:2.0.1"
 compose-webview = "io.github.kevinnzou:compose-webview:0.33.6"
-compose-grid = "io.woong.compose.grid:grid:1.2.2"
+# KMK --> Matches the calendar API imported with the app architecture update.
+compose-grid = "com.cheonjaeung.compose.grid:grid:2.8.0"
+# KMK <--
 reorderable = { module = "sh.calvin.reorderable:reorderable", version = "3.1.0" }
 palette-ktx = "androidx.palette:palette-ktx:1.0.0"
 haze = "dev.chrisbanes.haze:haze:1.7.2"
@@ -93,6 +109,9 @@ timber = "com.jakewharton.timber:timber:5.0.1"
 logcat = "com.squareup.logcat:logcat:0.4"
 
 aboutLibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutlib_version" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 
 shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku_version" }
 shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku_version" }
@@ -133,8 +152,13 @@ materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "ma
 androidx-baselineProfile = { id = "androidx.baselineprofile", version = "1.5.0-alpha07" }
 # KMK <--
 aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlib_version" }
+google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.8" }
+apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }
+metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 moko = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "moko" }
+valkyrie = { id = "io.github.composegears.valkyrie", version.ref = "valkyrie" }
 
 [bundles]
 okhttp = ["okhttp-core", "okhttp-logging", "okhttp-brotli", "okhttp-dnsoverhttps", "okhttp-zstd"]

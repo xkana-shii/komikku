@@ -1,22 +1,22 @@
 package eu.kanade.domain.track.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.track.model.toDbTrack
-import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
-import kotlinx.coroutines.CancellationException
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
-import tachiyomi.domain.chapter.model.toChapterUpdate
-import tachiyomi.domain.track.interactor.InsertTrack
+import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.track.interactor.UpsertTrack
 import tachiyomi.domain.track.model.Track
 import kotlin.math.max
 
+@Inject
 class SyncChapterProgressWithTrack(
     private val updateChapter: UpdateChapter,
-    private val insertTrack: InsertTrack,
+    private val upsertTrack: UpsertTrack,
     private val getChaptersByMangaId: GetChaptersByMangaId,
 ) {
     /**
@@ -26,13 +26,12 @@ class SyncChapterProgressWithTrack(
         mangaId: Long,
         remoteTrack: Track,
         tracker: Tracker,
-        propagateErrors: Boolean = false,
     ): Int? {
         if (tracker !is EnhancedTracker) {
             return null
         }
         // KMK -->
-        return sync(mangaId, remoteTrack, tracker, propagateErrors)
+        return sync(mangaId, remoteTrack, tracker)
     }
 
     /**
@@ -42,7 +41,6 @@ class SyncChapterProgressWithTrack(
         mangaId: Long,
         remoteTrack: Track,
         tracker: Tracker,
-        propagateErrors: Boolean = false,
     ): Int? {
         // KMK <--
         // Current chapters in database, sort by source's order because database's order is a mess
@@ -73,7 +71,7 @@ class SyncChapterProgressWithTrack(
             }
             .filter { chapter -> !chapter.read }
             // KMK <--
-            .map { it.copy(read = true).toChapterUpdate() }
+            .map { ChapterUpdate(it.id) { read = true } }
 
         // only take into account continuous reading
         val localLastRead = sortedChapters.takeWhile { it.read }.lastOrNull()?.chapterNumber ?: 0F
@@ -84,9 +82,9 @@ class SyncChapterProgressWithTrack(
         try {
             // Update Tracker to localLastRead if needed
             if (lastRead > remoteTrack.lastChapterRead) {
-                val returnedTrack = tracker.update(updatedTrack.toDbTrack()).toDomainTrack()!!
+                tracker.update(updatedTrack.toDbTrack())
                 // update Track in database
-                insertTrack.await(returnedTrack)
+                upsertTrack.await(updatedTrack)
             }
             // KMK -->
             // Always update local chapters following Tracker even past chapters
@@ -97,10 +95,7 @@ class SyncChapterProgressWithTrack(
                 return lastRead.toInt()
             }
             // KMK <--
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            if (propagateErrors) throw e
+        } catch (e: Throwable) {
             logcat(LogPriority.WARN, e)
         }
         // KMK -->

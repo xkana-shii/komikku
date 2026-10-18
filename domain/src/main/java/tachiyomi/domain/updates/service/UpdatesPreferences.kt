@@ -1,54 +1,57 @@
 package tachiyomi.domain.updates.service
 
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getEnum
 import tachiyomi.core.common.preference.getLongArray
 
+@Inject
+@SingleIn(AppScope::class)
 class UpdatesPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
 
-    fun filterDownloaded() = preferenceStore.getEnum(
+    val filterDownloaded = preferenceStore.getEnum(
         "pref_filter_updates_downloaded",
         TriState.DISABLED,
     )
 
-    fun filterUnread() = preferenceStore.getEnum(
+    val filterUnread = preferenceStore.getEnum(
         "pref_filter_updates_unread",
         TriState.DISABLED,
     )
 
-    fun filterStarted() = preferenceStore.getEnum(
+    val filterStarted = preferenceStore.getEnum(
         "pref_filter_updates_started",
         TriState.DISABLED,
     )
 
-    fun filterBookmarked() = preferenceStore.getEnum(
+    val filterBookmarked = preferenceStore.getEnum(
         "pref_filter_updates_bookmarked",
         TriState.DISABLED,
     )
 
-    fun filterExcludedScanlators() = preferenceStore.getBoolean(
+    val filterExcludedScanlators = preferenceStore.getBoolean(
         "pref_filter_updates_hide_excluded_scanlators",
         false,
     )
 
-    // KMK -->
-    fun filterIncludedCategories(): Preference<List<Long>> = preferenceStore.getLongArray(
+    val filterIncludedCategories: Preference<List<Long>> = preferenceStore.getLongArray(
         "pref_filter_updates_included_categories",
         emptyList(),
     )
 
-    fun filterExcludedCategories(): Preference<List<Long>> = preferenceStore.getLongArray(
+    val filterExcludedCategories: Preference<List<Long>> = preferenceStore.getLongArray(
         "pref_filter_updates_excluded_categories",
         emptyList(),
     )
-    // KMK <--
 
     // KMK -->
-    fun usePanoramaCover() = preferenceStore.getBoolean(
+    val usePanoramaCover = preferenceStore.getBoolean(
         USE_PANORAMA_COVER_PREF,
         false,
     )

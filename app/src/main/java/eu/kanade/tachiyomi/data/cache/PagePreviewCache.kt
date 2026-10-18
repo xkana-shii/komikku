@@ -3,6 +3,9 @@ package eu.kanade.tachiyomi.data.cache
 import android.content.Context
 import android.text.format.Formatter
 import com.jakewharton.disklrucache.DiskLruCache
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.source.PagePreviewPage
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.saveTo
@@ -14,7 +17,6 @@ import okio.buffer
 import okio.sink
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
-import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.io.IOException
 
@@ -27,7 +29,12 @@ import java.io.IOException
  * @param context the application context.
  * @constructor creates an instance of the page preview cache.
  */
-class PagePreviewCache(private val context: Context) {
+@Inject
+@SingleIn(AppScope::class)
+class PagePreviewCache(
+    private val context: Context,
+    private val json: Json,
+) {
 
     companion object {
         /** Name of cache directory.  */
@@ -39,9 +46,6 @@ class PagePreviewCache(private val context: Context) {
         /** The number of values per cache entry. Must be positive.  */
         const val PARAMETER_VALUE_COUNT = 1
     }
-
-    /** Google Json class used for parsing JSON files.  */
-    private val json: Json by injectLazy()
 
     /** Cache class used for cache management.  */
     private var diskCache = setupDiskCache(75)

@@ -1,5 +1,6 @@
 package eu.kanade.domain.source.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.source.service.SourcePreferences
 import exh.source.BlacklistedSources
 import kotlinx.coroutines.flow.Flow
@@ -11,6 +12,7 @@ import tachiyomi.domain.source.model.Source
 import tachiyomi.domain.source.repository.SourceRepository
 import tachiyomi.source.local.isLocal
 
+@Inject
 class GetEnabledSources(
     private val repository: SourceRepository,
     private val preferences: SourcePreferences,
@@ -18,17 +20,17 @@ class GetEnabledSources(
 
     fun subscribe(): Flow<List<Source>> {
         return combine(
-            preferences.pinnedSources().changes(),
+            preferences.pinnedSources.changes(),
             combine(
-                preferences.enabledLanguages().changes(),
-                preferences.disabledSources().changes(),
-                preferences.lastUsedSource().changes(),
+                preferences.enabledLanguages.changes(),
+                preferences.disabledSources.changes(),
+                preferences.lastUsedSource.changes(),
             ) { a, b, c -> Triple(a, b, c) },
             // SY -->
             combine(
-                preferences.dataSaverExcludedSources().changes(),
-                preferences.sourcesTabSourcesInCategories().changes(),
-                preferences.sourcesTabCategoriesFilter().changes(),
+                preferences.dataSaverExcludedSources.changes(),
+                preferences.sourcesTabSourcesInCategories.changes(),
+                preferences.sourcesTabCategoriesFilter.changes(),
             ) { a, b, c -> Triple(a, b, c) },
             // SY <--
             repository.getSources(),

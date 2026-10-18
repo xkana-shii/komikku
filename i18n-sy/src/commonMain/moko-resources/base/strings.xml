@@ -322,22 +322,16 @@
     <string name="tap_scroll_page_summary">Tapping will scroll by page instead of screen size when this option is enabled</string>
     <string name="reader_bottom_buttons">Reader Bottom Buttons</string>
     <string name="reader_bottom_buttons_summary">Customize what buttons appear at the bottom of the reader</string>
-    <string name="pref_show_vert_seekbar_landscape">Show vertical seekbar in landscape</string>
-    <string name="pref_show_vert_seekbar_landscape_summary">Enables vertical seekbar when in landscape</string>
-    <string name="pref_left_handed_vertical_seekbar">Left-handed vertical seekbar</string>
-    <string name="pref_left_handed_vertical_seekbar_summary">Switches which side the seekbar is on</string>
-    <string name="pref_force_horz_seekbar">Force horizontal seekbar</string>
-    <string name="pref_force_horz_seekbar_summary">Removes vertical seekbar entirely in favour of horizontal</string>
     <string name="pref_smooth_scroll">Smooth Auto Scroll</string>
 
     <!-- Reader -->
     <!-- Reader Actions -->
     <string name="eh_retry_all">Retry all</string>
     <string name="eh_boost_page">Boost page</string>
-<!--<string name="eh_autoscroll">Autoscroll</string>
+    <string name="eh_autoscroll">Autoscroll</string>
     <string name="eh_autoscroll_help">Autoscroll help</string>
     <string name="eh_autoscroll_help_message">Automatically scroll to the next page in the specified interval. Interval is specified in seconds.</string>
-    <string name="eh_autoscroll_freq_invalid">Invalid frequency</string>-->
+    <string name="eh_autoscroll_freq_invalid">Invalid frequency</string>
     <string name="eh_retry_all_help">Retry all help</string>
     <string name="eh_retry_all_help_message">Re-add all failed pages to the download queue.</string>
     <string name="eh_boost_page_help">Boost page help</string>
@@ -464,7 +458,9 @@
 
     <!-- Extension section -->
     <string name="ext_redundant">Redundant</string>
+    <!-- KMK -> -->
     <string name="redundant_extension_message">This extension is redundant and will not be used inside this version of Komikku.</string>
+    <!-- KMK <- -->
 
     <!-- Migration -->
     <string name="select_sources">Select sources</string>

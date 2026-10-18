@@ -10,6 +10,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -17,12 +18,11 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.presentation.util.Screen
+import mihon.app.di.appGraph
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.material.Button
 import tachiyomi.presentation.core.components.material.ButtonDefaults
 import tachiyomi.presentation.core.components.material.Scaffold
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * A screen that displays a colors palette of current theme.
@@ -33,8 +33,8 @@ class PaletteScreen(
 
     @Composable
     override fun Content() {
-        val uiPreferences = Injekt.get<UiPreferences>()
-        val themeCoverBased = uiPreferences.themeCoverBased().get()
+        val uiPreferences = LocalContext.current.appGraph.uiPreferences
+        val themeCoverBased = uiPreferences.themeCoverBased.get()
 
         val seedColor = seedColor?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
 

@@ -1,10 +1,15 @@
 // AM (CONNECTIONS) -->
 package eu.kanade.domain.connections.service
 
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.data.connections.ConnectionsService
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 
+@Inject
+@SingleIn(AppScope::class)
 class ConnectionsPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
@@ -28,32 +33,32 @@ class ConnectionsPreferences(
         "",
     )
 
-    fun enableDiscordRPC() = preferenceStore.getBoolean("pref_enable_discord_rpc", false)
+    val enableDiscordRPC = preferenceStore.getBoolean("pref_enable_discord_rpc", false)
 
-    fun discordRPCStatus() = preferenceStore.getInt("pref_discord_rpc_status", 1)
+    val discordRPCStatus = preferenceStore.getInt("pref_discord_rpc_status", 1)
 
-    fun discordRPCIncognito() = preferenceStore.getBoolean("pref_discord_rpc_incognito", false)
+    val discordRPCIncognito = preferenceStore.getBoolean("pref_discord_rpc_incognito", false)
 
-    fun discordRPCIncognitoCategories() = preferenceStore.getStringSet(
+    val discordRPCIncognitoCategories = preferenceStore.getStringSet(
         "discord_rpc_incognito_categories",
         emptySet(),
     )
 
-    fun useChapterTitles() = preferenceStore.getBoolean("pref_discord_rpc_use_chapter_titles", false)
+    val useChapterTitles = preferenceStore.getBoolean("pref_discord_rpc_use_chapter_titles", false)
 
-    fun discordCustomMessage() = preferenceStore.getString("pref_discord_custom_message", "")
+    val discordCustomMessage = preferenceStore.getString("pref_discord_custom_message", "")
 
-    fun discordShowProgress() = preferenceStore.getBoolean("pref_discord_show_progress", true)
+    val discordShowProgress = preferenceStore.getBoolean("pref_discord_show_progress", true)
 
-    fun discordShowTimestamp() = preferenceStore.getBoolean("pref_discord_show_timestamp", true)
+    val discordShowTimestamp = preferenceStore.getBoolean("pref_discord_show_timestamp", true)
 
-    fun discordShowButtons() = preferenceStore.getBoolean("pref_discord_show_buttons", true)
+    val discordShowButtons = preferenceStore.getBoolean("pref_discord_show_buttons", true)
 
-    fun discordShowDownloadButton() = preferenceStore.getBoolean("pref_discord_show_download_button", true)
+    val discordShowDownloadButton = preferenceStore.getBoolean("pref_discord_show_download_button", true)
 
-    fun discordShowDiscordButton() = preferenceStore.getBoolean("pref_discord_show_discord_button", true)
+    val discordShowDiscordButton = preferenceStore.getBoolean("pref_discord_show_discord_button", true)
 
-    fun discordAccounts() = preferenceStore.getString("discord_accounts", "")
+    val discordAccounts = preferenceStore.getString("discord_accounts", "")
 
     companion object {
 

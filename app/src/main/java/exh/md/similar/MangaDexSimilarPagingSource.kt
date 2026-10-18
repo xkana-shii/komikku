@@ -4,6 +4,7 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.md.handlers.SimilarHandler
@@ -49,15 +50,6 @@ internal class MangaDexSimilarPagingSource(
         get() = recommendationSource.id
 
     private val client by lazy { Injekt.get<NetworkHelper>().client }
-    private val headers by lazy {
-        MdUtil.getEnabledMangaDex()?.headers
-            ?: Headers.Builder().apply {
-                set("Referer", "$baseUrl/")
-                set("Origin", baseUrl)
-                set("sec-fetch-dest", "document")
-                set("sec-fetch-mode", "navigate")
-            }.build()
-    }
 
     private val mdLang by lazy {
         recommendationSource.lang.let { lang ->
@@ -65,28 +57,46 @@ internal class MangaDexSimilarPagingSource(
         } ?: MdLang.ENGLISH
     }
 
-    private val mangadexService by lazy {
-        MangaDexService(client, headers)
+    // KUN -->
+    // MdUtil.getEnabledMangaDex is a suspend function in this fork, so the delegated headers
+    // cannot be resolved from a lazy initializer. Resolve the handler on first use instead.
+    private val fallbackHeaders by lazy {
+        Headers.Builder().apply {
+            set("Referer", "$baseUrl/")
+            set("Origin", baseUrl)
+            set("sec-fetch-dest", "document")
+            set("sec-fetch-mode", "navigate")
+        }.build()
     }
-    private val similarService by lazy {
-        SimilarService(client)
+
+    private var similarHandler: SimilarHandler? = null
+
+    private suspend fun getSimilarHandler(): SimilarHandler {
+        similarHandler?.let { return it }
+        val headers = MdUtil.getEnabledMangaDex(Injekt.get(), Injekt.get())?.headers ?: fallbackHeaders
+        return SimilarHandler(
+            mdLang.lang,
+            MangaDexService(client, headers),
+            SimilarService(client),
+        ).also { similarHandler = it }
     }
-    private val similarHandler by lazy {
-        SimilarHandler(mdLang.lang, mangadexService, similarService)
-    }
+    // KUN <--
     // KMK <--
 
-    override suspend fun requestNextPage(currentPage: Int): MangasPage {
+    override suspend fun requestNextPage(source: Source, currentPage: Int): MangasPage {
+        // KUN -->
+        val handler = getSimilarHandler()
+        // KUN <--
         val mangasPage = coroutineScope {
             try {
                 val similarPageDef = async {
                     // KMK -->
-                    similarHandler.getSimilar(manga.toSManga())
+                    handler.getSimilar(manga.toSManga())
                     // KMK <--
                 }
                 val relatedPageDef = async {
                     // KMK -->
-                    similarHandler.getRelated(manga.toSManga())
+                    handler.getRelated(manga.toSManga())
                     // KMK <--
                 }
                 val similarPage = similarPageDef.await()

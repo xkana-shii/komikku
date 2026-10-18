@@ -20,7 +20,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import eu.kanade.presentation.util.formattedMessage
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.network.NetworkHelper
@@ -28,6 +28,7 @@ import eu.kanade.tachiyomi.network.ProgressListener
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.connectivityManager
 import eu.kanade.tachiyomi.util.system.isConnectedToWifi
+import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notificationManager
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
 import eu.kanade.tachiyomi.util.system.toast
@@ -39,6 +40,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import mihon.app.di.AppGraph
+import mihon.app.di.appGraph
+import mihon.core.metro.metroGraph
 import okhttp3.internal.http2.ErrorCode
 import okhttp3.internal.http2.StreamResetException
 import tachiyomi.core.common.i18n.stringResource
@@ -46,26 +50,28 @@ import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.release.service.AppUpdatePolicy
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.lang.ref.WeakReference
-import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
 class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
 
-    private val notifier = AppUpdateNotifier(context)
-    private val network: NetworkHelper by injectLazy()
+    private val graph: AppGraph = context.metroGraph()
+
+    @Inject private lateinit var network: NetworkHelper
 
     // KMK -->
-    private val exhPreferences = Injekt.get<ExhPreferences>()
+    private val notifier = AppUpdateNotifier(context)
+    // KMK <--
+
+    // KMK -->
+    @Inject private lateinit var exhPreferences: ExhPreferences
     // KMK <--
 
     override suspend fun doWork(): Result {
+        graph.inject(this)
         // KMK -->
         val idleRun = inputData.getBoolean(SCHEDULED_RUN, false)
         if (idleRun) {
@@ -73,7 +79,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 return Result.failure()
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                val restrictions = exhPreferences.appShouldAutoUpdate().get()
+                val restrictions = exhPreferences.appShouldAutoUpdate.get()
                 if ((
                         AppUpdatePolicy.DEVICE_ONLY_ON_WIFI in restrictions &&
                             !context.isConnectedToWifi()
@@ -103,15 +109,29 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
 
         return try {
             withIOContext { downloadApk(title, url) }
+            Result.success(workDataOf(PROGRESS to 100, EXTRA_DOWNLOAD_URL to url))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            Result.failure()
         } finally {
+            // KMK -->
             instance = null
+            // KMK <--
         }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
+        val notification = context.notificationBuilder(Notifications.CHANNEL_APP_UPDATE)
+            .setContentTitle(context.stringResource(MR.strings.update_check_notification_update_available))
+            .setContentText(context.stringResource(MR.strings.update_check_notification_download_in_progress))
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setOngoing(true)
+            .build()
+
         return ForegroundInfo(
             Notifications.ID_APP_UPDATER,
-            notifier.onDownloadStarted().build(),
+            notification,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             } else {
@@ -125,7 +145,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
      *
      * @param url url location of file
      */
-    private suspend fun downloadApk(title: String, url: String): Result = coroutineScope {
+    private suspend fun downloadApk(title: String, url: String) = coroutineScope {
         // Show notification download starting.
         with(notifier) {
             onDownloadStarted(title)
@@ -156,40 +176,36 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     downloadedSize = totalSize - contentLength + bytesRead
                 }
                 // KMK <--
-                val progress = if (totalSize > 0) (100 * downloadedSize / totalSize).toInt().coerceIn(0, 100) else 0
+                val progress = (100 * (downloadedSize.toFloat() / totalSize)).toInt()
                 val currentTime = System.currentTimeMillis()
                 if (progress > savedProgress && currentTime - 200 > lastTick) {
                     savedProgress = progress
                     lastTick = currentTime
-                    notifier.onProgressChange(progress)
-                    setProgressAsync(workDataOf(PROGRESS to progress))
+                    setProgressAsync(workDataOf(PROGRESS to progress, EXTRA_DOWNLOAD_URL to url))
                 }
             }
         }
 
         try {
             // File where the apk will be saved.
-            val apkFile = File(context.externalCacheDir, "update-${urlTag(url).substringAfter(':')}.apk")
+            val apkFile = updateApk(context)
 
             // KMK -->
             network.downloadFileWithResume(url, apkFile, progressListener)
             if (isStopped) {
                 cancel()
-                throw CancellationException("Update download stopped")
+                return@coroutineScope
             }
             // KMK <--
 
             notifier.cancel()
             // KMK -->
-            if (inputData.getBoolean(INLINE_INSTALL, false)) {
-                notifier.promptInstall(apkFile.getUriCompat(context))
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 startInstalling(apkFile, title)
             } else {
                 // KMK <--
                 notifier.promptInstall(apkFile.getUriCompat(context))
             }
-            Result.success(workDataOf(EXTRA_FILE_URI to apkFile.getUriCompat(context).toString()))
         } catch (e: Exception) {
             xLogE("App update stopped:", e)
             val shouldCancel = e is CancellationException ||
@@ -197,7 +213,6 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 (e is StreamResetException && e.errorCode == ErrorCode.CANCEL)
             if (shouldCancel) {
                 notifier.cancel()
-                throw CancellationException("Update download cancelled", e)
             } else {
                 notifier.onDownloadError(
                     url,
@@ -206,7 +221,6 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     // KMK <--
                 )
             }
-            Result.failure(workDataOf(ERROR to with(context) { e.formattedMessage }))
         }
     }
 
@@ -267,11 +281,8 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
 
     companion object {
         const val TAG = "AppUpdateDownload"
-        const val SCHEDULED_TAG = "$TAG:scheduled"
+
         const val PROGRESS = "progress"
-        const val ERROR = "error"
-        private const val INLINE_INSTALL = "inline_install"
-        fun urlTag(url: String) = "$TAG:${MessageDigest.getInstance("SHA-256").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }}"
 
         // KMK -->
         const val PACKAGE_INSTALLED_ACTION =
@@ -281,11 +292,15 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
         // KMK <--
 
         const val EXTRA_DOWNLOAD_URL = "DOWNLOAD_URL"
+        // KMK -->
         const val EXTRA_DOWNLOAD_TITLE = "DOWNLOAD_TITLE"
+        // KMK <--
 
         // KMK -->
         private var instance: WeakReference<AppUpdateDownloadJob>? = null
         // KMK <--
+
+        fun updateApk(context: Context): File = File(context.externalCacheDir, "update.apk")
 
         fun start(
             context: Context,
@@ -293,22 +308,18 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             title: String? = null,
             // KMK -->
             scheduled: Boolean = false,
-            inlineInstall: Boolean = false,
             // KMK <--
         ) {
             val data = Data.Builder()
             data.putString(EXTRA_DOWNLOAD_URL, url)
-            data.putBoolean(INLINE_INSTALL, inlineInstall)
             data.putString(EXTRA_DOWNLOAD_TITLE, title)
             val request = OneTimeWorkRequestBuilder<AppUpdateDownloadJob>()
                 .addTag(TAG)
-                .addTag(urlTag(url))
                 .apply {
                     // KMK -->
                     if (scheduled) {
-                        addTag(SCHEDULED_TAG)
                         data.putBoolean(SCHEDULED_RUN, true)
-                        val restrictions = Injekt.get<ExhPreferences>().appShouldAutoUpdate().get()
+                        val restrictions = context.appGraph.exhPreferences.appShouldAutoUpdate.get()
                         val networkType = if (AppUpdatePolicy.DEVICE_NETWORK_NOT_METERED in restrictions) {
                             NetworkType.UNMETERED
                         } else {

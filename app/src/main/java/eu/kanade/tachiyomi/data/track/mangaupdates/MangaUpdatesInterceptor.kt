@@ -5,21 +5,29 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
 
-class MangaUpdatesInterceptor internal constructor(
-    private val session: () -> String?,
-    private val invalidate: (String) -> Unit,
+class MangaUpdatesInterceptor(
+    mangaUpdates: MangaUpdates,
 ) : Interceptor {
-    constructor(mangaUpdates: MangaUpdates) : this(mangaUpdates::restoreSession, mangaUpdates::invalidateSession)
+
+    private var token: String? = mangaUpdates.restoreSession()
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = session()?.takeIf { it.isNotBlank() } ?: throw IOException("Not authenticated with MangaUpdates")
-        val request = chain.request().newBuilder()
-            .header("Authorization", "Bearer $token")
+        val originalRequest = chain.request()
+
+        val token = token ?: throw IOException("Not authenticated with MangaUpdates")
+
+        // Add the authorization header to the original request.
+        val authRequest = originalRequest.newBuilder()
+            .addHeader("Authorization", "Bearer $token")
+            // KMK -->
             .header("User-Agent", "Komikku v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
+            // KMK <--
             .build()
-        return chain.proceed(request).also { response ->
-            // Leave the original HTTP 401 visible to the caller; never retry a write or erase a newer login.
-            if (response.code == 401) invalidate(token)
-        }
+
+        return chain.proceed(authRequest)
+    }
+
+    fun newAuth(token: String?) {
+        this.token = token
     }
 }

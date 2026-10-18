@@ -1,12 +1,14 @@
 package eu.kanade.tachiyomi.ui.base.delegate
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.ui.category.biometric.TimeRange
@@ -17,6 +19,7 @@ import eu.kanade.tachiyomi.util.view.setSecureScreen
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import mihon.app.di.appGraph
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
@@ -46,16 +49,16 @@ interface SecureActivityDelegate {
          */
         var requireUnlock = true
 
-        fun onApplicationStopped() {
-            val preferences = Injekt.get<SecurityPreferences>()
-            if (!preferences.useAuthenticator().get()) return
+        fun onApplicationStopped(context: Context) {
+            val preferences = context.appGraph.securityPreferences
+            if (!preferences.useAuthenticator.get()) return
 
             if (!AuthenticatorUtil.isAuthenticating) {
                 // Return if app is closed in locked state
                 if (requireUnlock) return
                 // Save app close time if lock is delayed
-                if (preferences.lockAppAfter().get() > 0) {
-                    preferences.lastAppClosed().set(System.currentTimeMillis())
+                if (preferences.lockAppAfter.get() > 0) {
+                    preferences.lastAppClosed.set(System.currentTimeMillis())
                 }
             }
         }
@@ -63,7 +66,7 @@ interface SecureActivityDelegate {
         // SY -->
         private fun canLockNow(preferences: SecurityPreferences): Boolean {
             val today: Calendar = Calendar.getInstance()
-            val timeRanges = preferences.authenticatorTimeRanges().get()
+            val timeRanges = preferences.authenticatorTimeRanges.get()
                 .mapNotNull { TimeRange.fromPreferenceString(it) }
             val canLockNow = if (timeRanges.isNotEmpty()) {
                 val now = today.get(Calendar.HOUR_OF_DAY).hours + today.get(Calendar.MINUTE).minutes
@@ -72,7 +75,7 @@ interface SecureActivityDelegate {
                 true
             }
 
-            val lockedDays = preferences.authenticatorDays().get()
+            val lockedDays = preferences.authenticatorDays.get()
             val canLockToday = lockedDays == LOCK_ALL_DAYS ||
                 when (today.get(Calendar.DAY_OF_WEEK)) {
                     Calendar.SUNDAY -> (lockedDays and LOCK_SUNDAY) == LOCK_SUNDAY
@@ -92,17 +95,17 @@ interface SecureActivityDelegate {
         /**
          * Checks if unlock is needed when app comes foreground.
          */
-        fun onApplicationStart() {
-            val preferences = Injekt.get<SecurityPreferences>()
-            if (!preferences.useAuthenticator().get()) return
+        fun onApplicationStart(context: Context) {
+            val preferences = context.appGraph.securityPreferences
+            if (!preferences.useAuthenticator.get()) return
 
-            val lastClosedPref = preferences.lastAppClosed()
+            val lastClosedPref = preferences.lastAppClosed
 
             // `requireUnlock` can be true on process start or if app was closed in locked state
             if (!AuthenticatorUtil.isAuthenticating && !requireUnlock) {
                 requireUnlock =
                     /* SY --> */ canLockNow(preferences) &&
-                    /* SY <-- */ when (val lockDelay = preferences.lockAppAfter().get()) {
+                    /* SY <-- */ when (val lockDelay = preferences.lockAppAfter.get()) {
                         -1 -> false // Never
                         0 -> true // Always
                         else -> lastClosedPref.get() + lockDelay * 60_000 <= System.currentTimeMillis()
@@ -122,11 +125,13 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
 
     private lateinit var activity: AppCompatActivity
 
-    private val preferences: BasePreferences by injectLazy()
-    private val securityPreferences: SecurityPreferences by injectLazy()
+    @Inject private lateinit var preferences: BasePreferences
+
+    @Inject private lateinit var securityPreferences: SecurityPreferences
 
     override fun registerSecureActivity(activity: AppCompatActivity) {
         this.activity = activity
+        Injekt.get<Context>().appGraph.inject(this)
         activity.lifecycle.addObserver(this)
     }
 
@@ -139,8 +144,8 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
     }
 
     private fun setSecureScreen() {
-        val secureScreenFlow = securityPreferences.secureScreen().changes()
-        val incognitoModeFlow = preferences.incognitoMode().changes()
+        val secureScreenFlow = securityPreferences.secureScreen.changes()
+        val incognitoModeFlow = preferences.incognitoMode.changes()
         combine(secureScreenFlow, incognitoModeFlow) { secureScreen, incognitoMode ->
             secureScreen == SecurityPreferences.SecureScreenMode.ALWAYS ||
                 (secureScreen == SecurityPreferences.SecureScreenMode.INCOGNITO && incognitoMode)
@@ -150,7 +155,7 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
     }
 
     private fun setAppLock() {
-        if (!securityPreferences.useAuthenticator().get()) return
+        if (!securityPreferences.useAuthenticator.get()) return
         if (activity.isAuthenticationSupported()) {
             if (!SecureActivityDelegate.requireUnlock) return
             activity.startActivity(Intent(activity, UnlockActivity::class.java))
@@ -161,7 +166,7 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
                 activity.overridePendingTransition(0, 0)
             }
         } else {
-            securityPreferences.useAuthenticator().set(false)
+            securityPreferences.useAuthenticator.set(false)
         }
     }
 }

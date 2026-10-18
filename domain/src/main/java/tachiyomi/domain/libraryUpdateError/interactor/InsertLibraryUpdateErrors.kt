@@ -1,5 +1,6 @@
 package tachiyomi.domain.libraryUpdateError.interactor
 
+import dev.zacsweers.metro.Inject
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
@@ -7,6 +8,7 @@ import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors.
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
 import tachiyomi.domain.libraryUpdateError.repository.LibraryUpdateErrorRepository
 
+@Inject
 class InsertLibraryUpdateErrors(
     private val libraryUpdateErrorRepository: LibraryUpdateErrorRepository,
 ) {

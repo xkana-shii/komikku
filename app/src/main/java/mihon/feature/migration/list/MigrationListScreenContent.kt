@@ -17,15 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.CopyAll
-import androidx.compose.material.icons.outlined.Done
-import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -56,9 +47,16 @@ import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.presentation.util.rememberResourceBitmapPainter
 import eu.kanade.tachiyomi.R
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import mihon.feature.migration.list.models.MigratingManga
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowForward
+import mihon.icons.materialsymbols.rounded.Check
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.ContentCopy
+import mihon.icons.materialsymbols.rounded.CopyAll
+import mihon.icons.materialsymbols.rounded.DoneAll
+import mihon.icons.materialsymbols.rounded.MoreVert
+import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
@@ -72,7 +70,7 @@ import tachiyomi.presentation.core.util.plus
 
 @Composable
 fun MigrationListScreenContent(
-    items: ImmutableList<MigratingManga>,
+    items: List<MigratingManga>,
     migrationComplete: Boolean,
     finishedCount: Int,
     onItemClick: (Manga) -> Unit,
@@ -96,23 +94,35 @@ fun MigrationListScreenContent(
                 },
                 actions = {
                     AppBarActions(
-                        persistentListOf(
+                        listOf(
                             // KMK -->
                             AppBar.Action(
                                 title = stringResource(MR.strings.action_settings),
-                                icon = Icons.Outlined.Settings,
+                                icon = MaterialSymbols.Rounded.Settings,
                                 onClick = openOptionsDialog,
                             ),
                             // KMK <--
                             AppBar.Action(
                                 title = stringResource(MR.strings.migrationListScreen_copyActionLabel),
-                                icon = if (items.size == 1) Icons.Outlined.ContentCopy else Icons.Outlined.CopyAll,
+                                icon = if (items.size ==
+                                    1
+                                ) {
+                                    MaterialSymbols.Rounded.ContentCopy
+                                } else {
+                                    MaterialSymbols.Rounded.CopyAll
+                                },
                                 onClick = { openMigrationDialog(true) },
                                 enabled = migrationComplete,
                             ),
                             AppBar.Action(
                                 title = stringResource(MR.strings.migrationListScreen_migrateActionLabel),
-                                icon = if (items.size == 1) Icons.Outlined.Done else Icons.Outlined.DoneAll,
+                                icon = if (items.size ==
+                                    1
+                                ) {
+                                    MaterialSymbols.Rounded.Check
+                                } else {
+                                    MaterialSymbols.Rounded.DoneAll
+                                },
                                 onClick = { openMigrationDialog(false) },
                                 enabled = migrationComplete,
                             ),
@@ -150,7 +160,7 @@ fun MigrationListScreenContent(
                     )
 
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                        imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward,
                         contentDescription = null,
                         modifier = Modifier.weight(0.2f),
                     )
@@ -339,7 +349,7 @@ private fun MigrationListItemAction(
                 IconButton(onClick = onCancel) {
                     // KMK <--
                     Icon(
-                        imageVector = Icons.Outlined.Close,
+                        imageVector = MaterialSymbols.Rounded.Close,
                         contentDescription = null,
                     )
                 }
@@ -347,7 +357,7 @@ private fun MigrationListItemAction(
             MigratingManga.SearchResult.NotFound, is MigratingManga.SearchResult.Success -> {
                 IconButton(onClick = { menuExpanded = true }) {
                     Icon(
-                        imageVector = Icons.Outlined.MoreVert,
+                        imageVector = MaterialSymbols.Rounded.MoreVert,
                         contentDescription = null,
                     )
                 }

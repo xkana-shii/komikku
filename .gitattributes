@@ -7,6 +7,9 @@
 # Gradle wrapper
 *.jar binary
 
+# SQLDelight schema snapshots
+*.db binary
+
 # Images
 *.webp binary
 *.png binary

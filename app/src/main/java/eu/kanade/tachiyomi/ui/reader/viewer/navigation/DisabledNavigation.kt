@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.navigation
 
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 
 /**
@@ -12,7 +13,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
  * | M | M | M |   N: Next
  * +---+---+---+
 */
-class DisabledNavigation : ViewerNavigation() {
+class DisabledNavigation(readerPreferences: ReaderPreferences) : ViewerNavigation(readerPreferences) {
 
     override var regionList: List<Region> = emptyList()
 }

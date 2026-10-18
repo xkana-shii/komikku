@@ -26,16 +26,12 @@ SELECT count(*) FROM feed_saved_search WHERE global = 1;
 selectBySource:
 SELECT * FROM feed_saved_search WHERE source = :sourceId AND global = 0 ORDER BY feed_order;
 
-insert:
-INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
- VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));
+insert {
+    INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
+    VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));
 
--- KMK -->
-insertReturningId:
-INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
- VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search))
-RETURNING _id;
--- KMK <--
+    SELECT last_insert_rowid();
+}
 
 deleteById:
 DELETE FROM feed_saved_search WHERE _id = :id;
@@ -67,7 +63,6 @@ FROM (
 JOIN saved_search
 ON saved_search._id = M.saved_search;
 
-
 -- KMK -->
 selectAllGlobalNonSavedSearch:
 SELECT * FROM feed_saved_search WHERE global = 1 AND saved_search IS NULL ORDER BY feed_order;
@@ -88,11 +83,3 @@ SET source = coalesce(:source, source),
     feed_order = coalesce(:feed_order, feed_order)
 WHERE _id = :id;
 -- KMK <--
-
-updatePartial:
-UPDATE feed_saved_search
-SET source = :source,
-    saved_search = :saved_search,
-    global = :global,
-    feed_order = :feed_order
-WHERE _id = :id;

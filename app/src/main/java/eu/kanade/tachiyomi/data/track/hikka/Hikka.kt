@@ -7,8 +7,6 @@ import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.hikka.dto.HKOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.injectLazy
@@ -26,11 +24,9 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
 
         private val SCORE_LIST = IntRange(0, 10)
             .map(Int::toString)
-            .toImmutableList()
+            .toList()
 
-        // KMK -->
         private const val SEARCH_ID_PREFIX = "id:"
-        // KMK <--
     }
 
     private val json: Json by injectLazy()
@@ -70,11 +66,11 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
 
     override fun getCompletionStatus(): Long = COMPLETED
 
-    // KMK -->
+    // KUN -->
     override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ
-    // KMK <--
+    // KUN <--
 
-    override fun getScoreList(): ImmutableList<String> = SCORE_LIST
+    override fun getScoreList(): List<String> = SCORE_LIST
 
     override fun displayScore(track: DomainTrack): String {
         return track.score.toInt().toString()
@@ -126,7 +122,6 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
         }
     }
 
-    // KMK -->
     override suspend fun search(query: String): List<TrackSearch> {
         if (query.startsWith(SEARCH_ID_PREFIX)) {
             query.substringAfter(SEARCH_ID_PREFIX).trim().let { slug ->
@@ -136,7 +131,6 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
 
         return api.searchManga(query)
     }
-    // KMK <--
 
     override suspend fun refresh(track: Track): Track {
         val remoteTrack = api.getManga(track)
@@ -152,6 +146,11 @@ class Hikka(id: Long) : BaseTracker(id, "Hikka"), DeletableTracker {
         track.finished_reading_date = (readContent.endDate ?: 0L) * 1000
 
         return track
+    }
+
+    override suspend fun updateUserConfig() {
+        val currentUser = api.getCurrentUser()
+        saveDisplayUsername(currentUser.username)
     }
 
     override suspend fun login(username: String, password: String) = login(password)

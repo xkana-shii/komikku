@@ -18,6 +18,7 @@ import exh.ui.metadata.adapters.MetadataUIUtil.bindDrawable
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
+import mihon.icons.materialsymbols.R as MaterialSymbolsR
 
 @Composable
 fun EightMusesDescription(state: State.Success, openMetadataViewer: () -> Unit) {
@@ -41,7 +42,7 @@ fun EightMusesDescription(state: State.Success, openMetadataViewer: () -> Unit) 
             // KMK -->
             binding.title.setTextColor(titleColor)
 
-            binding.moreInfo.bindDrawable(context, R.drawable.ic_info_24dp, iconColor)
+            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info, iconColor)
             binding.moreInfo.text = context.stringResource(SYMR.strings.more_info)
             binding.moreInfo.setTextColor(iconColor)
             // KMK <--

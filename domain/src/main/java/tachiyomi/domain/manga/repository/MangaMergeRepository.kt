@@ -6,6 +6,10 @@ import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
 
 interface MangaMergeRepository {
+    // SY -->
+    suspend fun getAllReferences(): List<MergedMangaReference>
+    // SY <--
+
     suspend fun getMergedManga(): List<Manga>
 
     suspend fun subscribeMergedManga(): Flow<List<Manga>>

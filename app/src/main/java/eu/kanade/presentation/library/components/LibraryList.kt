@@ -40,9 +40,6 @@ internal fun LibraryList(
 
         items(
             items = items,
-            // KMK -->
-            key = { it.id },
-            // KMK <--
             contentType = { "library_list_item" },
         ) { libraryItem ->
             val manga = libraryItem.libraryManga.manga
@@ -57,15 +54,11 @@ internal fun LibraryList(
                     lastModified = manga.coverLastModified,
                 ),
                 badge = {
-                    // KMK -->
                     DownloadsBadge(count = libraryItem.badges.downloadCount)
                     UnreadBadge(count = libraryItem.badges.unreadCount)
-                    // KMK <--
                     LanguageBadge(
-                        // KMK -->
                         isLocal = libraryItem.badges.isLocal,
                         sourceLanguage = libraryItem.badges.sourceLanguage,
-                        // KMK <--
                         // KMK -->
                         useLangIcon = libraryItem.useLangIcon,
                         // KMK <--

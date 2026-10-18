@@ -15,12 +15,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.library.components.CommonMangaItemDefaults
 import eu.kanade.presentation.library.components.MangaComfortableGridItem
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
+import mihon.app.di.appGraph
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.manga.model.asMangaCover
@@ -28,8 +29,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 @Composable
 fun GlobalSearchCardRow(
@@ -50,9 +49,7 @@ fun GlobalSearchCardRow(
         contentPadding = PaddingValues(MaterialTheme.padding.small),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
     ) {
-        // KMK --> Keep the manga subscription attached to its title across refresh/reordering.
-        items(titles, key = { "${it.source}:${it.url}" }) {
-            // KMK <--
+        items(titles) {
             val title by getManga(it)
             MangaItem(
                 title = title.title,
@@ -81,7 +78,7 @@ internal fun MangaItem(
     // KMK <--
 ) {
     // KMK -->
-    val panoramaCover = usePanoramaCover ?: Injekt.get<UiPreferences>().usePanoramaCoverFlow().collectAsState().value
+    val panoramaCover = usePanoramaCover ?: LocalContext.current.appGraph.uiPreferences.usePanoramaCoverFlow.collectAsState().value
     val coverRatio = remember { mutableFloatStateOf(1f) }
     // KMK <--
     Box(

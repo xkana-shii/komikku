@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -39,12 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,7 +48,6 @@ import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.manga.components.MangaCoverHide
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
-import eu.kanade.presentation.manga.components.composeColor
 import eu.kanade.presentation.manga.components.getSwipeAction
 import eu.kanade.presentation.manga.components.swipeActionThreshold
 import eu.kanade.presentation.util.animateItemFastScroll
@@ -67,10 +60,12 @@ import eu.kanade.tachiyomi.ui.updates.groupByDateAndManga
 import exh.debug.DebugToggles
 import me.saket.swipe.SwipeableActionsBox
 import mihon.feature.upcoming.DateHeading
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.roundedfilled.Bookmark
+import mihon.icons.materialsymbols.roundedfilled.Circle
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -80,16 +75,28 @@ internal fun LazyListScope.updatesLastUpdatedItem(
     lastUpdated: Long,
 ) {
     item(key = "updates-lastUpdated") {
-        Box(
-            modifier = Modifier
-                .animateItemFastScroll()
-                .padding(horizontal = MaterialTheme.padding.medium, vertical = MaterialTheme.padding.small),
-        ) {
-            Text(
-                text = stringResource(MR.strings.updates_last_update_info, relativeTimeSpanString(lastUpdated)),
-                fontStyle = FontStyle.Italic,
-            )
-        }
+        UpdatesLastUpdatedHeader(
+            lastUpdated = lastUpdated,
+            // KMK -->
+            modifier = Modifier.animateItemFastScroll(),
+            // KMK <--
+        )
+    }
+}
+
+@Composable
+internal fun UpdatesLastUpdatedHeader(
+    lastUpdated: Long,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = MaterialTheme.padding.medium, vertical = MaterialTheme.padding.small),
+    ) {
+        Text(
+            text = stringResource(MR.strings.updates_last_update_info, relativeTimeSpanString(lastUpdated)),
+            fontStyle = FontStyle.Italic,
+        )
     }
 }
 
@@ -254,6 +261,7 @@ private fun UpdatesUiItem(
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
 
+    // KMK -->
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
     val swipeStart = remember(updateSwipeStartAction, update.read, update.bookmark, downloadStateProvider()) {
         getSwipeAction(
@@ -383,7 +391,7 @@ private fun UpdatesUiItem(
                     var textHeight by remember { mutableIntStateOf(0) }
                     if (!update.read) {
                         Icon(
-                            imageVector = Icons.Filled.Circle,
+                            imageVector = MaterialSymbols.RoundedFilled.Circle,
                             contentDescription = stringResource(MR.strings.unread),
                             modifier = Modifier
                                 .height(8.dp)
@@ -393,11 +401,11 @@ private fun UpdatesUiItem(
                     }
                     if (update.bookmark) {
                         Icon(
-                            imageVector = Icons.Filled.Bookmark,
+                            imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                             contentDescription = stringResource(MR.strings.action_filter_bookmarked),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
-                            tint = update.bookmarkColor.composeColor() ?: MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                     }
@@ -451,7 +459,7 @@ fun CollapseButton(
     modifier: Modifier = Modifier,
 ) {
     val painter = rememberAnimatedVectorPainter(
-        AnimatedImageVector.animatedVectorResource(R.drawable.anim_caret_down),
+        AnimatedImageVector.animatedVectorResource(R.drawable.animated_caret_flip),
         !expanded,
     )
 

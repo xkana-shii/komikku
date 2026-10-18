@@ -18,19 +18,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
-import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_OUTSIDE_RELEASE_PERIOD
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.SettingsItemsPaddings
 import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.components.material.padding
@@ -44,38 +42,40 @@ class UpcomingScreen : Screen() {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        val viewModel = viewModel<UpcomingViewModel>()
+        val viewModel = metroViewModel<UpcomingViewModel>()
         val state by viewModel.state.collectAsStateWithLifecycle()
 
-        // KMK -->
         when (state.dialog) {
-            is UpcomingViewModel.Dialog.FilterSheet -> UpcomingFilterDialog(viewModel)
-            null -> Unit
+            is UpcomingViewModel.Dialog.FilterSheet -> {
+                UpcomingFilterDialog(
+                    viewModel = viewModel,
+                )
+            }
+
+            null -> {}
         }
-        // KMK <--
 
         UpcomingScreenContent(
             state = state,
             setSelectedYearMonth = viewModel::setSelectedYearMonth,
             onClickUpcoming = { navigator.push(MangaScreen(it.id)) },
             // KMK -->
-            hasActiveFilters = state.hasActiveFilters,
-            onClickFilter = viewModel::showFilterDialog,
             showUpdatingMangas = viewModel::showUpdatingMangas,
             hideUpdatingMangas = viewModel::hideUpdatingMangas,
             isPredictReleaseDate = MANGA_OUTSIDE_RELEASE_PERIOD in viewModel.restriction,
             // KMK <--
+            hasActiveFilters = state.hasActiveFilters,
+            onClickFilter = viewModel::showFilterDialog,
         )
     }
 }
 
-// KMK -->
 @Composable
 private fun ColumnScope.CategoryFilterSheet(
     viewModel: UpcomingViewModel,
 ) {
     Text(
-        stringResource(KMR.strings.pref_filter_upcoming_categories_details),
+        stringResource(MR.strings.pref_filter_upcoming_categories_details),
         modifier = Modifier
             .fillMaxWidth()
             .padding(
@@ -96,7 +96,12 @@ private fun ColumnScope.CategoryFilterSheet(
     val excluded by viewModel.upcomingPreferences.filterExcludedCategories.collectAsState()
     val included by viewModel.upcomingPreferences.filterIncludedCategories.collectAsState()
 
-    val selected = remember(allCategories, included, excluded) {
+    // KUN -->
+    // Key the remembered tri-state list on the live category list so it is rebuilt (and stays the same
+    // size/order) when categories change while the dialog is open. Upstream origin: mihon a73271aefa
+    // ("Add category filters to Upcoming calendar", #3607) used a keyless remember, which could throw
+    // IndexOutOfBoundsException / misalign the tri-state when allCategories changed.
+    val selected = remember(allCategories) {
         allCategories.map { category ->
             when (category.id) {
                 in included -> TriState.ENABLED_IS
@@ -105,15 +110,16 @@ private fun ColumnScope.CategoryFilterSheet(
             }
         }.toMutableStateList()
     }
+    // KUN <--
 
     Column {
-        allCategories.fastForEachIndexed { index, category ->
-            val state = selected[index]
+        allCategories.fastForEachIndexed { idx, category ->
+            val state = selected[idx]
             TriStateItem(
                 label = category.visualName,
                 state = state,
                 onClick = {
-                    selected[index] = state.next()
+                    selected[idx] = state.next()
                     viewModel.cycleCategory(category)
                 },
             )
@@ -122,20 +128,21 @@ private fun ColumnScope.CategoryFilterSheet(
 }
 
 @Composable
-private fun UpcomingFilterDialog(
+fun UpcomingFilterDialog(
     viewModel: UpcomingViewModel,
 ) {
     TabbedDialog(
         onDismissRequest = viewModel::resetDialog,
-        tabTitles = listOf(stringResource(MR.strings.categories)).toImmutableList(),
+        tabTitles = listOf(
+            stringResource(MR.strings.categories),
+        ),
     ) {
         Column(
             modifier = Modifier
                 .padding(vertical = TabbedDialogPaddings.Vertical)
                 .verticalScroll(rememberScrollState()),
         ) {
-            CategoryFilterSheet(viewModel)
+            CategoryFilterSheet(viewModel = viewModel)
         }
     }
 }
-// KMK <--

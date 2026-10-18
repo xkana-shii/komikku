@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
-import androidx.compose.material.icons.rounded.DisabledByDefault
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.collections.immutable.ImmutableSet
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.CheckBoxOutlineBlank
+import mihon.icons.materialsymbols.roundedfilled.DisabledByDefault
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.components.material.padding
@@ -36,8 +35,8 @@ import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun ScanlatorFilterDialog(
-    availableScanlators: ImmutableSet<String>,
-    excludedScanlators: ImmutableSet<String>,
+    availableScanlators: Set<String>,
+    excludedScanlators: Set<String>,
     onDismissRequest: () -> Unit,
     onConfirm: (Set<String>) -> Unit,
 ) {
@@ -81,9 +80,9 @@ fun ScanlatorFilterDialog(
                         ) {
                             Icon(
                                 imageVector = if (isExcluded) {
-                                    Icons.Rounded.DisabledByDefault
+                                    MaterialSymbols.RoundedFilled.DisabledByDefault
                                 } else {
-                                    Icons.Rounded.CheckBoxOutlineBlank
+                                    MaterialSymbols.Rounded.CheckBoxOutlineBlank
                                 },
                                 tint = if (isExcluded) {
                                     MaterialTheme.colorScheme.primary

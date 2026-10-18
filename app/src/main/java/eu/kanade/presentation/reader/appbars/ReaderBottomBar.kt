@@ -2,12 +2,6 @@ package eu.kanade.presentation.reader.appbars
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.FormatListNumbered
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -20,7 +14,15 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderBottomButton
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
-import kotlinx.collections.immutable.ImmutableSet
+import mihon.icons.custommaterialsymbols.CustomMaterialSymbols
+import mihon.icons.custommaterialsymbols.rounded.CropOff
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Crop
+import mihon.icons.materialsymbols.rounded.Explore
+import mihon.icons.materialsymbols.rounded.FormatListNumbered
+import mihon.icons.materialsymbols.rounded.Public
+import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.Share
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -28,7 +30,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun ReaderBottomBar(
     // SY -->
-    enabledButtons: ImmutableSet<String>,
+    enabledButtons: Set<String>,
     // SY <--
     readingMode: ReadingMode,
     onClickReadingMode: () -> Unit,
@@ -63,7 +65,7 @@ fun ReaderBottomBar(
         if (ReaderBottomButton.ViewChapters.isIn(enabledButtons)) {
             IconButton(onClick = onClickChapterList) {
                 Icon(
-                    imageVector = Icons.Outlined.FormatListNumbered,
+                    imageVector = MaterialSymbols.Rounded.FormatListNumbered,
                     contentDescription = stringResource(MR.strings.chapters),
                     // KMK -->
                     tint = iconColor,
@@ -75,7 +77,7 @@ fun ReaderBottomBar(
         if (ReaderBottomButton.WebView.isIn(enabledButtons) && onClickWebView != null) {
             IconButton(onClick = onClickWebView) {
                 Icon(
-                    imageVector = Icons.Outlined.Public,
+                    imageVector = MaterialSymbols.Rounded.Public,
                     contentDescription = stringResource(MR.strings.action_open_in_web_view),
                     // KMK -->
                     tint = iconColor,
@@ -87,7 +89,7 @@ fun ReaderBottomBar(
         if (ReaderBottomButton.Browser.isIn(enabledButtons) && onClickBrowser != null) {
             IconButton(onClick = onClickBrowser) {
                 Icon(
-                    imageVector = Icons.Outlined.Explore,
+                    imageVector = MaterialSymbols.Rounded.Explore,
                     contentDescription = stringResource(MR.strings.action_open_in_browser),
                     // KMK -->
                     tint = iconColor,
@@ -99,7 +101,7 @@ fun ReaderBottomBar(
         if (ReaderBottomButton.Share.isIn(enabledButtons) && onClickShare != null) {
             IconButton(onClick = onClickShare) {
                 Icon(
-                    imageVector = Icons.Outlined.Share,
+                    imageVector = MaterialSymbols.Rounded.Share,
                     contentDescription = stringResource(MR.strings.action_share),
                     // KMK -->
                     tint = iconColor,
@@ -111,7 +113,7 @@ fun ReaderBottomBar(
         if (ReaderBottomButton.ReadingMode.isIn(enabledButtons)) {
             IconButton(onClick = onClickReadingMode) {
                 Icon(
-                    painter = painterResource(readingMode.iconRes),
+                    imageVector = readingMode.icon,
                     contentDescription = stringResource(MR.strings.viewer),
                     // KMK -->
                     tint = iconColor,
@@ -140,9 +142,7 @@ fun ReaderBottomBar(
         if (cropBorders.isIn(enabledButtons)) {
             IconButton(onClick = onClickCropBorder) {
                 Icon(
-                    painter = painterResource(
-                        if (cropEnabled) R.drawable.ic_crop_24dp else R.drawable.ic_crop_off_24dp,
-                    ),
+                    imageVector = if (cropEnabled) MaterialSymbols.Rounded.Crop else CustomMaterialSymbols.Rounded.CropOff,
                     contentDescription = stringResource(MR.strings.pref_crop_borders),
                     // KMK -->
                     tint = iconColor,
@@ -181,7 +181,7 @@ fun ReaderBottomBar(
 
         IconButton(onClick = onClickSettings) {
             Icon(
-                imageVector = Icons.Outlined.Settings,
+                imageVector = MaterialSymbols.Rounded.Settings,
                 contentDescription = stringResource(MR.strings.action_settings),
                 // KMK -->
                 tint = iconColor,

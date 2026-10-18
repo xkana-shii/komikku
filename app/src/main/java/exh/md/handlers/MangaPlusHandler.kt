@@ -15,12 +15,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import uy.kohesive.injekt.injectLazy
 import java.util.UUID
 
-class MangaPlusHandler(currentClient: OkHttpClient) {
-    val json: Json by injectLazy()
-
+class MangaPlusHandler(currentClient: OkHttpClient, val json: Json) {
     val headers = Headers.Builder()
         .add("Origin", WEB_URL)
         .add("Referer", WEB_URL)

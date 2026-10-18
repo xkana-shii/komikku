@@ -1,6 +1,7 @@
 package exh.recs.sources
 
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import exh.metadata.metadata.RankedSearchMetadata
@@ -15,7 +16,7 @@ class StaticResultPagingSource(
     override val category: StringResource get() = StringResource(data.recSourceCategoryResId)
     override val associatedSourceId: Long? get() = data.recAssociatedSourceId
 
-    override suspend fun requestNextPage(currentPage: Int): MangasPage =
+    override suspend fun requestNextPage(source: Source, currentPage: Int): MangasPage =
         // Use virtual paging to improve performance for large lists
         data.results
             .entries

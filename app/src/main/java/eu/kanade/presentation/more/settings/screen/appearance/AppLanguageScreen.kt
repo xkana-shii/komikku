@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -31,15 +29,15 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.extension.interactor.GetExtensionLanguages.Companion.getLanguageIconID
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Check
 import org.xmlpull.v1.XmlPullParser
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
-import eu.kanade.tachiyomi.R as AppR
 import tachiyomi.i18n.R as I18nR
 
 class AppLanguageScreen : Screen() {
@@ -88,7 +86,7 @@ class AppLanguageScreen : Screen() {
                         },
                         // KMK -->
                         leadingContent = {
-                            val iconResId = getLanguageIconID(it.langTag) ?: AppR.drawable.globe
+                            val iconResId = getLanguageIconID(it.langTag) ?: R.drawable.globe
                             Icon(
                                 painter = painterResource(id = iconResId),
                                 tint = Color.Unspecified,
@@ -102,7 +100,7 @@ class AppLanguageScreen : Screen() {
                         trailingContent = {
                             if (currentLanguage == it.langTag) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = MaterialSymbols.Rounded.Check,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -114,7 +112,7 @@ class AppLanguageScreen : Screen() {
         }
     }
 
-    private fun getLangs(context: Context): ImmutableList<Language> {
+    private fun getLangs(context: Context): List<Language> {
         val langs = mutableListOf<Language>()
         val parser = context.resources.getXml(I18nR.xml.locales_config)
         var eventType = parser.eventType
@@ -136,7 +134,7 @@ class AppLanguageScreen : Screen() {
         langs.sortBy { it.displayName }
         langs.add(0, Language("", context.stringResource(MR.strings.label_default), null))
 
-        return langs.toImmutableList()
+        return langs.toList()
     }
 
     private data class Language(

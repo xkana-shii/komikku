@@ -2,6 +2,10 @@ package tachiyomi.data.manga
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import exh.metadata.metadata.base.FlatMetadata
 import exh.metadata.sql.models.SearchMetadata
 import exh.metadata.sql.models.SearchTag
@@ -15,34 +19,47 @@ import tachiyomi.data.subscribeToOneOrNull
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaMetadataRepository
 
-// KMK -->
-
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class MangaMetadataRepositoryImpl(
     private val database: Database,
 ) : MangaMetadataRepository {
 
     override suspend fun getMetadataById(id: Long): SearchMetadata? {
-        return database.search_metadataQueries.selectByMangaId(id, ::searchMetadataMapper).awaitAsOneOrNull()
+        return database.search_metadataQueries
+            .selectByMangaId(id, ::searchMetadataMapper)
+            .awaitAsOneOrNull()
     }
 
     override fun subscribeMetadataById(id: Long): Flow<SearchMetadata?> {
-        return database.search_metadataQueries.selectByMangaId(id, ::searchMetadataMapper).subscribeToOneOrNull()
+        return database.search_metadataQueries
+            .selectByMangaId(id, ::searchMetadataMapper)
+            .subscribeToOneOrNull()
     }
 
     override suspend fun getTagsById(id: Long): List<SearchTag> {
-        return database.search_tagsQueries.selectByMangaId(id, ::searchTagMapper).awaitAsList()
+        return database.search_tagsQueries
+            .selectByMangaId(id, ::searchTagMapper)
+            .awaitAsList()
     }
 
     override fun subscribeTagsById(id: Long): Flow<List<SearchTag>> {
-        return database.search_tagsQueries.selectByMangaId(id, ::searchTagMapper).subscribeToList()
+        return database.search_tagsQueries
+            .selectByMangaId(id, ::searchTagMapper)
+            .subscribeToList()
     }
 
     override suspend fun getTitlesById(id: Long): List<SearchTitle> {
-        return database.search_titlesQueries.selectByMangaId(id, ::searchTitleMapper).awaitAsList()
+        return database.search_titlesQueries
+            .selectByMangaId(id, ::searchTitleMapper)
+            .awaitAsList()
     }
 
     override fun subscribeTitlesById(id: Long): Flow<List<SearchTitle>> {
-        return database.search_titlesQueries.selectByMangaId(id, ::searchTitleMapper).subscribeToList()
+        return database.search_titlesQueries
+            .selectByMangaId(id, ::searchTitleMapper)
+            .subscribeToList()
     }
 
     override suspend fun insertFlatMetadata(flatMetadata: FlatMetadata) {
@@ -64,15 +81,21 @@ class MangaMetadataRepositoryImpl(
     }
 
     override suspend fun getExhFavoriteMangaWithMetadata(): List<Manga> {
-        return database.mangaQueries.getEhMangaWithMetadata(EH_SOURCE_ID, EXH_SOURCE_ID, MangaMapper::mapManga).awaitAsList()
+        return database.mangaQueries
+            .getEhMangaWithMetadata(EH_SOURCE_ID, EXH_SOURCE_ID, MangaMapper::mapManga)
+            .awaitAsList()
     }
 
     override suspend fun getIdsOfFavoriteMangaWithMetadata(): List<Long> {
-        return database.mangaQueries.getIdsOfFavoriteMangaWithMetadata().awaitAsList()
+        return database.mangaQueries
+            .getIdsOfFavoriteMangaWithMetadata()
+            .awaitAsList()
     }
 
     override suspend fun getSearchMetadata(): List<SearchMetadata> {
-        return database.search_metadataQueries.selectAll(::searchMetadataMapper).awaitAsList()
+        return database.search_metadataQueries
+            .selectAll(::searchMetadataMapper)
+            .awaitAsList()
     }
 
     private fun searchMetadataMapper(
@@ -121,4 +144,3 @@ class MangaMetadataRepositoryImpl(
         )
     }
 }
-// KMK <--

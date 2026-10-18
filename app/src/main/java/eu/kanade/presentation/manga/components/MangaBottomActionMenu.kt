@@ -23,18 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.ZeroCornerSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Label
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.BookmarkAdd
-import androidx.compose.material.icons.outlined.BookmarkRemove
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.RemoveDone
-import androidx.compose.material.icons.outlined.SwapCalls
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,24 +39,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.VectorPainter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.manga.DownloadAction
-import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.util.system.isTabletUi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import mihon.icons.custommaterialsymbols.CustomMaterialSymbols
+import mihon.icons.custommaterialsymbols.rounded.DonePrevious
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.Label
+import mihon.icons.materialsymbols.rounded.Block
+import mihon.icons.materialsymbols.rounded.BookmarkAdd
+import mihon.icons.materialsymbols.rounded.BookmarkRemove
+import mihon.icons.materialsymbols.rounded.Delete
+import mihon.icons.materialsymbols.rounded.DoneAll
+import mihon.icons.materialsymbols.rounded.Download
+import mihon.icons.materialsymbols.rounded.MoreVert
+import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.rounded.RemoveDone
+import mihon.icons.materialsymbols.rounded.SwapCalls
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -87,7 +85,7 @@ fun MangaBottomActionMenu(
     onMarkPreviousAsReadClicked: (() -> Unit)? = null,
     onDownloadClicked: (() -> Unit)? = null,
     onDeleteClicked: (() -> Unit)? = null,
-    // KMK -->
+    // KMK --> Multi-selection preserves color assignment and explicit blacklist actions.
     onBlacklistClicked: (() -> Unit)? = null,
     onBookmarkColorSelected: ((BookmarkColor) -> Unit)? = null,
     bookmarkColor: BookmarkColor? = null,
@@ -105,11 +103,11 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            // KNS
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false, false) }
-            // KNS
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false) }
             var resetJob by remember { mutableStateOf<Job?>(null) }
+            // KMK --> A long press opens color choices without changing the current bookmark state first.
             var bookmarkColorMenuExpanded by remember { mutableStateOf(false) }
+            // KMK <--
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 confirm.indices.forEach { i -> confirm[i] = i == toConfirmIndex }
@@ -131,14 +129,10 @@ fun MangaBottomActionMenu(
                 if (onBookmarkClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_bookmark),
-                        icon = Icons.Outlined.BookmarkAdd,
+                        icon = MaterialSymbols.Rounded.BookmarkAdd,
                         toConfirm = confirm[0],
                         onLongClick = {
-                            if (onBookmarkColorSelected != null) {
-                                bookmarkColorMenuExpanded = true
-                            } else {
-                                onLongClickItem(0)
-                            }
+                            if (onBookmarkColorSelected != null) bookmarkColorMenuExpanded = true else onLongClickItem(0)
                         },
                         onClick = onBookmarkClicked,
                     ) {
@@ -156,14 +150,10 @@ fun MangaBottomActionMenu(
                 if (onRemoveBookmarkClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_remove_bookmark),
-                        icon = Icons.Outlined.BookmarkRemove,
+                        icon = MaterialSymbols.Rounded.BookmarkRemove,
                         toConfirm = confirm[1],
                         onLongClick = {
-                            if (onBookmarkColorSelected != null) {
-                                bookmarkColorMenuExpanded = true
-                            } else {
-                                onLongClickItem(1)
-                            }
+                            if (onBookmarkColorSelected != null) bookmarkColorMenuExpanded = true else onLongClickItem(1)
                         },
                         onClick = onRemoveBookmarkClicked,
                     ) {
@@ -178,11 +168,11 @@ fun MangaBottomActionMenu(
                         )
                     }
                 }
-                // KMK --> Blacklisting retains the existing hold-to-confirm action.
+                // KMK --> Blacklisting continues to require the standard confirm hold gesture.
                 if (onBlacklistClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_blacklist_chapter),
-                        icon = Icons.Outlined.Block,
+                        icon = MaterialSymbols.Rounded.Block,
                         toConfirm = confirm[2],
                         onLongClick = { onLongClickItem(2) },
                         onClick = onBlacklistClicked,
@@ -192,45 +182,45 @@ fun MangaBottomActionMenu(
                 if (onMarkAsReadClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_mark_as_read),
-                        icon = Icons.Outlined.DoneAll,
-                        toConfirm = confirm[4],
-                        onLongClick = { onLongClickItem(4) },
+                        icon = MaterialSymbols.Rounded.DoneAll,
+                        toConfirm = confirm[3],
+                        onLongClick = { onLongClickItem(3) },
                         onClick = onMarkAsReadClicked,
                     )
                 }
                 if (onMarkAsUnreadClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_mark_as_unread),
-                        icon = Icons.Outlined.RemoveDone,
-                        toConfirm = confirm[5],
-                        onLongClick = { onLongClickItem(5) },
+                        icon = MaterialSymbols.Rounded.RemoveDone,
+                        toConfirm = confirm[4],
+                        onLongClick = { onLongClickItem(4) },
                         onClick = onMarkAsUnreadClicked,
                     )
                 }
                 if (onMarkPreviousAsReadClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_mark_previous_as_read),
-                        icon = ImageVector.vectorResource(R.drawable.ic_done_prev_24dp),
-                        toConfirm = confirm[6],
-                        onLongClick = { onLongClickItem(6) },
+                        icon = CustomMaterialSymbols.Rounded.DonePrevious,
+                        toConfirm = confirm[5],
+                        onLongClick = { onLongClickItem(5) },
                         onClick = onMarkPreviousAsReadClicked,
                     )
                 }
                 if (onDownloadClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_download),
-                        icon = Icons.Outlined.Download,
-                        toConfirm = confirm[7],
-                        onLongClick = { onLongClickItem(7) },
+                        icon = MaterialSymbols.Rounded.Download,
+                        toConfirm = confirm[6],
+                        onLongClick = { onLongClickItem(6) },
                         onClick = onDownloadClicked,
                     )
                 }
                 if (onDeleteClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_delete),
-                        icon = Icons.Outlined.Delete,
-                        toConfirm = confirm[8],
-                        onLongClick = { onLongClickItem(8) },
+                        icon = MaterialSymbols.Rounded.Delete,
+                        toConfirm = confirm[7],
+                        onLongClick = { onLongClickItem(7) },
                         onClick = onDeleteClicked,
                     )
                 }
@@ -243,31 +233,6 @@ fun MangaBottomActionMenu(
 internal fun RowScope.Button(
     title: String,
     icon: ImageVector,
-    toConfirm: Boolean,
-    onLongClick: () -> Unit,
-    onClick: () -> Unit,
-    // KMK -->
-    enabled: Boolean = true,
-    // KMK <--
-    content: (@Composable () -> Unit)? = null,
-) {
-    Button(
-        title = title,
-        painter = rememberVectorPainter(icon),
-        toConfirm = toConfirm,
-        onLongClick = onLongClick,
-        onClick = onClick,
-        // KMK -->
-        enabled = enabled,
-        // KMK <--
-        content = content,
-    )
-}
-
-@Composable
-internal fun RowScope.Button(
-    title: String,
-    painter: VectorPainter,
     toConfirm: Boolean,
     onLongClick: () -> Unit,
     onClick: () -> Unit,
@@ -309,7 +274,7 @@ internal fun RowScope.Button(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                painter = painter,
+                imageVector = icon,
                 contentDescription = title,
                 // KMK -->
                 tint = animatedColor,
@@ -389,21 +354,21 @@ fun LibraryBottomActionMenu(
             ) {
                 Button(
                     title = stringResource(MR.strings.action_move_category),
-                    icon = Icons.AutoMirrored.Outlined.Label,
+                    icon = MaterialSymbols.AutoMirroredRounded.Label,
                     toConfirm = confirm[0],
                     onLongClick = { onLongClickItem(0) },
                     onClick = onChangeCategoryClicked,
                 )
                 Button(
                     title = stringResource(MR.strings.action_mark_as_read),
-                    icon = Icons.Outlined.DoneAll,
+                    icon = MaterialSymbols.Rounded.DoneAll,
                     toConfirm = confirm[1],
                     onLongClick = { onLongClickItem(1) },
                     onClick = onMarkAsReadClicked,
                 )
                 Button(
                     title = stringResource(MR.strings.action_mark_as_unread),
-                    icon = Icons.Outlined.RemoveDone,
+                    icon = MaterialSymbols.Rounded.RemoveDone,
                     toConfirm = confirm[2],
                     onLongClick = { onLongClickItem(2) },
                     onClick = onMarkAsUnreadClicked,
@@ -412,7 +377,7 @@ fun LibraryBottomActionMenu(
                     var downloadExpanded by remember { mutableStateOf(false) }
                     Button(
                         title = stringResource(MR.strings.action_download),
-                        icon = Icons.Outlined.Download,
+                        icon = MaterialSymbols.Rounded.Download,
                         toConfirm = confirm[3],
                         onLongClick = { onLongClickItem(3) },
                         onClick = { downloadExpanded = !downloadExpanded },
@@ -433,7 +398,7 @@ fun LibraryBottomActionMenu(
                 if (onDownloadClicked == null || isTabletUi) {
                     Button(
                         title = stringResource(KMR.strings.action_update),
-                        icon = Icons.Outlined.Refresh,
+                        icon = MaterialSymbols.Rounded.Refresh,
                         toConfirm = confirm[4],
                         onLongClick = { onLongClickItem(4) },
                         onClick = onSelectionUpdateClicked,
@@ -443,7 +408,7 @@ fun LibraryBottomActionMenu(
                     // KMK <--
                     Button(
                         title = stringResource(MR.strings.migrate),
-                        icon = Icons.Outlined.SwapCalls,
+                        icon = MaterialSymbols.Rounded.SwapCalls,
                         toConfirm = confirm[5],
                         onLongClick = { onLongClickItem(5) },
                         onClick = onMigrateClicked,
@@ -452,7 +417,7 @@ fun LibraryBottomActionMenu(
                 var overflowMenuOpen by remember { mutableStateOf(false) }
                 Button(
                     title = stringResource(MR.strings.label_more),
-                    icon = Icons.Outlined.MoreVert,
+                    icon = MaterialSymbols.Rounded.MoreVert,
                     toConfirm = confirm[6],
                     onLongClick = { onLongClickItem(6) },
                     onClick = { overflowMenuOpen = true },

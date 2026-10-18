@@ -1,7 +1,6 @@
 plugins {
     id("mihon.library")
     id("mihon.library.compose")
-    kotlin("android")
 }
 
 android {
@@ -33,12 +32,13 @@ dependencies {
     // SY -->
     api(projects.i18nSy)
     // SY <--
+    implementation(projects.icons.materialSymbols)
 
     // Compose
     implementation(compose.activity)
     implementation(compose.foundation)
     implementation(compose.material3.core)
-    implementation(compose.material.icons)
+    api(compose.material3.nav.suite)
     implementation(compose.animation)
     implementation(compose.animation.graphics)
     debugImplementation(compose.ui.tooling)
@@ -47,5 +47,4 @@ dependencies {
 
     implementation(androidx.paging.runtime)
     implementation(androidx.paging.compose)
-    implementation(kotlinx.immutables)
 }

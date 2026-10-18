@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.i18n.MR
@@ -32,9 +33,9 @@ import tachiyomi.presentation.core.components.WheelTextPicker
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 import kotlin.math.absoluteValue
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Composable
 fun DeleteChaptersDialog(
@@ -135,8 +136,8 @@ fun SetIntervalDialog(
 
     val nextUpdateDays = remember(nextUpdate) {
         return@remember if (nextUpdate != null) {
-            val now = Instant.now()
-            now.until(nextUpdate, ChronoUnit.DAYS).toInt().coerceAtLeast(0)
+            val now = Clock.System.now()
+            now.daysUntil(nextUpdate, TimeZone.currentSystemDefault()).coerceAtLeast(0)
         } else {
             null
         }
@@ -192,7 +193,7 @@ fun SetIntervalDialog(
                                             }
                                         }
                                 )
-                                .toImmutableList()
+                                .toList()
                         WheelTextPicker(
                             items = items,
                             size = size,

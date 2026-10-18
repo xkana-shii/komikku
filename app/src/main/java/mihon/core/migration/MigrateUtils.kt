@@ -4,27 +4,26 @@ import eu.kanade.domain.source.service.SourcePreferences
 import kotlinx.coroutines.runBlocking
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getAndSet
-import tachiyomi.data.Database
-
-// KMK -->
+import tachiyomi.domain.source.repository.SourceMigrationRepository
 
 object MigrateUtils {
-    fun updateSourceId(migrationContext: MigrationContext, newId: Long, oldId: Long) {
-        val database = migrationContext.get<Database>() ?: return
+    fun updateSourceId(
+        sourceMigrationRepository: SourceMigrationRepository,
+        sourcePreferences: SourcePreferences?,
+        newId: Long,
+        oldId: Long,
+    ) {
         runBlocking {
-            database.ehQueries.migrateSource(newId, oldId)
             // KMK -->
-            database.ehQueries.migrateMergedSource(newId, oldId)
-            // Migrate saved searches & feeds
-            database.ehQueries.migrateSourceSavedSearch(newId, oldId)
-            database.ehQueries.migrateSourceFeed(newId, oldId)
+            // Migrate library entries, merged entries, saved searches & feeds
+            sourceMigrationRepository.migrateSource(newId, oldId)
         }
 
         // Also update pin
-        val preferences = migrationContext.get<SourcePreferences>() ?: return
-        val isPinned = oldId.toString() in preferences.pinnedSources().get()
+        val preferences = sourcePreferences ?: return
+        val isPinned = oldId.toString() in preferences.pinnedSources.get()
         if (isPinned) {
-            preferences.pinnedSources().getAndSet { pinned ->
+            preferences.pinnedSources.getAndSet { pinned ->
                 pinned.minus(oldId.toString())
                     .plus(newId.toString())
             }
@@ -70,4 +69,3 @@ object MigrateUtils {
             }
     }
 }
-// KMK <--

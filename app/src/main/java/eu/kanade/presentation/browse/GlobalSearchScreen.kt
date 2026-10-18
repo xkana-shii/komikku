@@ -1,6 +1,5 @@
 package eu.kanade.presentation.browse
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
@@ -16,12 +15,11 @@ import eu.kanade.presentation.browse.components.GlobalSearchResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchToolbar
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchItemResult
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchViewModel
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SourceFilter
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import kotlinx.collections.immutable.ImmutableMap
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.domain.source.model.Source as DomainSource
@@ -39,14 +37,12 @@ fun GlobalSearchScreen(
     onClickItem: (Manga) -> Unit,
     onLongClickItem: (Manga) -> Unit,
     // KMK -->
-    bulkFavoriteScreenModel: BulkFavoriteScreenModel,
+    bulkFavoriteViewModel: BulkFavoriteViewModel,
     hasPinnedSources: Boolean,
-    sourceCategories: List<String>,
-    onChangeSourceCategory: (String) -> Unit,
     // KMK <--
 ) {
     // KMK -->
-    val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
+    val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
     // KMK <--
 
     Scaffold(
@@ -56,19 +52,19 @@ fun GlobalSearchScreen(
                 BulkSelectionToolbar(
                     selectedCount = bulkFavoriteState.selection.size,
                     isRunning = bulkFavoriteState.isRunning,
-                    onClickClearSelection = bulkFavoriteScreenModel::toggleSelectionMode,
-                    onChangeCategoryClick = bulkFavoriteScreenModel::addFavorite,
+                    onClickClearSelection = bulkFavoriteViewModel::toggleSelectionMode,
+                    onChangeCategoryClick = bulkFavoriteViewModel::addFavorite,
                     onSelectAll = {
                         state.filteredItems.values
                             .filterIsInstance<SearchItemResult.Success>()
                             .flatMap { it.result }
-                            .forEach { bulkFavoriteScreenModel.select(it) }
+                            .forEach { bulkFavoriteViewModel.select(it) }
                     },
                     onReverseSelection = {
                         state.filteredItems.values
                             .filterIsInstance<SearchItemResult.Success>()
                             .flatMap { it.result }
-                            .let { bulkFavoriteScreenModel.reverseSelection(it) }
+                            .let { bulkFavoriteViewModel.reverseSelection(it) }
                     },
                 )
             } else {
@@ -87,12 +83,9 @@ fun GlobalSearchScreen(
                     onToggleResults = onToggleResults,
                     scrollBehavior = scrollBehavior,
                     // KMK -->
-                    toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,
+                    toggleSelectionMode = bulkFavoriteViewModel::toggleSelectionMode,
                     isRunning = bulkFavoriteState.isRunning,
                     hasPinnedSources = hasPinnedSources,
-                    sourceCategory = state.sourceCategory,
-                    sourceCategories = sourceCategories,
-                    onChangeSourceCategory = onChangeSourceCategory,
                     // KMK <--
                 )
             }
@@ -114,7 +107,7 @@ fun GlobalSearchScreen(
 
 @Composable
 internal fun GlobalSearchContent(
-    items: ImmutableMap<Source, SearchItemResult>,
+    items: Map<Source, SearchItemResult>,
     contentPadding: PaddingValues,
     getManga: @Composable (Manga) -> State<Manga>,
     onClickSource: (Source) -> Unit,
@@ -157,29 +150,25 @@ internal fun GlobalSearchContent(
                     onClick = { onClickSource(source) },
                     modifier = Modifier.animateItem(),
                 ) {
-                    // KMK -->
-                    Crossfade(targetState = result, label = "globalSearchResult") { resultState ->
-                        when (resultState) {
-                            SearchItemResult.Loading -> {
-                                GlobalSearchLoadingResultItem()
-                            }
-                            is SearchItemResult.Success -> {
-                                GlobalSearchCardRow(
-                                    titles = resultState.result,
-                                    getManga = getManga,
-                                    onClick = onClickItem,
-                                    onLongClick = onLongClickItem,
-                                    // KMK -->
-                                    selection = selection,
-                                    // KMK <--
-                                )
-                            }
-                            is SearchItemResult.Error -> {
-                                GlobalSearchErrorResultItem(message = resultState.throwable.message)
-                            }
+                    when (result) {
+                        SearchItemResult.Loading -> {
+                            GlobalSearchLoadingResultItem()
+                        }
+                        is SearchItemResult.Success -> {
+                            GlobalSearchCardRow(
+                                titles = result.result,
+                                getManga = getManga,
+                                onClick = onClickItem,
+                                onLongClick = onLongClickItem,
+                                // KMK -->
+                                selection = selection,
+                                // KMK <--
+                            )
+                        }
+                        is SearchItemResult.Error -> {
+                            GlobalSearchErrorResultItem(message = result.throwable.message)
                         }
                     }
-                    // KMK <--
                 }
             }
         }

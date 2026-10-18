@@ -1,15 +1,10 @@
 package eu.kanade.presentation.updates
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.FlipToBack
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -31,12 +26,17 @@ import eu.kanade.presentation.manga.components.MangaBottomActionMenu
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.CalendarMonth
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.FlipToBack
+import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -44,7 +44,6 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.active
-import java.time.LocalDate
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -55,13 +54,11 @@ fun UpdateScreen(
     // SY -->
     preserveReadingPosition: Boolean,
     // SY <--
-    libraryUpdateInProgress: Boolean,
     onClickCover: (UpdatesItem) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
     onCalendarClicked: () -> Unit,
-    onUpdateLibrary: () -> Boolean,
-    onCancelUpdateLibrary: () -> Boolean,
+    onUpdateLibrary: suspend () -> Boolean,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<UpdatesItem>, read: Boolean) -> Unit,
@@ -84,13 +81,13 @@ fun UpdateScreen(
         onSelectAll(false)
     }
 
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         topBar = { scrollBehavior ->
             UpdatesAppBar(
                 onCalendarClicked = { onCalendarClicked() },
-                onUpdateLibrary = { onUpdateLibrary() },
-                onCancelUpdateLibrary = { onCancelUpdateLibrary() },
-                isUpdatingLibrary = libraryUpdateInProgress,
+                onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
                 onFilterClicked = { onFilterClicked() },
                 hasFilters = hasActiveFilters,
                 actionModeCounter = state.selected.size,
@@ -113,12 +110,7 @@ fun UpdateScreen(
     ) { contentPadding ->
         when {
             state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
-            state.items.isEmpty() -> EmptyScreen(
-                stringRes = MR.strings.information_no_recent,
-                modifier = Modifier.padding(contentPadding),
-            )
             else -> {
-                val scope = rememberCoroutineScope()
                 var isRefreshing by remember { mutableStateOf(false) }
                 // KMK -->
                 val uiModels = remember(state.items) { state.getUiModel() }
@@ -127,9 +119,8 @@ fun UpdateScreen(
                 PullRefresh(
                     refreshing = isRefreshing,
                     onRefresh = {
-                        val started = onUpdateLibrary()
-                        if (!started) return@PullRefresh
                         scope.launch {
+                            if (!onUpdateLibrary()) return@launch
                             // Fake refresh status but hide it after a second as it's a long running task
                             isRefreshing = true
                             delay(1.seconds)
@@ -139,32 +130,50 @@ fun UpdateScreen(
                     enabled = !state.selectionMode,
                     indicatorPadding = contentPadding,
                 ) {
-                    FastScrollLazyColumn(
-                        contentPadding = contentPadding,
-                    ) {
-                        updatesLastUpdatedItem(lastUpdated)
+                    if (state.items.isEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .padding(contentPadding)
+                                .fillMaxSize(),
+                        ) {
+                            UpdatesLastUpdatedHeader(lastUpdated = lastUpdated)
+                            EmptyScreen(
+                                stringRes = if (hasActiveFilters) {
+                                    MR.strings.error_no_match
+                                } else {
+                                    MR.strings.information_no_recent
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    } else {
+                        FastScrollLazyColumn(
+                            contentPadding = contentPadding,
+                        ) {
+                            updatesLastUpdatedItem(lastUpdated)
 
-                        updatesUiItems(
-                            // KMK -->
-                            uiModels = uiModels,
-                            expandedState = state.expandedState,
-                            collapseToggle = collapseToggle,
-                            usePanoramaCover = usePanoramaCover,
-                            // KMK <--
-                            selectionMode = state.selectionMode,
-                            // SY -->
-                            preserveReadingPosition = preserveReadingPosition,
-                            // SY <--
-                            onUpdateSelected = onUpdateSelected,
-                            onClickCover = onClickCover,
-                            onClickUpdate = onOpenChapter,
-                            onDownloadChapter = onDownloadChapter,
-                            // KMK -->
-                            updateSwipeStartAction = updateSwipeStartAction,
-                            updateSwipeEndAction = updateSwipeEndAction,
-                            onUpdateSwipe = onUpdateSwipe,
-                            // KMK <--
-                        )
+                            updatesUiItems(
+                                // KMK -->
+                                uiModels = uiModels,
+                                expandedState = state.expandedState,
+                                collapseToggle = collapseToggle,
+                                usePanoramaCover = usePanoramaCover,
+                                // KMK <--
+                                selectionMode = state.selectionMode,
+                                // SY -->
+                                preserveReadingPosition = preserveReadingPosition,
+                                // SY <--
+                                onUpdateSelected = onUpdateSelected,
+                                onClickCover = onClickCover,
+                                onClickUpdate = onOpenChapter,
+                                onDownloadChapter = onDownloadChapter,
+                                // KMK -->
+                                updateSwipeStartAction = updateSwipeStartAction,
+                                updateSwipeEndAction = updateSwipeEndAction,
+                                onUpdateSwipe = onUpdateSwipe,
+                                // KMK <--
+                            )
+                        }
                     }
                 }
             }
@@ -176,8 +185,6 @@ fun UpdateScreen(
 private fun UpdatesAppBar(
     onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
-    onCancelUpdateLibrary: () -> Unit,
-    isUpdatingLibrary: Boolean,
     onFilterClicked: () -> Unit,
     hasFilters: Boolean,
     // For action mode
@@ -193,28 +200,22 @@ private fun UpdatesAppBar(
         title = stringResource(MR.strings.label_recent_updates),
         actions = {
             AppBarActions(
-                persistentListOf(
+                listOf(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_filter),
-                        icon = Icons.Outlined.FilterList,
+                        icon = MaterialSymbols.Rounded.FilterList,
                         iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
                         onClick = onFilterClicked,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_view_upcoming),
-                        icon = Icons.Outlined.CalendarMonth,
+                        icon = MaterialSymbols.Rounded.CalendarMonth,
                         onClick = onCalendarClicked,
                     ),
                     AppBar.Action(
-                        title = if (isUpdatingLibrary) stringResource(KMR.strings.action_cancel_update) else stringResource(MR.strings.action_update_library),
-                        icon = if (isUpdatingLibrary) Icons.Outlined.Close else Icons.Outlined.Refresh,
-                        onClick = {
-                            if (isUpdatingLibrary) {
-                                onCancelUpdateLibrary()
-                            } else {
-                                onUpdateLibrary()
-                            }
-                        },
+                        title = stringResource(MR.strings.action_update_library),
+                        icon = MaterialSymbols.Rounded.Refresh,
+                        onClick = onUpdateLibrary,
                     ),
                 ),
             )
@@ -223,15 +224,15 @@ private fun UpdatesAppBar(
         onCancelActionMode = onCancelActionMode,
         actionModeActions = {
             AppBarActions(
-                persistentListOf(
+                listOf(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_all),
-                        icon = Icons.Outlined.SelectAll,
+                        icon = MaterialSymbols.Rounded.SelectAll,
                         onClick = onSelectAll,
                     ),
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_inverse),
-                        icon = Icons.Outlined.FlipToBack,
+                        icon = MaterialSymbols.Rounded.FlipToBack,
                         onClick = onInvertSelection,
                     ),
                 ),
@@ -263,7 +264,7 @@ private fun UpdatesBottomBar(
         }.takeIf { selected.fastAny { !it.update.read } },
         onMarkAsUnreadClicked = {
             onMultiMarkAsReadClicked(selected, false)
-        }.takeIf { selected.fastAny { it.update.read || it.update.lastPageRead > 0L } },
+        }.takeIf { selected.fastAny { it.update.read || it.update.lastPageRead > 0 } },
         onDownloadClicked = {
             onDownloadChapter(selected, ChapterDownloadAction.START)
         }.takeIf {

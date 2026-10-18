@@ -1,4 +1,5 @@
 import kotlin.Boolean;
+import kotlin.time.Instant;
 
 CREATE TABLE manga_track(
     id INTEGER NOT NULL PRIMARY KEY,
@@ -12,8 +13,8 @@ CREATE TABLE manga_track(
     status INTEGER NOT NULL,
     score REAL NOT NULL,
     remote_url TEXT NOT NULL,
-    start_date INTEGER NOT NULL,
-    finish_date INTEGER NOT NULL,
+    start_date INTEGER AS Instant NOT NULL,
+    finish_date INTEGER AS Instant NOT NULL,
     private INTEGER AS Boolean DEFAULT 0 NOT NULL,
     UNIQUE (manga_id, tracker_id),
     FOREIGN KEY(manga_id) REFERENCES manga (id)
@@ -21,9 +22,17 @@ CREATE TABLE manga_track(
 );
 
 -- KMK -->
--- Index for manga.sq: getDuplicateLibraryManga's track_dupes.
 CREATE INDEX manga_track_tracker_id_remote_id_manga_id_index ON manga_track(tracker_id, remote_id, manga_id);
 -- KMK <--
+
+-- SY -->
+getTracksByMangaIds:
+SELECT
+    id, manga_id, tracker_id, remote_id, remote_url, library_id, title, last_chapter_read,
+    total_chapters, status, score, start_date, finish_date, private
+FROM manga_track
+WHERE manga_id IN :mangaIds;
+-- SY <--
 
 delete:
 DELETE FROM manga_track
@@ -42,13 +51,6 @@ SELECT
     total_chapters, status, score, start_date, finish_date, private
 FROM manga_track
 WHERE id = :id;
-
-getTracksByMangaIds:
-SELECT
-    id, manga_id, tracker_id, remote_id, remote_url, library_id, title, last_chapter_read,
-    total_chapters, status, score, start_date, finish_date, private
-FROM manga_track
-WHERE manga_id IN :mangaIds;
 
 getTracksByMangaId:
 SELECT

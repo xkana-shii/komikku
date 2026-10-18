@@ -1,9 +1,9 @@
 package eu.kanade.tachiyomi.ui.reader.setting
 
 import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
+import androidx.compose.ui.graphics.vector.ImageVector
+import ca.mpreg.webgpuviewer.renderer.WebGpuRenderer
 import dev.icerock.moko.resources.StringResource
-import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
@@ -13,49 +13,58 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.VerticalPagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewerContinuous
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
+import logcat.LogPriority
+import mihon.app.di.appGraph
+import mihon.icons.custommaterialsymbols.CustomMaterialSymbols
+import mihon.icons.custommaterialsymbols.rounded.ReaderLeftToRight
+import mihon.icons.custommaterialsymbols.rounded.ReaderLongStrip
+import mihon.icons.custommaterialsymbols.rounded.ReaderLongStripGaps
+import mihon.icons.custommaterialsymbols.rounded.ReaderRightToLeft
+import mihon.icons.custommaterialsymbols.rounded.ReaderVertical
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.MobileGear
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 enum class ReadingMode(
     val stringRes: StringResource,
-    @DrawableRes val iconRes: Int,
+    val icon: ImageVector,
     val flagValue: Int,
     val direction: Direction? = null,
     val type: ViewerType? = null,
 ) {
-    DEFAULT(MR.strings.label_default, R.drawable.ic_reader_default_24dp, 0x00000000),
+    DEFAULT(MR.strings.label_default, MaterialSymbols.Rounded.MobileGear, 0x00000000),
     LEFT_TO_RIGHT(
         MR.strings.left_to_right_viewer,
-        R.drawable.ic_reader_ltr_24dp,
+        CustomMaterialSymbols.Rounded.ReaderLeftToRight,
         0x00000001,
         Direction.Horizontal,
         ViewerType.Pager,
     ),
     RIGHT_TO_LEFT(
         MR.strings.right_to_left_viewer,
-        R.drawable.ic_reader_rtl_24dp,
+        CustomMaterialSymbols.Rounded.ReaderRightToLeft,
         0x00000002,
         Direction.Horizontal,
         ViewerType.Pager,
     ),
     VERTICAL(
         MR.strings.vertical_viewer,
-        R.drawable.ic_reader_vertical_24dp,
+        CustomMaterialSymbols.Rounded.ReaderVertical,
         0x00000003,
         Direction.Vertical,
         ViewerType.Pager,
     ),
     WEBTOON(
         MR.strings.webtoon_viewer,
-        R.drawable.ic_reader_webtoon_24dp,
+        CustomMaterialSymbols.Rounded.ReaderLongStrip,
         0x00000004,
         Direction.Vertical,
         ViewerType.Webtoon,
     ),
     CONTINUOUS_VERTICAL(
         MR.strings.vertical_plus_viewer,
-        R.drawable.ic_reader_continuous_vertical_24dp,
+        CustomMaterialSymbols.Rounded.ReaderLongStripGaps,
         0x00000005,
         Direction.Vertical,
         ViewerType.Webtoon,
@@ -72,6 +81,23 @@ enum class ReadingMode(
             return mode.type is ViewerType.Pager
         }
 
+        // KUN -->
+        /**
+         * Whether the high quality WebGPU renderer is usable on this device.
+         *
+         * The library performs its GPU bring-up (native library, instance, adapter, device) in a
+         * static initializer that catches its own failures; [WebGpuRenderer.isAvailable] reports the
+         * outcome. Probing it lets an unsupported device fall back to the SSIV viewer rather than
+         * handing the reader a viewer whose renderer silently no-ops.
+         */
+        private fun isHighQualityRendererAvailable(): Boolean = runCatching {
+            WebGpuRenderer.isAvailable
+        }.getOrElse {
+            logcat(LogPriority.WARN, it) { "High quality renderer probe failed" }
+            false
+        }
+        // KUN <--
+
         fun toViewer(
             preference: Int?,
             activity: ReaderActivity,
@@ -79,7 +105,20 @@ enum class ReadingMode(
             @ColorInt seedColor: Int?,
             // KMK <--
         ): Viewer {
-            if (Injekt.get<BasePreferences>().highQualityRenderer().get()) {
+            // KUN -->
+            // Capability gate: the renderer's static initializer runs the GPU bring-up and records
+            // any failure, so `isAvailable` tells us whether the high quality path can actually draw.
+            // Without this, an unsupported device would keep a WebGpuViewer whose renderer no-ops,
+            // i.e. a blank reader, instead of falling back to the SSIV viewer.
+            val preferHighQualityRenderer = activity.appGraph.basePreferences.highQualityRenderer.get()
+            val useHighQualityRenderer = preferHighQualityRenderer && isHighQualityRendererAvailable()
+            if (preferHighQualityRenderer && !useHighQualityRenderer) {
+                logcat(LogPriority.WARN) {
+                    "High quality renderer unavailable, falling back to the SSIV viewer: " +
+                        runCatching { WebGpuRenderer.unavailableReason }.getOrNull().orEmpty()
+                }
+            }
+            if (useHighQualityRenderer) {
                 return when (fromPreference(preference)) {
                     LEFT_TO_RIGHT -> WebGpuViewer(activity, isReversed = false, isVertical = false)
                     RIGHT_TO_LEFT -> WebGpuViewer(activity, isReversed = true, isVertical = false)
@@ -89,6 +128,7 @@ enum class ReadingMode(
                     DEFAULT -> throw IllegalStateException("Preference value must be resolved: $preference")
                 }
             }
+            // KUN <--
             return when (fromPreference(preference)) {
                 LEFT_TO_RIGHT -> L2RPagerViewer(
                     activity,

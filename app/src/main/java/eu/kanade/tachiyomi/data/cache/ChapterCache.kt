@@ -3,6 +3,9 @@ package eu.kanade.tachiyomi.data.cache
 import android.content.Context
 import android.text.format.Formatter
 import com.jakewharton.disklrucache.DiskLruCache
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.DownloadStream
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
@@ -32,6 +35,8 @@ import java.io.IOException
  *
  * @param context the application context.
  */
+@Inject
+@SingleIn(AppScope::class)
 class ChapterCache(
     private val context: Context,
     private val json: Json,
@@ -44,10 +49,18 @@ class ChapterCache(
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
     /** Cache class used for cache management.  */
-    private var diskCache = setupDiskCache(readerPreferences.cacheSize().get().toLong())
+    private var diskCacheDelegate: Lazy<DiskLruCache> =
+        lazy { setupDiskCache(readerPreferences.cacheSize.get().toLong()) }
+
+    // Lazy so opening the cache is deferred to first use; the delegate also lets the size change rebuild it.
+    private var diskCache: DiskLruCache
+        get() = diskCacheDelegate.value
+        set(value) {
+            diskCacheDelegate = lazyOf(value)
+        }
 
     init {
-        readerPreferences.cacheSize().changes()
+        readerPreferences.cacheSize.changes()
             .drop(1)
             .onEach {
                 // Save old cache for destruction later
@@ -62,7 +75,8 @@ class ChapterCache(
     /**
      * Returns directory of cache.
      */
-    private val cacheDir: File = diskCache.directory
+    private val cacheDir: File
+        get() = diskCache.directory
 
     /**
      * Returns real size of directory.
@@ -147,7 +161,13 @@ class ChapterCache(
      */
     fun isImageInCache(imageUrl: String): Boolean {
         return try {
-            diskCache.get(DiskUtil.hashKeyForDisk(imageUrl)).use { it != null }
+            val key = DiskUtil.hashKeyForDisk(imageUrl)
+            val inJournal = diskCache.get(key).use { it != null }
+            val fileExists = getImageFile(imageUrl).exists()
+            if (inJournal && !fileExists) {
+                logcat(LogPriority.WARN) { "Image is in journal but file is missing: $imageUrl" }
+            }
+            inJournal && fileExists
         } catch (_: IOException) {
             false
         }

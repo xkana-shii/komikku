@@ -16,6 +16,7 @@ import kotlin.coroutines.resume
 
 object WebViewUtil {
     private const val CHROME_PACKAGE = "com.android.chrome"
+    private const val YOUTUBE_FOR_TV_PACKAGE = "com.google.android.youtube.tv"
     private const val SYSTEM_SETTINGS_PACKAGE = "com.android.settings"
 
     const val MINIMUM_WEBVIEW_VERSION = 118
@@ -59,13 +60,16 @@ object WebViewUtil {
     }
 
     fun spoofedPackageName(context: Context): String {
-        return try {
-            context.packageManager.getPackageInfo(CHROME_PACKAGE, PackageManager.GET_META_DATA)
-
-            CHROME_PACKAGE
-        } catch (_: PackageManager.NameNotFoundException) {
-            SYSTEM_SETTINGS_PACKAGE
-        }
+        return runCatching { context.packageManager.getPackageInfo(CHROME_PACKAGE, 0) }
+            .recoverCatching { context.packageManager.getPackageInfo(SYSTEM_SETTINGS_PACKAGE, 0) }
+            .recoverCatching { context.packageManager.getPackageInfo(YOUTUBE_FOR_TV_PACKAGE, 0) }
+            .fold(
+                onSuccess = { it.packageName },
+                onFailure = {
+                    context.packageManager.getInstalledPackages(0)
+                        .random().packageName
+                },
+            )
     }
 }
 
@@ -98,7 +102,6 @@ fun WebView.setDefaultSettings() {
     CookieManager.getInstance().acceptThirdPartyCookies(this)
 }
 
-// KMK -->
 /**
  * Sets the user agent along with the matching user agent metadata, which Chromium uses to populate
  * the `Sec-CH-UA` client hints. Without this the hints keep advertising the real WebView brand and
@@ -145,7 +148,6 @@ private const val WEBVIEW_BRAND = "Android WebView"
 private const val CHROMIUM_BRAND = "Chromium"
 private const val CHROME_BRAND = "Google Chrome"
 private val CHROME_VERSION_REGEX = """Chrome/(\d+)(\.[\d.]+)?""".toRegex()
-// KMK <--
 
 private fun WebView.getWebViewMajorVersion(): Int {
     val uaRegexMatch = """.*Chrome/(\d+)\..*""".toRegex().matchEntire(getDefaultUserAgentString())

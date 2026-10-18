@@ -1,9 +1,9 @@
 CREATE TABLE manga_category(
     manga_id INTEGER NOT NULL,
     category_id INTEGER NOT NULL,
-    -- KMK -->
-    state_last_modified_at INTEGER NOT NULL DEFAULT 0,
-    -- KMK <--
+    -- SY -->
+    last_modified_at INTEGER NOT NULL DEFAULT 0,
+    -- SY <--
     UNIQUE(manga_id, category_id),
     FOREIGN KEY(category_id) REFERENCES category (id)
     ON DELETE CASCADE,
@@ -13,23 +13,33 @@ CREATE TABLE manga_category(
 
 CREATE INDEX manga_category_category_id_index ON manga_category(category_id);
 
--- KMK -->
--- Match the metadata and trigger already installed by migration 28.
+-- SY -->
 CREATE TRIGGER update_last_modified_at_mangas_categories
 AFTER UPDATE ON manga_category
 FOR EACH ROW
 BEGIN
   UPDATE manga_category
-  SET state_last_modified_at = strftime('%s', 'now')
+  SET last_modified_at = strftime('%s', 'now')
   WHERE manga_id = new.manga_id AND category_id = new.category_id;
 END;
+-- SY <--
+
 CREATE TRIGGER insert_manga_category_update_version AFTER INSERT ON manga_category
 BEGIN
     UPDATE manga
-    SET state_version = state_version + 1
-    WHERE id = new.manga_id AND (SELECT state_is_syncing FROM manga WHERE id = new.manga_id) = 0;
+    SET version = version + 1
+    WHERE id = new.manga_id AND (SELECT is_syncing FROM manga WHERE id = new.manga_id) = 0;
 END;
--- KMK <--
+
+-- SY -->
+-- removing a manga from a category is a manga-level change and must bump its version
+CREATE TRIGGER delete_manga_category_update_version AFTER DELETE ON manga_category
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = old.manga_id AND (SELECT is_syncing FROM manga WHERE id = old.manga_id) = 0;
+END;
+-- SY <--
 
 insert:
 INSERT INTO manga_category(manga_id, category_id)

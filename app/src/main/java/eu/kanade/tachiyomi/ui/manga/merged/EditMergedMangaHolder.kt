@@ -6,11 +6,10 @@ import coil3.request.transformations
 import coil3.transform.RoundedCornersTransformation
 import eu.davidea.viewholders.FlexibleViewHolder
 import eu.kanade.tachiyomi.databinding.EditMergedSettingsItemBinding
+import eu.kanade.tachiyomi.source.getOrStubOrNull
 import eu.kanade.tachiyomi.util.system.dpToPx
+import mihon.app.di.appGraph
 import tachiyomi.domain.manga.model.MergedMangaReference
-import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 class EditMergedMangaHolder(view: View, val adapter: EditMergedMangaAdapter) : FlexibleViewHolder(view, adapter) {
 
@@ -49,7 +48,15 @@ class EditMergedMangaHolder(view: View, val adapter: EditMergedMangaAdapter) : F
             }
         }
 
-        binding.title.text = Injekt.get<SourceManager>().getOrStub(item.mergedMangaReference.mangaSourceId).toString()
+        // KUN -->
+        // This Android ViewHolder has no coroutine scope. Read the already-loaded source snapshot
+        // instead of blocking the main thread; while the sources are still loading the title is left
+        // blank and the row is re-bound once the settings state changes.
+        binding.title.text = itemView.context.appGraph.sourceManager
+            .getOrStubOrNull(item.mergedMangaReference.mangaSourceId)
+            ?.toString()
+            .orEmpty()
+        // KUN <--
         binding.subtitle.text = item.mergedManga?.title
         updateDownloadChaptersIcon(item.mergedMangaReference.downloadChapters)
         updateChapterUpdatesIcon(item.mergedMangaReference.getChapterUpdates)

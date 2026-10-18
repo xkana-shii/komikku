@@ -14,7 +14,7 @@ internal class TrackInfoDialogHomePreviewProvider :
     private val aTrack = Track(
         id = 1L,
         mangaId = 2L,
-        trackerId = 2L,
+        trackerId = 3L,
         remoteId = 4L,
         libraryId = null,
         title = "Manage Name On Tracker Site",
@@ -23,8 +23,8 @@ internal class TrackInfoDialogHomePreviewProvider :
         status = 1L,
         score = 2.0,
         remoteUrl = "https://example.com",
-        startDate = 0L,
-        finishDate = 0L,
+        startDate = null,
+        finishDate = null,
         private = false,
     )
     private val privateTrack = aTrack.copy(private = true)
@@ -56,7 +56,6 @@ internal class TrackInfoDialogHomePreviewProvider :
                 trackItemWithoutTrack,
                 trackItemWithTrack,
             ),
-            seriesTitle = SERIES_TITLE,
             dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM),
             onStatusClick = {},
             onChapterClick = {},
@@ -74,7 +73,6 @@ internal class TrackInfoDialogHomePreviewProvider :
     private val noTrackers = @Composable {
         TrackInfoDialogHome(
             trackItems = listOf(),
-            seriesTitle = SERIES_TITLE,
             dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM),
             onStatusClick = {},
             onChapterClick = {},
@@ -92,7 +90,6 @@ internal class TrackInfoDialogHomePreviewProvider :
     private val trackerWithPrivateTracking = @Composable {
         TrackInfoDialogHome(
             trackItems = listOf(trackItemWithPrivateTrack),
-            seriesTitle = SERIES_TITLE,
             dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM),
             onStatusClick = {},
             onChapterClick = {},
@@ -106,43 +103,11 @@ internal class TrackInfoDialogHomePreviewProvider :
             onTogglePrivate = {},
         )
     }
-
-    // KMK -->
-    private val multipleBoundTrackers = @Composable {
-        TrackInfoDialogHome(
-            trackItems = listOf(
-                trackItemWithTrack,
-                TrackItem(
-                    track = aTrack.copy(id = 2L, trackerId = 4L, lastChapterRead = 5.0, score = 8.0),
-                    tracker = DummyTracker(id = 4L, name = "Example Tracker 3", supportsReadingDates = true),
-                ),
-                trackItemWithoutTrack,
-            ),
-            seriesTitle = SERIES_TITLE,
-            dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM),
-            onStatusClick = {},
-            onChapterClick = {},
-            onScoreClick = {},
-            onStartDateEdit = {},
-            onEndDateEdit = {},
-            onNewSearch = {},
-            onOpenInBrowser = {},
-            onRemoved = {},
-            onCopyLink = {},
-            onTogglePrivate = {},
-        )
-    }
-    // KMK <--
 
     override val values: Sequence<@Composable () -> Unit>
         get() = sequenceOf(
             trackersWithAndWithoutTrack,
             noTrackers,
             trackerWithPrivateTracking,
-            multipleBoundTrackers,
         )
-
-    companion object {
-        private const val SERIES_TITLE = "Ascendance of a Bookworm: I'll Do Anything to Become a Librarian!"
-    }
 }

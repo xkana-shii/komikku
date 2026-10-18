@@ -1,25 +1,26 @@
 package mihon.core.migration.migrations
 
-import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.Inject
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.data.Database
-import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.manga.interactor.UpdateMergedSettings
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
+import tachiyomi.domain.manga.repository.MangaMergeRepository
 
-// KMK -->
-
-class MergedMangaDedupeModeMigration : Migration {
+@Inject
+@ContributesIntoSet(AppScope::class)
+class MergedMangaDedupeModeMigration(
+    private val mangaMergeRepository: MangaMergeRepository,
+    private val updateMergedSettings: UpdateMergedSettings,
+) : Migration {
     override val version: Float = 77f
 
     override suspend fun invoke(migrationContext: MigrationContext): Boolean = withIOContext {
-        val database = migrationContext.get<Database>() ?: return@withIOContext false
-        val updateMergedSettings = migrationContext.get<UpdateMergedSettings>() ?: return@withIOContext false
-
         // Get merged manga references from db
-        val dbMergedMangaReferences = database.mergedQueries.selectAll(MergedMangaMapper::map).awaitAsList()
+        val dbMergedMangaReferences = mangaMergeRepository.getAllReferences()
 
         dbMergedMangaReferences.map {
             MergeMangaSettingsUpdate(
@@ -34,4 +35,3 @@ class MergedMangaDedupeModeMigration : Migration {
         return@withIOContext true
     }
 }
-// KMK <--

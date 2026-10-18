@@ -13,8 +13,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.foundation.lazy.grid.LazyGridScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +28,8 @@ import eu.kanade.presentation.browse.components.RelatedMangasComfortableGrid
 import eu.kanade.presentation.browse.components.RelatedMangasCompactGrid
 import eu.kanade.presentation.browse.components.RelatedMangasList
 import eu.kanade.tachiyomi.ui.manga.RelatedManga
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowForward
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
@@ -160,7 +160,7 @@ fun RelatedMangaTitle(
             }
         }
         if (showArrow) {
-            Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
+            Icon(imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward, contentDescription = null)
         }
     }
 }

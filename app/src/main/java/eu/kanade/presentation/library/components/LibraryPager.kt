@@ -1,7 +1,6 @@
 package eu.kanade.presentation.library.components
 
 import android.content.res.Configuration
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,9 +30,6 @@ import tachiyomi.presentation.core.util.plus
 @Composable
 fun LibraryPager(
     state: PagerState,
-    // KMK -->
-    pageHeader: @Composable (Category) -> Unit,
-    // KMK <--
     contentPadding: PaddingValues,
     hasActiveFilters: Boolean,
     selection: Set<Long>,
@@ -57,96 +53,88 @@ fun LibraryPager(
             return@HorizontalPager
         }
         val category = getCategoryForPage(page)
-        // KMK --> Each page measures its own child controls. The outer pager keeps its
-        // bounds throughout a swipe, including transitions to parents without children.
-        Column(Modifier.fillMaxSize()) {
-            pageHeader(category)
-            Box(Modifier.weight(1f)) {
-                val items = getItemsForCategory(category)
+        val items = getItemsForCategory(category)
 
-                if (items.isEmpty()) {
-                    LibraryPagerEmptyScreen(
-                        searchQuery = searchQuery,
-                        hasActiveFilters = hasActiveFilters,
-                        contentPadding = contentPadding,
-                        onGlobalSearchClicked = onGlobalSearchClicked,
-                    )
-                    return@Box
-                }
-
-                val displayMode by getDisplayMode(page)
-                val columns by if (displayMode != LibraryDisplayMode.List) {
-                    val configuration = LocalConfiguration.current
-                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-                    remember(isLandscape) { getColumnsForOrientation(isLandscape) }
-                } else {
-                    remember { mutableIntStateOf(0) }
-                }
-
-                val onClickManga: (LibraryManga) -> Unit = { onClickManga(category, it) }
-                val onLongClickManga: (LibraryManga) -> Unit = { onLongClickManga(category, it) }
-
-                when (displayMode) {
-                    LibraryDisplayMode.List -> {
-                        LibraryList(
-                            items = items,
-                            contentPadding = contentPadding,
-                            selection = selection,
-                            onClick = onClickManga,
-                            onLongClick = onLongClickManga,
-                            onClickContinueReading = onClickContinueReading,
-                            searchQuery = searchQuery,
-                            onGlobalSearchClicked = onGlobalSearchClicked,
-                        )
-                    }
-                    LibraryDisplayMode.CompactGrid, LibraryDisplayMode.CoverOnlyGrid -> {
-                        LibraryCompactGrid(
-                            items = items,
-                            showTitle = displayMode is LibraryDisplayMode.CompactGrid,
-                            columns = columns,
-                            contentPadding = contentPadding,
-                            selection = selection,
-                            onClick = onClickManga,
-                            onLongClick = onLongClickManga,
-                            onClickContinueReading = onClickContinueReading,
-                            searchQuery = searchQuery,
-                            onGlobalSearchClicked = onGlobalSearchClicked,
-                        )
-                    }
-                    LibraryDisplayMode.ComfortableGrid -> {
-                        LibraryComfortableGrid(
-                            items = items,
-                            columns = columns,
-                            contentPadding = contentPadding,
-                            selection = selection,
-                            onClick = onClickManga,
-                            onLongClick = onLongClickManga,
-                            onClickContinueReading = onClickContinueReading,
-                            searchQuery = searchQuery,
-                            onGlobalSearchClicked = onGlobalSearchClicked,
-                        )
-                    }
-                    // KMK -->
-                    LibraryDisplayMode.ComfortableGridPanorama -> {
-                        LibraryComfortableGrid(
-                            items = items,
-                            columns = columns,
-                            contentPadding = contentPadding,
-                            selection = selection,
-                            onClick = onClickManga,
-                            onLongClick = onLongClickManga,
-                            onClickContinueReading = onClickContinueReading,
-                            searchQuery = searchQuery,
-                            onGlobalSearchClicked = onGlobalSearchClicked,
-                            usePanoramaCover = true,
-                        )
-                    }
-                    // KMK <--
-                }
-            }
+        if (items.isEmpty()) {
+            LibraryPagerEmptyScreen(
+                searchQuery = searchQuery,
+                hasActiveFilters = hasActiveFilters,
+                contentPadding = contentPadding,
+                onGlobalSearchClicked = onGlobalSearchClicked,
+            )
+            return@HorizontalPager
         }
-        // KMK <--
+
+        val displayMode by getDisplayMode(page)
+        val columns by if (displayMode != LibraryDisplayMode.List) {
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+            remember(isLandscape) { getColumnsForOrientation(isLandscape) }
+        } else {
+            remember { mutableIntStateOf(0) }
+        }
+
+        val onClickManga: (LibraryManga) -> Unit = { onClickManga(category, it) }
+        val onLongClickManga: (LibraryManga) -> Unit = { onLongClickManga(category, it) }
+
+        when (displayMode) {
+            LibraryDisplayMode.List -> {
+                LibraryList(
+                    items = items,
+                    contentPadding = contentPadding,
+                    selection = selection,
+                    onClick = onClickManga,
+                    onLongClick = onLongClickManga,
+                    onClickContinueReading = onClickContinueReading,
+                    searchQuery = searchQuery,
+                    onGlobalSearchClicked = onGlobalSearchClicked,
+                )
+            }
+            LibraryDisplayMode.CompactGrid, LibraryDisplayMode.CoverOnlyGrid -> {
+                LibraryCompactGrid(
+                    items = items,
+                    showTitle = displayMode is LibraryDisplayMode.CompactGrid,
+                    columns = columns,
+                    contentPadding = contentPadding,
+                    selection = selection,
+                    onClick = onClickManga,
+                    onLongClick = onLongClickManga,
+                    onClickContinueReading = onClickContinueReading,
+                    searchQuery = searchQuery,
+                    onGlobalSearchClicked = onGlobalSearchClicked,
+                )
+            }
+            LibraryDisplayMode.ComfortableGrid -> {
+                LibraryComfortableGrid(
+                    items = items,
+                    columns = columns,
+                    contentPadding = contentPadding,
+                    selection = selection,
+                    onClick = onClickManga,
+                    onLongClick = onLongClickManga,
+                    onClickContinueReading = onClickContinueReading,
+                    searchQuery = searchQuery,
+                    onGlobalSearchClicked = onGlobalSearchClicked,
+                )
+            }
+            // KMK -->
+            LibraryDisplayMode.ComfortableGridPanorama -> {
+                LibraryComfortableGrid(
+                    items = items,
+                    columns = columns,
+                    contentPadding = contentPadding,
+                    selection = selection,
+                    onClick = onClickManga,
+                    onLongClick = onLongClickManga,
+                    onClickContinueReading = onClickContinueReading,
+                    searchQuery = searchQuery,
+                    onGlobalSearchClicked = onGlobalSearchClicked,
+                    usePanoramaCover = true,
+                )
+            }
+            // KMK <--
+        }
     }
 }
 

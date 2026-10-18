@@ -4,10 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.browse.ExtensionDetailsScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -16,15 +15,20 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 
-data class ExtensionDetailsScreen(private val pkgName: String) : Screen() {
+data class ExtensionDetailsScreen(
+    private val pkgName: String,
+) : Screen() {
+
     @Composable
     override fun Content() {
-        val viewModel = viewModel<ExtensionDetailsViewModel>(
-            factory = ExtensionDetailsViewModel.Factory,
-            extras = CreationExtras { set(ExtensionDetailsViewModel.PKG_NAME_KEY, pkgName) },
-        )
+        val viewModel =
+            assistedMetroViewModel<ExtensionDetailsViewModel, ExtensionDetailsViewModel.Factory> {
+                create(pkgName = pkgName)
+            }
         val state by viewModel.state.collectAsStateWithLifecycle()
+
         val navigator = LocalNavigator.currentOrThrow
+
         when (val state = state) {
             ExtensionDetailsViewModel.State.Loading -> LoadingScreen()
             ExtensionDetailsViewModel.State.Uninstalled -> {
@@ -32,14 +36,26 @@ data class ExtensionDetailsScreen(private val pkgName: String) : Screen() {
                 EmptyScreen(MR.strings.empty_screen)
             }
             is ExtensionDetailsViewModel.State.Success -> {
-                val source = state.extension.sources.firstOrNull()
+                // KMK -->
+                val source = state.extension.sources.getOrNull(0)
+                // KMK <--
                 ExtensionDetailsScreen(
                     navigateUp = navigator::pop,
                     state = state,
                     onClickSourcePreferences = { navigator.push(SourcePreferencesScreen(it)) },
                     // KMK -->
-                    onOpenWebView = (source as? HttpSource)?.let { httpSource ->
-                        { navigator.push(WebViewScreen(httpSource.baseUrl, httpSource.name, httpSource.id)) }
+                    onOpenWebView = if (source is HttpSource) {
+                        {
+                            navigator.push(
+                                WebViewScreen(
+                                    url = source.baseUrl,
+                                    initialTitle = source.name,
+                                    sourceId = source.id,
+                                ),
+                            )
+                        }
+                    } else {
+                        null
                     },
                     // KMK <--
                     onClickEnableAll = { viewModel.toggleSources(true) },

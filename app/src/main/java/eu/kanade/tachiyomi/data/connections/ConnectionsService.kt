@@ -10,12 +10,12 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import okhttp3.OkHttpClient
-import uy.kohesive.injekt.injectLazy
 
-abstract class ConnectionsService(val id: Long) {
-
-    val connectionsPreferences: ConnectionsPreferences by injectLazy()
-    private val networkService: NetworkHelper by injectLazy()
+abstract class ConnectionsService(
+    val id: Long,
+    val connectionsPreferences: ConnectionsPreferences,
+    private val networkService: NetworkHelper,
+) {
 
     open val client: OkHttpClient
         get() = networkService.client

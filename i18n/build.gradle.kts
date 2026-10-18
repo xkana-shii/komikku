@@ -1,17 +1,15 @@
-import mihon.buildlogic.generatedBuildDir
-import mihon.buildlogic.tasks.getLocalesConfigTask
+import mihon.buildlogic.android
+import mihon.buildlogic.tasks.GenerateLocalesConfigTask
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    id("mihon.library")
-    kotlin("multiplatform")
+    id("mihon.library.multiplatform")
     alias(libs.plugins.moko)
     id("com.github.ben-manes.versions")
 }
 
 kotlin {
-    androidTarget()
-
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
     applyDefaultHierarchyTemplate()
 
     sourceSets {
@@ -22,37 +20,39 @@ kotlin {
         }
     }
 
+    android {
+        namespace = "tachiyomi.i18n"
+
+        // TODO(antsy): Remove when https://youtrack.jetbrains.com/issue/KT-83319 is resolved
+        withHostTest { }
+
+        lint {
+            disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
+        }
+    }
+
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 }
 
-val generatedAndroidResourceDir = generatedBuildDir.resolve("android/res")
+androidComponents {
+    onVariants { variant ->
+        val resSource = variant.sources.res ?: return@onVariants
 
-android {
-    namespace = "tachiyomi.i18n"
-
-    sourceSets {
-        val main by getting
-        main.res.srcDirs(
-            "src/commonMain/resources",
-            generatedAndroidResourceDir,
-        )
-    }
-
-    lint {
-        disable.addAll(listOf("MissingTranslation", "ExtraTranslation"))
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val localesConfigTask = tasks.register<GenerateLocalesConfigTask>("generate${variantName}LocalesConfig") {
+            localeFiles.from(
+                layout.projectDirectory.dir("src/commonMain/moko-resources").asFileTree.matching {
+                    include("**/strings.xml", "**/plurals.xml")
+                },
+            )
+        }
+        resSource.addGeneratedSourceDirectory(localesConfigTask) { it.outputDir }
     }
 }
 
 multiplatformResources {
     resourcesPackage.set("tachiyomi.i18n")
-}
-
-tasks {
-    val localesConfigTask = project.getLocalesConfigTask(generatedAndroidResourceDir)
-    preBuild {
-        dependsOn(localesConfigTask)
-    }
 }

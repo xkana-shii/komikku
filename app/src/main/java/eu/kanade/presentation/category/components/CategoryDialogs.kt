@@ -12,7 +12,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TriStateCheckbox
@@ -29,127 +28,19 @@ import androidx.compose.ui.focus.focusRequester
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.preference.asToggleableState
 import eu.kanade.presentation.category.visualName
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.domain.category.model.Category
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import kotlin.time.Duration.Companion.seconds
-
-// KMK -->
-@Composable
-fun CategoryMoveDialog(
-    parents: ImmutableList<Category>,
-    excludedIds: Set<Long>,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Long) -> Unit,
-) {
-    var selected by remember { mutableStateOf(parents.firstOrNull { it.id !in excludedIds }?.id) }
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(
-                enabled = selected != null,
-                onClick = {
-                    selected?.let(onConfirm)
-                    onDismissRequest()
-                },
-            ) {
-                Text(stringResource(KMR.strings.category_manager_move))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(MR.strings.action_cancel))
-            }
-        },
-        title = { Text(stringResource(KMR.strings.category_manager_move_title)) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                parents.forEach { parent ->
-                    val enabled = parent.id !in excludedIds
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = enabled) { selected = parent.id },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = selected == parent.id,
-                            enabled = enabled,
-                            onClick = { selected = parent.id },
-                        )
-                        Text(
-                            text = parent.name,
-                            modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium),
-                        )
-                    }
-                }
-            }
-        },
-    )
-}
-
-@Composable
-fun CategoryMergeDialog(
-    candidates: ImmutableList<Category>,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Long) -> Unit,
-) {
-    var selected by remember { mutableStateOf(candidates.firstOrNull()?.id) }
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(
-                enabled = selected != null && candidates.size >= 2,
-                onClick = {
-                    selected?.let(onConfirm)
-                    onDismissRequest()
-                },
-            ) {
-                Text(stringResource(KMR.strings.category_manager_merge))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(MR.strings.action_cancel))
-            }
-        },
-        title = { Text(stringResource(KMR.strings.category_manager_merge_title)) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                candidates.forEach { candidate ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selected = candidate.id },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = selected == candidate.id,
-                            onClick = { selected = candidate.id },
-                        )
-                        Text(
-                            text = candidate.name,
-                            modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium),
-                        )
-                    }
-                }
-            }
-        },
-    )
-}
-// KMK <--
 
 @Composable
 fun CategoryCreateDialog(
     onDismissRequest: () -> Unit,
     onCreate: (String) -> Unit,
-    categories: ImmutableList<String>,
+    categories: List<String>,
     // SY -->
     title: String = stringResource(MR.strings.action_add_category),
     extraMessage: String? = null,
@@ -159,20 +50,15 @@ fun CategoryCreateDialog(
     var name by remember { mutableStateOf("") }
 
     val focusRequester = remember { FocusRequester() }
-    // KMK --> Keep UI feedback aligned with the sibling validation in the interactor.
-    val normalizedName = remember(name) { name.trim() }
-    val nameAlreadyExists = remember(name, categories) {
-        categories.any { it.trim().equals(normalizedName, ignoreCase = true) }
-    }
-    // KMK <--
+    val nameAlreadyExists = remember(name) { categories.contains(name) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(
-                enabled = normalizedName.isNotEmpty() && normalizedName.length <= 50 && !nameAlreadyExists,
+                enabled = name.isNotEmpty() && !nameAlreadyExists,
                 onClick = {
-                    onCreate(normalizedName)
+                    onCreate(name)
                     onDismissRequest()
                 },
             ) {
@@ -204,7 +90,7 @@ fun CategoryCreateDialog(
                         Text(text = stringResource(MR.strings.name))
                     },
                     supportingText = {
-                        val msgRes = if (normalizedName.isNotEmpty() && nameAlreadyExists) {
+                        val msgRes = if (name.isNotEmpty() && nameAlreadyExists) {
                             // SY -->
                             alreadyExistsError
                             // SY <--
@@ -213,7 +99,7 @@ fun CategoryCreateDialog(
                         }
                         Text(text = stringResource(msgRes))
                     },
-                    isError = normalizedName.isNotEmpty() && nameAlreadyExists,
+                    isError = name.isNotEmpty() && nameAlreadyExists,
                     singleLine = true,
                 )
                 // SY -->
@@ -233,27 +119,22 @@ fun CategoryCreateDialog(
 fun CategoryRenameDialog(
     onDismissRequest: () -> Unit,
     onRename: (String) -> Unit,
-    categories: ImmutableList<String>,
+    categories: List<String>,
     category: String,
 ) {
     var name by remember { mutableStateOf(category) }
     var valueHasChanged by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
-    // KMK --> Keep UI feedback aligned with the sibling validation in the interactor.
-    val normalizedName = remember(name) { name.trim() }
-    val nameAlreadyExists = remember(name, categories) {
-        categories.any { it.trim().equals(normalizedName, ignoreCase = true) }
-    }
-    // KMK <--
+    val nameAlreadyExists = remember(name) { categories.contains(name) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(
-                enabled = valueHasChanged && normalizedName.isNotEmpty() && normalizedName.length <= 50 && !nameAlreadyExists,
+                enabled = valueHasChanged && name.isNotEmpty() && !nameAlreadyExists,
                 onClick = {
-                    onRename(normalizedName)
+                    onRename(name)
                     onDismissRequest()
                 },
             ) {
@@ -338,7 +219,7 @@ fun CategoryDeleteDialog(
 
 @Composable
 fun ChangeCategoryDialog(
-    initialSelection: ImmutableList<CheckboxState<Category>>,
+    initialSelection: List<CheckboxState<Category>>,
     onDismissRequest: () -> Unit,
     onEditCategories: () -> Unit,
     onConfirm: (List<Long>, List<Long>) -> Unit,
@@ -410,7 +291,7 @@ fun ChangeCategoryDialog(
                         if (index != -1) {
                             val mutableList = selection.toMutableList()
                             mutableList[index] = it.next()
-                            selection = mutableList.toList().toImmutableList()
+                            selection = mutableList.toList().toList()
                         }
                     }
                     Row(

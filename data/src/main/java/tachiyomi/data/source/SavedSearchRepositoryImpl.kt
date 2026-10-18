@@ -3,38 +3,64 @@ package tachiyomi.data.source
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.SavedSearchRepository
 
-// KMK -->
-
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class SavedSearchRepositoryImpl(
     private val database: Database,
 ) : SavedSearchRepository {
 
     override suspend fun getById(savedSearchId: Long): SavedSearch? {
-        return database.saved_searchQueries.selectById(savedSearchId, SavedSearchMapper::map).awaitAsOneOrNull()
+        return database.saved_searchQueries
+            .selectById(savedSearchId, SavedSearchMapper::map)
+            .awaitAsOneOrNull()
     }
 
+    // KUN -->
+    override suspend fun getAll(): List<SavedSearch> {
+        return database.saved_searchQueries
+            .selectAll(SavedSearchMapper::map)
+            .awaitAsList()
+    }
+
+    override suspend fun deleteAll() {
+        database.saved_searchQueries.deleteAll()
+    }
+    // KUN <--
+
     override suspend fun getBySourceId(sourceId: Long): List<SavedSearch> {
-        return database.saved_searchQueries.selectBySource(sourceId, SavedSearchMapper::map).awaitAsList()
+        return database.saved_searchQueries
+            .selectBySource(sourceId, SavedSearchMapper::map)
+            .awaitAsList()
     }
 
     override fun getBySourceIdAsFlow(sourceId: Long): Flow<List<SavedSearch>> {
-        return database.saved_searchQueries.selectBySource(sourceId, SavedSearchMapper::map).subscribeToList()
+        return database.saved_searchQueries
+            .selectBySource(sourceId, SavedSearchMapper::map)
+            .subscribeToList()
     }
 
     override suspend fun delete(savedSearchId: Long) {
-        database.saved_searchQueries.deleteById(savedSearchId)
+        database.saved_searchQueries
+            .deleteById(savedSearchId)
     }
 
     override suspend fun insert(savedSearch: SavedSearch): Long {
         // KMK -->
         return database.transactionWithResult {
-            val currentSavedSearches = database.saved_searchQueries.selectAll(SavedSearchMapper::map).awaitAsList()
+            val currentSavedSearches = database.saved_searchQueries
+                .selectAll(SavedSearchMapper::map)
+                .awaitAsList()
             val existedSavedSearchId = currentSavedSearches.find { currentSavedSearch ->
                 currentSavedSearch.source == savedSearch.source &&
                     currentSavedSearch.name == savedSearch.name &&
@@ -44,24 +70,13 @@ class SavedSearchRepositoryImpl(
 
             existedSavedSearchId
                 // KMK <--
-                // KMK -->
-                ?: database.saved_searchQueries.insertReturningId(
+                ?: database.saved_searchQueries.insert(
                     savedSearch.source,
                     savedSearch.name,
                     savedSearch.query,
                     savedSearch.filtersJson,
                 ).awaitAsOne()
-            // KMK <--
         }
-    }
-
-    override suspend fun update(savedSearch: SavedSearch) {
-        database.saved_searchQueries.update(
-            name = savedSearch.name,
-            query = savedSearch.query,
-            filtersJson = savedSearch.filtersJson,
-            id = savedSearch.id,
-        )
     }
 
     override suspend fun insertAll(savedSearch: List<SavedSearch>) {
@@ -72,9 +87,19 @@ class SavedSearchRepositoryImpl(
                     it.name,
                     it.query,
                     it.filtersJson,
-                )
+                ).awaitAsOneOrNull()
             }
         }
     }
+
+    // KMK -->
+    override suspend fun update(savedSearch: SavedSearch) {
+        database.saved_searchQueries.update(
+            name = savedSearch.name,
+            query = savedSearch.query,
+            filtersJson = savedSearch.filtersJson,
+            id = savedSearch.id,
+        )
+    }
+    // KMK <--
 }
-// KMK <--

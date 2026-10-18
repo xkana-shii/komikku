@@ -1,6 +1,9 @@
 package exh.eh
 
 import android.content.Context
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.manga.interactor.UpdateManga
 import exh.metadata.metadata.EHentaiSearchMetadata
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +16,7 @@ import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.chapter.interactor.GetChapterByUrl
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.interactor.RemoveHistory
@@ -25,28 +28,33 @@ import tachiyomi.domain.manga.interactor.InsertFavoriteEntryAlternative
 import tachiyomi.domain.manga.model.FavoriteEntryAlternative
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
-import uy.kohesive.injekt.injectLazy
 import java.io.File
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 data class ChapterChain(val manga: Manga, val chapters: List<Chapter>, val history: List<History>)
 
-class EHentaiUpdateHelper(context: Context) {
+@Inject
+@SingleIn(AppScope::class)
+class EHentaiUpdateHelper(
+    context: Context,
+    private val getChapterByUrl: GetChapterByUrl,
+    private val getChaptersByMangaId: GetChaptersByMangaId,
+    private val getManga: GetManga,
+    private val updateManga: UpdateManga,
+    private val setMangaCategories: SetMangaCategories,
+    private val getCategories: GetCategories,
+    private val chapterRepository: ChapterRepository,
+    private val upsertHistory: UpsertHistory,
+    private val removeHistory: RemoveHistory,
+    private val getHistory: GetHistory,
+    private val insertFavoriteEntryAlternative: InsertFavoriteEntryAlternative,
+) {
     val parentLookupTable =
         MemAutoFlushingLookupTable(
             File(context.filesDir, "exh-plt.maftable"),
             GalleryEntry.Serializer(),
         )
-    private val getChapterByUrl: GetChapterByUrl by injectLazy()
-    private val getChaptersByMangaId: GetChaptersByMangaId by injectLazy()
-    private val getManga: GetManga by injectLazy()
-    private val updateManga: UpdateManga by injectLazy()
-    private val setMangaCategories: SetMangaCategories by injectLazy()
-    private val getCategories: GetCategories by injectLazy()
-    private val chapterRepository: ChapterRepository by injectLazy()
-    private val upsertHistory: UpsertHistory by injectLazy()
-    private val removeHistory: RemoveHistory by injectLazy()
-    private val getHistory: GetHistory by injectLazy()
-    private val insertFavoriteEntryAlternative: InsertFavoriteEntryAlternative by injectLazy()
 
     /**
      * @param chapters Cannot be an empty list!
@@ -97,18 +105,16 @@ class EHentaiUpdateHelper(context: Context) {
             val (chapterUpdates, newChapters, new) = getChapterList(accepted, toDiscard, chainsAsChapters)
 
             toDiscard.forEach {
-                mangaUpdates += MangaUpdate(
-                    id = it.manga.id,
-                    favorite = false,
-                    dateAdded = 0,
-                )
+                mangaUpdates += MangaUpdate(it.manga.id) {
+                    favorite = false
+                    dateAdded = null
+                }
             }
             if (!accepted.manga.favorite) {
-                mangaUpdates += MangaUpdate(
-                    id = accepted.manga.id,
-                    favorite = true,
-                    dateAdded = System.currentTimeMillis(),
-                )
+                mangaUpdates += MangaUpdate(accepted.manga.id) {
+                    favorite = true
+                    dateAdded = Clock.System.now()
+                }
             }
 
             val newAccepted = ChapterChain(accepted.manga, newChapters, emptyList())
@@ -117,7 +123,7 @@ class EHentaiUpdateHelper(context: Context) {
             // Apply changes to all manga
             updateManga.awaitAll(mangaUpdates)
             // Insert new chapters for accepted manga
-            chapterRepository.updateAll(chapterUpdates)
+            chapterRepository.updateAllRemote(chapterUpdates)
             chapterRepository.addAll(newChapters)
 
             val (newHistory, deleteHistory) = getHistory(
@@ -190,7 +196,7 @@ class EHentaiUpdateHelper(context: Context) {
         val newHistory = currentChapters.mapNotNull { chapter ->
             val newHistory = history[chapter.url]
                 ?.maxByOrNull {
-                    it.readAt?.time ?: 0
+                    it.readAt ?: Instant.fromEpochMilliseconds(0)
                 }
                 ?.takeIf { it.chapterId != chapter.id && it.readAt != null }
             if (newHistory != null) {
@@ -209,7 +215,7 @@ class EHentaiUpdateHelper(context: Context) {
         accepted: ChapterChain,
         toDiscard: List<ChapterChain>,
         chainsAsChapters: List<Chapter>,
-    ): Triple<List<ChapterUpdate>, List<Chapter>, Boolean> {
+    ): Triple<List<ChapterRemoteUpdate>, List<Chapter>, Boolean> {
         var new = false
         return toDiscard
             .flatMap { chain ->
@@ -263,7 +269,7 @@ class EHentaiUpdateHelper(context: Context) {
             }
             .sortedBy { it.dateUpload }
             .let { chapters ->
-                val updates = mutableListOf<ChapterUpdate>()
+                val updates = mutableListOf<ChapterRemoteUpdate>()
                 val newChapters = mutableListOf<Chapter>()
                 chapters.mapIndexed { index, chapter ->
                     val name = "v${index + 1}: " + chapter.name.substringAfter(" ")
@@ -277,14 +283,26 @@ class EHentaiUpdateHelper(context: Context) {
                                 sourceOrder = sourceOrder,
                             ),
                         )
-                        else -> updates.add(
-                            ChapterUpdate(
-                                id = chapter.id,
-                                name = name.takeUnless { chapter.name == it },
-                                chapterNumber = chapterNumber.takeUnless { chapter.chapterNumber == it },
-                                sourceOrder = sourceOrder.takeUnless { chapter.sourceOrder == it },
-                            ),
-                        )
+                        else -> {
+                            val newName = name.takeUnless { chapter.name == it }
+                            val newChapterNumber = chapterNumber.takeUnless { chapter.chapterNumber == it }
+                            val newSourceOrder = sourceOrder.takeUnless { chapter.sourceOrder == it }
+                            // Only write when a field actually changed, so an unchanged chapter is not
+                            // stamped as locally modified (which would churn the sync delta).
+                            if (newName != null || newChapterNumber != null || newSourceOrder != null) {
+                                updates.add(
+                                    ChapterRemoteUpdate(
+                                        id = chapter.id,
+                                        name = newName ?: chapter.name,
+                                        scanlator = chapter.scanlator,
+                                        chapterNumber = newChapterNumber ?: chapter.chapterNumber,
+                                        dateUpload = chapter.dateUpload,
+                                        sourceOrder = newSourceOrder ?: chapter.sourceOrder,
+                                        memo = chapter.memo,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
                 Triple(updates.toList(), newChapters.toList(), new)

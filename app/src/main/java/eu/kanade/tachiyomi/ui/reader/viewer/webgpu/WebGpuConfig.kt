@@ -9,12 +9,11 @@ import eu.kanade.tachiyomi.ui.reader.viewer.navigation.EdgeNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.KindlishNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * Configuration used by pager viewers.
@@ -22,10 +21,10 @@ import uy.kohesive.injekt.api.get
 class WebGpuConfig(
     private val viewer: WebGpuViewer,
     scope: CoroutineScope,
-    readerPreferences: ReaderPreferences = Injekt.get(),
+    readerPreferences: ReaderPreferences,
 ) : ViewerConfig(readerPreferences, scope) {
 
-    var theme = readerPreferences.readerTheme().get()
+    var theme = readerPreferences.readerTheme.get()
         private set
 
     var automaticBackground = false
@@ -76,57 +75,81 @@ class WebGpuConfig(
         private set
 
     init {
-        readerPreferences.readerTheme().register(
-            {
-                theme = it
-                automaticBackground = it == 3
-            },
-            { imagePropertyChangedListener?.invoke() },
-        )
+        // KUN -->
+        // First WebGPU use: adopt TachiyomiSY/Komikku's `pageLayout` dual page choice into
+        // `dualPageView`, which is what the WebGPU renderer reads and what its settings chip edits.
+        // Without this, enabling the high quality renderer silently reset a dual page layout to
+        // single pages (the new pref defaults to NEVER). Seeded once; the user's later `dualPageView`
+        // choice wins.
+        if (!readerPreferences.dualPageView.isSet()) {
+            readerPreferences.dualPageView.set(legacyDualPageView())
+        }
+        dualPageView = readerPreferences.dualPageView.get()
+        // KUN <--
 
-        readerPreferences.imageScaleType().register({ imageScaleType = it }, { imagePropertyChangedListener?.invoke() })
+        readerPreferences.readerTheme
+            .register(
+                {
+                    theme = it
+                    automaticBackground = it == 3
+                },
+                { imagePropertyChangedListener?.invoke() },
+            )
 
-        readerPreferences.zoomStart().register({ zoomTypeFromPreference(it) }, { imagePropertyChangedListener?.invoke() })
+        readerPreferences.imageScaleType
+            .register({ imageScaleType = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.cropBorders().register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
+        readerPreferences.zoomStart
+            .register({ zoomTypeFromPreference(it) }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.cropBordersWebtoon().register(
-            { imageCropBordersWebtoon = it },
-            { imagePropertyChangedListener?.invoke() },
-        )
+        readerPreferences.cropBorders
+            .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigateToPan().register({ navigateToPan = it })
+        readerPreferences.cropBordersWebtoon
+            .register(
+                { imageCropBordersWebtoon = it },
+                { imagePropertyChangedListener?.invoke() },
+            )
 
-        readerPreferences.landscapeZoom().register({ landscapeZoom = it }, { imagePropertyChangedListener?.invoke() })
+        readerPreferences.navigateToPan
+            .register({ navigateToPan = it })
 
-        readerPreferences.navigationModePager().register({ navigationMode = it }, { updateNavigation(navigationMode) })
+        readerPreferences.landscapeZoom
+            .register({ landscapeZoom = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.pagerNavInverted().register({ tappingInverted = it }, { navigator.invertMode = it })
-        readerPreferences.pagerNavInverted().changes().drop(1).onEach { navigationModeChangedListener?.invoke() }
+        readerPreferences.navigationModePager
+            .register({ navigationMode = it }, { updateNavigation(navigationMode) })
+
+        readerPreferences.pagerNavInverted
+            .register({ tappingInverted = it }, { navigator.invertMode = it })
+        readerPreferences.pagerNavInverted.changes()
+            .drop(1)
+            .onEach { navigationModeChangedListener?.invoke() }
             .launchIn(scope)
 
-        readerPreferences.dualPageSplitPaged().register(
-            { dualPageSplit = it },
-            {
-                imagePropertyChangedListener?.invoke()
-                dualPageSplitChangedListener?.invoke(it)
-            },
-        )
+        readerPreferences.dualPageSplitPaged
+            .register(
+                { dualPageSplit = it },
+                {
+                    imagePropertyChangedListener?.invoke()
+                    dualPageSplitChangedListener?.invoke(it)
+                },
+            )
 
-        readerPreferences.dualPageInvertPaged().register(
-            { dualPageInvert = it },
-            { imagePropertyChangedListener?.invoke() },
-        )
+        readerPreferences.dualPageInvertPaged
+            .register({ dualPageInvert = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.dualPageRotateToFit().register(
-            { dualPageRotateToFit = it },
-            { imagePropertyChangedListener?.invoke() },
-        )
+        readerPreferences.dualPageRotateToFit
+            .register(
+                { dualPageRotateToFit = it },
+                { imagePropertyChangedListener?.invoke() },
+            )
 
-        readerPreferences.dualPageRotateToFitInvert().register(
-            { dualPageRotateToFitInvert = it },
-            { imagePropertyChangedListener?.invoke() },
-        )
+        readerPreferences.dualPageRotateToFitInvert
+            .register(
+                { dualPageRotateToFitInvert = it },
+                { imagePropertyChangedListener?.invoke() },
+            )
 
         readerPreferences.transitionAnimation.register(
             { transitionAnimation = it },
@@ -158,7 +181,7 @@ class WebGpuConfig(
             { imagePropertyChangedListener?.invoke() },
         )
 
-        readerPreferences.webtoonDisableZoomOut().register(
+        readerPreferences.webtoonDisableZoomOut.register(
             { zoomOutDisabled = it },
             { imagePropertyChangedListener?.invoke() },
         )
@@ -168,6 +191,30 @@ class WebGpuConfig(
             { imagePropertyChangedListener?.invoke() },
         )
     }
+
+    // KUN -->
+    /**
+     * TachiyomiSY/Komikku's pager dual page choice, as the SSIV viewers see it: `pageLayout` plus the
+     * "split wide pages" flag (`dualPageSplitPaged` disables pairing, matching [PagerConfig]).
+     *
+     * The WebGPU renderer never reads `pageLayout`; it reads the newer `dualPageView` pref. This maps
+     * the legacy choice onto that pref so a user's dual page layout survives enabling the high quality
+     * renderer. Long strip / webtoon layout prefs have no WebGPU counterpart upstream.
+     */
+    private fun legacyDualPageView(): ReaderPreferences.DualPageView {
+        return when (readerPreferences.pageLayout.get()) {
+            PagerConfig.PageLayout.DOUBLE_PAGES -> {
+                if (readerPreferences.dualPageSplitPaged.get()) {
+                    ReaderPreferences.DualPageView.NEVER
+                } else {
+                    ReaderPreferences.DualPageView.ALWAYS
+                }
+            }
+            PagerConfig.PageLayout.AUTOMATIC -> ReaderPreferences.DualPageView.WIDE
+            else -> ReaderPreferences.DualPageView.NEVER
+        }
+    }
+    // KUN <--
 
     private fun zoomTypeFromPreference(value: Int) {
         imageZoomType = when (value) {
@@ -193,20 +240,20 @@ class WebGpuConfig(
 
     override fun defaultNavigation(): ViewerNavigation {
         return if (viewer.isVertical) {
-            LNavigation()
+            LNavigation(readerPreferences)
         } else {
-            RightAndLeftNavigation()
+            RightAndLeftNavigation(readerPreferences)
         }
     }
 
     override fun updateNavigation(navigationMode: Int) {
         navigator = when (navigationMode) {
             0 -> defaultNavigation()
-            1 -> LNavigation()
-            2 -> KindlishNavigation()
-            3 -> EdgeNavigation()
-            4 -> RightAndLeftNavigation()
-            5 -> DisabledNavigation()
+            1 -> LNavigation(readerPreferences)
+            2 -> KindlishNavigation(readerPreferences)
+            3 -> EdgeNavigation(readerPreferences)
+            4 -> RightAndLeftNavigation(readerPreferences)
+            5 -> DisabledNavigation(readerPreferences)
             else -> defaultNavigation()
         }
         navigationModeChangedListener?.invoke()

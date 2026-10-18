@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Save
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.i18n.MR
@@ -47,7 +45,7 @@ fun SourceFilterDialog(
     onUpdate: (FilterList) -> Unit,
     // SY -->
     startExpanded: Boolean,
-    savedSearches: ImmutableList<EXHSavedSearch>,
+    savedSearches: List<EXHSavedSearch>,
     onSave: () -> Unit,
     onSavedSearch: (EXHSavedSearch) -> Unit,
     onSavedSearchPress: (EXHSavedSearch) -> Unit,
@@ -88,7 +86,7 @@ fun SourceFilterDialog(
                         // SY -->
                         IconButton(onClick = onSave) {
                             Icon(
-                                Icons.Default.Save,
+                                MaterialSymbols.Rounded.Save,
                                 contentDescription = stringResource(MR.strings.action_save),
                                 tint = MaterialTheme.colorScheme.onBackground,
                             )
@@ -139,11 +137,11 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit/* SY --> */, star
         is Filter.AutoComplete -> {
             AutoCompleteItem(
                 name = filter.name,
-                state = filter.state.toImmutableList(),
+                state = filter.state.toList(),
                 hint = filter.hint,
-                values = filter.values.toImmutableList(),
-                skipAutoFillTags = filter.skipAutoFillTags.toImmutableList(),
-                validPrefixes = filter.validPrefixes.toImmutableList(),
+                values = filter.values.toList(),
+                skipAutoFillTags = filter.skipAutoFillTags.toList(),
+                validPrefixes = filter.validPrefixes.toList(),
             ) {
                 filter.state = it
                 onUpdate()
@@ -188,11 +186,10 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit/* SY --> */, star
                 label = filter.name,
                 options = filter.values,
                 selectedIndex = filter.state,
-                onSelect = {
-                    filter.state = it
-                    onUpdate()
-                },
-            )
+            ) {
+                filter.state = it
+                onUpdate()
+            }
         }
         is Filter.Sort -> {
             CollapsibleBox(
@@ -247,7 +244,7 @@ private fun Int.toTriStateFilter(): TriState {
         Filter.TriState.STATE_IGNORE -> TriState.DISABLED
         Filter.TriState.STATE_INCLUDE -> TriState.ENABLED_IS
         Filter.TriState.STATE_EXCLUDE -> TriState.ENABLED_NOT
-        else -> throw IllegalStateException("Unknown TriState state: $this")
+        else -> TriState.DISABLED
     }
 }
 

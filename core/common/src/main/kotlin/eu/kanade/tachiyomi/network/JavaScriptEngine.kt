@@ -2,13 +2,19 @@ package eu.kanade.tachiyomi.network
 
 import android.content.Context
 import app.cash.quickjs.QuickJs
-import tachiyomi.core.common.util.lang.withIOContext
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Util for evaluating JavaScript in sources.
  */
 @Suppress("UNUSED", "UNCHECKED_CAST")
-class JavaScriptEngine(@Suppress("UNUSED_PARAMETER") context: Context) {
+@Inject
+@SingleIn(AppScope::class)
+class JavaScriptEngine(context: Context) {
 
     /**
      * Evaluate arbitrary JavaScript code and get the result as a primitive type
@@ -18,7 +24,7 @@ class JavaScriptEngine(@Suppress("UNUSED_PARAMETER") context: Context) {
      * @param script JavaScript to execute.
      * @return Result of JavaScript code as a primitive type.
      */
-    suspend fun <T> evaluate(script: String): T = withIOContext {
+    suspend fun <T> evaluate(script: String): T = withContext(Dispatchers.Default) {
         QuickJs.create().use {
             it.evaluate(script) as T
         }
