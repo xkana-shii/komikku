@@ -1,0 +1,24 @@
+-- KUN -->
+-- Single collapsed migration for the stale-cover recovery change.
+--
+-- This brings a stable schema-54 database to schema 55 and installs the final
+-- `update_manga_version` trigger: routine cover URL churn (CDN rotation) must not bump the
+-- whole-row sync version, because that inflates versions and can overwrite genuine edits on
+-- other devices. Stale-cover recovery bumps `version` explicitly in `updateCover` instead.
+--
+-- The trigger matches `manga.sq`/master exactly, so there is no net schema divergence. The one
+-- pre-release schema-55 database was patched directly via ADB (`user_version = 55`, final trigger
+-- already in place), so it never runs this migration. A stable 54 -> 55 upgrade ends at the same
+-- trigger as master.
+DROP TRIGGER IF EXISTS update_manga_version;
+
+CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
+BEGIN
+    UPDATE manga SET version = version + 1
+    WHERE id = new.id AND new.is_syncing = 0 AND (
+        new.remote_url != old.remote_url OR
+        new.remote_description != old.remote_description OR
+        new.user_favorite_at IS NOT old.user_favorite_at
+    );
+END;
+-- KUN <--

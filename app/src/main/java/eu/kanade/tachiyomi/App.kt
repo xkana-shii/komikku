@@ -36,6 +36,7 @@ import com.elvishew.xlog.printer.file.naming.DateFileNameGenerator
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.createGraphFactory
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.manga.interactor.RefreshMangaCover
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
@@ -140,6 +141,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     @Inject private lateinit var pagePreviewCache: PagePreviewCache
 
     @Inject private lateinit var getCustomMangaInfo: GetCustomMangaInfo
+
+    @Inject private lateinit var refreshMangaCover: Lazy<RefreshMangaCover>
     // KUN <--
 
     @Inject private lateinit var extensionManager: Lazy<ExtensionManager>
@@ -311,6 +314,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             val callFactoryLazy = lazy { networkHelper.value.client }
             val coverCache = coverCache.value
             val sourceManager = sourceManager.value
+            // KUN -->
+            val coverRefresh = refreshMangaCover.value
+            // KUN <--
             components {
                 // NetworkFetcher.Factory
                 add(OkHttpNetworkFetcherFactory(callFactoryLazy::value))
@@ -318,8 +324,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 add(ImageDecoder.Factory(context))
                 // Fetcher.Factory
                 add(BufferedSourceFetcher.Factory())
-                add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy, coverCache, sourceManager, uiPreferences))
-                add(MangaCoverFetcher.MangaFactory(callFactoryLazy, coverCache, sourceManager, uiPreferences))
+                // KUN -->
+                add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy, coverCache, sourceManager, uiPreferences, coverRefresh))
+                add(MangaCoverFetcher.MangaFactory(callFactoryLazy, coverCache, sourceManager, uiPreferences, coverRefresh))
+                // KUN <--
                 add(ExtensionIconFetcher.ExtensionFactory(context))
                 add(ExtensionIconFetcher.SourceFactory(context, extensionManager))
                 // Keyer

@@ -68,6 +68,8 @@ BEGIN
   WHERE id = new.id;
 END;
 
+-- Routine cover URL churn must not bump the whole-row sync version; the stale-cover recovery
+-- path bumps it explicitly in updateCover.
 CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
 BEGIN
     UPDATE manga SET version = version + 1
@@ -89,6 +91,11 @@ SELECT
     favorite_modified_at
 FROM manga
 WHERE id = :id;
+
+-- KUN -->
+getMangaIsSyncing:
+SELECT is_syncing FROM manga WHERE id = :mangaId;
+-- KUN <--
 
 -- TODO: this should ideally never really have more than 1 result
 getMangaByUrlAndSource:
@@ -337,6 +344,27 @@ UPDATE manga SET
     -- SY <--
     user_notes = coalesce(:notes, user_notes)
 WHERE id = :mangaId;
+
+-- KUN -->
+-- Only remote_cover changes. state_cover_last_modified is deliberately left alone so the
+-- already decoded image keeps its Coil cache key for the rest of the session.
+--
+-- `version` is bumped explicitly exactly once here. The `update_manga_version` trigger no longer
+-- reacts to `remote_cover` (routine CDN URL churn must not inflate the whole-row version and
+-- overwrite genuine edits on other devices), but a recovered cover still has to win version-based
+-- reconciliation. The write is skipped while a sync is applying (`is_syncing != 0`) so it can be
+-- retried after sync instead of racing the sync write; `update_last_modified_at_mangas` still
+-- stamps `last_modified_at` for the upload.
+updateCover:
+UPDATE manga SET
+    remote_cover = :thumbnailUrl,
+    version = version + 1
+WHERE id = :mangaId
+AND remote_cover = :staleUrl
+AND remote_cover != :thumbnailUrl
+AND is_syncing = 0
+RETURNING id;
+-- KUN <--
 
 updateRemote:
 UPDATE manga SET

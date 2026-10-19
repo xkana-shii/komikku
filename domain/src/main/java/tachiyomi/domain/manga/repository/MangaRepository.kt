@@ -53,6 +53,26 @@ interface MangaRepository {
 
     suspend fun updateRemote(update: MangaRemoteUpdate): Boolean
 
+    // KUN -->
+    /**
+     * Updates only the source-owned cover URL of [mangaId], leaving every other field untouched.
+     * The write only succeeds while the entry still points at [staleUrl], the new URL differs, and
+     * no sync is applying (`is_syncing = 0`); otherwise it fails so the recovery can be retried
+     * after sync. It bumps `version` explicitly, since routine cover-only changes no longer do; the
+     * SyncYomi triggers still stamp `last_modified_at`, so the new URL is uploaded.
+     *
+     * Syncing is best-effort: the recovered cover only wins when its version is strictly higher
+     * than a peer's. Equal or higher peer versions keep the peer row. A cover-specific version or
+     * reconciler is a follow-up.
+     */
+    suspend fun updateCover(mangaId: Long, staleUrl: String, thumbnailUrl: String): Boolean
+
+    /**
+     * Whether a sync is currently applying to [mangaId]. Used to avoid racing a recovery write.
+     */
+    suspend fun isSyncing(mangaId: Long): Boolean
+    // KUN <--
+
     suspend fun updateAll(mangaUpdates: List<MangaUpdate>): Boolean
 
     suspend fun insertNetworkManga(
