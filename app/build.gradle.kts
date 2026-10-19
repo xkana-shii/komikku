@@ -78,6 +78,11 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-${getCommitCount()}"
             isPseudoLocalesEnabled = true
+
+            // KUN -->
+            // Debug builds are installed locally; never check for or download app updates.
+            buildConfigField("boolean", "UPDATER_ENABLED", "false")
+            // KUN <--
         }
         val release = getByName("release") {
             isMinifyEnabled = Config.enableCodeShrink
