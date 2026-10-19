@@ -27,8 +27,8 @@ android {
     defaultConfig {
         applicationId = "app.komikku.kns"
 
-        versionCode = 171
-        versionName = "1.24.7"
+        versionCode = 172
+        versionName = "1.24.8"
 
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
         buildConfigField("String", "DEV_OPTIONS", "\"${devSecret}\"")
