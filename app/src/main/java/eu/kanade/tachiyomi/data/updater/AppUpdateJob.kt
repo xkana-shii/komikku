@@ -43,6 +43,14 @@ class AppUpdateJob(private val context: Context, workerParams: WorkerParameters)
         private const val TAG = "AppUpdateChecker"
 
         fun setupTask(context: Context) {
+            // KUN -->
+            // Make sure a worker scheduled by an earlier (non-debug) build is removed too.
+            if (!updaterEnabled) {
+                cancelTask(context)
+                return
+            }
+            // KUN <--
+
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()

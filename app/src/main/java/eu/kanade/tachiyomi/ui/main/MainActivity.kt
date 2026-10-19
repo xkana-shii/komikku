@@ -626,11 +626,13 @@ class MainActivity : BaseActivity() {
 
         // App updates
         LaunchedEffect(Unit) {
+            // KMK -->
+            // setupTask() also cancels a worker left behind by an earlier build when the
+            // updater is disabled for this build type.
+            AppUpdateJob.setupTask(context)
+            // KMK <--
             if (updaterEnabled) {
                 try {
-                    // KMK -->
-                    AppUpdateJob.setupTask(context)
-                    // KMK <--
                     val result = context.appGraph.updateChecker.checkForUpdate(context)
                     if (
                         result is GetApplicationRelease.Result.NewUpdate &&

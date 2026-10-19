@@ -8,6 +8,7 @@ import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.util.system.isFossBuildType
 import eu.kanade.tachiyomi.util.system.isNightlyBuildType
+import eu.kanade.tachiyomi.util.system.updaterEnabled
 import exh.source.ExhPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,6 +32,9 @@ class AppUpdateChecker(
         autoUpdate: Boolean = AppUpdatePolicy.DISABLE_AUTO_DOWNLOAD !in exhPreferences.appShouldAutoUpdate.get(),
         // KMK <--
     ): GetApplicationRelease.Result {
+        // KUN -->
+        if (!updaterEnabled) return GetApplicationRelease.Result.NoNewUpdate
+        // KUN <--
         return withContext(Dispatchers.IO) {
             val result = getApplicationRelease.await(
                 GetApplicationRelease.Arguments(

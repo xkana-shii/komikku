@@ -32,6 +32,7 @@ import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notificationManager
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
 import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.system.workManager
 import exh.log.xLogE
 import exh.source.ExhPreferences
@@ -71,6 +72,9 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
     // KMK <--
 
     override suspend fun doWork(): Result {
+        // KUN -->
+        if (!updaterEnabled) return Result.success()
+        // KUN <--
         graph.inject(this)
         // KMK -->
         val idleRun = inputData.getBoolean(SCHEDULED_RUN, false)
@@ -310,6 +314,9 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             scheduled: Boolean = false,
             // KMK <--
         ) {
+            // KUN -->
+            if (!updaterEnabled) return
+            // KUN <--
             val data = Data.Builder()
             data.putString(EXTRA_DOWNLOAD_URL, url)
             data.putString(EXTRA_DOWNLOAD_TITLE, title)
