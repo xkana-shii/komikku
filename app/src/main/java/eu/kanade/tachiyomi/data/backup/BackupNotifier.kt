@@ -27,10 +27,11 @@ import mihon.icons.materialsymbols.R as MaterialSymbolsR
 class BackupNotifier(
     private val context: Context,
     private val preferences: SecurityPreferences,
+    // KUN -->
+    // Metro: this was a KMK member injection; inject it through the constructor instead.
+    private val backupRestoreStatus: BackupRestoreStatus,
+    // KUN <--
 ) {
-    // KMK -->
-    @Inject private lateinit var backupRestoreStatus: BackupRestoreStatus
-    // KMK <--
     private val progressNotificationBuilder = context.notificationBuilder(
         Notifications.CHANNEL_BACKUP_RESTORE_PROGRESS,
     ) {

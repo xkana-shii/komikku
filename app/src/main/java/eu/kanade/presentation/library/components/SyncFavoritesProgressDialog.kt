@@ -158,13 +158,16 @@ fun SyncFavoritesProgressDialog(
                 ) {
                     delay(5.seconds)
                     value = properties.copy(
+                        // KUN -->
+                        // SY added a redundant `else -> properties.text`; this `when` is exhaustive
+                        // because `status` is narrowed to the two AddingGallery subtypes above.
                         text = when (status) {
                             is FavoritesSyncStatus.Processing.AddingGalleryToRemote ->
                                 properties.text + "\n\n" + status.title
                             is FavoritesSyncStatus.Processing.AddingGalleryToLocal ->
                                 properties.text + "\n\n" + status.title
-                            else -> properties.text
                         },
+                        // KUN <--
                     )
                 }
             }

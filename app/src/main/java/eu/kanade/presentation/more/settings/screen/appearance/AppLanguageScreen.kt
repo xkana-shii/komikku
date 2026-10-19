@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,12 +79,6 @@ class AppLanguageScreen : Screen() {
                         modifier = Modifier.clickable {
                             currentLanguage = it.langTag
                         },
-                        headlineContent = { Text(it.displayName) },
-                        supportingContent = {
-                            it.localizedDisplayName?.let {
-                                Text(it)
-                            }
-                        },
                         // KMK -->
                         leadingContent = {
                             val iconResId = getLanguageIconID(it.langTag) ?: R.drawable.globe
@@ -106,6 +101,12 @@ class AppLanguageScreen : Screen() {
                                 )
                             }
                         },
+                        supportingContent = {
+                            it.localizedDisplayName?.let {
+                                Text(it)
+                            }
+                        },
+                        content = { Text(it.displayName) },
                     )
                 }
             }

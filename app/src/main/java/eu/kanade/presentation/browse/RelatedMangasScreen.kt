@@ -21,8 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.capitalize
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.browse.components.RelatedMangasComfortableGrid
 import eu.kanade.presentation.browse.components.RelatedMangasCompactGrid
@@ -152,7 +152,7 @@ fun RelatedMangaTitle(
             ),
         ) {
             Text(
-                text = title.capitalize(Locale.current),
+                text = title.capitalize(LocalLocale.current),
                 style = MaterialTheme.typography.titleMedium,
             )
             if (subtitle != null) {

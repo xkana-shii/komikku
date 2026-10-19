@@ -136,10 +136,13 @@ class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker
                 it.title?.htmlDecode(),
                 it.image?.url?.original,
                 it.description?.htmlDecode(),
-                it.authors?.filter { it.type != null && "Author" in it.type }
-                    ?.joinToString(separator = ", ") { it.name ?: "" },
-                it.authors?.filter { it.type != null && "Artist" in it.type }
-                    ?.joinToString(separator = ", ") { it.name ?: "" },
+                // KUN -->
+                // MUAuthor.type/name are non-null in this fork, so the safe calls/Elvis checks were dead.
+                it.authors.filter { "Author" in it.type }
+                    .joinToString(separator = ", ") { it.name },
+                it.authors.filter { "Artist" in it.type }
+                    .joinToString(separator = ", ") { it.name },
+                // KUN <--
             )
         }
     }
