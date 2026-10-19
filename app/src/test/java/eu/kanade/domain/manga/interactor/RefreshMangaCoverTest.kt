@@ -2,6 +2,7 @@ package eu.kanade.domain.manga.interactor
 
 import android.util.Log
 import eu.kanade.tachiyomi.data.cache.CoverCache
+import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -25,6 +26,8 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.source.service.SourceManager
 import java.io.IOException
+import java.net.ConnectException
+import java.net.UnknownHostException
 
 class RefreshMangaCoverTest {
 
@@ -37,6 +40,8 @@ class RefreshMangaCoverTest {
     private val transientCooldown = 10 * 60 * 1000L
     private val deadReplacementCooldown = 15 * 60 * 1000L
     private val sourceMinInterval = 300L
+    private val sourceFailureCooldown = 2 * 60 * 60 * 1000L
+    private val transientSourceCooldown = 60_000L
 
     private val manga = Manga.create().copy(
         id = mangaId,
@@ -305,10 +310,11 @@ class RefreshMangaCoverTest {
     }
 
     @Test
-    fun `five source failures open the breaker for that source`() = runTest {
+    fun `five source-wide blocks open the breaker for that source`() = runTest {
         every { source.id } returns sourceId
         coEvery { sourceManager.get(sourceId) } returns source
-        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws IOException("source down")
+        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws
+            IOException("source down", HttpException(403))
 
         repeat(5) { index ->
             val id = 100L + index
@@ -325,6 +331,151 @@ class RefreshMangaCoverTest {
         refreshMangaCover.findReplacement(sixthId, sixthStale) shouldBe null
 
         coVerify(exactly = 5) { source.getMangaUpdate(any(), any(), true, false) }
+
+        now += sourceFailureCooldown + 1
+        stubSource(newUrl)
+        refreshMangaCover.findReplacement(sixthId, sixthStale) shouldBe newUrl
+        coVerify(exactly = 6) { source.getMangaUpdate(any(), any(), true, false) }
+    }
+
+    @Test
+    fun `a 429 response counts toward the long breaker`() = runTest {
+        every { source.id } returns sourceId
+        coEvery { sourceManager.get(sourceId) } returns source
+        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws HttpException(429)
+
+        repeat(5) { index ->
+            val id = 300L + index
+            val stale = "https://old.example/$id.jpg"
+            coEvery { repository.getMangaById(id) } returns manga.copy(id = id, ogThumbnailUrl = stale)
+            refreshMangaCover.findReplacement(id, stale) shouldBe null
+            now += sourceMinInterval
+        }
+
+        val sixthId = 400L
+        val sixthStale = "https://old.example/400.jpg"
+        coEvery { repository.getMangaById(sixthId) } returns manga.copy(id = sixthId, ogThumbnailUrl = sixthStale)
+        refreshMangaCover.findReplacement(sixthId, sixthStale) shouldBe null
+        coVerify(exactly = 5) { source.getMangaUpdate(any(), any(), true, false) }
+
+        now += sourceFailureCooldown + 1
+        stubSource(newUrl)
+        refreshMangaCover.findReplacement(sixthId, sixthStale) shouldBe newUrl
+        coVerify(exactly = 6) { source.getMangaUpdate(any(), any(), true, false) }
+    }
+
+    @Test
+    fun `transient network failures do not open the long breaker`() = runTest {
+        every { source.id } returns sourceId
+        coEvery { sourceManager.get(sourceId) } returns source
+        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws
+            UnknownHostException("kagane.to")
+
+        repeat(5) { index ->
+            val id = 500L + index
+            val stale = "https://old.example/$id.jpg"
+            coEvery { repository.getMangaById(id) } returns manga.copy(id = id, ogThumbnailUrl = stale)
+            refreshMangaCover.findReplacement(id, stale) shouldBe null
+            // Each transient failure backs the whole source off for 60s.
+            now += transientSourceCooldown + sourceMinInterval
+        }
+        coVerify(exactly = 5) { source.getMangaUpdate(any(), any(), true, false) }
+
+        // A short backoff, not the 2h breaker: 60s later the source is queried again.
+        now += transientSourceCooldown + 1
+        val retryId = 600L
+        val retryStale = "https://old.example/600.jpg"
+        coEvery { repository.getMangaById(retryId) } returns manga.copy(id = retryId, ogThumbnailUrl = retryStale)
+        stubSource(newUrl)
+        refreshMangaCover.findReplacement(retryId, retryStale) shouldBe newUrl
+        coVerify(exactly = 6) { source.getMangaUpdate(any(), any(), true, false) }
+    }
+
+    @Test
+    fun `connect failures are transient too`() = runTest {
+        every { source.id } returns sourceId
+        coEvery { sourceManager.get(sourceId) } returns source
+        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws
+            ConnectException("timeout")
+
+        repeat(5) { index ->
+            val id = 700L + index
+            val stale = "https://old.example/$id.jpg"
+            coEvery { repository.getMangaById(id) } returns manga.copy(id = id, ogThumbnailUrl = stale)
+            refreshMangaCover.findReplacement(id, stale) shouldBe null
+            now += transientSourceCooldown + sourceMinInterval
+        }
+
+        now += transientSourceCooldown + 1
+        val retryId = 800L
+        val retryStale = "https://old.example/800.jpg"
+        coEvery { repository.getMangaById(retryId) } returns manga.copy(id = retryId, ogThumbnailUrl = retryStale)
+        stubSource(newUrl)
+        refreshMangaCover.findReplacement(retryId, retryStale) shouldBe newUrl
+        coVerify(exactly = 6) { source.getMangaUpdate(any(), any(), true, false) }
+    }
+
+    @Test
+    fun `per-manga 404 and 410 responses do not open the long breaker`() = runTest {
+        every { source.id } returns sourceId
+        coEvery { sourceManager.get(sourceId) } returns source
+
+        repeat(5) { index ->
+            val id = 900L + index
+            val stale = "https://old.example/$id.jpg"
+            coEvery { repository.getMangaById(id) } returns manga.copy(id = id, ogThumbnailUrl = stale)
+            coEvery { source.getMangaUpdate(any(), any(), true, false) } throws
+                HttpException(if (index % 2 == 0) 404 else 410)
+            refreshMangaCover.findReplacement(id, stale) shouldBe null
+            now += transientSourceCooldown + sourceMinInterval
+        }
+        coVerify(exactly = 5) { source.getMangaUpdate(any(), any(), true, false) }
+
+        now += transientSourceCooldown + 1
+        val retryId = 1_000L
+        val retryStale = "https://old.example/1000.jpg"
+        coEvery { repository.getMangaById(retryId) } returns manga.copy(id = retryId, ogThumbnailUrl = retryStale)
+        stubSource(newUrl)
+        refreshMangaCover.findReplacement(retryId, retryStale) shouldBe newUrl
+        coVerify(exactly = 6) { source.getMangaUpdate(any(), any(), true, false) }
+    }
+
+    @Test
+    fun `a success resets the source-wide failure count`() = runTest {
+        every { source.id } returns sourceId
+        coEvery { sourceManager.get(sourceId) } returns source
+        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws HttpException(403)
+
+        var nextId = 1_100L
+        suspend fun failOnce() {
+            val id = nextId++
+            val stale = "https://old.example/$id.jpg"
+            coEvery { repository.getMangaById(id) } returns manga.copy(id = id, ogThumbnailUrl = stale)
+            refreshMangaCover.findReplacement(id, stale) shouldBe null
+            now += sourceMinInterval
+        }
+
+        // Four failures leave the counter below the threshold.
+        repeat(4) { failOnce() }
+
+        stubSource(newUrl)
+        val successId = nextId++
+        val successStale = "https://old.example/$successId.jpg"
+        coEvery { repository.getMangaById(successId) } returns manga.copy(id = successId, ogThumbnailUrl = successStale)
+        refreshMangaCover.findReplacement(successId, successStale) shouldBe newUrl
+        now += sourceMinInterval
+
+        // The success cleared the counter, so four more failures still do not open the breaker.
+        coEvery { source.getMangaUpdate(any(), any(), true, false) } throws HttpException(403)
+        repeat(4) { failOnce() }
+
+        val afterResetId = nextId++
+        val afterResetStale = "https://old.example/$afterResetId.jpg"
+        coEvery { repository.getMangaById(afterResetId) } returns manga.copy(id = afterResetId, ogThumbnailUrl = afterResetStale)
+        refreshMangaCover.findReplacement(afterResetId, afterResetStale) shouldBe null
+
+        // 4 + 1 success + 4 failures + this one = 10 source calls: not blocked.
+        coVerify(exactly = 10) { source.getMangaUpdate(any(), any(), true, false) }
     }
 
     private fun stubManga(ogThumbnailUrl: String = staleUrl) {

@@ -5,6 +5,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.data.cache.CoverCache
+import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.source.online.HttpSource
 import exh.log.xLogI
 import exh.log.xLogW
@@ -47,7 +48,9 @@ enum class CoverPersistResult {
  *   15 minutes for dead replacements;
  * - starts are paced per source ([SOURCE_MIN_INTERVAL_MS]), with a safety-valve budget
  *   ([MAX_ATTEMPTS_PER_SOURCE] per [SOURCE_WINDOW_MS]) and a per-source circuit breaker that
- *   pauses a source after [SOURCE_FAILURE_THRESHOLD] consecutive failures;
+ *   pauses a source after [SOURCE_FAILURE_THRESHOLD] consecutive source-wide block responses
+ *   (HTTP 403/429). Transient DNS/connect/timeout failures only back the source off for
+ *   [SOURCE_TRANSIENT_COOLDOWN_MS];
  * - at most [MAX_CONCURRENT_REQUESTS] source requests in flight across the app.
  */
 @Inject
@@ -238,14 +241,14 @@ class RefreshMangaCover(
             // If the outer request was cancelled at the same time, propagate that instead of
             // treating the timeout as a transient source failure.
             coroutineContext.ensureActive()
-            recordSourceFailure(source.id)
+            recordSourceFailure(source.id, e)
             recordAttempt(mangaId, staleUrl, TRANSIENT_COOLDOWN_MS)
             null
         } catch (e: CancellationException) {
             // A cancelled image request should not lock this entry out for the whole cooldown.
             throw e
         } catch (e: Exception) {
-            recordSourceFailure(source.id)
+            recordSourceFailure(source.id, e)
             recordAttempt(mangaId, staleUrl, TRANSIENT_COOLDOWN_MS)
             throw e
         } ?: return null
@@ -314,7 +317,16 @@ class RefreshMangaCover(
         }
     }
 
-    private fun recordSourceFailure(sourceId: Long) {
+    private fun recordSourceFailure(sourceId: Long, failure: Throwable) {
+        // DNS, connect and timeout errors are transient: they say nothing about the source being
+        // blocked, so they only earn a short backoff and must not count toward the long breaker.
+        if (!failure.isSourceWideBlock()) {
+            synchronized(sourceAttemptsLock) {
+                sourceBlockedUntil[sourceId] = now() + SOURCE_TRANSIENT_COOLDOWN_MS
+            }
+            return
+        }
+
         val blocked = synchronized(sourceAttemptsLock) {
             val failures = (sourceConsecutiveFailures[sourceId] ?: 0) + 1
             sourceConsecutiveFailures[sourceId] = failures
@@ -328,9 +340,23 @@ class RefreshMangaCover(
         if (blocked) {
             xLogW(
                 "Cover recovery for source $sourceId paused after " +
-                    "$SOURCE_FAILURE_THRESHOLD consecutive failures",
+                    "$SOURCE_FAILURE_THRESHOLD consecutive source-wide failures",
             )
         }
+    }
+
+    /**
+     * True when the source answered with a block response (HTTP 403/429) that applies to every
+     * request, not just this manga. Wrapped exceptions are unwrapped so that extension-level
+     * wrapping does not hide the status code. HTTP 404/410 and other errors are per-manga only.
+     */
+    private fun Throwable.isSourceWideBlock(): Boolean {
+        var cause: Throwable? = this
+        while (cause != null) {
+            if (cause is HttpException && cause.code in SOURCE_WIDE_BLOCK_CODES) return true
+            cause = cause.cause
+        }
+        return false
     }
 
     private fun hasSourceBudget(sourceId: Long, now: Long): Boolean {
@@ -353,6 +379,8 @@ class RefreshMangaCover(
         const val SOURCE_TIMEOUT_MS = 60_000L
         const val SOURCE_FAILURE_THRESHOLD = 5
         const val SOURCE_FAILURE_COOLDOWN_MS = 2 * 60 * 60 * 1000L // 2 hours
+        const val SOURCE_TRANSIENT_COOLDOWN_MS = 60_000L // 1 minute
+        val SOURCE_WIDE_BLOCK_CODES = setOf(403, 429)
         const val SOURCE_BUSY_COOLDOWN_MS = 60_000L
         // A one-time host migration can leave a whole library stale. These are a safety valve,
         // not a typical limit: the per-manga cooldown is what prevents repeated requests.
