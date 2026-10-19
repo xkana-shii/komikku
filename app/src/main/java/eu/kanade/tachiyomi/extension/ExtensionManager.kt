@@ -24,6 +24,7 @@ import exh.source.ExhPreferences
 import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -80,6 +81,37 @@ class ExtensionManager(
     // A full load replaces both maps, so install events wait for it and apply on top instead of being overwritten
     private val loadMutex = Mutex()
 
+    // KUN -->
+    private companion object {
+        const val PACKAGE_MANAGER_MAX_CHECKS = 12
+        const val PACKAGE_MANAGER_STABLE_CHECKS = 3
+        const val PACKAGE_MANAGER_CHECK_INTERVAL_MS = 500L
+    }
+
+    /**
+     * The package manager can answer with a partial installed-extension list while the process is still
+     * starting up. Poll its count until it has been stable for a few checks so the first load sees every
+     * installed extension, instead of silently dropping sources until the next manual reload.
+     */
+    private suspend fun waitForPackageManager() {
+        var previousCount = -1
+        var stableChecks = 0
+        repeat(PACKAGE_MANAGER_MAX_CHECKS) { check ->
+            val count = ExtensionLoader.getExtensionCount(context)
+            if (count == previousCount) {
+                stableChecks++
+                if (stableChecks >= PACKAGE_MANAGER_STABLE_CHECKS) return
+            } else {
+                previousCount = count
+                stableChecks = 0
+            }
+            if (check < PACKAGE_MANAGER_MAX_CHECKS - 1) {
+                delay(PACKAGE_MANAGER_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+    // KUN <--
+
     @Volatile
     private var stores = emptyList<ExtensionStore>()
 
@@ -116,6 +148,13 @@ class ExtensionManager(
 
     init {
         scope.launch(Dispatchers.IO) {
+            // KUN -->
+            // Querying installed packages right after process start can return an incomplete list, and
+            // nothing would retry the load afterwards (installed extensions don't broadcast an install),
+            // leaving sources and library entries orphaned for the whole session. Wait for the count to
+            // settle before the first load, as Mihon did in #2984.
+            waitForPackageManager()
+            // KUN <--
             loadExtensions()
             ExtensionInstallReceiver(InstallationListener(), scope).register(context)
 

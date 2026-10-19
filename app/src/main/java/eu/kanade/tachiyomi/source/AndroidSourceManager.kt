@@ -72,9 +72,13 @@ class AndroidSourceManager(
 
     private val stubSourcesMap = ConcurrentHashMap<Long, StubSource>()
 
+    // KUN -->
+    // Emit the current snapshot straight away (empty while the extensions load) instead of waiting for
+    // the first package scan. Callers must tolerate sources that are not loaded yet, but a screen that
+    // observes this flow then must never be left waiting forever on a slow or failing extension scan.
     override val sources: Flow<List<Source>> = sourcesMapFlow
-        .filterNotNull()
-        .map { it.values.toList() }
+        .map { it?.values?.toList().orEmpty() }
+    // KUN <--
 
     init {
         scope.launch {
@@ -248,7 +252,7 @@ class AndroidSourceManager(
      * while the main map is not loaded yet, and null when nothing is known about it — callers must
      * then fall back rather than block.
      */
-    fun getOrStubOrNull(sourceKey: Long): Source? =
+    override fun getOrStubOrNull(sourceKey: Long): Source? =
         sourcesMapFlow.value?.get(sourceKey) ?: stubSourcesMap[sourceKey]
     // KUN <--
 

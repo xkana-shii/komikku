@@ -97,6 +97,30 @@ internal object ExtensionLoader {
         File(getPrivateExtensionDir(context), "$pkgName.$PRIVATE_EXTENSION_EXTENSION").delete()
     }
 
+    // KUN -->
+    /**
+     * Total number of installed extensions (shared + private), used only to wait for the package
+     * manager's list to settle before the first load. Deliberately cheap: no metadata, signatures or
+     * class loading.
+     */
+    fun getExtensionCount(context: Context): Int {
+        val pkgManager = context.packageManager
+        val pollingFlags = PackageManager.GET_CONFIGURATIONS
+        val installedPkgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pkgManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(pollingFlags.toLong()))
+        } else {
+            @Suppress("DEPRECATION")
+            pkgManager.getInstalledPackages(pollingFlags)
+        }
+        val sharedCount = installedPkgs.count { isPackageAnExtension(it) }
+        val privateCount = getPrivateExtensionDir(context)
+            .listFiles()
+            ?.count { it.isFile && it.extension == PRIVATE_EXTENSION_EXTENSION }
+            ?: 0
+        return sharedCount + privateCount
+    }
+    // KUN <--
+
     fun getArchivePackageInfo(context: Context, file: File): PackageInfo? {
         return context.packageManager.getPackageArchiveInfo(file.absolutePath, PACKAGE_FLAGS)
     }
