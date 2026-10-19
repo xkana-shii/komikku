@@ -93,7 +93,7 @@
     <string name="ext_untrusted">신뢰되지않음</string>
     <string name="ext_uninstall">삭제</string>
     <string name="untrusted_extension">신뢰할 수 없는 확장 앱</string>
-    <string name="untrusted_extension_message">일부 악의적인 확장 앱은 Mihon에 저장된 로그인 정보를 읽거나 임의의 코드를 실행할 수도 있습니다. \n \n이 확장 앱을 신뢰하면 이러한 위험에 노출될 수 있습니다.</string>
+    <string name="untrusted_extension_message">일부 악의적인 확장 앱은 Komikun에 저장된 로그인 정보를 읽거나 임의의 코드를 실행할 수도 있습니다. \n \n이 확장 앱을 신뢰하면 이러한 위험에 노출될 수 있습니다.</string>
     <string name="pref_fullscreen">전체화면</string>
     <string name="pref_double_tap_anim_speed">더블 탭 애니메이션 속도</string>
     <string name="pref_show_page_number">페이지 번호 표시</string>
@@ -462,7 +462,7 @@
     <string name="skipped_reason_not_started">읽지 않은 만화를 건너 뛰었습니다</string>
     <string name="update_check_eol">이 안드로이드 버전은 더이상 지원되지 않습니다</string>
     <string name="information_cloudflare_bypass_failure">Cloudflare를 통과하지 못했습니다</string>
-    <string name="information_webview_required">Mihon 앱의 기능을 사용하려면 WebView가 필요합니다</string>
+    <string name="information_webview_required">Komikun 앱의 기능을 사용하려면 WebView가 필요합니다</string>
     <string name="information_webview_outdated">호환성을 위해 WebView 어플리케이션을 업데이트 해 주세요</string>
     <string name="pref_navigate_pan">넓은 이미지 이동</string>
     <string name="obsolete_extension_message">이 확장 프로그램은 어떤 스토어와도 연결되어 있지 않습니다. 업데이트되지 않으며, 제대로 작동하지 않을 수 있고, 앱에 문제가 발생할 수 있습니다. 제거하는 것을 권장합니다.</string>
@@ -869,19 +869,6 @@
     <string name="migrationListScreen.matchWithoutChapterToast">챕터를 찾을 수 없어 이 항목은 마이그레이션에 사용할 수 없습니다</string>
     <string name="action_filter_excluded_scanlators">스캔레이터를 제외한 필터</string>
     <string name="download_bookmarked">북마크됨</string>
-    <string name="label_support_us">저희를 지원해 주세요</string>
-    <string name="supportUsScreen.perks">후원해 주시는 분들은 더 많은 혜택이 적용될 예정인 독점 채널에 접속할 수 있습니다.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (선호됨)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon은 현재 %d+의 후원자 분들의 도움을 받고 있습니다. 모든 분들께 감사를 전하고 싶습니다. 함께 Mihon을 더욱 발전시켜 나갑시다.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">대체 옵션 또는 관련 질문이 있으실 경우, Discord 서버에 방문해 주십시오.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">앱을 즐기고 있으신가요?</string>
-    <string name="donationCampaign.paragraph1">안녕하세요! Mihon 메인 개발자입니다. 귀하께서 이 앱 개발에 대한 재정적 지원을 고려해주셨으면 합니다. 충분한 지원이 있다면 Mihon을 풀 타임으로 작업하여 오랫동안 지속되어 온 이슈와 요청이 많았던 기능들에 집중할 수 있을 것입니다.</string>
-    <string name="donationCampaign.paragraph2">Pateron(선호됨) 또는 OpenCollective를 통해 기부하실 수 있습니다. 질문이 있거나 다른 기부 방법에 대한 지원이 필요하신 경우, 언제든지 Mihon의 Discord 서버를 통해 연락해 주십시오.</string>
-    <string name="donationCampaign.paragraph3">기부 여부와 무관하게, Mihon은 저와 자원봉사자 분들에 의해 계속 유지보수되며 오픈 소스로 남아있을 것입니다.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">닫기</string>
     <string name="extensionStores">확장 앱 스토어</string>
     <string name="action.addExtensionStore">확장 앱 스토어 추가</string>
     <string name="extensionStoresScreen.emptyLabel">확장 앱 스토어를 아직 추가하지 않았습니다</string>
@@ -908,8 +895,6 @@
     <string name="ext_filtered">필터링됨</string>
     <string name="app_migrating_title">업데이트 완료</string>
     <string name="app_migrating_summary">업데이트 후 준비 중. 몇 분 정도 소요될 수 있으므로 앱을 계속 켜두십시오.</string>
-    <string name="pref_enable_chapter_name_hash">챕터 이름에 해시 접미사 사용 허용</string>
-    <string name="pref_enable_chapter_name_hash_details">이름 충돌 방지를 위해 각 챕터 이름에 고유 해시 접미사를 붙입니다. 비활성화할 경우 이름이 동일한 챕터는 다운로드할 수 없습니다.</string>
     <string name="ext_not_loaded">불러올 수 없음</string>
     <string name="ext_not_loaded_dialog">불러올 수 없습니다</string>
     <string name="ext_not_loaded_details">불러올 수 없는 이유</string>
@@ -969,16 +954,4 @@
     <string name="update_check_notification_download_complete">탭하여 업데이트 설치</string>
     <string name="update_check_notification_download_error">다운로드 오류</string>
     <string name="channel_app_updates">앱 업데이트</string>
-    <string name="ext_nsfw_warning">이 확장 앱의 소스는 성인 컨텐츠가 포함될 수 있습니다</string>
-    <string name="ext_nsfw_short">성인 컨텐츠</string>
-    <string name="pref_category_nsfw_content">성인 콘텐츠 소스</string>
-    <string name="pref_show_nsfw_source">소스 및 확장 기능 목록에 보이기</string>
-    <string name="parental_controls_info">이 옵션을 끄더라도 비공식 또는 분류가 잘못된 확장 기능으로 인하여 성인 컨텐츠가 표시될 수 있습니다.</string>
-    <string name="ext_info_age_rating">연령 등급</string>
-    <string name="action_open_repo">소스 저장소 열기</string>
-    <string name="pref_hardware_bitmap_threshold">커스텀 하드웨어 비트맵 임계값</string>
-    <string name="pref_hardware_bitmap_threshold_default">기본값 (%d)</string>
-    <string name="pref_hardware_bitmap_threshold_summary">리더가 빈 이미지를 불러올 경우 임계값을 점진적으로 줄입니다.\n선택: %s</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">긴 스트립 리더에 레거시 디코더 사용</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">성능에 영향을 미칩니다. 비트맵 임계값을 줄여도 빈 이미지 문제가 해결되지 않을 경우에만 활성화하십시오</string>
 </resources>

@@ -869,19 +869,6 @@
     <string name="action_webview_close_tab">關閉頁籤</string>
     <string name="action_filter_excluded_scanlators">篩選排除掃譯者</string>
     <string name="download_bookmarked">已新增書籤</string>
-    <string name="label_support_us">支持我們</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="supportUsScreen.perks">贊助者可使用專屬頻道，未來也會提供更多福利。</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon（建議優先使用）</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon 目前由 %d 位以上的贊助者支持。感謝每一位的支持，讓我們一起讓 Mihon 變得更好。</string>
-    <string name="supportUsScreen.contactForDetailsMessage">如需其他贊助方式或有相關問題，請加入我們的 Discord 伺服器。</string>
-    <string name="donationCampaign.title">喜歡這個 App 嗎？</string>
-    <string name="donationCampaign.paragraph1">您好！我是 Mihon 的主要開發者，想邀請您考慮以金錢方式支持本專案的開發。若能獲得足夠的支持，將能全職投入 Mihon 的開發，專注解決長期存在的問題，以及實作許多使用者期待已久的功能。</string>
-    <string name="donationCampaign.paragraph2">您可以透過 Patreon（建議優先使用）或 OpenCollective 進行贊助。如果有任何問題，或希望透過其他方式支持，歡迎透過 Mihon 的 Discord 伺服器與我聯繫。</string>
-    <string name="donationCampaign.paragraph3">無論是否贊助，Mihon 都會持續由我與志工維護，並且維持開源。</string>
-    <string name="donationCampaign.dismiss">關閉</string>
     <string name="extensionStores">擴充套件商店</string>
     <string name="action.addExtensionStore">新增擴充套件商店</string>
     <string name="extensionStoresScreen.emptyLabel">你尚未新增任何擴充套件商店</string>
@@ -929,8 +916,6 @@
     <string name="pref_apply_content_warnings_to_installed">同時套用於已安裝的擴充套件</string>
     <string name="pref_apply_content_warnings_to_installed_summary">關閉時，已安裝的擴充套件將繼續載入及更新，不受其內容警告影響</string>
     <string name="content_warnings_info">已安裝但未載入的擴充套件仍會顯示於清單中，但無法使用其來源；未安裝的擴充套件將被隱藏。這無法防止非官方或可能標記錯誤的擴充套件在應用程式內顯示 18+ 內容。</string>
-    <string name="pref_enable_chapter_name_hash">啟用章節名稱雜湊後綴</string>
-    <string name="pref_enable_chapter_name_hash_details">確保在章節名稱中加入獨特的雜湊後綴以防止命名衝突。若停用，將無法下載名稱相同的章節。</string>
     <string name="ext_filtered">已過濾</string>
     <string name="ext_not_loaded">未載入</string>
     <string name="ext_not_loaded_dialog">無法載入</string>
@@ -968,17 +953,5 @@
     <string name="update_check_notification_download_in_progress">正在下載更新…</string>
     <string name="update_check_notification_download_complete">輕觸即可更新</string>
     <string name="update_check_notification_download_error">更新下載失敗</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="parental_controls_info">即使啟用監護限制，還是可能有漏網之魚，使用者仍可藉由第三方或未正確標幟的擴充套件在本應用程式中瀏覽 NSFW(18+) 內容</string>
-    <string name="ext_nsfw_warning">來自此擴充套件的來源可能包含未滿十八歲之人不宜觀賞的內容</string>
-    <string name="pref_category_nsfw_content">未滿十八歲之人不宜瀏覽的來源</string>
-    <string name="pref_show_nsfw_source">在來源和擴充套件清單中顯示</string>
     <string name="channel_app_updates">應用程式更新</string>
-    <string name="ext_info_age_rating">分級</string>
-    <string name="action_open_repo">開啟來源儲存庫</string>
-    <string name="pref_hardware_bitmap_threshold">自訂硬體點陣圖的閾值設定</string>
-    <string name="pref_hardware_bitmap_threshold_summary">如果閱讀時載入的是空白影像，請逐步降低閾值\n已選擇：%s</string>
-    <string name="pref_hardware_bitmap_threshold_default">%d (預設)</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">影響效能。 僅當降低點陣圖閾值無法解決空白影象問題時才啟用</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">對長條閱讀模式使用舊版解碼器</string>
 </resources>

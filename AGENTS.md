@@ -74,7 +74,7 @@ Markers record **what diverges from upstream** — they never mark upstream code
   - Hand-edit an existing translation only to fix an obvious error.
 - Inside a `// KUN` block (or Komikku's own `// KMK` behavior), default to **`KMR`** even if nearby code imports `MR`.
 
-**Porting translation commits:** upstream locale files and this fork's have diverged in both directions (the fork still has Komikku-era keys that Mihon removed, and is missing newer upstream keys). Resolve conflicts per file by keeping upstream's values for the keys it has and re-appending the fork-only entries with their existing translations — `scripts/resolve_i18n_union.py` in the `upstream-port` skill automates this. Never drop a translation that already exists. Validate that the XML is well-formed and that no key from the fork's `base` lost its translation.
+**Porting translation commits:** upstream locale files and this fork's have diverged in both directions (the fork still has Komikku-era keys that Mihon removed, and is missing newer upstream keys). Resolve conflicts per file by keeping upstream's values for the keys it has, dropping entries whose string no longer exists in the module's `base/`, and re-appending fork-only entries that still exist in `base/` — `scripts/resolve_i18n_union.py` in the `upstream-port` skill automates this. Never drop a translation for a string that still exists in `base/`. Validate that the XML is well-formed and that no key from the fork's `base` lost its translation.
 
 **Examples (→ `i18n-kmk`, not `i18n`):** library update error UI, sync-before-update messages, WebDAV/Discord settings, updater notifications, `mihon/feature/*` screens.
 

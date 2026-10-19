@@ -35,6 +35,7 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.rememberIs24HourSystem
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
+import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +52,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.plus
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.time.Instant
 
 class WorkerInfoScreen : Screen() {
@@ -149,7 +149,7 @@ class WorkerInfoScreen : Screen() {
             timeFormatPref.changes(),
             is24HourSystem,
         ) { date, time, is24 ->
-            UiPreferences.dateTimeFormat(date, time, Locale.getDefault(), is24)
+            UiPreferences.dateTimeFormat(date, time, LocaleHelper.appLocale, is24)
         }
 
         fun onSystemTimeFormatChanged(value: Boolean) {

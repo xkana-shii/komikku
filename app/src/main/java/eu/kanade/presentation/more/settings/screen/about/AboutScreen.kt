@@ -35,6 +35,7 @@ import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.WhatsNewScreen
 import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
+import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isFossBuildType
@@ -67,7 +68,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.util.Locale
 import kotlin.time.Instant
 
 class AboutScreen : Screen() {
@@ -413,7 +413,7 @@ class AboutScreen : Screen() {
                         UiPreferences.dateTimeFormat(
                             uiPreferences.dateFormat.get(),
                             uiPreferences.timeFormat.get(),
-                            Locale.getDefault(),
+                            LocaleHelper.appLocale,
                             DateFormat.is24HourFormat(context),
                         ),
                     )

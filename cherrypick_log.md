@@ -4,21 +4,27 @@
 <!-- Only edit the Status and Notes columns; everything else is regenerated on every run. -->
 
 Commits from main upstream **mihon** and additional **tachiyomiSY**, **komikku** since **2024-01-01** (authors matching `renovate` excluded), checked against `master`.
-Last updated **2026-10-14** from mihon `mihon/main` @ `446f6df82c`, tachiyomiSY `tachiyomiSY/master` @ `5a469745d3`, komikku `komikku/master` @ `1656575e8f`.
+Last updated **2026-10-20** from mihon `mihon/main` @ `4750748dd1`, tachiyomiSY `tachiyomiSY/master` @ `5a469745d3`, komikku `komikku/master` @ `1656575e8f`.
 How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills/cherrypick-log/README.md).
 
 **Status:** `O` cherry-picked · `?` maybe, needs review (includes commits that cancel each other out, flagged by the script) · empty = not found · `X` won't pick (set by hand, or version-bump-only commits). **Upstream** `↳ name` = copy of the mihon commit right below it. **Details** = how pairing / status was found (regenerated); **Notes** = yours, kept.
 
 | Upstream | O | ? | X | empty | other | total |
 |---|--:|--:|--:|--:|--:|--:|
-| mihon | 852 | 28 | 65 | 361 | 0 | 1306 |
-| tachiyomiSY | 817 | 1 | 15 | 185 | 0 | 1018 |
-| komikku | 0 | 0 | 0 | 10 | 0 | 10 |
+| mihon | 865 | 28 | 65 | 354 | 0 | 1312 |
+| tachiyomiSY | 819 | 1 | 15 | 183 | 0 | 1018 |
+| komikku | 1 | 0 | 0 | 9 | 0 | 10 |
 
 ## Commits
 
 | Status | Commit | Upstream | Date | Title | Author | Details | Notes |
 |:-:|---|---|---|---|---|---|---|
+| O | [2e72b50f52](https://github.com/mihonapp/mihon/commit/2e72b50f52f4c1aef6f7d1f7001d79b12dab99e7) | mihon | 2026-10-20 | Translations update from Hosted Weblate (#4135) | hosted-weblate[bot] | master `3cc6ddbcbb` [hash of mihon] |  |
+| O | [deeb9b2584](https://github.com/mihonapp/mihon/commit/deeb9b2584b6e246135cbd31da49a39e6b6e1e52) | mihon | 2026-10-18 | Fix downloads not being found for sources sharing a stored source's name | AntsyLich | master `3cc6ddbcbb` [hash of mihon] |  |
+| O | [a01867dc3e](https://github.com/mihonapp/mihon/commit/a01867dc3e1f3b9e186ecc8d1a65fc1f3b85cc11) | mihon | 2026-10-18 | Only send source headers to the source in WebView | AntsyLich | master `3cc6ddbcbb` [hash of mihon] |  |
+| O | [5f63c983da](https://github.com/mihonapp/mihon/commit/5f63c983da1b7fdc0d14015aeb5f682c1ec2723a) | mihon | 2026-10-18 | Fix WebView renderer being killed by sources setting an Origin header | AntsyLich | master `3cc6ddbcbb` [hash of mihon] |  |
+| O | [970b12f1bd](https://github.com/mihonapp/mihon/commit/970b12f1bd5f28325eeae191b8d48549be932976) | mihon | 2026-10-17 | Add Time Format setting (#4118) | MajorTanya | master `3cc6ddbcbb` [hash of mihon] |  |
+| O | [7618df898c](https://github.com/mihonapp/mihon/commit/7618df898c5ab1b0b3f9c2b4dbca57c0ea11a575) | mihon | 2026-10-17 | Translations update from Hosted Weblate (#4095) | hosted-weblate[bot] | master `3cc6ddbcbb` [hash of mihon] |  |
 |   | [3100dceddd](https://github.com/mihonapp/mihon/commit/3100dceddd177ea5444abff86d3f563fb75b55ce) | mihon | 2026-10-13 | Release v0.21.2 | AntsyLich |  |  |
 | O | [771ba33a33](https://github.com/mihonapp/mihon/commit/771ba33a33b6b07675625ece8211d1584f247ac8) | mihon | 2026-10-13 | Stream entries when creating and restoring backups | AntsyLich |  | AI checked 2026-10-14: ported (cherry-pick trailer present) |
 | O | [5a5ff22c37](https://github.com/mihonapp/mihon/commit/5a5ff22c375b77a7557e4fcddf6e377ef94f8b9b) | mihon | 2026-10-13 | Fix concurrent Cloudflare challenges each opening a WebView | AntsyLich |  |  |
@@ -151,7 +157,7 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 |   | [c67a33f3d4](https://github.com/mihonapp/mihon/commit/c67a33f3d4b176a274abdaec8610d0a38b0af41d) | mihon | 2026-09-27 | Remove unused sync scaffold | AntsyLich |  |  |
 | O | [532575e29e](https://github.com/mihonapp/mihon/commit/532575e29e196ed59a5457fd4b4c6af5e0740287) | mihon | 2026-09-26 | Fixed entries being incorrectly marked as duplicates when tracked with some trackers (#4008) | Secozzi |  |  |
 | O | [f52d890e7f](https://github.com/mihonapp/mihon/commit/f52d890e7f8a3c418ddab41f41d4b577bce0dc06) | mihon | 2026-09-22 | Fix library search when clicking source name in manga info screen (#4002) | Chopper |  |  |
-|   | [449c4e08e7](https://github.com/mihonapp/mihon/commit/449c4e08e76deb06ac9ec520efafe3f8d6e181ec) | mihon | 2026-09-20 | Translations update from Hosted Weblate (#3987) | hosted-weblate[bot] |  |  |
+| O | [449c4e08e7](https://github.com/mihonapp/mihon/commit/449c4e08e76deb06ac9ec520efafe3f8d6e181ec) | mihon | 2026-09-20 | Translations update from Hosted Weblate (#3987) | hosted-weblate[bot] |  | AI checked 2026-10-20: content imported by the full translation sync |
 | O | [93a163f96e](https://github.com/mihonapp/mihon/commit/93a163f96ee550934aa7fd66d660294fe9972d13) | mihon | 2026-09-20 | Only upload Crashlytics mapping file when building for release | AntsyLich |  |  |
 | O | [61680580dd](https://github.com/mihonapp/mihon/commit/61680580ddd51f07cec396fe3b9287a5c4443d32) | mihon | 2026-09-20 | Simplify build flags setup with distribution profile | AntsyLich |  |  |
 | O | [0de91a9c53](https://github.com/mihonapp/mihon/commit/0de91a9c532b1c1aafa4a8b01c3294b66567a45c) | mihon | 2026-09-20 | Remove redundant dimens.xm in :app | AntsyLich |  |  |
@@ -162,8 +168,8 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [c69b14c975](https://github.com/mihonapp/mihon/commit/c69b14c975f6353fe576f5d8109e8df6579c8f25) | mihon | 2026-09-20 | Bump compileSdk to 37.2 | AntsyLich |  |  |
 |   | [debab6c261](https://github.com/mihonapp/mihon/commit/debab6c261c806792a44dcb3caa9203c77eb1b25) | mihon | 2026-09-20 | Enable Gradle Tooling parallelism explicitly | AntsyLich |  |  |
 | O | [01e3f8c605](https://github.com/mihonapp/mihon/commit/01e3f8c60557d89b6cd9d28c11f41d676d0ab5d9) | mihon | 2026-09-20 | Add refresh button to tracker for new profile info (#3828) | MajorTanya |  |  |
-|   | [385d076d43](https://github.com/mihonapp/mihon/commit/385d076d4369535c2839193cd29e2b32741989b1) | mihon | 2026-09-19 | Translations update from Hosted Weblate (#3972) | hosted-weblate[bot] |  |  |
-|   | [51efde975b](https://github.com/mihonapp/mihon/commit/51efde975b6f2fb4880126758cf3a0ff5d8d9062) | mihon | 2026-09-16 | Translations update from Hosted Weblate (#3950) | hosted-weblate[bot] |  |  |
+| O | [385d076d43](https://github.com/mihonapp/mihon/commit/385d076d4369535c2839193cd29e2b32741989b1) | mihon | 2026-09-19 | Translations update from Hosted Weblate (#3972) | hosted-weblate[bot] |  | AI checked 2026-10-20: content imported by the full translation sync |
+| O | [51efde975b](https://github.com/mihonapp/mihon/commit/51efde975b6f2fb4880126758cf3a0ff5d8d9062) | mihon | 2026-09-16 | Translations update from Hosted Weblate (#3950) | hosted-weblate[bot] |  | AI checked 2026-10-20: content imported by the full translation sync |
 | O | [1e142c4255](https://github.com/mihonapp/mihon/commit/1e142c4255cf8e734a6202a8ccb072071eadd540) | mihon | 2026-09-16 | Fix padded year & 31-clamped month in local source (#3970) | MajorTanya |  |  |
 | O | [a7179805ad](https://github.com/mihonapp/mihon/commit/a7179805ad1e7b3c3a0a4098560d04fed24b2701) | mihon | 2026-09-16 | Use & write Year, Month, Day info in ComicInfo (#3967) | MajorTanya |  |  |
 |   | [1c43addeca](https://github.com/mihonapp/mihon/commit/1c43addeca7510db550a131c825bfb2e6a9f6f71) | mihon | 2026-09-15 | Resolve Injekt dependencies directly from the Metro graph (#3965) | AntsyLich |  |  |
@@ -173,7 +179,7 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [0e0bc6972a](https://github.com/mihonapp/mihon/commit/0e0bc6972a2516d2ed2b5acac089ade708cf285b) | mihon | 2026-09-14 | Allow user to load installed extensions regardless of content warning (#3952) | AntsyLich |  |  |
 | O | [a5cd541bdf](https://github.com/mihonapp/mihon/commit/a5cd541bdf3068cd8d5c5499adf896f2fec7ab82) | mihon | 2026-09-14 | webgpuviewer: Fix menu hiding when navigating in long strip (#3956) | w |  |  |
 | O | [0fbaa1ecec](https://github.com/mihonapp/mihon/commit/0fbaa1ecece412808dfd2bb1ef4ce963bcf8f937) | mihon | 2026-09-14 | Replace extension NSFW flag with content warning app-wide (#3951) | AntsyLich |  |  |
-|   | [cbafe9bf3f](https://github.com/mihonapp/mihon/commit/cbafe9bf3f274b5655415b539ba0e45f31ec2015) | mihon | 2026-09-14 | Translations update from Hosted Weblate (#3938) | hosted-weblate[bot] |  |  |
+| O | [cbafe9bf3f](https://github.com/mihonapp/mihon/commit/cbafe9bf3f274b5655415b539ba0e45f31ec2015) | mihon | 2026-09-14 | Translations update from Hosted Weblate (#3938) | hosted-weblate[bot] |  | AI checked 2026-10-20: content imported by the full translation sync |
 | O | [7418f4e7bc](https://github.com/mihonapp/mihon/commit/7418f4e7bc716a3e5f7dd991e744fb0f6fbcc97c) | mihon | 2026-09-14 | Bump webgpuviewer (#3949) | w |  |  |
 | O | [2d1a8bbeff](https://github.com/mihonapp/mihon/commit/2d1a8bbeff996ef6615c904e019ca9794e8d2096) | mihon | 2026-09-12 | Tighten AniList rate limit (#3942) | MajorTanya |  |  |
 | O | [60e74b8d8f](https://github.com/mihonapp/mihon/commit/60e74b8d8f14bd2761799f4fb0ae4d124becbea2) | mihon | 2026-09-12 | Don't try to create slider state when slider can't or won't be rendered (#3941) | AntsyLich |  |  |
@@ -211,7 +217,7 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [f75f2598a3](https://github.com/mihonapp/mihon/commit/f75f2598a3f42c1cd91eb09a7b1dfa1462d508b3) | mihon | 2026-08-17 | Fix fit height to in new renderer and bump webgpuviewer (#3801) | w |  |  |
 | O | [c613b52503](https://github.com/mihonapp/mihon/commit/c613b52503d30029583fb876e3f0b06b211aed53) | mihon | 2026-08-17 | Add score info to MangaUpdates search results (#3795) | MajorTanya |  |  |
 |   | [3e98c15b74](https://github.com/mihonapp/mihon/commit/3e98c15b748de772044d65f3e65eb69ceae43218) | mihon | 2026-08-17 | Remove duplicate in strings.xml | AntsyLich |  |  |
-|   | [2b532ea0c4](https://github.com/mihonapp/mihon/commit/2b532ea0c406f4eff14a5074cec720fe97459ed8) | mihon | 2026-08-17 | Translations update from Hosted Weblate (#3701) | Weblate (bot) |  |  |
+| O | [2b532ea0c4](https://github.com/mihonapp/mihon/commit/2b532ea0c406f4eff14a5074cec720fe97459ed8) | mihon | 2026-08-17 | Translations update from Hosted Weblate (#3701) | Weblate (bot) |  | AI checked 2026-10-20: content imported by the full translation sync |
 | O | [b2015d1ef3](https://github.com/mihonapp/mihon/commit/b2015d1ef3f954614ae4dccbb79c85a8df0e08fd) | mihon | 2026-08-16 | Migrate to Metro DI (#3608) | AntsyLich |  |  |
 | O | [b884b203a1](https://github.com/jobobby04/TachiyomiSY/commit/b884b203a1ea18ef094976e52522b5cd13b224b6) | ↳ tachiyomiSY | 2026-10-12 | Load extensions off the main thread (#3788) | AntsyLich | pick of mihon `5fa5f7e159` [pr+title] |  |
 | O | [5fa5f7e159](https://github.com/mihonapp/mihon/commit/5fa5f7e159aa9833c85f1d2f5706f14f3bfe3374) | mihon | 2026-08-16 | Load extensions off the main thread (#3788) | AntsyLich |  |  |
@@ -270,8 +276,8 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [2e77e33538](https://github.com/jobobby04/TachiyomiSY/commit/2e77e33538c1510efc3916b2edb0daa6284f6fcd) | ↳ tachiyomiSY | 2026-10-11 | Suppress R8 warnings for missing androidx.window extension classes | AntsyLich | pick of mihon `869fa1a4b2` [title+author] |  |
 | O | [869fa1a4b2](https://github.com/mihonapp/mihon/commit/869fa1a4b2e3b79a4064ce9a34c405b374c77652) | mihon | 2026-08-05 | Suppress R8 warnings for missing androidx.window extension classes | AntsyLich |  |  |
 | X | [df6507256a](https://github.com/mihonapp/mihon/commit/df6507256acce8e7f3660783a3db6dbd1a31b6b5) | mihon | 2026-08-05 | Release v0.20.4 | AntsyLich |  | AI checked 2026-10-03: omitted - version bump only (issue templates, CHANGELOG.md, app/build.gradle.kts) |
-|   | [9a66f0d6e7](https://github.com/jobobby04/TachiyomiSY/commit/9a66f0d6e7788665a9f9d5c63b461c3ab9aacfe7) | ↳ tachiyomiSY | 2026-10-11 | Translations update from Hosted Weblate (#3677) | Weblate (bot) | pick of mihon `b765531b82` [pr+title] |  |
-|   | [b765531b82](https://github.com/mihonapp/mihon/commit/b765531b82bccb313fd760898ac1e6597cb764e4) | mihon | 2026-08-05 | Translations update from Hosted Weblate (#3677) | Weblate (bot) |  |  |
+| O | [9a66f0d6e7](https://github.com/jobobby04/TachiyomiSY/commit/9a66f0d6e7788665a9f9d5c63b461c3ab9aacfe7) | ↳ tachiyomiSY | 2026-10-11 | Translations update from Hosted Weblate (#3677) | Weblate (bot) | pick of mihon `b765531b82` [pr+title] | AI checked 2026-10-20: SY copy of mihon b765531b82, content imported by the full translation sync |
+| O | [b765531b82](https://github.com/mihonapp/mihon/commit/b765531b82bccb313fd760898ac1e6597cb764e4) | mihon | 2026-08-05 | Translations update from Hosted Weblate (#3677) | Weblate (bot) |  | AI checked 2026-10-20: content imported by the full translation sync |
 |   | [974d34e3c4](https://github.com/jobobby04/TachiyomiSY/commit/974d34e3c4601ef620771edf19303dc8bd86eda4) | tachiyomiSY | 2026-10-11 | Lint | Jobobby04 |  |  |
 | O | [9c1b47a71c](https://github.com/jobobby04/TachiyomiSY/commit/9c1b47a71ceef2263f107decba29fd1f70a69cf8) | ↳ tachiyomiSY | 2026-10-11 | Replace CategoryUpdate with dedicated update queries (#3693) | AntsyLich | pick of mihon `21c6357967` [pr+title] |  |
 | O | [21c6357967](https://github.com/mihonapp/mihon/commit/21c63579678be4cfe19ba0982d8a158fe300f278) | mihon | 2026-08-05 | Replace CategoryUpdate with dedicated update queries (#3693) | AntsyLich |  |  |
@@ -296,8 +302,8 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [e3799aeee8](https://github.com/jobobby04/TachiyomiSY/commit/e3799aeee878c1366f37bdd3b5e2f2123556742a) | ↳ tachiyomiSY | 2026-10-11 | Replace java.time APIs with kotlin(x).(date)time (#3001) | MajorTanya | pick of mihon `6d69903a56` [pr+title] |  |
 | O | [6d69903a56](https://github.com/mihonapp/mihon/commit/6d69903a561b3b9445578eb9b2479f064f4926e8) | mihon | 2026-08-02 | Replace java.time APIs with kotlin(x).(date)time (#3001) | MajorTanya |  |  |
 | X | [0648e2eaaf](https://github.com/mihonapp/mihon/commit/0648e2eaafdc037d447cfad4924be1b362c1b7b3) | mihon | 2026-08-01 | Release v0.20.2 | AntsyLich |  | AI checked 2026-10-03: omitted - version bump only (issue templates, CHANGELOG.md, app/build.gradle.kts) |
-|   | [a13068502a](https://github.com/jobobby04/TachiyomiSY/commit/a13068502a89d29d78c9b4688289282f953c41e0) | ↳ tachiyomiSY | 2026-10-11 | Translations update from Hosted Weblate (#3563) | Weblate (bot) | pick of mihon `46a2471abb` [pr+title] |  |
-|   | [46a2471abb](https://github.com/mihonapp/mihon/commit/46a2471abbe892741ddca33526c4706785e53258) | mihon | 2026-08-01 | Translations update from Hosted Weblate (#3563) | Weblate (bot) |  |  |
+| O | [a13068502a](https://github.com/jobobby04/TachiyomiSY/commit/a13068502a89d29d78c9b4688289282f953c41e0) | ↳ tachiyomiSY | 2026-10-11 | Translations update from Hosted Weblate (#3563) | Weblate (bot) | pick of mihon `46a2471abb` [pr+title] | AI checked 2026-10-20: SY copy of mihon 46a2471abb, content imported by the full translation sync |
+| O | [46a2471abb](https://github.com/mihonapp/mihon/commit/46a2471abbe892741ddca33526c4706785e53258) | mihon | 2026-08-01 | Translations update from Hosted Weblate (#3563) | Weblate (bot) |  | AI checked 2026-10-20: content imported by the full translation sync |
 | O | [db750cc0b2](https://github.com/jobobby04/TachiyomiSY/commit/db750cc0b22978575b66d4653b739df018469403) | ↳ tachiyomiSY | 2026-10-11 | Fix backup restore dropping library entries (#3667) | Naji Astier | pick of mihon `c114028a33` [pr+title] |  |
 | O | [c114028a33](https://github.com/mihonapp/mihon/commit/c114028a331fcf2ade8f270c0ca7c17f057947f9) | mihon | 2026-08-01 | Fix backup restore dropping library entries (#3667) | Naji Astier |  |  |
 |   | [4296d056b5](https://github.com/mihonapp/mihon/commit/4296d056b5ab1a85e2861c21709996bf8a405a11) | mihon | 2026-07-30 | Regenerate baseline profiles | AntsyLich |  |  |
@@ -563,7 +569,7 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 |   | [1682962703](https://github.com/jobobby04/TachiyomiSY/commit/1682962703ac0580a1bb33995ffaa5674099a6c9) | ↳ tachiyomiSY | 2026-04-06 | Add `gradle.properties` to `build-logic` synced with root `gradle.properties` (#3159) | ArthurKun | pick of mihon `25d4bf5e2f` [pr+title] |  |
 |   | [25d4bf5e2f](https://github.com/mihonapp/mihon/commit/25d4bf5e2ffdcb84f6469f5e0a81108777a98e85) | mihon | 2026-03-31 | Add `gradle.properties` to `build-logic` synced with root `gradle.properties` (#3159) | ArthurKun |  |  |
 |   | [d75db63258](https://github.com/mihonapp/mihon/commit/d75db6325852797bb5149c8a7b1891eedb059593) | mihon | 2026-03-30 | Run tests before compiling APK in CI (#3174) | MajorTanya |  |  |
-|   | [1656575e8f](https://github.com/komikku-app/komikku/commit/1656575e8fdaaef010c652f9758130c2a01d8890) | komikku | 2026-10-12 | refactor(MangaDex): Simplify request header plumbing (#1930) | Cuong-Tran |  |  |
+| O | [1656575e8f](https://github.com/komikku-app/komikku/commit/1656575e8fdaaef010c652f9758130c2a01d8890) | komikku | 2026-10-12 | refactor(MangaDex): Simplify request header plumbing (#1930) | Cuong-Tran | master `7797e850de` [hash of komikku] |  |
 |   | [411523a2a0](https://github.com/komikku-app/komikku/commit/411523a2a093750adb46e5422e60f6dbc17fac1b) | komikku | 2026-10-12 | Revert "fix(MangaDex): Fix MangaDex tracker's covers (#1782)" | Cuong-Tran |  |  |
 |   | [c10081a5d6](https://github.com/komikku-app/komikku/commit/c10081a5d6f7173d95c2418a7c9948534ae7693b) | komikku | 2026-10-12 | Revert "chore(NetworkHelper): Allow disabling network handling for MangaDex cover images based on delegate source preferences (#1786)" | Cuong-Tran |  |  |
 |   | [d29c54404e](https://github.com/komikku-app/komikku/commit/d29c54404e86e2499e37ca0a4cfa9dee388159d2) | komikku | 2026-10-10 | fix(sqlite): Read inserted row IDs in a transaction (#1924) | Cuong-Tran |  |  |

@@ -869,7 +869,6 @@
     <string name="pref_download_concurrent_pages_summary">Paĝoj elŝutitaj sammomente por fonto</string>
     <string name="action_filter_excluded_scanlators">Filtri ekskluzivitajn skantradukistojn</string>
     <string name="download_bookmarked">Legosignita</string>
-    <string name="label_support_us">Subtenu nin</string>
     <string name="extensionStores">Etendaĵejoj</string>
     <string name="action.addExtensionStore">Aldoni etendaĵejon</string>
     <string name="extensionStoresScreen.emptyLabel">Vi ankoraŭ aldonis neniun etendaĵejon</string>
@@ -881,18 +880,6 @@
     <string name="extensionStoresScreen.deleteStore.title">Forigi etendaĵejon</string>
     <string name="extensionStoresScreen.deleteStore.body">Ĉu vi volas forigi la etendaĵejon \"%1$s\" (%2$s)?</string>
     <string name="pref_webtoon_vertical_navigator_on_left">Loki vertikalan navigilon ĉe la maldekstra flanko</string>
-    <string name="supportUsScreen.perks">Donacantoj ricevas aliron al ekskluzivaj kanaloj, kaj pli da avantaĝoj poste.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (preferata)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon estas nun finance subtenata de %d+ patronoj. Ni volas danki ĉiun el vi. Ni plibonigu Mihon eĉ pli kune.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Por alternativaj opcioj aŭ iaj ajn rilataj demandoj, aniĝu al nia Discord-servilo.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Ĉu vi ŝatas la apon?</string>
-    <string name="donationCampaign.paragraph1">Sal! Mi estas ĉefa programisto de Mihon kaj mi ŝatus peti vin konsideri finance subteni ĝian evoluigon. Kun sufiĉa subteno mi povos labori pri Mihon plentempe kaj koncentriĝi pri delonge ekzistantaj problemoj kaj ankaŭ pri tre petitaj funkcioj.</string>
-    <string name="donationCampaign.paragraph2">Vi povas donaci per Patreon (preferata) aŭ OpenCollective. Se vi havas demandojn aŭ vi volus subteni per alternativaj metodoj, ne hezitu kontakti min ĉe la Discord-servilo de Mihon.</string>
-    <string name="donationCampaign.paragraph3">Sendepende de tio, Mihon daŭre estos prizorgata de mi kaj la volontuloj, kaj ĝi restos malfermitkoda.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Kaŝi</string>
     <string name="theme_tokyonight">Tokia nokto</string>
     <string name="downloading_with_progress">Elŝutado… (%d%%)</string>
     <string name="pref_vertical_navigator">Uzi vertikalan ĉapitran navigilon en</string>
@@ -904,8 +891,6 @@
     <string name="pref_apply_content_warnings_to_installed">Ankaŭ apliki al instalitaj etendaĵoj</string>
     <string name="pref_apply_content_warnings_to_installed_summary">Kiam malŝaltita, etendaĵoj kiuj vi jam instalis daŭras ŝargi kaj ĝisdatigi malgraŭ iliaj avertoj</string>
     <string name="content_warnings_info">Instalitaj etendaĵoj kiuj ne estas ŝargitaj restas listitaj sen iliaj fontoj; tiuj kiujn vi ne instalis estas kaŝitaj. Ĉi tio ne preventas neoficialajn aŭ eventuale malprave markitajn etendaĵojn montri 18+-enhavon ene de la apo.</string>
-    <string name="pref_enable_chapter_name_hash">Ŝalti haketaĵan sufikson de ĉapitra nomo</string>
-    <string name="pref_enable_chapter_name_hash_details">Certigas, ke unika haketaĵa sufikso estas aldonita al ĉapitraj nomoj por preventi nomajn konfliktojn. Se malŝaltita, ĉapitroj kun indentaj nomoj ne eblas esti elŝutitaj.</string>
     <string name="ext_filtered">Filtrita</string>
     <string name="ext_not_loaded_dialog">Ne ŝargeblis</string>
     <string name="ext_not_loaded_details">Kial ĝi ne estas ŝargita</string>
@@ -968,20 +953,8 @@
     <string name="follow_language">Laŭ lingvo</string>
     <string name="time_24_hours">24-hora</string>
     <string name="time_12_hours">12-hora</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="pref_show_nsfw_source">Montri en fontaj kaj etendaĵaj listoj</string>
-    <string name="pref_category_nsfw_content">NSFW-fontoj (18+)</string>
     <string name="update_check_notification_download_error">Elŝutada eraro</string>
     <string name="update_check_notification_download_complete">Tuŝetu por instali ĝisdatigon</string>
     <string name="update_check_notification_download_in_progress">Elŝutado…</string>
-    <string name="ext_nsfw_warning">Fontoj de ĉi tiu etendaĵo eble enhavas NSFW-enhavon (18+)</string>
-    <string name="parental_controls_info">Tio ne preventas neoficialajn aŭ eventuale malĝuste markitajn etendaĵojn montri NSFW-enhavon (18+) ene de la apo.</string>
-    <string name="ext_info_age_rating">Aĝa takso</string>
-    <string name="pref_hardware_bitmap_threshold_default">Defaŭlta (%d)</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Se legilo ŝargas malplenan bildon alkremente redukti la sojlon.\nElektita: %s</string>
-    <string name="action_open_repo">Malfermitkoda deponejo</string>
-    <string name="pref_hardware_bitmap_threshold">Propra rastruma sojlo de aparataro</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Influas rendimenton. Ŝaltu nur se redukto de rastruma sojlo ne riparas problemojn pri malplenaj bildoj</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Uzi malmodernan malkodilon por longa stria legilo</string>
     <string name="channel_app_updates">Apaj ĝisdatigoj</string>
 </resources>

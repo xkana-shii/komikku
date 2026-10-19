@@ -869,19 +869,6 @@
     <string name="action_webview_close_tab">Sekmeyi kapat</string>
     <string name="action_filter_excluded_scanlators">Hariç tutulan Çevirenleri filtrele</string>
     <string name="download_bookmarked">Yer imli</string>
-    <string name="label_support_us">Bizi Destekleyin</string>
-    <string name="supportUsScreen.perks">Patronlar, özel kanallara ve gelecekte daha fazlasına erişim elde eder.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (tercih edilen)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon, şu anda %d+ patron tarafından desteklenmektedir. Her birinize ayrı olarak teşekkür etmek istiyoruz. Hadi Mihon\'u birlikte daha iyi yapalım.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Başka seçenekler ve sorularınız için Discord sunucumuza katılın.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Uygulamayı beğendiniz mi?</string>
-    <string name="donationCampaign.paragraph1">Merhaba! Ben, Mihon\'un ana geliştiricisiyim ve geliştirme sürecine maddi olarak destek olmayı düşünmenizi isterim. Yeterli destek olursa Mihon üzerinde tam zamanlı olarak çalışabilirim ve uzun zamandır olan sorunlara ve çok istenen özelliklere odaklanabilirim.</string>
-    <string name="donationCampaign.paragraph2">Patreon (tercih edilen) veya OpenCollective üzerinden bağışta bulunabilirsiniz. Sorularınız varsa veya başka bir yolla destek olmak isterseniz Mihon\'un Discord sunucusu üzerinden bana ulaşmaktan çekinmeyin.</string>
-    <string name="donationCampaign.paragraph3">Ancak ne olursa olsun Mihon, ben ve gönüllü insanlar tarafından geliştirilmeye devam edecek ve açık kaynak kodlu olarak kalacaktır.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Kapat</string>
     <string name="extensionStores">Uzantı mağazaları</string>
     <string name="action.addExtensionStore">Uzantı mağazası ekle</string>
     <string name="extensionStoresScreen.emptyLabel">Henüz uzantı mağazası eklemediniz</string>
@@ -907,8 +894,6 @@
     <string name="pref_apply_content_warnings_to_installed">Yüklenmiş uzantılar için de uygula</string>
     <string name="pref_apply_content_warnings_to_installed_summary">Devre dışı olduğunda yüklediğiniz uzantılar, uyarılara bakılmaksızın çalışmaya ve güncellenmeye devam eder</string>
     <string name="content_warnings_info">Yüklenmiş ama çalışmayan uzantılar, kaynakları gösterilmeden listelenmeye devam eder. Yüklemediğiniz uzantılar gizlenir. Resmî olmayan veya yanlış işaretlenmiş uzantılar yine de uygulama içinde 18+ içerik gösterebilir.</string>
-    <string name="pref_enable_chapter_name_hash">Bölüm isimleri sonuna benzersiz ek ekle</string>
-    <string name="pref_enable_chapter_name_hash_details">Bölüm isimlerinin birbirleriyle çakışmasını engellemek için isimlerin sonuna benzersiz bir metin ekler. Devre dışı olduğunda aynı ismi paylaşan bölümler indirilemez.</string>
     <string name="ext_filtered">Filtrelenmiş</string>
     <string name="ext_not_loaded">Çalışmıyor</string>
     <string name="ext_not_loaded_dialog">Çalıştırılamadı</string>
@@ -968,17 +953,5 @@
     <string name="update_check_notification_download_in_progress">İndiriliyor…</string>
     <string name="update_check_notification_download_complete">Güncellemeyi yüklemek için dokunun</string>
     <string name="update_check_notification_download_error">İndirme hatası</string>
-    <string name="ext_nsfw_warning">Bu uzantıdaki kaynaklar yetişkin içerik (18+) içerebilir</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="parental_controls_info">Bu, resmî olmayan veya yanlış işaretlenmiş uzantıların uygulama içinde yetişkin içeriği (18+) göstermesini engellemez.</string>
-    <string name="pref_category_nsfw_content">Yetişkin içerik (18+) kaynakları</string>
-    <string name="pref_show_nsfw_source">Kaynaklar ve uzantılar listelerinde göster</string>
     <string name="channel_app_updates">Uygulama güncellemeleri</string>
-    <string name="ext_info_age_rating">Yaş derecelendirmesi</string>
-    <string name="action_open_repo">Açık kaynaklı depo</string>
-    <string name="pref_hardware_bitmap_threshold">Özel bitmap donanım sınırı</string>
-    <string name="pref_hardware_bitmap_threshold_default">Varsayılan (%d)</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Eğer okuyucu boş bir görsel yüklerse bu sınırı kademeli olarak azaltın.\nSeçili: %s</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Performansı etkiler. Yalnızca bitmap sınırını düşürmek boş görsel sorunlarını çözmediğinde kullanın</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Uzun şerit okuyucusu için eski çözümleyiciyi kullan</string>
 </resources>

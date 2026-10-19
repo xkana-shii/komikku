@@ -8,9 +8,14 @@ upstream has fresher translations and new keys, while the fork still has keys
 translations, so this helper:
 
   1. takes the upstream file (the commit being cherry-picked, i.e. `theirs`),
-  2. re-appends every `<string>` / `<plurals>` entry that only exists in the
-     fork's copy (HEAD), with its existing translation,
-  3. validates the result is well-formed XML with no duplicate names.
+  2. drops entries whose key is not in the module's `base/` (string removed from
+     the fork's base, e.g. Komikku dropped Mihon's donation strings),
+  3. re-appends every `<string>` / `<plurals>` entry that only exists in the
+     fork's copy (HEAD) and is still in `base/`, with its existing translation,
+  4. validates the result is well-formed XML with no duplicate names.
+
+`base/` is derived from the path (`i18n/src/<sourceSet>/moko-resources/...`), so
+run it from the repo root.
 
 With no paths it resolves every moko-resources file changed by the commit being
 picked (`--theirs`, default `CHERRY_PICK_HEAD`), including files git merged without
@@ -25,6 +30,7 @@ and a manual `git cherry-pick --no-commit`).
 from __future__ import annotations
 
 import argparse
+import glob
 import re
 import subprocess
 import sys
@@ -32,7 +38,9 @@ import xml.etree.ElementTree as ET
 
 ENTRY = re.compile(r'<(string|plurals)\b[^>]*\bname="([^"]+)"[^>]*>.*?</\1>', re.S)
 ENTRY_SELF = re.compile(r'<(string|plurals)\b[^>]*\bname="([^"]+)"[^>]*/>', re.S)
+COMMENT = re.compile(r"<!--.*?-->", re.S)
 MOKO_PATH = re.compile(r"^i18n[^/]*/src/.*/moko-resources/")
+BASE_DIR = re.compile(r"^([^/]+/src/[^/]+/moko-resources)/")
 
 
 def git(*args: str) -> str:
@@ -47,11 +55,18 @@ def show(ref: str, path: str) -> str | None:
 
 
 def entries(text: str) -> dict[str, str]:
+    comments = [(m.start(), m.end()) for m in COMMENT.finditer(text)]
+
+    def in_comment(pos: int) -> bool:
+        return any(start < pos < end for start, end in comments)
+
     out: dict[str, str] = {}
     for match in ENTRY.finditer(text):
-        out[match.group(2)] = match.group(0)
+        if not in_comment(match.start()):
+            out[match.group(2)] = match.group(0)
     for match in ENTRY_SELF.finditer(text):
-        out.setdefault(match.group(2), match.group(0))
+        if not in_comment(match.start()):
+            out.setdefault(match.group(2), match.group(0))
     return out
 
 
@@ -71,6 +86,22 @@ def validate(text: str) -> list[str]:
     return problems
 
 
+def base_keys(path: str) -> set[str] | None:
+    """Keys defined in the module's base/ files, or None when they can't be found."""
+    match = BASE_DIR.match(path)
+    if not match:
+        return None
+    keys: set[str] = set()
+    for base in glob.glob(f"{match.group(1)}/base/*.xml"):
+        keys |= set(entries(open(base).read()))
+    return keys or None
+
+
+def drop_entry(text: str, entry: str) -> str:
+    new, replaced = re.subn(r"\n[ \t]*" + re.escape(entry), "", text, count=1)
+    return new if replaced else text.replace(entry, "", 1)
+
+
 def resolve(path: str, theirs_ref: str) -> str:
     head = show("HEAD", path)
     theirs = show(theirs_ref, path)
@@ -79,9 +110,20 @@ def resolve(path: str, theirs_ref: str) -> str:
 
     ours = entries(head)
     upstream = entries(theirs)
-    missing = [name for name in ours if name not in upstream]
+    keys = base_keys(path)
 
     text = theirs
+    dropped = 0
+    if keys is not None:
+        for name, entry in list(upstream.items()):
+            if name not in keys:
+                text = drop_entry(text, entry)
+                del upstream[name]
+                dropped += 1
+        missing = [name for name in ours if name in keys and name not in upstream]
+    else:
+        missing = [name for name in ours if name not in upstream]
+
     if missing:
         # The regex starts at "<", so re-indent only the first line; nested
         # <item> lines keep the indentation they had in the file.
@@ -94,7 +136,7 @@ def resolve(path: str, theirs_ref: str) -> str:
 
     with open(path, "w") as f:
         f.write(text)
-    return f"{path}: kept {len(missing)} fork-only entries"
+    return f"{path}: kept {len(missing)} fork-only entries, dropped {dropped} base-less entries"
 
 
 def main() -> int:

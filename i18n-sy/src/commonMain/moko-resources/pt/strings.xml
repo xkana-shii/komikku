@@ -588,7 +588,6 @@
     <string name="entry_not_tracked">A entrada não é rastreada.</string>
     <string name="fill_from_tracker">Preencher a partir do rastreador</string>
     <string name="feed">Feed</string>
-    <string name="too_many_in_feed">Muitas fontes no seu feed, não é possível adicionar mais que 10</string>
     <string name="action_edit_tags">Editar tags</string>
     <string name="rec_services_to_search">Serviços de recomendação para pesquisa</string>
     <string name="rec_group_source">Recomendações de fontes</string>

@@ -869,19 +869,6 @@
     <string name="pref_download_concurrent_pages_summary">Число одновременных загрузок страниц с источника</string>
     <string name="action_filter_excluded_scanlators">Фильтровать исключенных переводчиков</string>
     <string name="download_bookmarked">В закладках</string>
-    <string name="label_support_us">Поддержите нас</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (Предпочтительно)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon сейчас поддерживается %d+ спонсорами. Мы хотим поблагодарить каждого из вас. Давайте сделаем Mihon лучше.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="supportUsScreen.perks">Спонсоры получают доступ к эксклюзивным каналам с будущими привилегиями и возможностями.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Нравится приложение?</string>
-    <string name="donationCampaign.paragraph1">Приветствую! Я главный разработчик Mihon и хотел бы попросить вас об финансовой поддержке проекта. При достаточной поддержке я смогу работать над Mihon в полную силу и сосредоточиться как на давно существующих проблемах, так и на функциях, которые пользователи уже давно просят добавить.</string>
-    <string name="donationCampaign.paragraph2">Вы можете поддержать проект через Patreon (Предпочтительно) или OpenCollective. Если у вас есть вопросы или хотите поддержать, используя другие способы, вы можете связаться со мной через Discord-сервер нашего приложения.</string>
-    <string name="donationCampaign.paragraph3">Независимо от поддержки, Mihon останется с открытым исходным кодом, и я с волонтёрами будем и дальше его поддерживать.</string>
-    <string name="donationCampaign.dismiss">Отклонить</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Если у вас есть другие способы поддержки или вопросы по этому поводу, можете присоединиться к нашему Discord-серверу.</string>
     <string name="extensionStores">Хранилище расширений</string>
     <string name="action.addExtensionStore">Добавить хранилище расширений</string>
     <string name="extensionStoresScreen.emptyLabel">Вы ещё не добавляли хранилище расширений</string>
@@ -950,8 +937,6 @@
     <string name="pref_continuous_gap">Зазор</string>
     <string name="pref_allowed_content_warnings">Разрешенное предупреждение об контенте</string>
     <string name="app_migrating_summary">Подготовка после обновления. Это может занять несколько минут, поэтому не закрывайте приложение.</string>
-    <string name="pref_enable_chapter_name_hash">Включить суффикс хэша в название главы</string>
-    <string name="pref_enable_chapter_name_hash_details">Обеспечивает добавление уникального хэш-суффикса к названиям глав во избежание конфликтов имён. Если эта функция отключена, загрузка глав с одинаковыми названиями будет невозможна.</string>
     <string name="ext_not_loaded_details">Почему это не загрузилось</string>
     <string name="app_migrating_title">Завершение обновления</string>
     <string name="pref_load_ahead_only_over_wifi">Загрузить наперёд только с Wi-Fi</string>
@@ -971,17 +956,5 @@
     <string name="update_check_notification_download_complete">Нажмите для установки обновления</string>
     <string name="update_check_notification_download_error">Ошибка загрузки</string>
     <string name="update_check_notification_download_in_progress">Загрузка…</string>
-    <string name="ext_nsfw_warning">Источики из этого расширения могут содержать контент NSFW (18+)</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="parental_controls_info">Это не предотвращает появление внутри приложения контента NSFW (18+) из неофициальных или потенциально неправильно помеченных расширений.</string>
-    <string name="pref_category_nsfw_content">Источники NSFW (18+)</string>
-    <string name="pref_show_nsfw_source">Показывать в списке источников и расширений</string>
     <string name="channel_app_updates">Обновления приложения</string>
-    <string name="ext_info_age_rating">Возрастное ограничение</string>
-    <string name="action_open_repo">Открыть репозиторий источника</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Если читалка загружает пустое изображение, постепенно уменьшайте пороговую обработку.\nВыбрано: %s</string>
-    <string name="pref_hardware_bitmap_threshold">Пользовательская аппаратная пороговая обработка растрового изображения</string>
-    <string name="pref_hardware_bitmap_threshold_default">По умолчанию (%d)</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Влияет на производительность. Включите этот параметр, если пороговая обработка растрового изображения не помогает с ошибками, связанными с пустыми изображениями</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Использовать старый декодер для читалки с длинными страницами</string>
 </resources>

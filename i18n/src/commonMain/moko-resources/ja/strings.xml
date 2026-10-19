@@ -836,7 +836,6 @@
     <string name="download_bookmarked">ブックマーク済み</string>
     <string name="migrationConfigScreen.continueButtonText">移行</string>
     <string name="migrationConfigScreen.removeDownloadsTitle">移行後に既存のダウンロード済みデータを削除する</string>
-    <string name="label_support_us">支援する</string>
     <string name="extensionStores">拡張機能ストア</string>
     <string name="action.addExtensionStore">拡張機能ストアを追加</string>
     <string name="extensionStoresScreen.emptyLabel">拡張機能ストアをまだ追加していません</string>
@@ -853,11 +852,6 @@
     <string name="migrationConfigScreen.selectNoneLabel">すべて選択解除</string>
     <string name="migrationConfigScreen.additionalSearchQueryLabel">追加キーワード（任意）</string>
     <string name="migrationConfigScreen.additionalSearchQuerySupportingText">キーワードを追加することで、検索結果を絞り込むのに役立ちます</string>
-    <string name="donationCampaign.title">このアプリは気に入っていただけましたか？</string>
-    <string name="donationCampaign.paragraph1">こんにちは！Mihon のメイン開発者です。Mihon の開発を資金面でご支援いただけないでしょうか。十分なご支援をいただければ、Mihon の開発に専念し、長年の課題解決や多くのユーザーから要望のあった機能開発に集中できるようになります。</string>
-    <string name="donationCampaign.paragraph2">寄付は Patreon（推奨）または OpenCollective を通じて行うことができます。ご質問がある場合や、別の方法で支援をご希望の場合は、Mihon の Discord サーバーからお気軽にご連絡ください。</string>
-    <string name="donationCampaign.paragraph3">いずれにせよ、Mihon は私とボランティアによって引き続きメンテナンスされ、オープンソースのまま維持されます。</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
     <string name="migrationListScreenTitle">移行</string>
     <string name="migrationListScreenTitleWithProgress">移行（%1$d/%2$d）</string>
     <string name="migrationListScreen.copyActionLabel">コピー</string>
@@ -876,13 +870,6 @@
     <string name="migrationListScreen.migrateDialog.migrateLabel">移行</string>
     <string name="migrationListScreen.migrateDialog.cancelLabel">キャンセル</string>
     <string name="migrationListScreen.progressDialog.cancelLabel">キャンセル</string>
-    <string name="supportUsScreen.perks">支援者は限定チャンネルにアクセスできるほか、今後さらに多くの特典が追加される予定です。</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon（推奨）</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon は現在、%d 人以上の支援者の方々にご支援いただいています。皆様一人ひとりに心より感謝申し上げます。共に Mihon をさらに素晴らしいものにしていきましょう。</string>
-    <string name="supportUsScreen.contactForDetailsMessage">代替案や関連するご質問については、Discord サーバーにご参加ください。</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">閉じる</string>
     <string name="pref_vertical_navigator">垂直な章ナビゲーターを使用</string>
     <string name="pref_vertical_navigator_height">垂直ナビゲーターの高さ</string>
     <string name="pref_webtoon_vertical_navigator_on_left">垂直ナビゲーターを左側に配置</string>
@@ -907,8 +894,6 @@
     <string name="pref_apply_content_warnings_to_installed">インストール済みの拡張機能にも適用</string>
     <string name="pref_apply_content_warnings_to_installed_summary">オフにすると、すでにインストール済みの拡張機能は、警告が表示されていても読み込みや更新が継続されます</string>
     <string name="content_warnings_info">インストール済みであっても読み込まれていない拡張機能は、ソース情報なしで一覧表示されます。インストールしていない拡張機能は非表示になります。ただし、これは非公式の拡張機能や、誤ってフラグ付けされた可能性のある拡張機能がアプリ内で 18 歳以上向けコンテンツを表示することを防ぐものではありません。</string>
-    <string name="pref_enable_chapter_name_hash">章名のハッシュ接尾辞を有効にする</string>
-    <string name="pref_enable_chapter_name_hash_details">名前付けの競合を防ぐため、章名に一意のハッシュ接尾辞を追加します。この機能を無効にすると、同じ名前の章はダウンロードできなくなります。</string>
     <string name="ext_info_warning">Warning</string>
     <string name="ext_content_warning_safe">Safe</string>
     <string name="ext_content_warning_mixed">Mixed</string>
@@ -939,17 +924,5 @@
     <string name="update_check_notification_download_in_progress">ダウンロード中…</string>
     <string name="update_check_notification_download_complete">タップでアップデートをインストール</string>
     <string name="update_check_notification_download_error">ダウンロード中にエラー発生</string>
-    <string name="ext_nsfw_warning">この拡張機能のソースには成人向けのコンテンツが含まれる可能性があります</string>
-    <string name="ext_nsfw_short">成人向け</string>
-    <string name="parental_controls_info">非公式や誤ってフラグ付けされた可能性のある拡張機能の成人向けのコンテンツはこれからも表示される恐れがあります。</string>
-    <string name="pref_category_nsfw_content">成人向けのソース</string>
-    <string name="pref_show_nsfw_source">ソース・拡張機能リストに表示</string>
     <string name="channel_app_updates">アプリ更新</string>
-    <string name="ext_info_age_rating">レイティング区分</string>
-    <string name="action_open_repo">ソース リポジトリを開く</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">パフォーマンスに影響する。 ビットマップのしきい値を下げてもブランク画像の問題が解決しない場合のみ有効にしてください。</string>
-    <string name="pref_hardware_bitmap_threshold_default">デフォルト (%d)</string>
-    <string name="pref_hardware_bitmap_threshold">カスタム・ハードウェア・ビットマップ閾値</string>
-    <string name="pref_hardware_bitmap_threshold_summary">リーダが空の画像を読み込んだ場合は、しきい値を徐々に下げてください。\n選択されました: %s</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">レガシーデコーダーを長尺ストリップリーダーに使用する</string>
 </resources>

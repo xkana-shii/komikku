@@ -157,8 +157,6 @@
     <string name="action_restore">റിസ്റ്റോർ</string>
     <string name="update_12hour">ഓരോ 12 മണിക്കൂറിലും</string>
     <string name="update_6hour">ഓരോ 6 മണിക്കൂറിലും</string>
-    <string name="update_1hour">ഓരോ 1 മണിക്കൂറിലും</string>
-    <string name="update_3hour">ഓരോ 3 മണിക്കൂറിലും</string>
     <string name="landscape">ലാൻഡ്സ്കേപ്പ്</string>
     <string name="pref_library_columns">ഗ്രിഡ് വലിപ്പം</string>
     <string name="ext_update">അപ്ഡേറ്റ്</string>
@@ -186,16 +184,12 @@
     <string name="automatic_background">സ്വയമേവ</string>
     <string name="ext_installer_shizuku_stopped">ഷിസുകു പ്രവർത്തനമല്ല</string>
     <string name="nav_zone_left">ഇടത്</string>
-    <string name="ext_info_age_rating">വയസ്സ് റേറ്റിംഗ്</string>
-    <string name="ext_nsfw_short">18+</string>
     <string name="pref_firebase">വിശകലനവും തകരാറ് ലോഗുകളും</string>
     <string name="lock_with_biometrics">അൺലോക്ക് ആവശ്യമാണ്</string>
     <string name="pref_date_format">തീയതി രൂപം</string>
     <string name="pref_manage_notifications">അറിയിപ്പുകൾ കൈകാര്യം ചെയ്യുക</string>
     <string name="pref_app_language">ആപ്പ് ഭാഷ</string>
     <string name="pref_category_security">സുരക്ഷയും സ്വകാര്യതയും</string>
-    <string name="pref_show_nsfw_source">ഉറവിടങ്ങളിലും വിപുലീകരണ പട്ടികയിലും കാണിക്കുക</string>
-    <string name="parental_controls_info">ഇത് അനൗദ്യോഗികമായോ തെറ്റായി അടയാളപ്പെടുത്തിയോ ഉള്ള വിപുലീകരണങ്ങൾ ആപ്പിനുള്ളിൽ NSFW (18+) ഉള്ളടക്കം പ്രദർശിപ്പിക്കുന്നത് തടയില്ല.</string>
     <string name="relative_time_today">ഇന്ന്</string>
     <string name="onboarding_description">ആദ്യമായി ചില ക്രമീകരണങ്ങൾ സജ്ജമാക്കാം. പിന്നീട് ഇവയെല്ലാം സെറ്റിംഗ്സിൽ നിന്ന് എപ്പോൾ വേണമെങ്കിലും മാറ്റാനാകും.</string>
     <string name="lock_always">എപ്പോഴും</string>
@@ -222,7 +216,6 @@
     <string name="migrationListScreenTitle">സ്ഥലാന്തരീകരണം</string>
     <string name="migrationConfigScreen.continueButtonText">തുടരുക</string>
     <string name="migrationConfigScreen.availableHeader">ലഭ്യം</string>
-    <string name="label_support_us">ഞങ്ങളെ സഹായിക്കു</string>
     <string name="label_auto">യാന്ത്രികമായ</string>
     <string name="action_display_unread_badge">വായിച്ചിട്ടിലാത്ത അദ്ധ്യായം</string>
     <string name="action_move_to_bottom_all_for_series">പരമ്പര അടിത്തട്ടിലേക്ക് നീക്കുക</string>
@@ -243,4 +236,6 @@
     <string name="pref_category_delete_chapters">അദ്ധ്യായം മായ്ച്ചുകളയുക</string>
     <string name="pref_remove_after_marked_as_read">സ്വന്തമായി വായിച്ചെൻ അടയാളപ്പെടുത്തിയതിൻ ശേഷം</string>
     <string name="pref_remove_after_read">യാന്ത്രികമായി വായിച്ചെതിനു ശേഷം മായ്ച്ചുകളയുക</string>
+    <string name="update_1hour">ഓരോ 1 മണിക്കൂറിലും</string>
+    <string name="update_3hour">ഓരോ 3 മണിക്കൂറിലും</string>
 </resources>

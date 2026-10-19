@@ -868,19 +868,6 @@
     <string name="action_webview_close_tab">Đóng thẻ</string>
     <string name="action_filter_excluded_scanlators">Lọc nhóm dịch bị loại trừ</string>
     <string name="download_bookmarked">Đã đánh dấu</string>
-    <string name="label_support_us">Hỗ trợ chúng tôi</string>
-    <string name="supportUsScreen.perks">Người hỗ trợ có quyền truy cập vào các kênh độc quyền và nhận được nhiều đặc quyền hơn.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (ưu tiên)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon hiện được hỗ trợ bởi %d+ người hỗ trợ. Chúng tôi muốn cảm ơn tất cả các bạn. Hãy cùng nhau làm cho Mihon trở nên tốt hơn nữa.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Để biết các lựa chọn thay thế hoặc bất kỳ câu hỏi liên quan nào, hãy tham gia máy chủ Discord của chúng tôi.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Bạn thích ứng dụng này?</string>
-    <string name="donationCampaign.paragraph1">Xin chào! Tôi là nhà phát triển chính đằng sau Mihon và tôi mong bạn cân nhắc về việc hỗ trợ tài chính cho sự phát triển của ứng dụng này. Với đủ sự hỗ trợ, tôi sẽ có thể phát triển Mihon toàn thời gian và tập trung vào các vấn đề tồn đọng lâu dài cũng như các tính năng được yêu cầu cao.</string>
-    <string name="donationCampaign.paragraph2">Bạn có thể quyên góp thông qua Patreon (ưu tiên) hoặc OpenCollective. Nếu bạn có thắc mắc hoặc muốn hỗ trợ bằng cách khác, hãy liên hệ với tôi thông qua nhóm Discord của Mihon.</string>
-    <string name="donationCampaign.paragraph3">Dù thế nào đi nữa, Mihon sẽ tiếp tục được tôi và các tình nguyện viên duy trì và nó sẽ vẫn là nguồn mở.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Bỏ qua</string>
     <string name="action.addExtensionStore">Thêm cửa hành tiện ích mở rộng</string>
     <string name="extensionStoresScreen.emptyLabel">Bạn chưa thêm cửa hàng tiện ích mở rộng</string>
     <string name="extensionStoresScreen.addStore.title">Thêm cửa hàng tiện ích mở rộng</string>
@@ -905,17 +892,5 @@
     <string name="update_check_notification_download_in_progress">Đang tải xuống…</string>
     <string name="update_check_notification_download_complete">Nhấn để cập nhật</string>
     <string name="update_check_notification_download_error">Lỗi khi tải xuống</string>
-    <string name="ext_nsfw_warning">Nguồn truyền từ tiện ích mở rộng này có thể chứa nội dung NSFW 18+</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="parental_controls_info">Điều này không ngăn các tiện ích mở rộng không chính thức hoặc có khả năng bị gắn cờ không chính xác hiển thị nội dung NSFW (18+) trong ứng dụng.</string>
-    <string name="pref_category_nsfw_content">Nguồn NSFW (18+)</string>
-    <string name="pref_show_nsfw_source">Hiển thị trong các danh sách nguồn và tiện ích mở rộng</string>
     <string name="channel_app_updates">Cập nhật ứng dụng</string>
-    <string name="ext_info_age_rating">Phân loại độ tuổi</string>
-    <string name="action_open_repo">Mở nguồn</string>
-    <string name="pref_hardware_bitmap_threshold">Tùy chỉnh ngưỡng phần cứng bitmap</string>
-    <string name="pref_hardware_bitmap_threshold_default">Mặc định (%d)</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Nếu người đọc tải một hình ảnh trống thì hãy giảm dần ngưỡng\nĐã chọn: %s</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Ảnh hưởng đến hiệu suất. Chỉ bật nếu việc giảm ngưỡng bitmap không khắc phục được sự cố hình ảnh trống</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Sử dụng bộ giải mã cũ cho cuộc dọc</string>
 </resources>

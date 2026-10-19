@@ -868,7 +868,6 @@
     <string name="migrationListScreen.progressDialog.cancelLabel">Cancel·la</string>
     <string name="migrationListScreen.matchWithoutChapterToast">No s’ha trobat cap capítol, aquest element no es pot utilitzar per a migrar</string>
     <string name="action_filter_excluded_scanlators">Filtra els scanlators exclosos</string>
-    <string name="label_support_us">Doneu-nos suport</string>
     <string name="theme_tokyonight">Nit a Tòquio</string>
     <string name="pref_category_extensions">Extensions</string>
     <string name="pref_allowed_content_warnings">Advertències de contingut permeses</string>
@@ -937,18 +936,6 @@
     <string name="considering">Considerant</string>
     <string name="pref_filter_update_categories_details">Les actualitzacions de les categories excloses no es mostraran fins i tot si són també en qualsevol categoria inclosa.</string>
     <string name="pref_filter_upcoming_categories_details">Els elements de les categories excloses no es mostren, fins i tot si són també en qualsevol categoria inclosa.</string>
-    <string name="supportUsScreen.perks">Els mecenes tenen accés a canals exclusius, i en el futur tindran més avantatges.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (preferit)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">El Mihon rep el suport de més de %d mecenes. Volem donar-vos les gràcies a tots vosaltres. Junts, fem que el Mihon sigui encara millor.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Per a opcions alternatives o altres qüestions relacionades, uniu-vos al nostre servidor del Discord.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Us agrada l’aplicació?</string>
-    <string name="donationCampaign.paragraph1">Ep! Sóc el desenvolupador principal del Mihon, i m’agradaria demanar-vos que considereu donar suport financer al desenvolupament de l’aplicació. Amb prou suport, podré treballar en el Mihon a temps complet i centrar-me a corregir problemes que fa temps que existeixen i a desenvolupar funcionalitats molt demanades.</string>
-    <string name="donationCampaign.paragraph2">Podeu fer un donatiu mitjançant el Patreon (preferit) o OpenCollective. Si teniu qüestions o voleu donar-hi suport mitjançant altres mètodes alternatius, no dubteu a contactar amb mi mitjançant el servidor del Discord del Mihon.</string>
-    <string name="donationCampaign.paragraph3">Sigui com sigui, els voluntaris i jo continuarem mantenint el Mihon i continuarà sent de codi obert.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Ignora</string>
     <string name="refresh_tracker_profile">Actualitza el perfil del servei de seguiment</string>
     <string name="refresh_tracker_success">S’ha actualitzat el perfil de %s</string>
     <string name="refresh_tracker_error">S’ha produït un error en actualitzar %1$s: %2$s</string>
@@ -956,8 +943,6 @@
     <string name="update_check_skip_message">Les actualitzacions sovint contenen solucions d’errors i millores de seguretat. No tornareu a rebre cap recordatori d’aquesta versió, però sí que en rebreu si se’n publica una altra de més nova.</string>
     <string name="update_check_skip">Omet aquesta versió</string>
     <string name="app_migrating_summary">S’estan enllestint algunes coses després de l’actualització. Pot tardar uns minuts, mantingueu oberta l’aplicació.</string>
-    <string name="pref_enable_chapter_name_hash_details">Assegura que s’afegeixi un sufix amb un resum únic al nom dels capítols per a evitar conflictes de noms. Si es desactiva, els capítols amb noms idèntics no es poden baixar.</string>
-    <string name="pref_enable_chapter_name_hash">Activa el sufix del resum al nom del capítol</string>
     <string name="ext_not_loaded_details">Per què no s’ha carregat</string>
     <string name="pref_load_ahead_only_over_wifi">Precarrega només amb Wi-Fi</string>
     <string name="app_migrating_title">S’està finalitzant l’actualització</string>
@@ -973,17 +958,5 @@
     <string name="update_check_notification_download_in_progress">S’està baixant…</string>
     <string name="update_check_notification_download_complete">Premeu per a instal·lar l’actualització</string>
     <string name="update_check_notification_download_error">Error de baixada</string>
-    <string name="ext_nsfw_warning">Les fonts d’aquesta extensió poden contenir contingut NSFW (+18)</string>
-    <string name="ext_nsfw_short">+18</string>
-    <string name="parental_controls_info">Això no evita que les extensions no oficials o possiblement mal etiquetades puguin mostrar contingut NSFW (+18) a l’aplicació.</string>
-    <string name="pref_category_nsfw_content">Fonts NSFW (+18)</string>
-    <string name="pref_show_nsfw_source">Mostra a la llista de fonts i extensions</string>
     <string name="channel_app_updates">Actualitzacions de l’aplicació</string>
-    <string name="ext_info_age_rating">Valoració d’edat</string>
-    <string name="action_open_repo">Obre el repositori d’origen</string>
-    <string name="pref_hardware_bitmap_threshold_default">Per defecte (%d)</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Afecta el rendiment. Activeu-ho només si en reduir el llindar de mapes de bits no se solucionen els problemes d’imatges buides</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Si el lector carrega una imatge buida, reduïu-ne el llindar a poc a poc.\nActual: %s</string>
-    <string name="pref_hardware_bitmap_threshold">Llindar personalitzat dels mapes de bits per maquinari</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Utilitza el decodificador antic per al lector de tira llarga</string>
 </resources>

@@ -869,19 +869,6 @@
     <string name="action_webview_close_tab">Tab schließen</string>
     <string name="action_filter_excluded_scanlators">Ausgeschlossene Scanlationgruppen herausfiltern</string>
     <string name="download_bookmarked">Mit Lesezeichen versehen</string>
-    <string name="label_support_us">Unterstütze Uns</string>
-    <string name="supportUsScreen.perks">Unterstützende erhalten Zugang zu exklusiven Kanälen. Weitere Vorteile folgen.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (bevorzugt)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon wird aktuell von %d+ Personen unterstützt. Wir bedanken uns bei euch allen. Lasst uns Mihon gemeinsam noch besser machen.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Trete unserem Discord-Server für alternative Optionen oder bei weiteren Fragen bei.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Gefällt dir die App?</string>
-    <string name="donationCampaign.paragraph1">Hi! Ich bin der Hauptentwickler von Mihon und möchte darum bitten, die Entwicklung finanziell zu unterstützen. Mit genügend Unterstützung werde ich in der Lage sein, in Vollzeit an Mihon zu arbeiten und sowohl langjährige Probleme zu beheben als auch häufig gewünschte Features zu implementieren.</string>
-    <string name="donationCampaign.paragraph2">Du kannst entweder mittels Patreon (bevorzugt) oder OpenCollective spenden. Wenn du Fragen hast oder auf anderem Wege die Entwicklung unterstützen möchstest, dann kannst du mich gerne über Mihons Discord-Server erreichen.</string>
-    <string name="donationCampaign.paragraph3">Unabhängig davon wird Mihon weiterhin von mir und anderen Freiwilligen entwickelt werden und bleibt open-source.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Verwerfen</string>
     <string name="extensionStores">Erweiterungsdepots</string>
     <string name="action.addExtensionStore">Erweiterungsdepot hinzufügen</string>
     <string name="extensionStoresScreen.emptyLabel">Du hast noch kein Erweiterungsdepot hinzugefügt</string>
@@ -957,8 +944,6 @@
     <string name="update_check_skip_message">Aktualisierungen beinhalten oft Fehlerbehebungen und Sicherheitsverbesserungen. Du wirst nicht erneut an diese Version erinnert, aber du wirst dennoch informiert, wenn eine neuere Version herausgebracht wird.</string>
     <string name="app_migrating_title">Aktualisierung wird abgeschlossen</string>
     <string name="app_migrating_summary">Die Aktualisierung wird abgeschlossen. Das kann einige Minuten dauern. Bitte lass die App so lange geöffnet.</string>
-    <string name="pref_enable_chapter_name_hash">Hash-Suffix für Kapitelnamen aktivieren</string>
-    <string name="pref_enable_chapter_name_hash_details">Fügt ein eindeutiges Hash-Suffix an Kapitelnamen an, um Namenskonflikte zu vermeiden. Ist die Option deaktiviert, können Kapitel mit identischen Namen nicht heruntergeladen werden.</string>
     <string name="ext_not_loaded_details">Warum nicht geladen?</string>
     <string name="ext_filtered_message">Die Inhaltswarnung dieser Erweiterung ist nicht zum Laden ausgewählt. Ihre Quellen sind daher nicht verfügbar.</string>
     <string name="ext_content_warning_safe">Unbedenklich</string>
@@ -968,16 +953,5 @@
     <string name="update_check_notification_download_in_progress">Herunterladen…</string>
     <string name="update_check_notification_download_complete">Tippe, um das Update zu installieren</string>
     <string name="update_check_notification_download_error">Fehler beim Herunterladen</string>
-    <string name="ext_nsfw_warning">Quellen dieser Erweiterung könnten NSFW/Ü18-Inhalte enthalten</string>
-    <string name="ext_nsfw_short">Ü18</string>
-    <string name="parental_controls_info">Dies verhindert nicht, dass inoffizielle oder möglicherweise falsch gekennzeichnete Erweiterungen NSFW/Ü18-Inhalte in der App anzeigen.</string>
-    <string name="pref_category_nsfw_content">NSFW/Ü18-Quellen</string>
-    <string name="pref_show_nsfw_source">In Quellen- und Erweiterungslisten anzeigen</string>
     <string name="channel_app_updates">App-Updates</string>
-    <string name="ext_info_age_rating">Altersfreigabe</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Reduziert stufenweise den Grenzwert, wenn der Leser nur ein leeres Bild lädt.\nAusgewählt: %s</string>
-    <string name="pref_hardware_bitmap_threshold">Benutzerdefinierter Hardware-Bitmap-Grenzwert</string>
-    <string name="pref_hardware_bitmap_threshold_default">Standard (%d)</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Beeinflusst die Leistung. Nur aktivieren, wenn das Reduzieren des Bitmap-Grenzwerts das Problem von leeren Bildern nicht behebt</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Legacy-Decoder für Langer-Streifen-Leser verwenden</string>
 </resources>

@@ -869,19 +869,6 @@
     <string name="migrationConfigScreen.availableHeader">Maaaring Magamit</string>
     <string name="action_filter_excluded_scanlators">Isala ang na-ibukod na mga scanlator</string>
     <string name="download_bookmarked">Na-bookmark</string>
-    <string name="label_support_us">Suportahan Kami</string>
-    <string name="supportUsScreen.perks">Ang mga patron ay may access sa exclusive channels, at marami pang perks ang darating.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (mas mainam)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Ang Mihon ay kasalukuyang sinusuportahan ng %d+ na patron. Nais naming pasalamatan ang bawat isa sa inyo. Sama-sama nating pagandahin pa lalo ang Mihon.</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Para sa iba pang alternatibong opsyon o anumang mga katanungan, sumali sa aming Discord server.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Nasisiyahan ka ba sa paggamit ng app?</string>
-    <string name="donationCampaign.paragraph1">Kumusta! Ako ang main developer ng Mihon. Nais ko sanang humiling ng inyong suportang pinansyal para sa development nito. Sa sapat na suporta, magagawa kong pagtuunan ng panahon ang Mihon full-time at mabigyang-pansin ang mga dati pang isyu pati na ang mga feature na madalas ninyong hinihiling.</string>
-    <string name="donationCampaign.paragraph2">Maaari kang mag-donate sa pamamagitan ng Patreon (mas mainam) o OpenCollective. Kung mayroon kang mga katanungan o nais tumulong gamit ang ibang paraan, huwag mag-atubiling makipag-ugnayan sa akin sa Discord server ng Mihon.</string>
-    <string name="donationCampaign.paragraph3">Anuman ang mangyari, patuloy na itataguyod ang Mihon ko at ng mga volunteer, at mananatili itong open source.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Alisin</string>
     <string name="extensionStores">Mga Extension store</string>
     <string name="action.addExtensionStore">Magdagdag ng extension store</string>
     <string name="extensionStoresScreen.emptyLabel">Wala ka pang idinagdag na extension store</string>
@@ -951,8 +938,6 @@
     <string name="cutout_mode_shift">Pag-usog</string>
     <string name="app_migrating_title">Tinatapos ang update</string>
     <string name="app_migrating_summary">Inihahanda pa ang lahat pagkatapos ng update. Maaari itong tumagal nang ilang minuto, kaya pabayaang nakabukas ang app.</string>
-    <string name="pref_enable_chapter_name_hash">Paganahin ang hash suffix sa pangalan ng kabanata</string>
-    <string name="pref_enable_chapter_name_hash_details">Sinisigurong may natatanging hash suffix na idinaragdag sa pangalan ng mga kabanata upang maiwasan ang conflict sa pangalan. Kapag naka-off, hindi maida-download ang mga kabanatang may magkakaparehong pangalan.</string>
     <string name="ext_not_loaded_details">Bakit hindi ito na-load</string>
     <string name="pref_load_ahead_only_over_wifi">Mag-load lang sa Wi-Fi</string>
     <string name="pref_load_ahead_only_over_wifi_summary">Makatitipid sa mobile data sa pag-load lang ng mga pahinang malapit sa kasalukuyan mong binabasa</string>
@@ -968,17 +953,5 @@
     <string name="update_check_notification_download_error">Nagka-error sa pag-download</string>
     <string name="update_check_notification_download_complete">I-tap upang ma-install ang update</string>
     <string name="update_check_notification_download_in_progress">Dina-download…</string>
-    <string name="parental_controls_info">Hindi nito naiiwasan ang pagpapakita ng mga NSFW (18+) sa mga di-opisyal o posibleng maling naka-flag na extension sa loob ng app.</string>
-    <string name="ext_nsfw_warning">Posibleng may NSFW (18+) content ang mga source mula sa extension na ito</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="pref_show_nsfw_source">Ipakita sa mga listahan ng source at extension</string>
-    <string name="pref_category_nsfw_content">Mga source na NSFW (18+)</string>
     <string name="channel_app_updates">Mga update sa app</string>
-    <string name="ext_info_age_rating">Rating sa edad</string>
-    <string name="action_open_repo">Open source na repo</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Kung naglo-load ang reader ng isang blangkong imahe ay unti-unting bawasan ang threshold.\nNapili: %s</string>
-    <string name="pref_hardware_bitmap_threshold">Custom na threshold sa hardware bitmap</string>
-    <string name="pref_hardware_bitmap_threshold_default">Default (%d)</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Nakakaapekto sa performance. Paganahin lamang kung ang pagbabawas ng bitmap threshold ay hindi nakakapag-ayos ng mga isyu sa blangkong imahe</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Gamitin ang legacy decoder para sa long strip reader</string>
 </resources>

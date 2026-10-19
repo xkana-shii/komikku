@@ -630,7 +630,6 @@
     <string name="file_extension">امتداد الملف</string>
     <string name="base_url">عنوان URL الأساسي</string>
     <string name="final_chapter">الفصل الأخير</string>
-    <string name="pref_include_chapter_url_hash">تضمين تجزئة عنوان URL للفصل</string>
     <string name="pref_include_chapter_url_hash_desc">أضف الأحرف الستة الأولى من تجزئة MD5 الخاصة بعنوان URL الخاص بالفصل إلى اسم ملف أو مجلد الفصل.</string>
     <string name="pref_include_chapter_url_hash">تضمين هاش الرابط للفصل</string>
 </resources>

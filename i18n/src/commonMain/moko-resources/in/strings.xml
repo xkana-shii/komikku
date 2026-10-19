@@ -868,7 +868,6 @@
     <string name="pref_download_concurrent_pages_summary">Halaman yang diunduh secara bersamaan per sumber</string>
     <string name="action_webview_close_tab">Tutup tab</string>
     <string name="action_filter_excluded_scanlators">Filter yang mengecualikan pemindai</string>
-    <string name="label_support_us">Dukung Kami</string>
     <string name="extensionStores">Tempat ekstensi</string>
     <string name="action.addExtensionStore">Tambah toko ekstensi</string>
     <string name="extensionStoresScreen.emptyLabel">Anda belum menambahkan ekstensi</string>
@@ -881,18 +880,6 @@
     <string name="extensionStoresScreen.addStoreInput.inputLabel">Menyimpan indeks URL</string>
     <string name="pref_webtoon_vertical_navigator_on_left">Letakkan navigator vertikal di sisi kiri</string>
     <string name="download_bookmarked">Ditandai</string>
-    <string name="supportUsScreen.perks">Patrons mendapatkan akses ke saluran eksklusif, dengan lebih banyak keuntungan yang akan datang.</string>
-    <string name="supportUsScreen.donationPlatform.patreon">Patreon (disarankan)</string>
-    <string name="supportUsScreen.donationPlatform.opencollective">OpenCollective</string>
-    <string name="supportUsScreen.currentlySupportedBy">Mihon saat ini didukung oleh %d + patrons. Kami ingin berterima kasih kepada kalian semua. Mari buat Mihon menjadi lebih baik bersama-sama.</string>
-    <string name="supportUsScreen.contactPlatform">Discord</string>
-    <string name="donationCampaign.title">Suka dengan aplikasi ini?</string>
-    <string name="supportUsScreen.contactForDetailsMessage">Untuk opsi lain atau pertanyaan terkait apa pun, silakan bergabung dengan server Discord kami.</string>
-    <string name="donationCampaign.paragraph1">Hai! Saya adalah pengembang utama di balik Mihon, dan saya ingin meminta Anda untuk mempertimbangkan memberikan dukungan finansial bagi pengembangan Mihon. Dengan dukungan yang cukup, saya akan dapat bekerja penuh waktu untuk Mihon dan fokus pada masalah-masalah yang sudah lama ada serta fitur-fitur yang banyak diminta.</string>
-    <string name="donationCampaign.paragraph2">Anda dapat memberikan donasi melalui Patreon (disarankan) atau OpenCollective. Jika Anda memiliki pertanyaan atau ingin memberikan dukungan melalui cara lain, silakan hubungi saya melalui server Discord Mihon.</string>
-    <string name="donationCampaign.paragraph3">Bagaimanapun juga, Mihon akan terus dipelihara oleh saya dan para sukarelawan, dan akan tetap bersifat open source.</string>
-    <string name="donationCampaign.contactPlatform">Discord</string>
-    <string name="donationCampaign.dismiss">Tutup</string>
     <string name="considering">Mempertimbangkan</string>
     <string name="app_migrating_title">Menyelesaikan pembaruan</string>
     <string name="app_migrating_summary">Mempersiapkan segala sesuatu setelah pembaruan. Proses ini dapat memakan waktu beberapa menit, jadi biarkan aplikasi tetap terbuka.</string>
@@ -902,8 +889,6 @@
     <string name="pref_apply_content_warnings_to_installed">Berlaku juga untuk ekstensi yang terpasang</string>
     <string name="pref_apply_content_warnings_to_installed_summary">Saat dimatikan, ekstensi yang sudah Anda instal akan terus memuat dan memperbarui terlepas dari peringatan yang diberikan</string>
     <string name="content_warnings_info">Ekstensi terpasang yang tidak dimuat tetap tercantum tanpa sumbernya; yang belum Anda instal disembunyikan. Ini tidak mencegah ekstensi yang tidak resmi atau yang berpotensi ditandai salah untuk memunculkan konten 18+ di dalam aplikasi.</string>
-    <string name="pref_enable_chapter_name_hash">Aktifkan sufiks hash nama bab</string>
-    <string name="pref_enable_chapter_name_hash_details">Memastikan sufiks hash unik ditambahkan ke nama bab untuk mencegah konflik penamaan. Jika dinonaktifkan, bab dengan nama yang identik tidak dapat diunduh.</string>
     <string name="ext_filtered">Tersaring</string>
     <string name="ext_not_loaded">Tidak dimuat</string>
     <string name="ext_not_loaded_dialog">Tidak dapat dimuat</string>
@@ -968,17 +953,5 @@
     <string name="update_check_notification_download_in_progress">Mengunduh…</string>
     <string name="update_check_notification_download_complete">Ketuk untuk menginstal pembaruan</string>
     <string name="update_check_notification_download_error">Terjadi kesalahan saat mengunduh</string>
-    <string name="ext_nsfw_warning">Sumber dari ekstensi ini mungkin berisi konten DEWASA (NSFW 18+)</string>
-    <string name="ext_nsfw_short">18+</string>
-    <string name="parental_controls_info">Hal ini tidak mencegah ekstensi non-resmi atau konten DEWASA (NSFW 18+) yang tidak ditandai dengan benar muncul di dalam aplikasi.</string>
-    <string name="pref_category_nsfw_content">Sumber NSFW (18+)</string>
-    <string name="pref_show_nsfw_source">Tampilkan di daftar sumber dan ekstensi</string>
     <string name="channel_app_updates">Pembaruan aplikasi</string>
-    <string name="ext_info_age_rating">Rating Umur</string>
-    <string name="action_open_repo">Repo sumber terbuka</string>
-    <string name="pref_hardware_bitmap_threshold">Batas bitmap perangkat keras kustom</string>
-    <string name="pref_hardware_bitmap_threshold_summary">Jika pembaca memuat gambar kosong, kurangi threshold secara bertahap.\nPilih: %s</string>
-    <string name="pref_hardware_bitmap_threshold_default">Bawaan (%d)</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_summary">Mempengaruhi performa. Aktifkan hanya jika menurunkan batas bitmap tidak memperbaiki gambar kosong</string>
-    <string name="pref_always_decode_long_strip_with_ssiv_2">Gunakan dekoder lama untuk bacaan strip panjang</string>
 </resources>

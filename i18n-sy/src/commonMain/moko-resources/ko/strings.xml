@@ -369,7 +369,6 @@
     <string name="invalid_category_name">잘못된 카테고리 이름</string>
     <string name="feed">피드</string>
     <string name="feed_delete">피드 항목을 삭제하시겠습니까?</string>
-    <string name="too_many_in_feed">피드에 소스가 너무 많습니다, 10개보다 많이 추가할 수 없습니다</string>
     <string name="feed_tab_empty">피드에 소스가 없습니다. 오른쪽 위에서 추가해 주십시오</string>
     <string name="feed_add">%1$s을(를) 피드에 추가하시겠습니까?</string>
     <string name="add_tag">태그 추가</string>

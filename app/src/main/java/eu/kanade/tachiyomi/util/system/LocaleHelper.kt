@@ -13,6 +13,12 @@ import java.util.Locale
 object LocaleHelper {
 
     /**
+     * The app's current locale, honoring the in-app language setting.
+     */
+    val appLocale: Locale
+        get() = LocaleListCompat.getAdjustedDefault()[0] ?: Locale.getDefault()
+
+    /**
      * Sorts by display name, except keeps the "all" (displayed as "Multi") locale at the top.
      */
     val comparator = { a: String, b: String ->
