@@ -68,12 +68,17 @@ Markers record **what diverges from upstream** — they never mark upstream code
 **Hard rules:**
 
 - **All new strings go to `i18n-kmk/`** (`import tachiyomi.i18n.kmk.KMR`). `MR` / `SYMR` are upstream-owned; reuse existing entries, but only add or change them when syncing upstream.
-- **Never** edit non-`base` locale `strings.xml` or `plurals.xml` files in `i18n-kmk/`, `i18n/`, or `i18n-sy/` — [Weblate](https://hosted.weblate.org/engage/komikku-app/) owns translations.
+- **Weblate is not connected to this repo.** Translation content is maintained here, not generated: non-`base` locale files in `i18n-kmk/`, `i18n/`, and `i18n-sy/` are normal source files.
+  - **Port upstream translation commits** (“Translations update from Hosted Weblate” from Mihon/TachiyomiSY/Komikku) like any other upstream commit. Never skip them or mark them `X` — they are the only source of refreshed translations.
+  - **Translate new strings yourself**: when you add a `base` string, add its translation to the non-`base` locales you can translate confidently (missing keys fall back to the base language, so skipping a locale is safe). Do this as part of the feature, not as a follow-up.
+  - Hand-edit an existing translation only to fix an obvious error.
 - Inside a `// KUN` block (or Komikku's own `// KMK` behavior), default to **`KMR`** even if nearby code imports `MR`.
+
+**Porting translation commits:** upstream locale files and this fork's have diverged in both directions (the fork still has Komikku-era keys that Mihon removed, and is missing newer upstream keys). Resolve conflicts per file by keeping upstream's values for the keys it has and re-appending the fork-only entries with their existing translations — `scripts/resolve_i18n_union.py` in the `upstream-port` skill automates this. Never drop a translation that already exists. Validate that the XML is well-formed and that no key from the fork's `base` lost its translation.
 
 **Examples (→ `i18n-kmk`, not `i18n`):** library update error UI, sync-before-update messages, WebDAV/Discord settings, updater notifications, `mihon/feature/*` screens.
 
-**Self-check before finishing:** `git diff` must not add new `<string name="…">` or `<plurals name="…">` entries under non-`base` locales in `i18n-kmk/src/`, `i18n/src/`, or `i18n-sy/src/`.
+**Self-check before finishing:** `git diff` must not hand-add `<string name="…">` / `<plurals name="…">` entries under non-`base` locales, **except** translations that accompany a new base string or a ported upstream translation commit. New base strings should ship with translations where you can provide them.
 
 ### Formatting & build verification
 

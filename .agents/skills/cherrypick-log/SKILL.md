@@ -87,6 +87,10 @@ Run this step when the user asks to clean the log, or together with a review if 
 Release commits of a fork (mihon's `Release v0.20.4`, SY's `Release 1.13.2` / `1.10.5`, `Bump versionCode
 to 33`, `Update version code`) are only for that fork's releases, so the fork never picks them.
 
+**Never mark a translation commit `X`.** “Translations update from Hosted Weblate” commits are ported
+like any other commit — Weblate is not connected to this repo (see the `upstream-port` skill), so they
+are the only source of refreshed translations.
+
 1. List candidates among empty and `?` rows (an `AI checked` note does not exclude them here):
    ```bash
    python3 $P uncertain --json --include-empty --include-reviewed \

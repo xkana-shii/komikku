@@ -602,7 +602,6 @@ class ReaderViewModel(
                 manga = mangaList[it.chapter.mangaId] ?: manga,
                 // KMK <--
                 isCurrent = it.chapter.id == currentChapter?.chapter?.id,
-                dateFormat = UiPreferences.dateFormat(uiPreferences.dateFormat.get()),
             )
         }
     }

@@ -45,12 +45,15 @@ import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.selectedBackground
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 private val HistoryItemHeight = 96.dp
 
 @Composable
 fun HistoryItem(
     history: HistoryWithRelations,
+    timeFormatter: DateTimeFormatter,
     onClickCover: () -> Unit,
     // KMK -->
     onClick: () -> Unit,
@@ -164,7 +167,9 @@ fun HistoryItem(
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            val readAt = remember { history.readAt?.toTimestampString() ?: "" }
+            val readAt = remember(timeFormatter, history.readAt) {
+                history.readAt?.toTimestampString(timeFormatter) ?: ""
+            }
             // KMK -->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -241,6 +246,7 @@ private fun HistoryItemPreviews(
         Surface {
             HistoryItem(
                 history = historyWithRelations,
+                timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT),
                 onClickCover = {},
                 // KMK -->
                 onClick = {},

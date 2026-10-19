@@ -62,7 +62,9 @@ Only **Status** and **Notes** are yours to edit. Every other cell, the order of 
 - Non-merge commits on each upstream branch whose committer date is on or after `since`.
 - A commit is excluded if its author, committer or any `Co-authored-by` matches `exclude_identity_regex` (Renovate).
   An SY copy of an excluded mihon commit is excluded too.
-- Weblate translation commits are included. Mark them `X` if you don't want them.
+- Weblate translation commits are included and **must be ported** like any other commit: Weblate is not
+  connected to this repo, so they are the only source of translation updates. Never mark them `X`.
+  See the `upstream-port` skill for resolving the locale-file conflicts.
 
 ### Pairing SY commits with mihon commits
 

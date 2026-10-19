@@ -38,8 +38,10 @@ upstream** — they never mark upstream code itself. Rules (extending `AGENTS.md
 
 - `// KMK` is **not** this fork's marker: it means the code came from the **Komikku** upstream (this
   repo's base). komi-kun's own code uses `// KUN`.
-- Never add new strings to a non-`base` locale; new strings go to
-  `i18n-kmk/.../base/strings.xml` and are referenced via `KMR` (`AGENTS.md`).
+- New strings go to `i18n-kmk/.../base/strings.xml` and are referenced via `KMR` (`AGENTS.md`).
+  Weblate is **not** connected to this repo, so non-`base` locales are maintained here: translation
+  updates arrive by porting upstream translation commits, and new strings ship with best-effort
+  translations instead of waiting for a translation service.
 - Markers also apply inside `.sq` / `.sqm` files (use `-- KUN -->` / `-- KUN <--`).
 - A pure cherry-pick needs no marker: the trailing `(cherry picked from commit <sha>)` is the
   provenance, and `update_cherrypick_log.py` detects it as `O`.
@@ -59,13 +61,18 @@ upstream** — they never mark upstream code itself. Rules (extending `AGENTS.md
    `↳ tachiyomiSY` row): Komikku descends from SY, so the SY-adapted version conflicts far less.
 6. After each batch: `./gradlew spotlessApply spotlessCheck :app:compileDebugKotlin`, then the unit
    tests (`:app:testDebugUnitTest`, `:domain:testDebugUnitTest`) where relevant.
-7. For SQL changes append a **new** migration at the next number
+7. **Translation commits are ports too.** “Translations update from Hosted Weblate” commits are never
+   skipped (`X`): Weblate is not connected to this repo, so they are the only source of refreshed
+   translations. Resolve locale-file conflicts with `scripts/resolve_i18n_union.py` from the
+   `upstream-port` skill (upstream wins per key, fork-only translations are re-appended), then
+   validate the XML and that no base key lost its translation.
+8. For SQL changes append a **new** migration at the next number
    (`data/src/main/sqldelight/tachiyomi/migrations/<n+1>.sqm`); never renumber or edit an existing
    migration. Reconcile the incoming triggers/columns with what Komikku already has — some may
    already exist.
-8. After the PR is merged into `master`, run the generator again: it finds the ported commits by
+9. After the PR is merged into `master`, run the generator again: it finds the ported commits by
    their cherry-pick trailer and marks them `O`.
-9. Push the feature branch and open a PR; never push to `master`.
+10. Push the feature branch and open a PR; never push to `master`.
 
 ## Followed Mihon re-architectures
 

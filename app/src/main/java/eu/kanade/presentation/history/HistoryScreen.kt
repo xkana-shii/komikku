@@ -10,10 +10,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
@@ -22,9 +26,11 @@ import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
+import eu.kanade.presentation.util.rememberIs24HourSystem
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
 import kotlinx.datetime.LocalDate
+import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Checklist
 import mihon.icons.materialsymbols.rounded.DeleteSweep
@@ -40,6 +46,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.active
+import tachiyomi.presentation.core.util.collectAsState
 
 @Composable
 fun HistoryScreen(
@@ -164,6 +171,14 @@ private fun HistoryScreenContent(
     usePanoramaCover: Boolean,
     // KMK <--
 ) {
+    val context = LocalContext.current
+    val locale = LocalLocale.current
+    val is24HourSystem = rememberIs24HourSystem()
+    val timeFormat by remember { context.appGraph.uiPreferences.timeFormat }.collectAsState()
+    val timeFormatter = remember(timeFormat, locale, is24HourSystem) {
+        UiPreferences.timeFormat(timeFormat, locale.platformLocale, is24HourSystem)
+    }
+
     FastScrollLazyColumn(
         contentPadding = contentPadding,
     ) {
@@ -192,6 +207,7 @@ private fun HistoryScreenContent(
                     HistoryItem(
                         modifier = Modifier.animateItemFastScroll(),
                         history = value,
+                        timeFormatter = timeFormatter,
                         onClickCover = { onClickCover(value) },
                         // KMK -->
                         onClick = {

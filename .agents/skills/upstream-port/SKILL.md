@@ -25,6 +25,9 @@ python3 .agents/skills/cherrypick-log/update_cherrypick_log.py uncertain --json 
   Komikku descends from SY, so the SY-adapted version conflicts far less.
 - Skip commits whose feature already exists (the fork ports Mihon directly, so a Komikku/SY commit
   that copies a Mihon commit may already be present under another hash).
+- **Translation commits are in scope.** “Translations update from Hosted Weblate” commits are ported
+  like any other commit — Weblate is not connected to this repo, so skipping them (`X`) would freeze
+  the fork's translations. Only Renovate/version-bump bookkeeping is excluded.
 
 ## 2. Port on a feature branch
 
@@ -51,10 +54,37 @@ git cherry-pick -x <sha>        # chronological order; earlier commits unblock l
 - Never label non-SY code `// SY`, or non-Komikku code `// KMK`.
 - `.sq` / `.sqm` use SQL comments: `-- KUN -->` / `-- KUN <--`.
 
-## 4. Strings
+## 4. Strings and translations
 
 New user-facing strings go to `i18n-kmk/.../base/strings.xml` and are referenced via `KMR` — not
-`MR`/`SYMR` (`AGENTS.md`). Never edit non-`base` locales.
+`MR`/`SYMR` (`AGENTS.md`).
+
+**Translate them yourself.** Weblate is not connected to this repo, so a new base string would stay
+English forever unless you translate it. Add the string to the non-`base` locales you can translate
+confidently, as part of the feature. Missing keys fall back to the base language, so skipping a locale
+you are unsure about is safe; never machine-translate into a language you cannot check.
+
+**Upstream translation commits** are ports like any other:
+
+```bash
+git cherry-pick -x <translation-commit>
+```
+
+The fork's locale files diverge from upstream's in both directions (Komikku kept keys Mihon removed,
+and the files are missing newer upstream keys). Run the helper after the cherry-pick stops with
+conflicts (or right after a `--no-commit` pick, before adding): it rewrites every moko-resources file
+the commit touches — including ones git merged without a conflict — keeping upstream's values and
+re-appending the fork-only entries (including `plurals`):
+
+```bash
+python3 .agents/skills/upstream-port/scripts/resolve_i18n_union.py    # all moko files changed by the pick
+```
+
+Then check that nothing was lost: every key in the fork's `base` that was translated before must still
+be translated, and no file may have duplicate keys or invalid XML. Never drop an existing translation.
+
+Strings for a ported Mihon/SY feature stay in their upstream module (`MR`/`SYMR`): that is an upstream
+sync, not new fork code.
 
 ## 5. Verify
 

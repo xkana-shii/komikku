@@ -24,3 +24,7 @@ local.properties
 *.jks
 *.keystore
 app/standard/nightly/*
+
+# Python bytecode
+__pycache__/
+*.py[cod]

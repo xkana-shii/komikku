@@ -11,7 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.unit.dp
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.MangaChapterListItem
@@ -50,6 +52,14 @@ fun ChapterListDialog(
 ) {
     val manga by viewModel.mangaFlow.collectAsState()
     val context = LocalContext.current
+    // KUN -->
+    // Format here, where the app locale is known, instead of in the ViewModel (which only has
+    // Locale.getDefault(), the system locale, and ignores the in-app language setting).
+    val locale = LocalLocale.current
+    val dateFormat = remember(locale) {
+        UiPreferences.dateFormat(context.appGraph.uiPreferences.dateFormat.get(), locale.platformLocale)
+    }
+    // KUN <--
     val state = rememberLazyListState(chapters.indexOfFirst { it.isCurrent }.coerceAtLeast(0))
     val downloadManager: DownloadManager = remember { context.appGraph.downloadManager }
     val downloadQueueState by downloadManager.queueState.collectAsState()
@@ -100,7 +110,7 @@ fun ChapterListDialog(
                             } else {
                                 it.toLocalDateTime(TimeZone.currentSystemDefault())
                                     .date
-                                    .toRelativeString(context, dateRelativeTime, chapterItem.dateFormat)
+                                    .toRelativeString(context, dateRelativeTime, dateFormat)
                             }
                             // SY <--
                         },
