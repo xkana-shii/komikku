@@ -817,7 +817,12 @@ class LibraryViewModel(
             getLibraryManga.subscribe(),
             getLibraryItemPreferencesFlow(),
             downloadCache.changes.pausedWhileUnsubscribed(),
-        ) { libraryManga, preferences, _ ->
+            // KUN -->
+            // Recompute when the loaded sources change, so entries restored on a blank install stop
+            // showing a stub source (and the warning badge) once their extension is installed.
+            sourceManager.sources,
+            // KUN <--
+        ) { libraryManga, preferences, _, _ ->
             val sources = libraryManga
                 .mapTo(mutableSetOf()) { it.manga.source }
                 .associateWith { sourceManager.getOrStub(it) }
