@@ -394,3 +394,65 @@ main upstream `mihon/main`, additional `tachiyomiSY/master`, `komikku/master` (d
 - **Missing `google-services.json` / `client_secrets.json`** – not needed unless telemetry is compiled in
   (`-Pdist=ci|github` without `-Pinclude-telemetry=false`) or Google Drive backup is used.
 - **First build is slow** – it downloads ~1 GB of dependencies and the pinned daemon JDK.
+
+## Mandatory CHANGELOG.md Maintenance
+
+Maintain a complete, accurate `CHANGELOG.md` in the repository throughout development.
+
+**Every time you add, change, fix, optimize, remove, or restore functionality, update `CHANGELOG.md` as part of the same work.**
+
+This requirement applies to the entire feature-restoration project and all future development tasks.
+
+### Changelog requirements
+
+1. Check whether `CHANGELOG.md` already exists. Preserve its existing entries and history. Do not create a duplicate lowercase `changelog.md`.
+2. Maintain an `Unreleased` section for changes that have not yet been published.
+3. Organize entries using appropriate sections, such as:
+   - **Added** — New features, settings, controls, and functionality.
+   - **Changed** — Behavior changes, UI adjustments, refactoring, and performance improvements.
+   - **Fixed** — Bug fixes, regressions, and reliability corrections.
+   - **Removed** — Intentionally removed or replaced functionality.
+   - **Technical** — Database migrations, build changes, testing infrastructure, and other important internal changes.
+4. Describe what actually changed and why it matters, using clear, concise language.
+5. Include smaller modifications and bug fixes, not just major features.
+6. Group closely related changes logically, but do not omit distinct functionality.
+7. Record database migrations, backup compatibility changes, and synchronization changes explicitly.
+8. Record changes to settings, defaults, navigation, reader interactions, and other user-visible behavior.
+9. Record meaningful internal changes to architecture, performance, tests, and developer tooling.
+10. Do not list previously existing Komi-kun or Mihon/TachiyomiSY functionality as newly added fork features.
+11. Distinguish new fork-specific implementations from adaptations of existing upstream functionality where relevant.
+12. Do not invent completed features, successful tests, performance improvements, or compatibility guarantees.
+13. Preserve historical release entries, version numbers, and dates. Do not rewrite previous releases to make new changes appear older.
+14. Keep the writing natural and readable, without repetitive or vague AI-generated descriptions.
+
+### Required development workflow
+
+For every feature or coherent change batch:
+
+1. Implement the change.
+2. Add or update relevant regression tests.
+3. Run the applicable validation.
+4. Update `CHANGELOG.md` to describe the actual changes.
+5. Commit the changelog alongside the corresponding source changes.
+6. Update the feature implementation progress document.
+7. Continue to the next batch.
+
+**Never leave a completed feature or fix undocumented in `CHANGELOG.md`.**
+
+Do not wait until the entire project is finished to write the changelog.
+
+A batch containing five distinct functional changes should have changelog coverage for all five, even if they belong to one commit.
+
+Documentation-only changes and formatting corrections should also be recorded when meaningful, but do not create recursive entries merely for editing the changelog itself.
+
+### Final verification
+
+Before declaring a task complete:
+
+- Compare the new commits and modified files against `CHANGELOG.md`.
+- Check that every meaningful addition, behavior change, fix, removal, migration, and optimization is documented.
+- Verify that the changelog does not claim unimplemented or untested behavior.
+- Ensure the changelog is included in the appropriate local commits.
+- Report the changelog updates in the final completion summary.
+
+**Updating `CHANGELOG.md` is a mandatory part of implementing changes, not an optional documentation task.**
