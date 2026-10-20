@@ -1,0 +1,20 @@
+-- KUN -->
+-- A sync restore writes `favorite_modified_at` from the backup itself. The old trigger stamped
+-- `now` whenever `user_favorite_at` changed, which overwrote the restored timestamp (and could make
+-- the restored row look newer than it really is). Only user-driven changes (is_syncing = 0) should
+-- stamp now; the insert trigger keeps its behavior. Recreated here so an upgraded database matches
+-- the fresh schema in manga.sq byte-for-byte.
+DROP TRIGGER IF EXISTS update_last_favorited_at_mangas;
+
+CREATE TRIGGER update_last_favorited_at_mangas
+AFTER UPDATE OF user_favorite_at ON manga
+WHEN new.is_syncing = 0 AND (
+    new.user_favorite_at IS NOT old.user_favorite_at
+    OR (new.user_favorite_at IS NOT NULL AND old.favorite_modified_at IS NULL)
+)
+BEGIN
+  UPDATE manga
+  SET favorite_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+-- KUN <--

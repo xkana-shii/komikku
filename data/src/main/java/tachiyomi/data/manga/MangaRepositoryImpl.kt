@@ -184,6 +184,14 @@ class MangaRepositoryImpl(
             }
             val toRemove = currentExcluded.minus(excludedScanlators)
             database.excluded_scanlatorQueries.remove(mangaId, toRemove)
+            // KUN -->
+            // The filter is stored in a child table, so the manga row (and its version/timestamp)
+            // would not change and delta sync would never upload the edit. Bump both explicitly;
+            // restore writes the child rows directly and deliberately does not call this path.
+            if (toAdd.isNotEmpty() || toRemove.isNotEmpty()) {
+                database.mangaQueries.bumpSyncVersion(mangaId)
+            }
+            // KUN <--
         }
     }
 

@@ -62,8 +62,16 @@ END;
 -- touch it, so the timestamp keeps meaning "the user favorited/unfavorited this".
 CREATE TRIGGER update_last_favorited_at_mangas
 AFTER UPDATE OF user_favorite_at ON manga
-WHEN new.user_favorite_at IS NOT old.user_favorite_at
+-- KUN -->
+-- A sync restore writes the backup timestamp itself (updateFromBackup), so it must not be
+-- overwritten with `now`. `new.is_syncing = 1` covers both the real favorite-state change and the
+-- `old.favorite_modified_at IS NULL` backfill below. Ordinary user changes (is_syncing = 0) still
+-- stamp now, including a favorite added to an entry whose timestamp was never set.
+WHEN new.is_syncing = 0 AND (
+    new.user_favorite_at IS NOT old.user_favorite_at
     OR (new.user_favorite_at IS NOT NULL AND old.favorite_modified_at IS NULL)
+)
+-- KUN <--
 BEGIN
   UPDATE manga
   SET favorite_modified_at = strftime('%s', 'now')
@@ -357,14 +365,20 @@ INSERT INTO manga(
     remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
     user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
-    state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing
+    state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
+    -- KUN -->
+    favorite_modified_at
+    -- KUN <--
 )
 VALUES (
     :sourceId, :remoteUrl, :remoteTitle, :remoteAuthor, :remoteArtist, :remoteDescription,
     :remoteGenre, :remoteStatus, :remoteCover, :remoteUpdateStrategy, :remoteMemo,
     :userFavoriteAt, :userNotes, :userReaderFlags, :userChapterFlags,
     :stateChapterLastUpdate, :stateChapterNextUpdate, :stateChapterFetchInterval,
-    :stateCoverLastModified, :stateInitialized, :lastModifiedAt, :version, :isSyncing
+    :stateCoverLastModified, :stateInitialized, :lastModifiedAt, :version, :isSyncing,
+    -- KUN -->
+    :favoriteModifiedAt
+    -- KUN <--
 )
 RETURNING id;
 
@@ -409,6 +423,19 @@ AND is_syncing = 0
 RETURNING id;
 -- KUN <--
 
+-- KUN -->
+-- Excluded scanlators live in a child table, so editing them does not touch the manga row and the
+-- delta sync upload would never see the change. The user-facing repository path bumps both fields
+-- explicitly after writing the child rows; a restore writes those rows directly and must not call
+-- this (it would echo the restore back to the other device).
+bumpSyncVersion:
+UPDATE manga
+SET version = version + 1,
+    last_modified_at = strftime('%s', 'now')
+WHERE id = :mangaId
+AND is_syncing = 0;
+-- KUN <--
+
 updateRemote:
 UPDATE manga SET
     remote_artist = coalesce(:artist, remote_artist),
@@ -428,13 +455,22 @@ updateFromBackup:
 UPDATE manga SET
     source_id = coalesce(:source, source_id),
     remote_url = coalesce(:url, remote_url),
-    remote_artist = coalesce(:artist, remote_artist),
-    remote_author = coalesce(:author, remote_author),
-    remote_description = coalesce(:description, remote_description),
+    -- KUN -->
+    -- Direct assignment: a newer incoming payload may explicitly clear these nullable fields. The
+    -- old coalesce() kept the local value forever, so a removed artist/author/description/cover
+    -- could never propagate. When the local copy wins, restoreExistingManga passes its raw og*
+    -- fields back in, so this cannot erase a newer local value or copy custom metadata into the
+    -- remote columns.
+    remote_artist = :artist,
+    remote_author = :author,
+    remote_description = :description,
+    -- KUN <--
     remote_genre = coalesce(:genre, remote_genre),
     remote_title = coalesce(:title, remote_title),
     remote_status = coalesce(:status, remote_status),
-    remote_cover = coalesce(:thumbnailUrl, remote_cover),
+    -- KUN -->
+    remote_cover = :thumbnailUrl,
+    -- KUN <--
     -- NULL is a real value here (not in the library), which coalesce cannot write
     user_favorite_at = CASE WHEN :userFavoriteAtSet THEN :userFavoriteAt ELSE user_favorite_at END,
     state_chapter_last_update = coalesce(:lastUpdate, state_chapter_last_update),
@@ -449,6 +485,11 @@ UPDATE manga SET
     version = coalesce(:version, version),
     last_modified_at = coalesce(:lastModifiedAt, last_modified_at),
     is_syncing = coalesce(:isSyncing, is_syncing),
+    -- KUN -->
+    -- A NULL incoming timestamp keeps the known one, but a real value from the backup is written
+    -- so the favorite timestamp can move forward with the sync payload.
+    favorite_modified_at = coalesce(:favoriteModifiedAt, favorite_modified_at),
+    -- KUN <--
     -- SY <--
     user_notes = coalesce(:notes, user_notes),
     remote_memo = coalesce(:memo, remote_memo)

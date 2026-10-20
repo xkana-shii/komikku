@@ -270,6 +270,57 @@ class RestoreRepositoryChapterMetadataTest {
         }
     }
 
+    @Test
+    fun `an ordinary restore does not lower a chapter version`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val mangaRepository = MangaRepositoryImpl(database)
+                val chapterRepository = ChapterRepositoryImpl(database)
+                val repository = RestoreRepositoryImpl(
+                    database = database,
+                    mangaRepository = mangaRepository,
+                    chapterRepository = chapterRepository,
+                    trackRepository = TrackRepositoryImpl(database),
+                    mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
+                )
+
+                driver.insertManga()
+                chapterRepository.addAll(
+                    listOf(chapter("/c1", sourceOrder = 1L, version = 5L, lastModifiedAt = 10L)),
+                )
+
+                repository.restoreManga(
+                    entries = listOf(
+                        RestoredManga(
+                            manga = manga(),
+                            // An older backup differing only in order/fetch state must be merged
+                            // without moving the stored sync version backwards.
+                            chapters = listOf(
+                                chapter("/c1", sourceOrder = 5L, version = 2L, lastModifiedAt = 20L),
+                            ),
+                            categoryIds = null,
+                            history = emptyList(),
+                            tracks = emptyList(),
+                            excludedScanlators = emptyList(),
+                        ),
+                    ),
+                    isSync = false,
+                    restoreCategories = false,
+                    removeMissingChaptersBefore = null,
+                    update = { it.toMangaUpdate() },
+                )
+
+                val restored = chapterRepository.getChapterByMangaId(1).single { it.url == "/c1" }
+                restored.version shouldBe 5L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
     private fun chapter(
         url: String,
         name: String = url,
@@ -277,6 +328,7 @@ class RestoreRepositoryChapterMetadataTest {
         scanlator: String? = null,
         dateFetch: Long = 1_000L,
         bookmark: Boolean = false,
+        sourceOrder: Long = 0L,
         version: Long = 1L,
         lastModifiedAt: Long = 0L,
     ) = Chapter.create().copy(
@@ -287,6 +339,7 @@ class RestoreRepositoryChapterMetadataTest {
         scanlator = scanlator,
         dateFetch = Instant.fromEpochMilliseconds(dateFetch),
         bookmark = bookmark,
+        sourceOrder = sourceOrder,
         version = version,
         lastModifiedAt = lastModifiedAt,
     )
