@@ -52,6 +52,14 @@
     <string name="pref_sync_force_full_confirmation_title">Принудительно выполнить полную синхронизацию?</string>
     <string name="pref_sync_force_full_confirmation_message">Вся ваша библиотека будет загружена на сервер синхронизации. Это может быть медленнее и расходовать больше трафика, чем обычная синхронизация.</string>
     <string name="pref_sync_force_full_started">Полная синхронизация запущена</string>
+    <string name="pref_sync_force_push">Принудительно отправить локальное состояние</string>
+    <string name="pref_sync_force_push_summary">Заменить данные на сервере синхронизации библиотекой этого устройства</string>
+    <string name="pref_sync_force_push_confirmation_title">Принудительно отправить состояние этого устройства?</string>
+    <string name="pref_sync_force_push_confirmation_message">Это заменит сервер синхронизации и все другие устройства включёнными данными синхронизации этого устройства. Разделы, оставленные отключёнными (история, отслеживание, категории, пользовательские сведения, настройки приложения), сохраняются с сервера. Это нельзя отменить из приложения.</string>
+    <string name="pref_sync_force_push_started">Принудительная отправка запущена</string>
+    <string name="pref_sync_force_push_requires_sections">Включите записи библиотеки и главы в разделе «Выбрать, что синхронизировать» перед принудительной отправкой.</string>
+    <string name="pref_sync_force_push_requires_v2">Для принудительной отправки требуется сервер SyncYomi v2.</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">Не удалось прочитать текущие данные сервера, поэтому принудительная отправка была остановлена до внесения изменений. Повторите попытку, когда сервер будет доступен.</string>
     <string name="saved_searches_feeds">Сохраненные запросы и ленты</string>
     <string name="onboarding_permission_external_storage">Доступ к медиафайлам</string>
     <string name="onboarding_permission_external_storage_description">Разрешить использование пользовательских обложек в редактировании записи</string>

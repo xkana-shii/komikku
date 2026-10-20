@@ -635,11 +635,14 @@ object SettingsDataScreen : SearchableSettings {
         syncServiceType: SyncManager.SyncService,
         // KUN <--
     ): List<Preference> {
+        // KUN -->
+        val syncSettings = syncPreferences.getSyncSettings()
+        // Hiding the force actions when library entries are not synced avoids sending an empty
+        // "full" upload while the server still returns (and restores) the library. Force push also
+        // needs chapters; the manga-payload sections it can leave disabled (history, tracking,
+        // custom info) and categories are preserved from the server snapshot instead.
         return listOf(
-            // KUN -->
-            // Hiding the force action when library entries are not synced avoids sending an empty
-            // "full" upload while the server still returns (and restores) the library.
-            getSyncNowPref(syncServiceType, syncPreferences.getSyncSettings().libraryEntries),
+            getSyncNowPref(syncServiceType, syncSettings.libraryEntries, syncSettings.supportsForcePush),
             // KUN <--
             getAutomaticSyncGroup(syncPreferences),
             // KMK -->
@@ -867,6 +870,7 @@ object SettingsDataScreen : SearchableSettings {
         // KUN -->
         syncServiceType: SyncManager.SyncService,
         libraryEntries: Boolean,
+        forcePushAllowed: Boolean,
         // KUN <--
     ): Preference.PreferenceGroup {
         val context = LocalContext.current
@@ -889,8 +893,13 @@ object SettingsDataScreen : SearchableSettings {
                     },
                 ),
             )
-            if (syncServiceType == SyncManager.SyncService.SYNCYOMI && libraryEntries) {
-                add(getForceFullSyncPref())
+            if (syncServiceType == SyncManager.SyncService.SYNCYOMI) {
+                if (libraryEntries) {
+                    add(getForceFullSyncPref())
+                }
+                if (libraryEntries && forcePushAllowed) {
+                    add(getForcePushPref())
+                }
             }
         }
         // KUN <--
@@ -942,6 +951,58 @@ object SettingsDataScreen : SearchableSettings {
             onDismissRequest = onDismissRequest,
             title = { Text(text = stringResource(KMR.strings.pref_sync_force_full_confirmation_title)) },
             text = { Text(text = stringResource(KMR.strings.pref_sync_force_full_confirmation_message)) },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(text = stringResource(MR.strings.action_ok))
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun getForcePushPref(): Preference.PreferenceItem.TextPreference {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var showConfirmationDialog by remember { mutableStateOf(false) }
+
+        if (showConfirmationDialog) {
+            ForcePushConfirmationDialog(
+                onConfirm = {
+                    showConfirmationDialog = false
+                    scope.launch {
+                        if (!SyncDataJob.isRunning(context)) {
+                            SyncDataJob.startNow(context, manual = true, forcePush = true)
+                            context.toast(KMR.strings.pref_sync_force_push_started)
+                        } else {
+                            context.toast(SYMR.strings.sync_in_progress)
+                        }
+                    }
+                },
+                onDismissRequest = { showConfirmationDialog = false },
+            )
+        }
+
+        return Preference.PreferenceItem.TextPreference(
+            title = stringResource(KMR.strings.pref_sync_force_push),
+            subtitle = stringResource(KMR.strings.pref_sync_force_push_summary),
+            onClick = { showConfirmationDialog = true },
+        )
+    }
+
+    @Composable
+    private fun ForcePushConfirmationDialog(
+        onConfirm: () -> Unit,
+        onDismissRequest: () -> Unit,
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text(text = stringResource(KMR.strings.pref_sync_force_push_confirmation_title)) },
+            text = { Text(text = stringResource(KMR.strings.pref_sync_force_push_confirmation_message)) },
             dismissButton = {
                 TextButton(onClick = onDismissRequest) {
                     Text(text = stringResource(MR.strings.action_cancel))

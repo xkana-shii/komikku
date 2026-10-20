@@ -371,22 +371,25 @@ class RestoreRepositoryImpl(
                 (chapter.version == dbChapter.version && dbChapter.lastModifiedAt > chapter.lastModifiedAt)
 
             val base = when {
+                // The newer writer owns the state outright: an unread chapter, a removed bookmark or
+                // lower progress from another device must reach this one instead of being merged away.
                 incomingIsNewer -> chapter.copy(
                     id = dbChapter.id,
-                    bookmark = chapter.bookmark || dbChapter.bookmark,
-                    read = chapter.read || dbChapter.read,
-                    lastPageRead = max(chapter.lastPageRead, dbChapter.lastPageRead),
+                    bookmark = chapter.bookmark,
+                    read = chapter.read,
+                    // An explicit unread/reset wins; when both sides are read, keep the furthest
+                    // progress rather than rolling the reader backwards.
+                    lastPageRead = if (chapter.read && dbChapter.read) {
+                        max(chapter.lastPageRead, dbChapter.lastPageRead)
+                    } else {
+                        chapter.lastPageRead
+                    },
                     version = chapter.version,
                     lastModifiedAt = chapter.lastModifiedAt,
                 )
-                localIsNewer -> dbChapter.copy(
-                    id = dbChapter.id,
-                    bookmark = chapter.bookmark || dbChapter.bookmark,
-                    read = chapter.read || dbChapter.read,
-                    lastPageRead = max(chapter.lastPageRead, dbChapter.lastPageRead),
-                    version = dbChapter.version,
-                    lastModifiedAt = dbChapter.lastModifiedAt,
-                )
+                // The local write is newer; keep it as-is, including a local read/bookmark/progress reset.
+                localIsNewer -> dbChapter
+                // No winner: keep the union of both sides.
                 else -> chapter.copy(
                     id = dbChapter.id,
                     bookmark = chapter.bookmark || dbChapter.bookmark,

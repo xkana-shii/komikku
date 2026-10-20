@@ -43,6 +43,14 @@ import java.util.concurrent.TimeUnit
 internal const val FORCE_FULL_SYNC_KEY = "force_full"
 
 internal fun Data.forceFullRequested(): Boolean = getBoolean(FORCE_FULL_SYNC_KEY, false)
+
+/**
+ * One-shot SyncYomi repair request: make this device's versions authoritative before uploading.
+ * Like [FORCE_FULL_SYNC_KEY], it only applies to the run that carries it.
+ */
+internal const val FORCE_PUSH_SYNC_KEY = "force_push"
+
+internal fun Data.forcePushRequested(): Boolean = getBoolean(FORCE_PUSH_SYNC_KEY, false)
 // KUN <--
 
 class SyncDataJob(private val context: Context, workerParams: WorkerParameters) :
@@ -99,6 +107,7 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
             ).syncData(
                 // KUN -->
                 forceFull = inputData.forceFullRequested(),
+                forcePush = inputData.forcePushRequested(),
                 // KUN <--
             )
             Result.success()
@@ -171,8 +180,9 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
             context: Context,
             manual: Boolean = false,
             // KUN -->
-            // One-shot: only affects this run, never persisted in a preference.
+            // One-shot: only affect this run, never persisted in a preference.
             forceFull: Boolean = false,
+            forcePush: Boolean = false,
             // KUN <--
         ) {
             val wm = context.workManager
@@ -185,13 +195,18 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
                 .addTag(TAG_JOB)
                 .addTag(tag)
                 // KUN -->
-                .setInputData(workDataOf(FORCE_FULL_SYNC_KEY to forceFull))
+                .setInputData(
+                    workDataOf(
+                        FORCE_FULL_SYNC_KEY to forceFull,
+                        FORCE_PUSH_SYNC_KEY to forcePush,
+                    ),
+                )
                 // KUN <--
                 .build()
             // KUN -->
             // A force request must not be dropped because a normal manual sync is still queued
             // under the same unique name; KEEP would silently keep the older request.
-            val policy = if (forceFull) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+            val policy = if (forceFull || forcePush) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
             context.workManager.enqueueUniqueWork(tag, policy, request)
             // KUN <--
         }

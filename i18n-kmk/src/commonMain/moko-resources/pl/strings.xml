@@ -49,6 +49,14 @@
     <string name="pref_sync_force_full_confirmation_title">Wymusić pełną synchronizację?</string>
     <string name="pref_sync_force_full_confirmation_message">Cała biblioteka zostanie przesłana na serwer synchronizacji. Może to być wolniejsze i zużywać więcej danych niż zwykła synchronizacja.</string>
     <string name="pref_sync_force_full_started">Rozpoczęto pełną synchronizację</string>
+    <string name="pref_sync_force_push">Wymuś wysłanie stanu lokalnego</string>
+    <string name="pref_sync_force_push_summary">Zastępuje serwer synchronizacji biblioteką tego urządzenia</string>
+    <string name="pref_sync_force_push_confirmation_title">Wymusić wysłanie stanu tego urządzenia?</string>
+    <string name="pref_sync_force_push_confirmation_message">Zastępuje serwer synchronizacji i wszystkie inne urządzenia danymi synchronizacji włączonymi na tym urządzeniu. Sekcje pozostawione jako wyłączone (historia, śledzenie, kategorie, informacje niestandardowe, ustawienia aplikacji) są zachowywane z serwera. Tej operacji nie można cofnąć z poziomu aplikacji.</string>
+    <string name="pref_sync_force_push_started">Rozpoczęto wymuszone wysyłanie</string>
+    <string name="pref_sync_force_push_requires_sections">Przed wymuszeniem wysyłania włącz wpisy biblioteki i rozdziały w opcji Wybierz, co synchronizować.</string>
+    <string name="pref_sync_force_push_requires_v2">Wymuszenie wysyłania wymaga serwera SyncYomi v2.</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">Nie udało się odczytać bieżących danych serwera, więc wymuszone wysyłanie zostało zatrzymane, zanim cokolwiek zmieniono. Spróbuj ponownie, gdy serwer będzie dostępny.</string>
     <string name="saved_searches_feeds">Zapisane wyszukiwania &amp; Kanały</string>
     <string name="onboarding_permission_external_storage">Dostęp do plików multimedialnych</string>
     <string name="onboarding_permission_external_storage_description">Zezwalaj na używanie własnych okładek w informacjach edycji wpisu</string>

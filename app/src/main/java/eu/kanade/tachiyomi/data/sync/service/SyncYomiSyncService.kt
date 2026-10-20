@@ -54,7 +54,14 @@ class SyncYomiSyncService(
     }
     // KMK <--
 
-    private class SyncYomiException(message: String?) : Exception(message)
+    private class SyncYomiException(
+        message: String?,
+        // KUN -->
+        // The HTTP status of a failed request, when there was one. SyncManager uses it to tell a
+        // permanent rejection (a force push that can never fit) from a transient failure.
+        val statusCode: Int? = null,
+        // KUN <--
+    ) : Exception(message)
 
     @Serializable
     private data class SyncEvent(
@@ -134,7 +141,16 @@ class SyncYomiSyncService(
         submitDeletedChapters(host, apiKey)
         // SY <--
 
-        val pendingDeleted = syncPreferences.pendingDeletedCategoryUids.get()
+        // KUN -->
+        // A disabled category sync must not tombstone the server's categories: a force push uploads
+        // the server's copy, and an ordinary sync does not manage them either. Report nothing as
+        // sent (so the pending set survives) and leave it for a later categories-enabled sync.
+        val pendingDeleted = if (syncPreferences.getSyncSettings().categories) {
+            syncPreferences.pendingDeletedCategoryUids.get()
+        } else {
+            emptySet()
+        }
+        // KUN <--
         val headersBuilder = baseHeaders(apiKey)
             .add("X-Sync-Cursor", syncPreferences.syncCursor.get().toString())
             .add("X-Sync-Full", full.toString())
@@ -156,7 +172,9 @@ class SyncYomiSyncService(
             val responseBody = response.body.string()
             logcat(LogPriority.ERROR) { "SyncError (${response.code}): $responseBody" }
             reportSyncEvent(SyncEventStatus.SYNC_FAILED, "Server answered ${response.code}")
-            throw SyncYomiException("Failed to sync: ${response.code} $responseBody")
+            // KUN -->
+            throw SyncYomiException("Failed to sync: ${response.code} $responseBody", statusCode = response.code)
+            // KUN <--
         }
 
         val bytes = response.body.bytes()
@@ -196,12 +214,23 @@ class SyncYomiSyncService(
     /**
      * Probes the server once per host for protocol v2 support (`GET /api/sync/v2/capabilities`).
      * 200 means v2, 404 means an old server; anything else is a transient failure and is not cached.
+     *
+     * KUN -->
+     * [forceProbe] bypasses the cached host result for explicit repair actions, so a server that
+     * was upgraded in place is detected without waiting for a cache invalidation.
+     * KUN <--
      */
-    suspend fun supportsV2(): Boolean {
+    suspend fun supportsV2(
+        // KUN -->
+        forceProbe: Boolean = false,
+        // KUN <--
+    ): Boolean {
         val host = syncPreferences.clientHost.get()
-        if (syncPreferences.v2ProbedHost.get() == host) {
+        // KUN -->
+        if (!forceProbe && syncPreferences.v2ProbedHost.get() == host) {
             return syncPreferences.serverSupportsV2.get()
         }
+        // KUN <--
 
         val request = GET(
             url = "$host/api/sync/v2/capabilities",
@@ -219,6 +248,37 @@ class SyncYomiSyncService(
         logcat(LogPriority.INFO) { "SyncYomi server supports protocol v2: $supported" }
         return supported
     }
+
+    // KUN -->
+    /**
+     * A full copy of the server's library, used by a force push to keep the sections the user
+     * disabled syncing (history, tracking, categories, custom info) instead of replacing them with
+     * empty manga payloads.
+     *
+     * Null means "the server has nothing to preserve": either 404 (no state stored yet) or a 200
+     * with a zero-byte body (an existing but empty `sync_state`, which is how an empty protobuf
+     * encodes). `SyncManager` then decides whether that is safe: a never-synced device proceeds,
+     * while a previously-synced one aborts. Any other failure throws.
+     */
+    suspend fun fetchSnapshot(): Backup? {
+        val host = syncPreferences.clientHost.get()
+        val request = GET(
+            url = "$host/api/sync/v2/snapshot",
+            headers = baseHeaders(syncPreferences.clientAPIKey.get()).build(),
+        )
+        val response = syncClient().newCall(request).await()
+        response.use { resp ->
+            if (resp.code == HttpStatus.SC_NOT_FOUND) return null
+            if (!resp.isSuccessful) {
+                throw SyncYomiException("Failed to fetch sync snapshot: ${resp.code}")
+            }
+            val bytes = resp.body.bytes()
+            // 404 and an empty protobuf mean the same thing to the caller: no stored data.
+            if (bytes.isEmpty()) return null
+            return protoBuf.decodeFromByteArray(Backup.serializer(), bytes)
+        }
+    }
+    // KUN <--
 
     private fun baseHeaders(apiKey: String): Headers.Builder = Headers.Builder()
         .add("X-API-Token", apiKey)
@@ -254,12 +314,22 @@ class SyncYomiSyncService(
             logcat(LogPriority.ERROR) { "Error syncing: ${e.message}" }
             notifier.showSyncError(e.message)
             reportSyncEvent(SyncEventStatus.SYNC_ERROR, e.message)
-            return SyncResult(null, changed = false, protocolV2 = v2)
+            // KUN -->
+            return SyncResult(
+                null,
+                changed = false,
+                protocolV2 = v2,
+                failureStatus = (e as? SyncYomiException)?.statusCode,
+            )
+            // KUN <--
         } catch (e: OutOfMemoryError) {
             logcat(LogPriority.ERROR) { "Out of memory while syncing" }
             notifier.showSyncError("Not enough memory to sync this library")
             reportSyncEvent(SyncEventStatus.SYNC_ERROR, "OutOfMemoryError")
-            return SyncResult(null, changed = false, protocolV2 = v2)
+            // KUN -->
+            // A forced full upload that runs out of memory will do it again; a later delta may fit.
+            return SyncResult(null, changed = false, protocolV2 = v2, permanentFailure = true)
+            // KUN <--
         }
     }
     // SY <--

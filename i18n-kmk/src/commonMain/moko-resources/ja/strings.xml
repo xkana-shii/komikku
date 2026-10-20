@@ -50,6 +50,14 @@
     <string name="pref_sync_force_full_confirmation_title">強制フル同期を実行しますか？</string>
     <string name="pref_sync_force_full_confirmation_message">ライブラリ全体が同期サーバーにアップロードされます。通常の同期より時間と通信量が多くかかる場合があります。</string>
     <string name="pref_sync_force_full_started">フル同期を開始しました</string>
+    <string name="pref_sync_force_push">ローカル状態を強制プッシュ</string>
+    <string name="pref_sync_force_push_summary">この端末のライブラリで同期サーバーを置き換えます</string>
+    <string name="pref_sync_force_push_confirmation_title">この端末の状態を強制プッシュしますか？</string>
+    <string name="pref_sync_force_push_confirmation_message">この端末で有効になっている同期データで、同期サーバーと他のすべての端末が置き換えられます。無効のままにしている項目（履歴、トラッキング、カテゴリ、カスタム情報、アプリ設定）はサーバーのデータが保持されます。この操作はアプリから元に戻せません。</string>
+    <string name="pref_sync_force_push_started">強制プッシュを開始しました</string>
+    <string name="pref_sync_force_push_requires_sections">強制プッシュする前に、「同期する項目を選択」でライブラリ項目と章を有効にしてください。</string>
+    <string name="pref_sync_force_push_requires_v2">強制プッシュには SyncYomi v2 サーバーが必要です。</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">サーバーの現在のデータを読み取れなかったため、何も変更する前に強制プッシュを中止しました。サーバーに接続できるときに再試行してください。</string>
     <string name="saved_searches_feeds">保存された検索 &amp; フィード</string>
     <string name="onboarding_permission_external_storage">メディアファイルへのアクセス許可</string>
     <string name="onboarding_permission_external_storage_description">エントリの編集情報でカスタムカバーの使用を許可する</string>

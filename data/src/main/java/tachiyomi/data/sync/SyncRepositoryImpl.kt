@@ -42,4 +42,16 @@ class SyncRepositoryImpl(
             .getMangasModifiedSince(since, MangaMapper::mapManga)
             .awaitAsList()
     }
+
+    // KUN -->
+    override suspend fun markForForcePush(version: Long, lastModifiedAt: Long, bumpCategories: Boolean) {
+        database.transaction {
+            database.mangaQueries.forcePushVersions(version, lastModifiedAt)
+            database.chapterQueries.forcePushVersions(version, lastModifiedAt)
+            if (bumpCategories) {
+                database.categoryQueries.forcePushVersions(version, lastModifiedAt)
+            }
+        }
+    }
+    // KUN <--
 }

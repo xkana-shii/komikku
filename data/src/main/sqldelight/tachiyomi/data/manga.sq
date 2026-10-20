@@ -303,6 +303,22 @@ SET user_reader_flags = 0
 WHERE user_reader_flags != 0;
 
 -- SY -->
+-- KUN -->
+-- One-shot force push: lift every library row above any stale device's counter so this device's
+-- state wins the version-first merge. Rows that were never in the library are left alone.
+-- `last_modified_at` only moves forward: an edit made while the forced upload was in flight must
+-- keep its newer timestamp so the next delta still carries it.
+forcePushVersions:
+UPDATE manga
+SET version = max(version, :version),
+    favorite_modified_at = max(
+        coalesce(favorite_modified_at, 0),
+        CAST(strftime('%s', 'now') AS INTEGER)
+    ),
+    last_modified_at = max(last_modified_at, :lastModifiedAt)
+WHERE favorite_modified_at IS NOT NULL OR user_favorite_at IS NOT NULL;
+-- KUN <--
+
 resetIsSyncing:
 UPDATE manga
 SET is_syncing = 0

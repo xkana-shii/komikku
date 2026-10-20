@@ -52,6 +52,14 @@
     <string name="pref_sync_force_full_confirmation_title">Forzare una sincronizzazione completa?</string>
     <string name="pref_sync_force_full_confirmation_message">L\'intera libreria verrà caricata sul server di sincronizzazione. Potrebbe essere più lento e consumare più dati rispetto a una sincronizzazione normale.</string>
     <string name="pref_sync_force_full_started">Sincronizzazione completa avviata</string>
+    <string name="pref_sync_force_push">Forza invio dello stato locale</string>
+    <string name="pref_sync_force_push_summary">Sostituisce il server di sincronizzazione con la libreria di questo dispositivo</string>
+    <string name="pref_sync_force_push_confirmation_title">Forzare lo stato di questo dispositivo?</string>
+    <string name="pref_sync_force_push_confirmation_message">Questa operazione sostituisce il server di sincronizzazione e tutti gli altri dispositivi con i dati di sincronizzazione abilitati di questo dispositivo. Le sezioni lasciate disabilitate (cronologia, tracciamento, categorie, informazioni personalizzate, impostazioni dell\'app) vengono conservate dal server. Non può essere annullata dall\'app.</string>
+    <string name="pref_sync_force_push_started">Invio forzato avviato</string>
+    <string name="pref_sync_force_push_requires_sections">Abilita voci della libreria e capitoli in Scegli cosa sincronizzare prima di forzare l’invio.</string>
+    <string name="pref_sync_force_push_requires_v2">Forzare l’invio richiede un server SyncYomi v2.</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">Non è stato possibile leggere i dati attuali del server, quindi l\'invio forzato è stato interrotto prima di modificare qualcosa. Riprova quando il server è raggiungibile.</string>
     <string name="saved_searches_feeds">Ricerche Salvate &amp; Feeds</string>
     <string name="onboarding_permission_external_storage">Accesso ai file multimediali</string>
     <string name="onboarding_permission_external_storage_description">Consenti l\'utilizzo di copertine personalizzate nelle informazioni di modifica della voce</string>

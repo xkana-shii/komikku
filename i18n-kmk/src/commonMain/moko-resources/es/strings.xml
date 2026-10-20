@@ -52,6 +52,14 @@
     <string name="pref_sync_force_full_confirmation_title">¿Forzar sincronización completa?</string>
     <string name="pref_sync_force_full_confirmation_message">Se subirá toda tu biblioteca al servidor de sincronización. Puede ser más lento y consumir más datos que una sincronización normal.</string>
     <string name="pref_sync_force_full_started">Sincronización completa iniciada</string>
+    <string name="pref_sync_force_push">Forzar carga del estado local</string>
+    <string name="pref_sync_force_push_summary">Reemplaza el servidor de sincronización con la biblioteca de este dispositivo</string>
+    <string name="pref_sync_force_push_confirmation_title">¿Forzar el estado de este dispositivo?</string>
+    <string name="pref_sync_force_push_confirmation_message">Esto reemplaza el servidor de sincronización y todos los demás dispositivos con los datos de sincronización habilitados de este dispositivo. Las secciones que se mantengan desactivadas (historial, seguimiento, categorías, información personalizada, ajustes de la aplicación) se conservan del servidor. Esto no se puede deshacer desde la aplicación.</string>
+    <string name="pref_sync_force_push_started">Carga forzada iniciada</string>
+    <string name="pref_sync_force_push_requires_sections">Activa entradas de biblioteca y capítulos en Elegir qué sincronizar antes de forzar el envío.</string>
+    <string name="pref_sync_force_push_requires_v2">Forzar el envío requiere un servidor SyncYomi v2.</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">No se pudieron leer los datos actuales del servidor, así que la carga forzada se detuvo antes de cambiar nada. Inténtalo de nuevo cuando el servidor esté disponible.</string>
     <string name="saved_searches_feeds">Búsquedas guardadas &amp; Menos</string>
     <string name="onboarding_permission_external_storage">Acceso a archivos multimedia</string>
     <string name="onboarding_permission_external_storage_description">Permitir el uso de portadas personalizadas en la información de edición de la entrada</string>

@@ -53,6 +53,14 @@
     <string name="pref_sync_force_full_confirmation_title">强制完整同步？</string>
     <string name="pref_sync_force_full_confirmation_message">您的整个书库将被上传到同步服务器。这可能会比普通同步更慢并消耗更多流量。</string>
     <string name="pref_sync_force_full_started">已开始完整同步</string>
+    <string name="pref_sync_force_push">强制推送本地状态</string>
+    <string name="pref_sync_force_push_summary">用此设备的书库替换同步服务器</string>
+    <string name="pref_sync_force_push_confirmation_title">强制推送此设备的状态？</string>
+    <string name="pref_sync_force_push_confirmation_message">这会用此设备已启用的同步数据替换同步服务器及其他所有设备。保持停用的部分（历史记录、追踪、分类、自定义信息、应用设置）将从服务器保留。此操作无法在应用中撤销。</string>
+    <string name="pref_sync_force_push_started">已开始强制推送</string>
+    <string name="pref_sync_force_push_requires_sections">强制推送前，请在“选择要同步的内容”中启用书库条目和章节。</string>
+    <string name="pref_sync_force_push_requires_v2">强制推送需要 SyncYomi v2 服务器。</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">无法读取服务器当前的数据，因此强制推送在做出任何更改之前已停止。请在服务器可访问时重试。</string>
     <string name="saved_searches_feeds">保存搜索 &amp; 订阅</string>
     <string name="onboarding_permission_external_storage">访问媒体文件权限</string>
     <string name="onboarding_permission_external_storage_description">允许在条目编辑信息中使用自定义封面</string>

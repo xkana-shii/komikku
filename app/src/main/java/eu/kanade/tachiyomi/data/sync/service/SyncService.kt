@@ -40,6 +40,10 @@ data class SyncResult(
     val cursor: Long? = null,
     val pendingDeletedCategories: Set<String> = emptySet(),
     val fullSyncRequested: Boolean = false,
+    /** HTTP status of a failed request, when the service reported one. */
+    val failureStatus: Int? = null,
+    /** True when retrying the same request cannot succeed (e.g. the forced payload exceeds a body limit). */
+    val permanentFailure: Boolean = false,
     // KUN <--
 )
 

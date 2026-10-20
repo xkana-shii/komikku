@@ -6,6 +6,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -210,11 +211,200 @@ class RestoreRepositoryChapterTombstoneTest {
         }
     }
 
-    private fun chapter(url: String, lastModifiedAt: Long = 0L) = Chapter.create().copy(
+    @Test
+    fun `a newer remote chapter propagates an unread and unbookmarked reset`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val mangaRepository = MangaRepositoryImpl(database)
+                val chapterRepository = ChapterRepositoryImpl(database)
+                val repository = RestoreRepositoryImpl(
+                    database = database,
+                    mangaRepository = mangaRepository,
+                    chapterRepository = chapterRepository,
+                    trackRepository = TrackRepositoryImpl(database),
+                    mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
+                )
+
+                driver.insertManga()
+                chapterRepository.addAll(
+                    listOf(chapter("/c1", read = true, bookmark = true, lastPageRead = 5, version = 1L)),
+                )
+
+                repository.restoreManga(
+                    entries = listOf(
+                        RestoredManga(
+                            manga = manga(),
+                            // Another device marked the chapter unread and removed its bookmark.
+                            chapters = listOf(
+                                chapter(
+                                    "/c1",
+                                    read = false,
+                                    bookmark = false,
+                                    lastPageRead = 0,
+                                    version = 2L,
+                                    lastModifiedAt = 10L,
+                                ),
+                            ),
+                            categoryIds = null,
+                            history = emptyList(),
+                            tracks = emptyList(),
+                            excludedScanlators = emptyList(),
+                        ),
+                    ),
+                    isSync = true,
+                    restoreCategories = false,
+                    removeMissingChaptersBefore = 1_000L,
+                    update = { it.toMangaUpdate() },
+                )
+
+                val restored = chapterRepository.getChapterByMangaId(1).single { it.url == "/c1" }
+                restored.read shouldBe false
+                restored.bookmark shouldBe false
+                restored.lastPageRead shouldBe 0
+                restored.version shouldBe 2L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `a newer local chapter keeps its state against an older remote copy`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val mangaRepository = MangaRepositoryImpl(database)
+                val chapterRepository = ChapterRepositoryImpl(database)
+                val repository = RestoreRepositoryImpl(
+                    database = database,
+                    mangaRepository = mangaRepository,
+                    chapterRepository = chapterRepository,
+                    trackRepository = TrackRepositoryImpl(database),
+                    mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
+                )
+
+                driver.insertManga()
+                chapterRepository.addAll(
+                    listOf(
+                        chapter(
+                            "/c1",
+                            read = true,
+                            bookmark = true,
+                            lastPageRead = 5,
+                            version = 3L,
+                            lastModifiedAt = 100L,
+                        ),
+                    ),
+                )
+
+                repository.restoreManga(
+                    entries = listOf(
+                        RestoredManga(
+                            manga = manga(),
+                            chapters = listOf(
+                                chapter(
+                                    "/c1",
+                                    read = false,
+                                    bookmark = false,
+                                    lastPageRead = 0,
+                                    version = 2L,
+                                    lastModifiedAt = 10L,
+                                ),
+                            ),
+                            categoryIds = null,
+                            history = emptyList(),
+                            tracks = emptyList(),
+                            excludedScanlators = emptyList(),
+                        ),
+                    ),
+                    isSync = true,
+                    restoreCategories = false,
+                    removeMissingChaptersBefore = 1_000L,
+                    update = { it.toMangaUpdate() },
+                )
+
+                val restored = chapterRepository.getChapterByMangaId(1).single { it.url == "/c1" }
+                restored.read shouldBe true
+                restored.bookmark shouldBe true
+                restored.lastPageRead shouldBe 5
+                restored.version shouldBe 3L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `a newer remote read chapter keeps the furthest progress`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val mangaRepository = MangaRepositoryImpl(database)
+                val chapterRepository = ChapterRepositoryImpl(database)
+                val repository = RestoreRepositoryImpl(
+                    database = database,
+                    mangaRepository = mangaRepository,
+                    chapterRepository = chapterRepository,
+                    trackRepository = TrackRepositoryImpl(database),
+                    mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
+                )
+
+                driver.insertManga()
+                chapterRepository.addAll(
+                    listOf(chapter("/c1", read = true, lastPageRead = 50, version = 1L, lastModifiedAt = 10L)),
+                )
+
+                repository.restoreManga(
+                    entries = listOf(
+                        RestoredManga(
+                            manga = manga(),
+                            chapters = listOf(
+                                chapter("/c1", read = true, lastPageRead = 10, version = 2L, lastModifiedAt = 20L),
+                            ),
+                            categoryIds = null,
+                            history = emptyList(),
+                            tracks = emptyList(),
+                            excludedScanlators = emptyList(),
+                        ),
+                    ),
+                    isSync = true,
+                    restoreCategories = false,
+                    removeMissingChaptersBefore = 1_000L,
+                    update = { it.toMangaUpdate() },
+                )
+
+                val restored = chapterRepository.getChapterByMangaId(1).single { it.url == "/c1" }
+                restored.read shouldBe true
+                restored.lastPageRead shouldBe 50
+                restored.version shouldBe 2L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    private fun chapter(
+        url: String,
+        read: Boolean = false,
+        bookmark: Boolean = false,
+        lastPageRead: Int = 0,
+        lastModifiedAt: Long = 0L,
+        version: Long = 1L,
+    ) = Chapter.create().copy(
         mangaId = 1L,
         url = url,
         name = url,
-        version = 1L,
+        read = read,
+        bookmark = bookmark,
+        lastPageRead = lastPageRead,
+        version = version,
         dateFetch = Instant.fromEpochMilliseconds(1_000),
         lastModifiedAt = lastModifiedAt,
     )

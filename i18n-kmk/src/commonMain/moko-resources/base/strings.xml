@@ -138,6 +138,15 @@
     <string name="pref_sync_force_full_confirmation_title">Force full sync?</string>
     <string name="pref_sync_force_full_confirmation_message">Your complete library will be uploaded to the sync server. This can be slower and use more data than a normal sync.</string>
     <string name="pref_sync_force_full_started">Full sync started</string>
+    <!-- KUN: Force push local state -->
+    <string name="pref_sync_force_push">Force push local state</string>
+    <string name="pref_sync_force_push_summary">Replace the sync server with this device\'s library</string>
+    <string name="pref_sync_force_push_confirmation_title">Force push this device\'s state?</string>
+    <string name="pref_sync_force_push_confirmation_message">This replaces the sync server and every other device with this device\'s enabled sync data. Sections kept disabled (history, tracking, categories, custom info, app settings) are preserved from the server. This cannot be undone from the app.</string>
+    <string name="pref_sync_force_push_started">Force push started</string>
+    <string name="pref_sync_force_push_requires_sections">Enable library entries and chapters in Choose what to sync before force pushing.</string>
+    <string name="pref_sync_force_push_requires_v2">Force push requires a SyncYomi v2 server.</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">Could not read the server\'s current data, so the force push was stopped before changing anything. Try again when the server is reachable.</string>
     <!-- Advanced section -->
     <string name="pref_clean_invalid_downloads">Clean invalid downloads</string>
     <string name="pref_clean_invalid_downloads_summary">Find and remove all downloads, files, folders which are not saved in your library</string>

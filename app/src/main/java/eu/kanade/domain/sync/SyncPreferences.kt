@@ -52,6 +52,18 @@ class SyncPreferences(
     )
     // SY <--
 
+    // KUN -->
+    /**
+     * A force push whose server upload was accepted but whose local half (database bump and restore)
+     * has not necessarily finished. A later run that still uses SyncYomi resumes the repair instead
+     * of uploading the raised versions as an ordinary delta with empty disabled sections.
+     */
+    val forcePushPending = preferenceStore.getBoolean(
+        Preference.appStateKey("sync_force_push_pending"),
+        false,
+    )
+    // KUN <--
+
     val syncInterval = preferenceStore.getInt("sync_interval", 0)
     val syncService = preferenceStore.getInt("sync_service", 0)
 

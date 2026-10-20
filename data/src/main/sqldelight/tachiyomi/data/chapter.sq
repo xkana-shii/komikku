@@ -173,6 +173,20 @@ DELETE FROM chapter
 WHERE id IN :chapterIds;
 
 -- SY -->
+-- KUN -->
+-- One-shot force push: mirror the manga bump for the chapters of every library entry.
+-- `last_modified_at` only moves forward so a chapter read while the upload was in flight is still
+-- picked up by the next delta.
+forcePushVersions:
+UPDATE chapter
+SET version = max(version, :version),
+    last_modified_at = max(last_modified_at, :lastModifiedAt)
+WHERE manga_id IN (
+    SELECT id FROM manga
+    WHERE favorite_modified_at IS NOT NULL OR user_favorite_at IS NOT NULL
+);
+-- KUN <--
+
 resetIsSyncing:
 UPDATE chapter
 SET is_syncing = 0

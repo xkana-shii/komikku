@@ -53,6 +53,14 @@
     <string name="pref_sync_force_full_confirmation_title">強制完整同步？</string>
     <string name="pref_sync_force_full_confirmation_message">您的整個書庫將被上傳到同步伺服器。這可能會比一般同步更慢並消耗更多流量。</string>
     <string name="pref_sync_force_full_started">已開始完整同步</string>
+    <string name="pref_sync_force_push">強制推送本機狀態</string>
+    <string name="pref_sync_force_push_summary">以此裝置的書庫取代同步伺服器</string>
+    <string name="pref_sync_force_push_confirmation_title">強制推送此裝置的狀態？</string>
+    <string name="pref_sync_force_push_confirmation_message">這會以此裝置已啟用的同步資料取代同步伺服器及其他所有裝置。保持停用的部分（歷史記錄、追蹤、分類、自訂資訊、應用程式設定）會從伺服器保留。此操作無法在應用程式中復原。</string>
+    <string name="pref_sync_force_push_started">已開始強制推送</string>
+    <string name="pref_sync_force_push_requires_sections">強制推送前，請在「選擇要同步的內容」中啟用書庫項目和章節。</string>
+    <string name="pref_sync_force_push_requires_v2">強制推送需要 SyncYomi v2 伺服器。</string>
+    <string name="pref_sync_force_push_snapshot_unavailable">無法讀取伺服器目前的資料，因此強制推送在做出任何變更之前已停止。請在伺服器可連線時再試一次。</string>
     <string name="saved_searches_feeds">儲存的搜尋 &amp; 訂閱</string>
     <string name="onboarding_permission_external_storage">媒體檔案存取權限</string>
     <string name="onboarding_permission_external_storage_description">允許在條目的編輯資訊中使用自訂封面</string>
