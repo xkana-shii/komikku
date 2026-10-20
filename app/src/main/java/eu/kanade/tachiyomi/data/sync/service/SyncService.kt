@@ -36,6 +36,11 @@ data class SyncResult(
     val backup: Backup?,
     val changed: Boolean,
     val protocolV2: Boolean,
+    // KUN -->
+    val cursor: Long? = null,
+    val pendingDeletedCategories: Set<String> = emptySet(),
+    val fullSyncRequested: Boolean = false,
+    // KUN <--
 )
 
 abstract class SyncService(
@@ -179,9 +184,11 @@ abstract class SyncService(
             "Starting merge. Local list size: ${localMangaListSafe.size}, Remote list size: ${remoteMangaListSafe.size}"
         }
 
+        // KUN -->
         fun mangaCompositeKey(manga: BackupManga): String {
-            return "${manga.source}|${manga.url}|${manga.title.lowercase().trim()}|${manga.author?.lowercase()?.trim()}"
+            return "${manga.source}|${manga.url}"
         }
+        // KUN <--
 
         // Create maps using composite keys
         val localMangaMap = localMangaListSafe.associateBy { mangaCompositeKey(it) }
@@ -219,7 +226,9 @@ abstract class SyncService(
             when {
                 local != null && remote == null -> {
                     // SY -->
-                    if (lastSyncTime == 0L || local.lastModifiedAt > lastSyncTime) {
+                    // KUN -->
+                    if (lastSyncTime == 0L || local.lastModifiedAt == 0L || local.lastModifiedAt > lastSyncTime) {
+                        // KUN <--
                         updateCategories(local, localCategoriesMapByOrder)
                         local
                     } else {
@@ -230,7 +239,9 @@ abstract class SyncService(
                 }
                 local == null && remote != null -> {
                     // SY -->
-                    if (lastSyncTime == 0L || remote.lastModifiedAt > lastSyncTime) {
+                    // KUN -->
+                    if (lastSyncTime == 0L || remote.lastModifiedAt == 0L || remote.lastModifiedAt > lastSyncTime) {
+                        // KUN <--
                         updateCategories(remote, remoteCategoriesMapByOrder)
                         remote
                     } else {
@@ -303,9 +314,11 @@ abstract class SyncService(
         }
         // SY <--
 
+        // KUN -->
         fun chapterCompositeKey(chapter: BackupChapter): String {
-            return "${chapter.url}|${chapter.name}|${chapter.chapterNumber}"
+            return chapter.url
         }
+        // KUN <--
 
         val localChapterMap = localChapters.associateBy { chapterCompositeKey(it) }
         val remoteChapterMap = remoteChapters.associateBy { chapterCompositeKey(it) }
@@ -327,7 +340,9 @@ abstract class SyncService(
             when {
                 localChapter != null && remoteChapter == null -> {
                     // SY -->
-                    if (lastSyncTime == 0L || localChapter.lastModifiedAt > lastSyncTime) {
+                    // KUN -->
+                    if (lastSyncTime == 0L || localChapter.lastModifiedAt == 0L || localChapter.lastModifiedAt > lastSyncTime) {
+                        // KUN <--
                         logcat(LogPriority.DEBUG, logTag) { "Keeping local chapter: ${localChapter.name}." }
                         localChapter
                     } else {
@@ -338,7 +353,9 @@ abstract class SyncService(
                 }
                 localChapter == null && remoteChapter != null -> {
                     // SY -->
-                    if (lastSyncTime == 0L || remoteChapter.lastModifiedAt > lastSyncTime) {
+                    // KUN -->
+                    if (lastSyncTime == 0L || remoteChapter.lastModifiedAt == 0L || remoteChapter.lastModifiedAt > lastSyncTime) {
+                        // KUN <--
                         logcat(LogPriority.DEBUG, logTag) { "Taking remote chapter: ${remoteChapter.name}." }
                         remoteChapter
                     } else {

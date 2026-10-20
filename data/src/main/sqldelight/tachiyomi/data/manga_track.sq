@@ -23,6 +23,29 @@ CREATE TABLE manga_track(
 
 CREATE INDEX manga_track_tracker_id_remote_id_index ON manga_track(tracker_id, remote_id);
 
+-- KUN -->
+CREATE TRIGGER insert_manga_track_update_version AFTER INSERT ON manga_track
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = new.manga_id AND (SELECT is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+
+CREATE TRIGGER update_manga_track_update_version AFTER UPDATE ON manga_track
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = new.manga_id AND (SELECT is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+
+CREATE TRIGGER delete_manga_track_update_version AFTER DELETE ON manga_track
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = old.manga_id AND (SELECT is_syncing FROM manga WHERE id = old.manga_id) = 0;
+END;
+-- KUN <--
+
 -- SY -->
 getTracksByMangaIds:
 SELECT * FROM manga_track WHERE manga_id IN :mangaIds;

@@ -130,17 +130,19 @@ class WebDavSyncService(
     private suspend fun pullSyncData(): Pair<SyncData?, String> {
         if (!validateSettings()) return Pair(null, "")
 
-        val lastETag = syncPreferences.lastSyncEtag.get()
+        // KUN -->
+        // WebDAV stores the full backup. We must always download the remote backup so that
+        // local and remote data can be merged before pushing. If we sent If-None-Match and received
+        // 304 Not Modified, we would have no remote data to merge and would wipe remote changes.
         val headersBuilder = Headers.Builder().add("Authorization", credentials)
-        if (lastETag.isNotEmpty()) headersBuilder.add("If-None-Match", lastETag)
+        // KUN <--
 
         val requestUrl = buildWebDavFileUrl()
         val request = GET(requestUrl, headers = headersBuilder.build())
         val response = client.newCall(request).await()
 
         return when (response.code) {
-            HttpStatus.SC_NOT_MODIFIED -> Pair(null, lastETag)
-            HttpStatus.SC_NOT_FOUND -> Pair(null, "")
+            HttpStatus.SC_NOT_MODIFIED, HttpStatus.SC_NOT_FOUND -> Pair(null, "")
             else -> {
                 if (response.isSuccessful) {
                     val newETag = response.headers["ETag"]?.trim('"') ?: ""
@@ -196,6 +198,9 @@ class WebDavSyncService(
                     "Please retry syncing or check your WebDAV folder."
                 xLogW(message)
                 notifier.showSyncError(message)
+                // KUN -->
+                throw WebDavException(message)
+                // KUN <--
             }
             else -> {
                 val bodyStr = response.body.string()

@@ -197,7 +197,9 @@ class GoogleDriveSyncService(context: Context, json: Json, syncPreferences: Sync
     private fun getAppDataFileList(drive: Drive): MutableList<File> {
         try {
             // Search for the existing file by name in the appData folder
-            val query = "mimeType='application/x-gzip' and name = '$remoteFileName'"
+            // KUN -->
+            val query = "name = '$remoteFileName' and trashed = false"
+            // KUN <--
             val fileList = drive.files()
                 .list()
                 .setSpaces("appDataFolder")

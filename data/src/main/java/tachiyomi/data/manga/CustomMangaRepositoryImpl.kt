@@ -61,13 +61,17 @@ class CustomMangaRepositoryImpl(context: Context) : CustomMangaRepository {
         saveCustomInfo()
     }
 
+    // KUN -->
     private fun saveCustomInfo() {
         val jsonElements = customMangaMap.values.map { it.toJson() }
         if (jsonElements.isNotEmpty()) {
             editJson.delete()
             editJson.writeText(Json.encodeToString(MangaList(jsonElements)))
+        } else {
+            editJson.delete()
         }
     }
+    // KUN <--
 
     @Serializable
     data class MangaList(

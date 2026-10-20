@@ -147,5 +147,40 @@ class MangaRestorerTest {
         val captured = entriesSlot.captured.single()
         assertEquals(listOf(42L), captured.categoryIds)
     }
+
+    @Test
+    fun `restore preserves categories when incoming category orders cannot be matched in sync`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        val dbCategories = listOf(
+            Category(id = 42L, name = "Local Only", order = 2, flags = 0, hidden = false, uid = 300L),
+        )
+        coEvery { getCategories.await() } returns dbCategories
+
+        // Incoming category order 99 does not exist in dbCategories or backupCategories
+        val backupManga = BackupManga(
+            url = "/test/1",
+            title = "Test Manga",
+            categories = listOf(99L),
+        )
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(backupManga),
+            backupCategories = emptyList(),
+            restoreCategories = true,
+        )
+
+        val captured = entriesSlot.captured.single()
+        assertEquals(null, captured.categoryIds)
+    }
 }
 // KUN <--

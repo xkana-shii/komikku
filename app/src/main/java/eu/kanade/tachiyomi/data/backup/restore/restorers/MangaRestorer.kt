@@ -70,7 +70,7 @@ class MangaRestorer(
                 chapters = backupManga.chapters.map { it.toChapterImpl() },
                 // KUN -->
                 categoryIds = if (restoreCategories) {
-                    backupManga.categories.mapNotNull { backupCategoryOrder ->
+                    val resolved = backupManga.categories.mapNotNull { backupCategoryOrder ->
                         val backupCat = backupCategoriesByOrder[backupCategoryOrder]
                         if (backupCat != null) {
                             (if (backupCat.uid != 0L) dbCategoriesByUid[backupCat.uid]?.id else null)
@@ -79,6 +79,13 @@ class MangaRestorer(
                         } else {
                             dbCategoriesByOrder[backupCategoryOrder]?.id
                         }
+                    }
+                    if (isSync && backupManga.categories.isNotEmpty() && resolved.isEmpty()) {
+                        // Backup had categories, but none could be matched locally (e.g. order shift).
+                        // Preserve local categories rather than wiping them.
+                        null
+                    } else {
+                        resolved
                     }
                 } else {
                     emptyList()

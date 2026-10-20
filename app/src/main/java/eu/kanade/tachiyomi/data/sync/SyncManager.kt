@@ -213,7 +213,9 @@ class SyncManager(
 
         if (remoteBackup == null) {
             logcat(LogPriority.DEBUG) { "Skip restore due to network issues" }
-            // should we call showSyncError?
+            // KUN -->
+            notifier.showSyncError("Sync failed to get remote data")
+            // KUN <--
             return
         }
 
@@ -221,24 +223,21 @@ class SyncManager(
         if (remoteBackup === syncData.backup || (result.protocolV2 && !result.changed)) {
             // nothing changed
             logcat(LogPriority.DEBUG) { "Skip restore, nothing new on the remote" }
+            // KUN -->
+            result.cursor?.let { syncPreferences.syncCursor.set(it) }
+            syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
+            syncPreferences.pendingDeletedCategoryUids.set(
+                syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
+            )
+            // KUN <--
             finishWithSuccess(syncStart, "Sync completed successfully")
             return
         }
 
-        if (!result.protocolV2) {
-            // Stop the sync early if the remote backup is null or empty
-            if (remoteBackup.backupManga.isEmpty()) {
-                notifier.showSyncError("No data found on remote server.")
-                return
-            }
-
-            // Check if it's first sync based on lastSyncTimestamp
-            if (syncPreferences.lastSyncTimestamp.get() == 0L && databaseManga.isNotEmpty()) {
-                // It's first sync no need to restore data. (just update remote data)
-                finishWithSuccess(syncStart, "Updated remote data successfully")
-                return
-            }
-        }
+        // KUN -->
+        // Legacy SY had checks here that aborted sync on empty remote manga list or skipped restore
+        // on first sync. That broke first-sync restores and prevented syncing non-manga data.
+        // KUN <--
         // SY <--
 
         val (filteredFavorites, nonFavorites) = filterFavoritesAndNonFavorites(remoteBackup)
@@ -310,6 +309,13 @@ class SyncManager(
             // KUN <--
         ) {
             // update the sync timestamp
+            // KUN -->
+            result.cursor?.let { syncPreferences.syncCursor.set(it) }
+            syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
+            syncPreferences.pendingDeletedCategoryUids.set(
+                syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
+            )
+            // KUN <--
             finishWithSuccess(syncStart, "Sync completed successfully")
             return
         }
@@ -338,6 +344,13 @@ class SyncManager(
         // SY -->
         if (newSyncData.hasNothingToRestore()) {
             // the category deletions above were the whole change; an empty backup cannot be decoded
+            // KUN -->
+            result.cursor?.let { syncPreferences.syncCursor.set(it) }
+            syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
+            syncPreferences.pendingDeletedCategoryUids.set(
+                syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
+            )
+            // KUN <--
             finishWithSuccess(syncStart, "Sync completed successfully")
             return
         }
@@ -374,16 +387,26 @@ class SyncManager(
                 // SY -->
                 syncPreferences.lastPushedAt.set(syncStart)
                 // SY <--
+                // KUN -->
+                result.cursor?.let { syncPreferences.syncCursor.set(it) }
+                syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
+                syncPreferences.pendingDeletedCategoryUids.set(
+                    syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
+                )
+                // KUN <--
             } else {
                 // SY -->
-                // The cursor already advanced past the data that failed to apply, so
-                // ask the server for everything on the next run to self-heal.
+                // The restore failed, so ask the server for everything on the next run to self-heal.
                 syncPreferences.fullSyncRequested.set(true)
                 notifier.showSyncError("Failed to apply synced data; will retry with a full sync")
                 logcat(LogPriority.ERROR) { "Sync restore failed; requesting full sync on next run" }
                 // SY <--
             }
         } else {
+            // KUN -->
+            syncPreferences.fullSyncRequested.set(true)
+            notifier.showSyncError("Failed to write sync data to cache; will retry with a full sync")
+            // KUN <--
             logcat(LogPriority.ERROR) { "Failed to write sync data to file" }
         }
     }
@@ -557,9 +580,14 @@ class SyncManager(
                 if (localManga.favorite != nonFavorite.favorite) {
                     val remoteFavTime = nonFavorite.favoriteModifiedAt
                     val localFavTime = localManga.favoriteModifiedAt
-                    val shouldUnfavorite = remoteFavTime != null &&
-                        (localFavTime == null || remoteFavTime > localFavTime) &&
-                        nonFavorite.version >= localManga.version
+                    val shouldUnfavorite = when {
+                        remoteFavTime != null && localFavTime != null -> remoteFavTime > localFavTime
+                        remoteFavTime != null && localFavTime == null -> {
+                            val localAddedSeconds = localManga.dateAdded?.epochSeconds ?: 0L
+                            remoteFavTime > localAddedSeconds
+                        }
+                        else -> nonFavorite.version >= localManga.version
+                    }
 
                     if (shouldUnfavorite) {
                         val updatedManga = localManga.copy(

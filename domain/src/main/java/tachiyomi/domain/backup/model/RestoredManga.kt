@@ -11,7 +11,9 @@ import kotlin.time.Instant
 data class RestoredManga(
     val manga: Manga,
     val chapters: List<Chapter>,
-    val categoryIds: List<Long>,
+    // KUN -->
+    val categoryIds: List<Long>?,
+    // KUN <--
     val history: List<RestoredHistory>,
     val tracks: List<Track>,
     val excludedScanlators: List<String>,

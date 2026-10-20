@@ -54,9 +54,11 @@ INSERT INTO history(manga_id, chapter_id, read_at, read_duration)
 SELECT manga_id, id, :readAt, :readDuration
 FROM chapter
 WHERE id = :chapterId
+-- KUN -->
 ON CONFLICT(chapter_id) DO UPDATE SET
-    read_at = excluded.read_at,
+    read_at = max(coalesce(history.read_at, 0), coalesce(excluded.read_at, 0)),
     read_duration = read_duration + excluded.read_duration;
+-- KUN <--
 
 getReadDuration:
 SELECT coalesce(sum(read_duration), 0)

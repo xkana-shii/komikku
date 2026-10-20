@@ -73,7 +73,9 @@ class BackupRestoreWorker(private val context: Context, workerParams: WorkerPara
         } catch (e: Exception) {
             if (e is CancellationException) {
                 notifier.showRestoreError(context.stringResource(MR.strings.restoring_backup_canceled))
-                Result.success()
+                // KUN -->
+                Result.failure()
+                // KUN <--
             } else {
                 logcat(LogPriority.ERROR, e)
                 notifier.showRestoreError(e.message)

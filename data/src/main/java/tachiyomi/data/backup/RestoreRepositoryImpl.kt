@@ -104,9 +104,11 @@ class RestoreRepositoryImpl(
         // KUN -->
         // But a restore may be run with the "Categories" option off, which makes `entry.categoryIds`
         // empty for every entry; clearing unconditionally would then wipe every manga's category
-        // assignments. Only clear or update when categories are actually being restored.
-        if (restoreCategories && (isSync || entry.categoryIds.isNotEmpty())) {
-            mangaRepository.setMangaCategories(manga.id, entry.categoryIds)
+        // assignments. Only clear or update when categories are actually being restored and incoming is not older.
+        val incomingIsNewerOrEqual = dbManga == null || entry.manga.version >= dbManga.version
+        val categoryIds = entry.categoryIds
+        if (restoreCategories && incomingIsNewerOrEqual && categoryIds != null && (isSync || categoryIds.isNotEmpty())) {
+            mangaRepository.setMangaCategories(manga.id, categoryIds)
         }
         // KUN <--
         // SY <--
@@ -117,7 +119,11 @@ class RestoreRepositoryImpl(
         // SY -->
         restoreMergedMangaReferencesForManga(manga.id, entry.mergedMangaReferences)
         entry.flatMetadata?.let { restoreFlatMetadata(manga.id, it) }
-        restoreEditedInfo(entry.customMangaInfo?.copy(id = manga.id))
+        // KUN -->
+        if (incomingIsNewerOrEqual) {
+            restoreEditedInfo(entry.customMangaInfo?.copy(id = manga.id))
+        }
+        // KUN <--
         // SY <--
         return manga
     }

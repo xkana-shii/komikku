@@ -166,17 +166,23 @@ class SyncYomiSyncService(
         val changed = response.headers["X-Sync-Changed"]?.toBoolean() ?: true
         val fullRequested = response.headers["X-Sync-Full-Requested"]?.toBoolean() ?: false
 
-        syncPreferences.syncCursor.set(cursor)
-        syncPreferences.fullSyncRequested.set(fullRequested)
-        // Only drop the uids we actually sent; a category deleted during the request stays pending.
-        syncPreferences.pendingDeletedCategoryUids.set(syncPreferences.pendingDeletedCategoryUids.get() - pendingDeleted)
+        // KUN -->
+        // Defer committing the cursor and clearing pending deletions until the restore actually succeeds in SyncManager.
         if (full) {
             syncPreferences.lastFullSync.set(Clock.System.now().toEpochMilliseconds())
         }
         logcat(LogPriority.DEBUG) { "SyncYomi v2 merge done: cursor=$cursor changed=$changed fullRequested=$fullRequested" }
 
         reportSyncEvent(SyncEventStatus.SYNC_SUCCESS)
-        return SyncResult(remote, changed = changed, protocolV2 = true)
+        return SyncResult(
+            backup = remote,
+            changed = changed,
+            protocolV2 = true,
+            cursor = cursor,
+            pendingDeletedCategories = pendingDeleted,
+            fullSyncRequested = fullRequested,
+        )
+        // KUN <--
     }
 
     /**
