@@ -1438,15 +1438,26 @@ class LibraryViewModel(
         searchQuery.update { query }
     }
 
-    fun updateActiveCategoryIndex(index: Int) {
+    fun updateActiveCategoryIndex(
+        index: Int,
+        // KUN -->
+        categoryId: Long,
+        // KUN <--
+    ) {
         activeCategoryIndex.update { index }
         // KMK -->
-        activeCategoryId.update { state.value.displayedCategories.getOrNull(index)?.id }
+        // KUN -->
+        // The caller resolves the id from the list it rendered. Reading it back off [state] raced
+        // with category list updates (e.g. during a sync restore) and could latch the id of the
+        // category that used to be at this index.
+        activeCategoryId.update { categoryId }
+        // KUN <--
         // KMK <--
-        // Coerce here rather than reading it back off [state], which is derived asynchronously
-        // and would still hold the previous index at this point.
-        val lastIndex = state.value.displayedCategories.lastIndex.coerceAtLeast(0)
-        libraryPreferences.lastUsedCategory.set(index.coerceIn(0, lastIndex))
+        // KUN -->
+        // The index comes from the pager via the rendered category list, so it is never negative.
+        // [State.coercedActiveCategoryIndex] coerces it on read if the list later shrank.
+        libraryPreferences.lastUsedCategory.set(index)
+        // KUN <--
     }
 
     fun openChangeCategoryDialog() {

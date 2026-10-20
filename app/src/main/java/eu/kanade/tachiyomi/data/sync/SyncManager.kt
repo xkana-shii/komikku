@@ -351,9 +351,7 @@ class SyncManager(
                 it.uid !in mergedUids && it.name !in mergedNames
             }
             if (categoriesToDelete.isNotEmpty()) {
-                categoriesToDelete.forEach {
-                    categoryRepository.delete(it.id)
-                }
+                categoryRepository.delete(categoriesToDelete.map { it.id })
                 categoriesToDelete.forEach { syncPreferences.rememberDeletedCategory(it.uid) }
             }
         }

@@ -37,7 +37,9 @@ fun LibraryContent(
     currentPage: Int,
     hasActiveFilters: Boolean,
     showPageTabs: Boolean,
-    onChangeCurrentPage: (Int) -> Unit,
+    // KUN -->
+    onChangeCurrentPage: (Int, Long) -> Unit,
+    // KUN <--
     onClickManga: (Long) -> Unit,
     onContinueReadingClicked: ((LibraryManga) -> Unit)?,
     onToggleSelection: (Category, LibraryManga) -> Unit,
@@ -61,20 +63,24 @@ fun LibraryContent(
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
 
-        if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
-            LaunchedEffect(categories) {
-                // KMK -->
-                val targetPage = when {
-                    categories.isEmpty() -> 0
-                    activeCategoryIndex != pagerState.currentPage -> activeCategoryIndex.coerceAtMost(categories.size - 1)
-                    pagerState.currentPage >= categories.size -> categories.size - 1
-                    else -> pagerState.currentPage
-                }
-                if (targetPage != pagerState.currentPage) {
-                    pagerState.scrollToPage(targetPage)
-                }
-                // KMK <--
+        // KUN --> the pager must follow the coerced index even when the tab row is hidden
+        val categoryIds = categories.map { it.id }
+        // KMK -->
+        LaunchedEffect(categoryIds) {
+            val targetPage = when {
+                categories.isEmpty() -> 0
+                activeCategoryIndex != pagerState.currentPage -> activeCategoryIndex.coerceAtMost(categories.size - 1)
+                pagerState.currentPage >= categories.size -> categories.size - 1
+                else -> pagerState.currentPage
             }
+            if (targetPage != pagerState.currentPage) {
+                pagerState.scrollToPage(targetPage)
+            }
+        }
+        // KMK <--
+        // KUN <--
+
+        if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
             LibraryTabs(
                 categories = categories,
                 pagerState = pagerState,
@@ -123,8 +129,14 @@ fun LibraryContent(
             )
         }
 
-        LaunchedEffect(pagerState.currentPage) {
-            onChangeCurrentPage(pagerState.currentPage)
+        // KUN -->
+        // Resolve the id from the list this composition is actually rendering. Reading it back off
+        // the ViewModel's state raced with the category list updates that follow a sync restore and
+        // could latch the id of whichever category used to sit at this index.
+        val renderedPage = pagerState.currentPage
+        LaunchedEffect(renderedPage) {
+            categories.getOrNull(renderedPage)?.let { onChangeCurrentPage(renderedPage, it.id) }
         }
+        // KUN <--
     }
 }

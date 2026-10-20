@@ -41,4 +41,13 @@ interface CategoryRepository {
     suspend fun updatePartial(updates: List<CategoryUpdate>)
 
     suspend fun delete(categoryId: Long)
+
+    // KUN -->
+    /**
+     * Deletes [categoryIds] in a single transaction so observers see one list update.
+     * Callers must exclude the system category (`id <= 0`): `system_category_delete_trigger`
+     * aborts the whole batch. The batch is atomic.
+     */
+    suspend fun delete(categoryIds: List<Long>)
+    // KUN <--
 }

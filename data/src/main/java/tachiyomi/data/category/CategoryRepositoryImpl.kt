@@ -85,33 +85,37 @@ class CategoryRepositoryImpl(
     }
 
     override suspend fun restoreCategories(categories: List<Category>, isSync: Boolean): List<Category> {
-        val dbCategories = database.categoryQueries
-            .getCategories(CategoryMapper::mapCategory)
-            .awaitAsList()
         // KUN -->
-        val dbCategoriesByName = dbCategories.associateBy { it.name.trim().lowercase() }
-        val dbCategoriesByUid = dbCategories.filter { it.uid != 0L }.associateBy { it.uid } // Map by UID
+        // One transaction for the whole restore: `getCategories` observers (the library's category
+        // tabs) then see a single committed list instead of the sentinel orders of the reorder
+        // pre-pass followed by one intermediate list per written row.
+        return database.transactionWithResult {
+            val dbCategories = database.categoryQueries
+                .getCategories(CategoryMapper::mapCategory)
+                .awaitAsList()
+            val dbCategoriesByName = dbCategories.associateBy { it.name.trim().lowercase() }
+            val dbCategoriesByUid = dbCategories.filter { it.uid != 0L }.associateBy { it.uid } // Map by UID
 
-        // Deduplicate incoming categories by normalized name and ensure deterministic UIDs
-        val deduplicatedCategories = categories
-            .map { cat ->
-                val uid = if (cat.uid != 0L) cat.uid else Category.nameToUid(cat.name)
-                cat.copy(uid = uid)
+            // Deduplicate incoming categories by normalized name and ensure deterministic UIDs
+            val deduplicatedCategories = categories
+                .map { cat ->
+                    val uid = if (cat.uid != 0L) cat.uid else Category.nameToUid(cat.name)
+                    cat.copy(uid = uid)
+                }
+                .distinctBy { it.name.trim().lowercase() }
+
+            // `order` is UNIQUE, so a reorder would trip it mid-swap. Free the positions of every
+            // category we are about to reorder first, then assign the server's positions.
+            val reordered = if (isSync) {
+                deduplicatedCategories.mapNotNull { category ->
+                    (if (category.uid != 0L) dbCategoriesByUid[category.uid] else null)
+                        ?: dbCategoriesByName[category.name.trim().lowercase()]
+                }.distinctBy { it.id }
+            } else {
+                emptyList()
             }
-            .distinctBy { it.name.trim().lowercase() }
-
-        // `order` is UNIQUE, so a reorder would trip it mid-swap. Free the positions of every category
-        // we are about to reorder first, then assign the server's positions.
-        val reordered = if (isSync) {
-            deduplicatedCategories.mapNotNull { category ->
-                (if (category.uid != 0L) dbCategoriesByUid[category.uid] else null)
-                    ?: dbCategoriesByName[category.name.trim().lowercase()]
-            }.distinctBy { it.id }
-        } else {
-            emptyList()
-        }
-        if (reordered.isNotEmpty()) {
-            database.transaction {
+            if (reordered.isNotEmpty()) {
+                // The enclosing transaction makes the sentinel pre-pass part of the same commit.
                 reordered.forEachIndexed { index, db ->
                     database.categoryQueries.update(
                         name = db.name,
@@ -126,93 +130,84 @@ class CategoryRepositoryImpl(
                     )
                 }
             }
-        }
-        val reorderedIds = reordered.mapTo(mutableSetOf()) { it.id }
-        val usedOrders = dbCategories
-            .filterNot { it.id in reorderedIds }
-            .mapTo(mutableSetOf()) { it.order }
-        var nextOrder = (dbCategories.maxOfOrNull { it.order } ?: -1L) + 1
-        fun freeOrder(): Long {
-            while (nextOrder in usedOrders) nextOrder++
-            return nextOrder++
-        }
-        // KUN <--
-        // SY <--
+            val reorderedIds = reordered.mapTo(mutableSetOf()) { it.id }
+            val usedOrders = dbCategories
+                .filterNot { it.id in reorderedIds }
+                .mapTo(mutableSetOf()) { it.order }
+            var nextOrder = (dbCategories.maxOfOrNull { it.order } ?: -1L) + 1
+            fun freeOrder(): Long {
+                while (nextOrder in usedOrders) nextOrder++
+                return nextOrder++
+            }
 
-        val restored = deduplicatedCategories
-            .sortedBy { it.order }
-            .map { category ->
-                val normalizedName = category.name.trim().lowercase()
-                var dbCategory = if (category.uid != 0L) {
-                    dbCategoriesByUid[category.uid]
-                } else {
-                    null
-                }
+            val restored = deduplicatedCategories
+                .sortedBy { it.order }
+                .map { category ->
+                    val normalizedName = category.name.trim().lowercase()
+                    var dbCategory = if (category.uid != 0L) {
+                        dbCategoriesByUid[category.uid]
+                    } else {
+                        null
+                    }
 
-                if (dbCategory == null) {
-                    dbCategory = dbCategoriesByName[normalizedName]
-                }
+                    if (dbCategory == null) {
+                        dbCategory = dbCategoriesByName[normalizedName]
+                    }
 
-                if (dbCategory != null) {
-                    // KUN -->
-                    // A user-initiated (non-sync) restore only inserts new categories and leaves
-                    // existing ones untouched, matching master's CategoriesRestorer; updating them
-                    // would rewrite order, flags and the sync counters (`version`/`last_modified_at`).
-                    // The sync path still converges order and counters below.
-                    if (!isSync) return@map dbCategory
-                    val order = if (category.order !in usedOrders) category.order else freeOrder()
+                    if (dbCategory != null) {
+                        // A user-initiated (non-sync) restore only inserts new categories and leaves
+                        // existing ones untouched, matching master's CategoriesRestorer; updating them
+                        // would rewrite order, flags and the sync counters (`version`/`last_modified_at`).
+                        // The sync path still converges order and counters below.
+                        if (!isSync) return@map dbCategory
+                        val order = if (category.order !in usedOrders) category.order else freeOrder()
+                        usedOrders.add(order)
+                        val canonicalUid = if (category.uid != 0L) category.uid else dbCategory.uid
+                        database.categoryQueries.update(
+                            name = category.name,
+                            order = order,
+                            flags = category.flags,
+                            // KMK -->
+                            // `hidden = coalesce(:hidden, hidden)`, so null would keep the stored value and
+                            // a sync restore could never un-hide a category. Pass 0 like the insert path.
+                            hidden = if (category.hidden) 1L else 0L,
+                            // KMK <--
+                            version = category.version,
+                            uid = canonicalUid,
+                            lastModifiedAt = category.lastModifiedAt,
+                            isSyncing = 1,
+                            categoryId = dbCategory.id,
+                        )
+                        return@map category.copy(id = dbCategory.id, order = order, uid = canonicalUid)
+                    }
+
+                    // A sync delta is a converging replica, not an import: new
+                    // categories must land at the position the server holds or
+                    // reorders never converge across devices.
+                    val order = if (isSync && category.order !in usedOrders) category.order else freeOrder()
                     usedOrders.add(order)
-                    val canonicalUid = if (category.uid != 0L) category.uid else dbCategory.uid
-                    // KUN <--
-                    database.categoryQueries.update(
+                    database.categoryQueries.insert(
                         name = category.name,
                         order = order,
                         flags = category.flags,
                         // KMK -->
-                        // `hidden = coalesce(:hidden, hidden)`, so null would keep the stored value and
-                        // a sync restore could never un-hide a category. Pass 0 like the insert path.
                         hidden = if (category.hidden) 1L else 0L,
                         // KMK <--
                         version = category.version,
-                        // KUN -->
-                        uid = canonicalUid,
-                        // KUN <--
+                        uid = category.uid,
                         lastModifiedAt = category.lastModifiedAt,
-                        isSyncing = 1,
-                        categoryId = dbCategory.id,
-                    )
-                    // KUN -->
-                    return@map dbCategory.copy(order = order, uid = canonicalUid)
-                    // KUN <--
+                        // SY --> a sync restore must not stamp last_modified_at, or the next delta echoes it back
+                        isSyncing = if (isSync) 1L else 0L,
+                        // SY <--
+                    ).awaitAsOne()
+                        .let { id -> category.copy(id = id, order = order) }
                 }
 
-                // A sync delta is a converging replica, not an import: new
-                // categories must land at the position the server holds or
-                // reorders never converge across devices.
-                // KUN -->
-                val order = if (isSync && category.order !in usedOrders) category.order else freeOrder()
-                usedOrders.add(order)
-                // KUN <--
-                database.categoryQueries.insert(
-                    name = category.name,
-                    order = order,
-                    flags = category.flags,
-                    // KMK -->
-                    hidden = if (category.hidden) 1L else 0L,
-                    // KMK <--
-                    version = category.version,
-                    uid = category.uid,
-                    lastModifiedAt = category.lastModifiedAt,
-                    // SY --> a sync restore must not stamp last_modified_at, or the next delta echoes it back
-                    isSyncing = if (isSync) 1L else 0L,
-                    // SY <--
-                ).awaitAsOne()
-                    .let { id -> category.copy(id = id, order = order) }
-            }
+            database.categoryQueries.resetIsSyncing()
 
-        database.categoryQueries.resetIsSyncing()
-
-        return restored
+            restored
+        }
+        // KUN <--
     }
     // SY <--
 
@@ -272,4 +267,13 @@ class CategoryRepositoryImpl(
     override suspend fun delete(categoryId: Long) {
         database.categoryQueries.delete(categoryId = categoryId)
     }
+
+    // KUN -->
+    override suspend fun delete(categoryIds: List<Long>) {
+        if (categoryIds.isEmpty()) return
+        database.transaction {
+            categoryIds.forEach { database.categoryQueries.delete(categoryId = it) }
+        }
+    }
+    // KUN <--
 }
