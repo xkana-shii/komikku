@@ -45,6 +45,11 @@
     <string name="pref_show_updating_progress_banner">更新中のバナーを表示</string>
     <string name="pref_show_restoring_progress_banner">復元中のバナーを表示</string>
     <string name="pref_show_syncing_progress_banner">同期中の進捗バナーを表示</string>
+    <string name="pref_sync_force_full">強制フル同期</string>
+    <string name="pref_sync_force_full_summary">変更されたデータだけでなく、ライブラリ全体をアップロードします。時間と通信量が多くかかる場合があります。</string>
+    <string name="pref_sync_force_full_confirmation_title">強制フル同期を実行しますか？</string>
+    <string name="pref_sync_force_full_confirmation_message">ライブラリ全体が同期サーバーにアップロードされます。通常の同期より時間と通信量が多くかかる場合があります。</string>
+    <string name="pref_sync_force_full_started">フル同期を開始しました</string>
     <string name="saved_searches_feeds">保存された検索 &amp; フィード</string>
     <string name="onboarding_permission_external_storage">メディアファイルへのアクセス許可</string>
     <string name="onboarding_permission_external_storage_description">エントリの編集情報でカスタムカバーの使用を許可する</string>

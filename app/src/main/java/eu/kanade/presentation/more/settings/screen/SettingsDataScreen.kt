@@ -593,7 +593,9 @@ object SettingsDataScreen : SearchableSettings {
         val basePreferences = getBasePreferences(syncServiceType, syncPreferences)
 
         return if (syncServiceType != SyncManager.SyncService.NONE) {
-            basePreferences + getAdditionalPreferences(syncPreferences)
+            // KUN -->
+            basePreferences + getAdditionalPreferences(syncPreferences, syncServiceType)
+            // KUN <--
         } else {
             basePreferences
         }
@@ -627,9 +629,18 @@ object SettingsDataScreen : SearchableSettings {
     }
 
     @Composable
-    private fun getAdditionalPreferences(syncPreferences: SyncPreferences): List<Preference> {
+    private fun getAdditionalPreferences(
+        syncPreferences: SyncPreferences,
+        // KUN -->
+        syncServiceType: SyncManager.SyncService,
+        // KUN <--
+    ): List<Preference> {
         return listOf(
-            getSyncNowPref(),
+            // KUN -->
+            // Hiding the force action when library entries are not synced avoids sending an empty
+            // "full" upload while the server still returns (and restores) the library.
+            getSyncNowPref(syncServiceType, syncPreferences.getSyncSettings().libraryEntries),
+            // KUN <--
             getAutomaticSyncGroup(syncPreferences),
             // KMK -->
             Preference.PreferenceItem.SwitchPreference(
@@ -852,13 +863,18 @@ object SettingsDataScreen : SearchableSettings {
     // KMK <--
 
     @Composable
-    private fun getSyncNowPref(): Preference.PreferenceGroup {
+    private fun getSyncNowPref(
+        // KUN -->
+        syncServiceType: SyncManager.SyncService,
+        libraryEntries: Boolean,
+        // KUN <--
+    ): Preference.PreferenceGroup {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        return Preference.PreferenceGroup(
-            title = stringResource(SYMR.strings.pref_sync_now_group_title),
-            preferenceItems = listOf(
-                getSyncOptionsPref(),
+        // KUN -->
+        val preferenceItems = buildList {
+            add(getSyncOptionsPref())
+            add(
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(SYMR.strings.pref_sync_now),
                     subtitle = stringResource(SYMR.strings.pref_sync_now_subtitle),
@@ -872,9 +888,73 @@ object SettingsDataScreen : SearchableSettings {
                         }
                     },
                 ),
-            ),
+            )
+            if (syncServiceType == SyncManager.SyncService.SYNCYOMI && libraryEntries) {
+                add(getForceFullSyncPref())
+            }
+        }
+        // KUN <--
+        return Preference.PreferenceGroup(
+            title = stringResource(SYMR.strings.pref_sync_now_group_title),
+            // KUN -->
+            preferenceItems = preferenceItems,
+            // KUN <--
         )
     }
+
+    // KUN -->
+    @Composable
+    private fun getForceFullSyncPref(): Preference.PreferenceItem.TextPreference {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var showConfirmationDialog by remember { mutableStateOf(false) }
+
+        if (showConfirmationDialog) {
+            ForceFullSyncConfirmationDialog(
+                onConfirm = {
+                    showConfirmationDialog = false
+                    scope.launch {
+                        if (!SyncDataJob.isRunning(context)) {
+                            SyncDataJob.startNow(context, manual = true, forceFull = true)
+                            context.toast(KMR.strings.pref_sync_force_full_started)
+                        } else {
+                            context.toast(SYMR.strings.sync_in_progress)
+                        }
+                    }
+                },
+                onDismissRequest = { showConfirmationDialog = false },
+            )
+        }
+
+        return Preference.PreferenceItem.TextPreference(
+            title = stringResource(KMR.strings.pref_sync_force_full),
+            subtitle = stringResource(KMR.strings.pref_sync_force_full_summary),
+            onClick = { showConfirmationDialog = true },
+        )
+    }
+
+    @Composable
+    private fun ForceFullSyncConfirmationDialog(
+        onConfirm: () -> Unit,
+        onDismissRequest: () -> Unit,
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text(text = stringResource(KMR.strings.pref_sync_force_full_confirmation_title)) },
+            text = { Text(text = stringResource(KMR.strings.pref_sync_force_full_confirmation_message)) },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(text = stringResource(MR.strings.action_ok))
+                }
+            },
+        )
+    }
+    // KUN <--
 
     @Composable
     private fun getSyncOptionsPref(): Preference.PreferenceItem.TextPreference {

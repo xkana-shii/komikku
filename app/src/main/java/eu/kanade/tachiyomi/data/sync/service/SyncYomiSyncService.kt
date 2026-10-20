@@ -167,10 +167,8 @@ class SyncYomiSyncService(
         val fullRequested = response.headers["X-Sync-Full-Requested"]?.toBoolean() ?: false
 
         // KUN -->
-        // Defer committing the cursor and clearing pending deletions until the restore actually succeeds in SyncManager.
-        if (full) {
-            syncPreferences.lastFullSync.set(Clock.System.now().toEpochMilliseconds())
-        }
+        // Defer committing the cursor, clearing pending deletions and moving `lastFullSync` until the
+        // restore actually succeeds in SyncManager. A merge alone is not a completed full sync.
         logcat(LogPriority.DEBUG) { "SyncYomi v2 merge done: cursor=$cursor changed=$changed fullRequested=$fullRequested" }
 
         reportSyncEvent(SyncEventStatus.SYNC_SUCCESS)

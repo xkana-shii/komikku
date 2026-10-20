@@ -48,6 +48,11 @@
     <string name="pref_show_updating_progress_banner">显示更新进度</string>
     <string name="pref_show_restoring_progress_banner">显示恢复进度横幅广告</string>
     <string name="pref_show_syncing_progress_banner">显示同步进度</string>
+    <string name="pref_sync_force_full">强制完整同步</string>
+    <string name="pref_sync_force_full_summary">上传整个书库，而不仅仅是已更改的数据。这可能会更慢并消耗更多流量。</string>
+    <string name="pref_sync_force_full_confirmation_title">强制完整同步？</string>
+    <string name="pref_sync_force_full_confirmation_message">您的整个书库将被上传到同步服务器。这可能会比普通同步更慢并消耗更多流量。</string>
+    <string name="pref_sync_force_full_started">已开始完整同步</string>
     <string name="saved_searches_feeds">保存搜索 &amp; 订阅</string>
     <string name="onboarding_permission_external_storage">访问媒体文件权限</string>
     <string name="onboarding_permission_external_storage_description">允许在条目编辑信息中使用自定义封面</string>

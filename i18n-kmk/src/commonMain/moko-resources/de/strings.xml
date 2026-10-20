@@ -47,6 +47,11 @@
     <string name="pref_show_updating_progress_banner">Zeige Aktualisierungsfortschritts-Banner</string>
     <string name="pref_show_restoring_progress_banner">Wiederherstellungsfortschritts-Banner anzeigen</string>
     <string name="pref_show_syncing_progress_banner">Zeige Synchronisationsfortschritts-Banner</string>
+    <string name="pref_sync_force_full">Vollständige Synchronisierung erzwingen</string>
+    <string name="pref_sync_force_full_summary">Lädt die gesamte Bibliothek hoch, statt nur geänderte Daten. Dies kann langsamer sein und mehr Daten verbrauchen.</string>
+    <string name="pref_sync_force_full_confirmation_title">Vollständige Synchronisierung erzwingen?</string>
+    <string name="pref_sync_force_full_confirmation_message">Deine gesamte Bibliothek wird auf den Synchronisierungsserver hochgeladen. Dies kann langsamer sein und mehr Daten verbrauchen als eine normale Synchronisierung.</string>
+    <string name="pref_sync_force_full_started">Vollständige Synchronisierung gestartet</string>
     <string name="saved_searches_feeds">Gespeicherte Suche &amp; Feeds</string>
     <string name="onboarding_permission_external_storage">Zugriff auf Mediendateien</string>
     <string name="onboarding_permission_external_storage_description">Verwende benutzerdefinierte Cover in der Editier-Info des Eintrags</string>

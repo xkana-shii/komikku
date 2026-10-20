@@ -45,6 +45,11 @@
     <string name="pref_show_updating_progress_banner">Afficher la bannière de progression de mise à jour</string>
     <string name="pref_show_restoring_progress_banner">Afficher la bannière de progression de restauration</string>
     <string name="pref_show_syncing_progress_banner">Afficher la bannière de progression de la synchronisation</string>
+    <string name="pref_sync_force_full">Forcer une synchronisation complète</string>
+    <string name="pref_sync_force_full_summary">Envoie toute la bibliothèque au lieu des seules données modifiées. Cela peut être plus lent et consommer plus de données.</string>
+    <string name="pref_sync_force_full_confirmation_title">Forcer une synchronisation complète ?</string>
+    <string name="pref_sync_force_full_confirmation_message">Toute votre bibliothèque sera envoyée au serveur de synchronisation. Cela peut être plus lent et consommer plus de données qu\'une synchronisation normale.</string>
+    <string name="pref_sync_force_full_started">Synchronisation complète démarrée</string>
     <string name="saved_searches_feeds">Recherches Sauvegardées &amp; Feeds</string>
     <string name="onboarding_permission_external_storage">Autorisation d\'accès aux fichiers médias</string>
     <string name="onboarding_permission_external_storage_description">Autoriser l\'utilisation de couvertures personnalisées dans les infos d\'édition de l\'entrée</string>

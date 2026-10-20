@@ -47,6 +47,11 @@
     <string name="pref_show_updating_progress_banner">Показывать баннер прогресса обновления</string>
     <string name="pref_show_restoring_progress_banner">Показывать баннер прогресса восстановления</string>
     <string name="pref_show_syncing_progress_banner">Показывать баннер прогресса синхронизации</string>
+    <string name="pref_sync_force_full">Принудительная полная синхронизация</string>
+    <string name="pref_sync_force_full_summary">Загружает всю библиотеку вместо только изменённых данных. Это может быть медленнее и расходовать больше трафика.</string>
+    <string name="pref_sync_force_full_confirmation_title">Принудительно выполнить полную синхронизацию?</string>
+    <string name="pref_sync_force_full_confirmation_message">Вся ваша библиотека будет загружена на сервер синхронизации. Это может быть медленнее и расходовать больше трафика, чем обычная синхронизация.</string>
+    <string name="pref_sync_force_full_started">Полная синхронизация запущена</string>
     <string name="saved_searches_feeds">Сохраненные запросы и ленты</string>
     <string name="onboarding_permission_external_storage">Доступ к медиафайлам</string>
     <string name="onboarding_permission_external_storage_description">Разрешить использование пользовательских обложек в редактировании записи</string>

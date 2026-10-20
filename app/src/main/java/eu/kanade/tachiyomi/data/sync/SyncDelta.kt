@@ -57,6 +57,15 @@ internal fun missingRemoteChapterUrls(
 
 // KUN -->
 /**
+ * Whether this upload has to carry the complete library: either the user asked for it once
+ * ([forceFull]) or the service needs it ([serviceNeedsFullSync], i.e. first sync, server request,
+ * or the daily safety net). Services without delta support always report `true`.
+ */
+internal fun shouldUploadFullLibrary(forceFull: Boolean, serviceNeedsFullSync: Boolean): Boolean =
+    forceFull || serviceNeedsFullSync
+// KUN <--
+
+/**
  * Merges local and remote categories for a sync restore.
  *
  * In SyncYomi protocol v2, [remote] is a delta of changed/new categories (often empty when categories

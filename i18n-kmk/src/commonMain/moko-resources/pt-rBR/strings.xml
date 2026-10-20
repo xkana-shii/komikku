@@ -46,6 +46,11 @@
     <string name="pref_show_updating_progress_banner">Mostrar atualização de progresso de banner</string>
     <string name="pref_show_restoring_progress_banner">Mostrar banner de restauração</string>
     <string name="pref_show_syncing_progress_banner">Mostrar banner de progresso sincronizado</string>
+    <string name="pref_sync_force_full">Forçar sincronização completa</string>
+    <string name="pref_sync_force_full_summary">Envia a biblioteca completa em vez de apenas os dados alterados. Pode ser mais lento e consumir mais dados.</string>
+    <string name="pref_sync_force_full_confirmation_title">Forçar sincronização completa?</string>
+    <string name="pref_sync_force_full_confirmation_message">Sua biblioteca completa será enviada ao servidor de sincronização. Isso pode ser mais lento e consumir mais dados do que uma sincronização normal.</string>
+    <string name="pref_sync_force_full_started">Sincronização completa iniciada</string>
     <string name="saved_searches_feeds">Pesquisas Salvas &amp; Feeds</string>
     <string name="onboarding_permission_external_storage">Permissão de acesso a arquivos de mídia</string>
     <string name="onboarding_permission_external_storage_description">Permitir usar capas personalizadas na edição de informações da entrada</string>

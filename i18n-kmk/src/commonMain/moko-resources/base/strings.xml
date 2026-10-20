@@ -132,6 +132,12 @@
     <string name="pref_webdav_password_summ">Enter your WebDAV account password</string>
     <string name="pref_webdav_folder">WebDAV data folder</string>
     <string name="pref_webdav_folder_summ">The application will store the data in this folder</string>
+    <!-- KUN: Force full sync -->
+    <string name="pref_sync_force_full">Force full sync</string>
+    <string name="pref_sync_force_full_summary">Upload the complete library instead of only the changed data. This may be slower and use more data.</string>
+    <string name="pref_sync_force_full_confirmation_title">Force full sync?</string>
+    <string name="pref_sync_force_full_confirmation_message">Your complete library will be uploaded to the sync server. This can be slower and use more data than a normal sync.</string>
+    <string name="pref_sync_force_full_started">Full sync started</string>
     <!-- Advanced section -->
     <string name="pref_clean_invalid_downloads">Clean invalid downloads</string>
     <string name="pref_clean_invalid_downloads_summary">Find and remove all downloads, files, folders which are not saved in your library</string>

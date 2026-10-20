@@ -82,8 +82,17 @@ class SyncManager(
      *
      * This function retrieves local data (favorites, manga, extensions, and categories)
      * from the database using the BackupManager, then synchronizes the data with a sync service.
+     *
+     * KUN -->
+     * @param forceFull one-shot request to upload the whole library even when the service would accept
+     * a delta. No-op for services that always upload everything (Google Drive, WebDAV, v1).
+     * KUN <--
      */
-    suspend fun syncData() {
+    suspend fun syncData(
+        // KUN -->
+        forceFull: Boolean = false,
+        // KUN <--
+    ) {
         // SY -->
         // Epoch seconds. Everything modified before this instant is in this upload; the next delta starts here.
         val syncStart = Clock.System.now().epochSeconds
@@ -144,7 +153,10 @@ class SyncManager(
         // SY -->
         // Whether to upload the whole library or only what changed since the last successful sync (SyncYomi v2).
         val full = try {
-            syncService?.needsFullSync() ?: true
+            // KUN -->
+            // `forceFull` is the user's one-shot request; `needsFullSync()` is the server's own flag.
+            shouldUploadFullLibrary(forceFull, syncService?.needsFullSync() ?: true)
+            // KUN <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to probe sync server" }
             notifier.showSyncError(e.message)
@@ -225,11 +237,8 @@ class SyncManager(
             // nothing changed
             logcat(LogPriority.DEBUG) { "Skip restore, nothing new on the remote" }
             // KUN -->
-            result.cursor?.let { syncPreferences.syncCursor.set(it) }
-            syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
-            syncPreferences.pendingDeletedCategoryUids.set(
-                syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
-            )
+            commitRemoteState(result)
+            markFullSyncCompleted(full, result)
             // KUN <--
             finishWithSuccess(syncStart, "Sync completed successfully")
             return
@@ -247,7 +256,14 @@ class SyncManager(
         val completeChapterList = result.protocolV2 && syncOptions.chapters
         // KUN <--
         val (filteredFavorites, nonFavorites) = filterFavoritesAndNonFavorites(remoteBackup, completeChapterList)
-        updateNonFavorites(nonFavorites)
+        // KUN -->
+        // Applying remote non-favorites unfavorites local entries. That is only meaningful when the
+        // user syncs library entries; a full response lists every non-favorite manga, so running this
+        // with library sync off would silently drop favorites.
+        if (syncOptions.libraryEntries) {
+            updateNonFavorites(nonFavorites)
+        }
+        // KUN <--
         // SY -->
         // the restore below may not run, so its reset of the sync flag cannot be relied on
         syncRepository.resetSyncing()
@@ -316,11 +332,8 @@ class SyncManager(
         ) {
             // update the sync timestamp
             // KUN -->
-            result.cursor?.let { syncPreferences.syncCursor.set(it) }
-            syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
-            syncPreferences.pendingDeletedCategoryUids.set(
-                syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
-            )
+            commitRemoteState(result)
+            markFullSyncCompleted(full, result)
             // KUN <--
             finishWithSuccess(syncStart, "Sync completed successfully")
             return
@@ -351,11 +364,8 @@ class SyncManager(
         if (newSyncData.hasNothingToRestore()) {
             // the category deletions above were the whole change; an empty backup cannot be decoded
             // KUN -->
-            result.cursor?.let { syncPreferences.syncCursor.set(it) }
-            syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
-            syncPreferences.pendingDeletedCategoryUids.set(
-                syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
-            )
+            commitRemoteState(result)
+            markFullSyncCompleted(full, result)
             // KUN <--
             finishWithSuccess(syncStart, "Sync completed successfully")
             return
@@ -400,11 +410,8 @@ class SyncManager(
                 syncPreferences.lastPushedAt.set(syncStart)
                 // SY <--
                 // KUN -->
-                result.cursor?.let { syncPreferences.syncCursor.set(it) }
-                syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
-                syncPreferences.pendingDeletedCategoryUids.set(
-                    syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
-                )
+                commitRemoteState(result)
+                markFullSyncCompleted(full, result)
                 // KUN <--
             } else {
                 // SY -->
@@ -431,6 +438,32 @@ class SyncManager(
         notifier.showSyncSuccess(message)
     }
     // SY <--
+
+    // KUN -->
+    /**
+     * Commits what the server reported once the sync reached it. Every success exit uses this so the
+     * cursor, the server's full-sync flag and the pending category tombstones stay in step with
+     * [finishWithSuccess]'s `lastPushedAt`.
+     */
+    private fun commitRemoteState(result: SyncResult) {
+        result.cursor?.let { syncPreferences.syncCursor.set(it) }
+        syncPreferences.fullSyncRequested.set(result.fullSyncRequested)
+        syncPreferences.pendingDeletedCategoryUids.set(
+            syncPreferences.pendingDeletedCategoryUids.get() - result.pendingDeletedCategories,
+        )
+    }
+
+    /**
+     * Only a full v2 sync whose restore succeeded counts as done. `needsFullSync()` reads this
+     * timestamp to decide when the next full upload is due, so an aborted or failed run must not
+     * move it forward.
+     */
+    private fun markFullSyncCompleted(full: Boolean, result: SyncResult) {
+        if (full && result.protocolV2) {
+            syncPreferences.lastFullSync.set(Clock.System.now().toEpochMilliseconds())
+        }
+    }
+    // KUN <--
 
     // SY -->
     private fun Backup.hasNothingToRestore() = backupManga.isEmpty() &&

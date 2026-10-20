@@ -47,6 +47,11 @@
     <string name="pref_show_updating_progress_banner">Mostra banner di avanzamento dell\'aggiornamento</string>
     <string name="pref_show_restoring_progress_banner">Mostra il ripristino del banner di avanzamento</string>
     <string name="pref_show_syncing_progress_banner">Mostra banner di avanzamento sincronizzazione</string>
+    <string name="pref_sync_force_full">Forza sincronizzazione completa</string>
+    <string name="pref_sync_force_full_summary">Carica l\'intera libreria invece dei soli dati modificati. Potrebbe essere più lento e consumare più dati.</string>
+    <string name="pref_sync_force_full_confirmation_title">Forzare una sincronizzazione completa?</string>
+    <string name="pref_sync_force_full_confirmation_message">L\'intera libreria verrà caricata sul server di sincronizzazione. Potrebbe essere più lento e consumare più dati rispetto a una sincronizzazione normale.</string>
+    <string name="pref_sync_force_full_started">Sincronizzazione completa avviata</string>
     <string name="saved_searches_feeds">Ricerche Salvate &amp; Feeds</string>
     <string name="onboarding_permission_external_storage">Accesso ai file multimediali</string>
     <string name="onboarding_permission_external_storage_description">Consenti l\'utilizzo di copertine personalizzate nelle informazioni di modifica della voce</string>

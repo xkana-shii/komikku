@@ -127,6 +127,18 @@ class SyncDeltaTest {
     }
 
     @Test
+    fun `a forced full sync uploads everything even when the service does not need it`() {
+        assertTrue(shouldUploadFullLibrary(forceFull = true, serviceNeedsFullSync = false))
+        assertTrue(shouldUploadFullLibrary(forceFull = true, serviceNeedsFullSync = true))
+    }
+
+    @Test
+    fun `the service request alone still triggers a full upload`() {
+        assertTrue(shouldUploadFullLibrary(forceFull = false, serviceNeedsFullSync = true))
+        assertFalse(shouldUploadFullLibrary(forceFull = false, serviceNeedsFullSync = false))
+    }
+
+    @Test
     fun `mergeSyncCategories preserves local categories when v2 delta is empty`() {
         val local = listOf(
             BackupCategory(name = "Reading", order = 0, uid = 1),
