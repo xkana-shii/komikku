@@ -327,3 +327,11 @@
     public <init>();
     public void destroy();
 }
+
+# KUN -->
+# Keep delegated sources and their constructors
+-keep class * extends exh.source.DelegatedHttpSource {
+    public <init>(eu.kanade.tachiyomi.source.online.HttpSource, android.content.Context);
+}
+# KUN <--
+
