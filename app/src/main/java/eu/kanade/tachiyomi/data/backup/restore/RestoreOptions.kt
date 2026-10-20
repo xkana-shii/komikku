@@ -13,6 +13,13 @@ data class RestoreOptions(
     // SY -->
     val savedSearchesFeeds: Boolean = true,
     // SY <--
+    // KUN -->
+    // Sections inside the manga payload. Manual restore has no UI for them yet, so they default to
+    // enabled and keep the existing behaviour; sync passes the user's per-section settings.
+    val tracking: Boolean = true,
+    val history: Boolean = true,
+    val customInfo: Boolean = true,
+    // KUN <--
 ) {
 
     fun asBooleanArray() = booleanArrayOf(
@@ -24,6 +31,11 @@ data class RestoreOptions(
         // SY -->
         savedSearchesFeeds,
         // SY <--
+        // KUN -->
+        tracking,
+        history,
+        customInfo,
+        // KUN <--
     )
 
     fun canRestore() =
@@ -81,6 +93,13 @@ data class RestoreOptions(
             // SY -->
             savedSearchesFeeds = array[5],
             // SY <--
+            // KUN -->
+            // Old WorkManager input arrays predate these flags; treat a missing entry as enabled so
+            // a queued or partially restored job keeps the historical behaviour.
+            tracking = array.getOrElse(6) { true },
+            history = array.getOrElse(7) { true },
+            customInfo = array.getOrElse(8) { true },
+            // KUN <--
         )
     }
 

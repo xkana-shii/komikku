@@ -13,6 +13,7 @@ import kotlinx.coroutines.ensureActive
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
+import tachiyomi.data.history.HistoryMapper
 import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.backup.model.RestoredHistory
@@ -20,6 +21,7 @@ import tachiyomi.domain.backup.model.RestoredManga
 import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
+import tachiyomi.domain.history.model.History
 import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
@@ -59,6 +61,9 @@ class RestoreRepositoryImpl(
         isSync: Boolean,
         // KUN -->
         restoreCategories: Boolean,
+        restoreTracking: Boolean,
+        restoreHistory: Boolean,
+        restoreCustomInfo: Boolean,
         removeMissingChaptersBefore: Long?,
         // KUN <--
         update: suspend (Manga) -> MangaUpdate,
@@ -79,6 +84,9 @@ class RestoreRepositoryImpl(
                             isSync,
                             syncingFlag,
                             restoreCategories,
+                            restoreTracking,
+                            restoreHistory,
+                            restoreCustomInfo,
                             removeMissingChaptersBefore,
                         ),
                     ),
@@ -102,6 +110,9 @@ class RestoreRepositoryImpl(
         syncingFlag: Long,
         // KUN -->
         restoreCategories: Boolean,
+        restoreTracking: Boolean,
+        restoreHistory: Boolean,
+        restoreCustomInfo: Boolean,
         removeMissingChaptersBefore: Long?,
         // KUN <--
     ): Manga {
@@ -138,10 +149,18 @@ class RestoreRepositoryImpl(
         // SY <--
         // KUN -->
         restoreChapters(manga, entry.chapters, isSync, syncingFlag, removeMissingChaptersBefore)
-        // KUN <--
-        restoreTracking(manga, entry.tracks)
-        restoreHistory(manga, entry.history)
-        // KUN -->
+        restoreTracking(
+            manga,
+            entry.tracks,
+            restoreTracking,
+        )
+        restoreHistory(
+            manga,
+            entry.history,
+            isSync,
+            incomingIsNewerOrEqual,
+            restoreHistory,
+        )
         restoreExcludedScanlators(
             manga,
             entry.excludedScanlators,
@@ -154,7 +173,7 @@ class RestoreRepositoryImpl(
         restoreMergedMangaReferencesForManga(manga.id, entry.mergedMangaReferences)
         entry.flatMetadata?.let { restoreFlatMetadata(manga.id, it) }
         // KUN -->
-        if (incomingIsNewerOrEqual) {
+        if (restoreCustomInfo && incomingIsNewerOrEqual) {
             restoreEditedInfo(entry.customMangaInfo?.copy(id = manga.id))
         }
         // KUN <--
@@ -528,58 +547,120 @@ class RestoreRepositoryImpl(
         }
     }
 
-    private suspend fun restoreHistory(manga: Manga, restoredHistory: List<RestoredHistory>) {
-        if (restoredHistory.isEmpty()) return
+    // KUN -->
+    private suspend fun restoreHistory(
+        manga: Manga,
+        restoredHistory: List<RestoredHistory>,
+        isSync: Boolean,
+        incomingIsNewerOrEqual: Boolean,
+        restoreHistory: Boolean,
+    ) {
+        // A disabled section is a hard no-op: no reads, no writes, no version/timestamp changes.
+        if (!restoreHistory) return
         // Read the entry's chapters and history once and match the backup entries in memory, instead
         // of looking up the history row (and, failing that, the chapter) for every backup item.
         val chapterIdsByUrl = chapterRepository.getChapterByMangaId(manga.id).associate { it.url to it.id }
         val dbHistoryByChapterId = database.historyQueries
-            .getHistoryByMangaId(manga.id)
+            .getHistoryByMangaId(manga.id, HistoryMapper::mapHistory)
             .awaitAsList()
-            .associateBy { it.chapter_id }
+            .associateBy { it.chapterId }
 
-        val toUpdate = restoredHistory
-            // Chapter doesn't exist; skip
+        // A backup of a library that still had duplicate chapters carries a history entry for each
+        // copy; they are one chapter now, read as late as any copy and for as long as all of them.
+        // A null readAt is an explicit tombstone for that entry, not an absent one.
+        val incomingByChapterId = restoredHistory
+            // The chapter is unknown locally; ignore it instead of guessing an id.
             .filter { it.chapterUrl in chapterIdsByUrl }
-            // A backup of a library that still had duplicate chapters carries a history entry for
-            // each copy; they are one chapter now, read as late as any copy and for as long as all
             .groupBy { chapterIdsByUrl.getValue(it.chapterUrl) }
-            .map { (chapterId, copies) ->
-                // KUN -->
-                // A removed/unread history entry is backed up with lastRead == 0 => readAt == null.
-                // Writing NULL would make `removeResettedHistory` drop the tombstone, so a removed
-                // history entry would not survive a restore; write epoch 0 (as master did) instead.
-                val readAt = copies.mapNotNull { it.readAt }.maxOrNull() ?: Instant.fromEpochMilliseconds(0)
-                // KUN <--
-                val readDuration = copies.sumOf { it.readDuration }
-                val dbHistory = dbHistoryByChapterId[chapterId]
-                    // New history entry
-                    ?: return@map Triple(chapterId, readAt, readDuration)
-
-                // Update history entry
-                Triple(
-                    chapterId,
-                    listOfNotNull(readAt, dbHistory.read_at).maxOrNull(),
-                    max(readDuration, dbHistory.read_duration) - dbHistory.read_duration,
-                )
+            .mapValues { (_, copies) ->
+                copies.mapNotNull { it.readAt }.maxOrNull() to copies.sumOf { it.readDuration }
             }
 
-        if (toUpdate.isEmpty()) return
+        // Only an explicit tombstone (lastRead == 0 / readAt == null) removes an entry, and only a
+        // winning sync payload may write it. The payload is never treated as a complete list: the
+        // manga payload is versioned per manga rather than per history section, so a peer with
+        // history disabled can upload an empty section and any manga edit carries the whole
+        // section. Absent entries are therefore preserved; deletion propagation needs a
+        // protocol-level tombstone design.
+        val payloadWins = isSync && incomingIsNewerOrEqual
         database.transaction {
-            toUpdate.forEach { (chapterId, readAt, readDuration) ->
-                database.historyQueries.upsert(
-                    chapterId = chapterId,
-                    readAt = readAt,
-                    readDuration = readDuration,
-                )
-            }
+            applyHistoryEntries(
+                incomingByChapterId,
+                dbHistoryByChapterId,
+                allowRemoval = payloadWins,
+            )
         }
     }
 
-    private suspend fun restoreTracking(manga: Manga, restoredTracks: List<Track>) {
-        val dbTrackByTrackerId = trackRepository.getTracksByMangaId(manga.id).associateBy { it.trackerId }
+    private suspend fun applyHistoryEntries(
+        incomingByChapterId: Map<Long, Pair<Instant?, Long>>,
+        dbHistoryByChapterId: Map<Long, History>,
+        allowRemoval: Boolean,
+    ) {
+        incomingByChapterId.forEach { (chapterId, incoming) ->
+            val (incomingReadAt, incomingDuration) = incoming
+            val dbHistory = dbHistoryByChapterId[chapterId]
+            when {
+                dbHistory == null -> {
+                    // A tombstone for an entry that never existed locally has nothing to preserve.
+                    if (incomingReadAt != null) {
+                        database.historyQueries.upsert(
+                            chapterId = chapterId,
+                            readAt = incomingReadAt,
+                            readDuration = incomingDuration,
+                        )
+                    }
+                }
+                incomingReadAt == null -> {
+                    if (allowRemoval) {
+                        // lastRead == 0 means this specific entry was removed. Write NULL, never
+                        // epoch 0, and keep the duration so the removal is not mistaken for a
+                        // chapter that was never read. Match on the chapter id, never the history
+                        // row id: the two differ.
+                        database.historyQueries.setHistoryFromRestore(
+                            readAt = null,
+                            readDuration = incomingDuration,
+                            chapterId = chapterId,
+                        )
+                    }
+                    // Manual/losing payload: an old backup predates the local read, so skip it.
+                }
+                else -> {
+                    database.historyQueries.setHistoryFromRestore(
+                        // Never move a read timestamp backwards, even when the payload wins: an
+                        // older payload could otherwise overwrite a newer local read date.
+                        readAt = listOfNotNull(incomingReadAt, dbHistory.readAt).maxOrNull(),
+                        readDuration = incomingDuration,
+                        chapterId = chapterId,
+                    )
+                }
+            }
+        }
+    }
+    // KUN <--
 
-        val (existingTracks, newTracks) = restoredTracks
+    // KUN -->
+    private suspend fun restoreTracking(
+        manga: Manga,
+        restoredTracks: List<Track>,
+        restoreTracking: Boolean,
+    ) {
+        // A disabled section is a hard no-op: no reads, no writes, no version/timestamp changes.
+        if (!restoreTracking) return
+        val dbTrackByTrackerId = trackRepository.getTracksByMangaId(manga.id).associateBy { it.trackerId }
+        // A backup may carry several rows for one tracker. Keep the last one and normalise the
+        // legacy `libraryId = 0` placeholder to "not in a tracker list" (null).
+        val incomingTracks = restoredTracks
+            .map { it.copy(libraryId = it.libraryId.takeIf { id -> id != 0L }) }
+            .associateBy { it.trackerId }
+            .values
+
+        // Merge monotonically and never delete. Tracks absent from the payload are preserved: the
+        // manga payload is versioned per manga, not per tracking section, so a peer with tracking
+        // disabled can upload an empty section and any manga edit carries the whole section.
+        // Deletion propagation needs protocol tombstones/per-tracker versions; until then an empty
+        // or partial list must never be treated as delete-all.
+        val (existingTracks, newTracks) = incomingTracks
             .mapNotNull { track ->
                 val dbTrack = dbTrackByTrackerId[track.trackerId]
                     ?: // New track
@@ -588,7 +669,6 @@ class RestoreRepositoryImpl(
                         mangaId = manga.id,
                     )
 
-                // KUN -->
                 val mergedLastChapterRead = max(track.lastChapterRead, dbTrack.lastChapterRead)
                 val mergedScore = if (track.score > 0.0) track.score else dbTrack.score
                 val mergedStatus = if (track.lastChapterRead >= dbTrack.lastChapterRead && track.status != 0L) {
@@ -619,7 +699,6 @@ class RestoreRepositoryImpl(
 
                 if (updatedTrack == dbTrack) return@mapNotNull null
                 updatedTrack
-                // KUN <--
             }
             .partition { it.id > 0 }
 
@@ -649,6 +728,7 @@ class RestoreRepositoryImpl(
             }
         }
     }
+    // KUN <--
 
     private suspend fun restoreExcludedScanlators(
         manga: Manga,

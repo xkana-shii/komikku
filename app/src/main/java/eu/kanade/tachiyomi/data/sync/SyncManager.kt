@@ -561,6 +561,11 @@ class SyncManager(
                     // KMK -->
                     savedSearchesFeeds = syncOptions.savedSearchesFeeds,
                     // KMK <--
+                    // KUN -->
+                    tracking = syncOptions.tracking,
+                    history = syncOptions.history,
+                    customInfo = syncOptions.customInfo,
+                    // KUN <--
                 ),
                 // KUN -->
                 // Drop local chapters that the v2 server no longer returns (tombstoned there).

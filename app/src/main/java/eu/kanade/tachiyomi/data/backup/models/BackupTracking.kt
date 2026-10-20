@@ -44,7 +44,10 @@ data class BackupTracking(
             } else {
                 this@BackupTracking.mediaId
             },
-            libraryId = this@BackupTracking.libraryId,
+            // KUN -->
+            // Legacy backups store 0 for "not in a tracker list"; the domain uses null.
+            libraryId = this@BackupTracking.libraryId.takeIf { it != 0L },
+            // KUN <--
             title = this@BackupTracking.title,
             lastChapterRead = this@BackupTracking.lastChapterRead.toDouble(),
             totalChapters = this@BackupTracking.totalChapters.toLong(),

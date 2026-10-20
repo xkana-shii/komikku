@@ -60,6 +60,17 @@ ON CONFLICT(chapter_id) DO UPDATE SET
     read_duration = read_duration + excluded.read_duration;
 -- KUN <--
 
+-- KUN -->
+-- Exact history write for a restore that owns the row: the payload decides read_at (NULL means
+-- the entry was removed) while read_duration never moves backwards. Matched on chapter_id, never
+-- on the history row id.
+setHistoryFromRestore:
+UPDATE history
+SET read_at = :readAt,
+    read_duration = max(read_duration, :readDuration)
+WHERE chapter_id = :chapterId;
+-- KUN <--
+
 getReadDuration:
 SELECT coalesce(sum(read_duration), 0)
 FROM history;

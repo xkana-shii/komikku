@@ -21,11 +21,16 @@ interface RestoreRepository {
         // KMK/SY <--
         // KUN -->
         restoreCategories: Boolean = true,
+        // Section flags for the manga payload. A disabled section must not be read or written at
+        // all, so it performs zero writes and leaves versions/timestamps untouched.
+        restoreTracking: Boolean = true,
+        restoreHistory: Boolean = true,
+        restoreCustomInfo: Boolean = true,
         // Epoch seconds of the upload snapshot, or null to leave local chapters alone. When set,
         // the incoming chapter list is authoritative as of that instant: local chapters missing
         // from it are deleted, except chapters created at or after the snapshot. An empty list is
         // authoritative too (every chapter was deleted), so the caller must only set this for a
-        // complete SyncYomi v2 response.
+        // complete SyncYomi v2 response. The same snapshot is the cutoff for history removals.
         removeMissingChaptersBefore: Long? = null,
         // KUN <--
         update: suspend (Manga) -> MangaUpdate,

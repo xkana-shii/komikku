@@ -200,6 +200,9 @@ class BackupRestorer(
                     uri = uri,
                     backupCategories = if (options.categories) backup.backupCategories else emptyList(),
                     restoreCategories = options.categories,
+                    restoreTracking = options.tracking,
+                    restoreHistory = options.history,
+                    restoreCustomInfo = options.customInfo,
                     categoriesRestoreJob = categoriesRestoreJob,
                 )
                 // KUN <--
@@ -275,6 +278,9 @@ class BackupRestorer(
         backupCategories: List<BackupCategory>,
         // KUN -->
         restoreCategories: Boolean,
+        restoreTracking: Boolean,
+        restoreHistory: Boolean,
+        restoreCustomInfo: Boolean,
         // KUN <--
         // SY -->
         categoriesRestoreJob: Job? = null,
@@ -315,7 +321,14 @@ class BackupRestorer(
                 val restoredAsBatch = try {
                     ensureActive()
                     // KUN -->
-                    mangaRestorer.restore(chunk, backupCategories, restoreCategories)
+                    mangaRestorer.restore(
+                        chunk,
+                        backupCategories,
+                        restoreCategories,
+                        restoreTracking,
+                        restoreHistory,
+                        restoreCustomInfo,
+                    )
                     // KUN <--
                     true
                 } catch (e: Exception) {
@@ -332,7 +345,14 @@ class BackupRestorer(
 
                         try {
                             // KUN -->
-                            mangaRestorer.restore(listOf(it), backupCategories, restoreCategories)
+                            mangaRestorer.restore(
+                                listOf(it),
+                                backupCategories,
+                                restoreCategories,
+                                restoreTracking,
+                                restoreHistory,
+                                restoreCustomInfo,
+                            )
                             // KUN <--
                         } catch (e: Exception) {
                             ensureActive()

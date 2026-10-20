@@ -54,6 +54,9 @@ class MangaRestorer(
         backupCategories: List<BackupCategory>,
         // KUN -->
         restoreCategories: Boolean = true,
+        restoreTracking: Boolean = true,
+        restoreHistory: Boolean = true,
+        restoreCustomInfo: Boolean = true,
         // KUN <--
     ) {
         // KUN -->
@@ -122,6 +125,9 @@ class MangaRestorer(
             entries,
             isSync,
             restoreCategories,
+            restoreTracking,
+            restoreHistory,
+            restoreCustomInfo,
             removeMissingChaptersBefore,
         ) { manga ->
             // KUN <--
