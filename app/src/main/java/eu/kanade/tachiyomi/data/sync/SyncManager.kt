@@ -29,6 +29,8 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
+import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.sync.repository.SyncRepository
 import java.io.File
@@ -169,9 +171,14 @@ class SyncManager(
             // SY -->
             // KUN -->
             // `categorized_display` is derived from the categories; a sync restore sets it, which would
-            // otherwise make the next delta echo it back to the server.
+            // otherwise make the next delta echo it back to the server. Device-local category ID preferences
+            // are also excluded to avoid cross-device ping-pong and preference corruption.
             backupPreferences = backupCreator.backupAppPreferences(backupOptions)
-                .filterNot { it.key == "categorized_display" },
+                .filterNot {
+                    it.key == "categorized_display" ||
+                        it.key in LibraryPreferences.categoryPreferenceKeys ||
+                        it.key in DownloadPreferences.categoryPreferenceKeys
+                },
             // KUN <--
             // SY <--
             backupSourcePreferences = backupCreator.backupSourcePreferences(backupOptions),
@@ -290,10 +297,17 @@ class SyncManager(
             extensionStoresDiffer(backup.backupExtensionStores, remoteBackup.backupExtensionStores)
         val hasSavedSearchChanges = remoteBackup.backupSavedSearches.isNotEmpty() &&
             remoteBackup.backupSavedSearches != backup.backupSavedSearches
+        // KUN -->
+        val hasFeedChanges = remoteBackup.backupFeeds.isNotEmpty() &&
+            remoteBackup.backupFeeds != backup.backupFeeds
+        // KUN <--
 
         if (!hasMangaChanges && !hasCategoryChanges && !hasSourceChanges &&
             !hasPreferenceChanges && !hasSourcePreferenceChanges &&
-            !hasExtensionRepoChanges && !hasSavedSearchChanges
+            !hasExtensionRepoChanges && !hasSavedSearchChanges &&
+            // KUN -->
+            !hasFeedChanges
+            // KUN <--
         ) {
             // update the sync timestamp
             finishWithSuccess(syncStart, "Sync completed successfully")
@@ -448,25 +462,30 @@ class SyncManager(
         return false
     }
 
+    // KUN -->
     private fun areChaptersDifferent(localChapters: List<Chapter>, remoteChapters: List<BackupChapter>): Boolean {
-        val localChapterMap = localChapters.associateBy { it.url }
-        val remoteChapterMap = remoteChapters.associateBy { it.url }
-
-        if (localChapterMap.size != remoteChapterMap.size) {
-            return true
+        if (remoteChapters.isEmpty()) {
+            return false
         }
+        val localChapterMap = localChapters.associateBy { it.url }
 
-        for ((url, localChapter) in localChapterMap) {
-            val remoteChapter = remoteChapterMap[url]
+        for (remoteChapter in remoteChapters) {
+            val localChapter = localChapterMap[remoteChapter.url]
 
-            // If a matching remote chapter doesn't exist, or the version numbers are different, consider them different
-            if (remoteChapter == null || localChapter.version != remoteChapter.version) {
+            // If a matching remote chapter doesn't exist locally, or their states/versions differ
+            if (localChapter == null ||
+                localChapter.version != remoteChapter.version ||
+                localChapter.read != remoteChapter.read ||
+                localChapter.bookmark != remoteChapter.bookmark ||
+                localChapter.lastPageRead.toLong() != remoteChapter.lastPageRead
+            ) {
                 return true
             }
         }
 
         return false
     }
+    // KUN <--
 
     /**
      * Filters the favorite and non-favorite manga from the backup and checks
@@ -482,15 +501,17 @@ class SyncManager(
 
         val elapsedTimeMillis = measureTimeMillis {
             val databaseManga = getAllMangaFromDB()
+            // KUN -->
             val localMangaMap = databaseManga.associateBy {
-                Triple(it.source, it.url, it.title)
+                it.source to it.url
             }
 
             logcat(LogPriority.DEBUG, logTag) { "Starting to filter favorites and non-favorites from backup data." }
 
             backup.backupManga.forEach { remoteManga ->
-                val compositeKey = Triple(remoteManga.source, remoteManga.url, remoteManga.title)
+                val compositeKey = remoteManga.source to remoteManga.url
                 val localManga = localMangaMap[compositeKey]
+                // KUN <--
                 when {
                     // Checks if the manga is in favorites and needs updating or adding
                     remoteManga.favorite -> {
@@ -527,16 +548,30 @@ class SyncManager(
     private suspend fun updateNonFavorites(nonFavorites: List<BackupManga>) {
         val localMangaList = getAllMangaFromDB()
 
-        val localMangaMap = localMangaList.associateBy { Triple(it.source, it.url, it.title) }
+        // KUN -->
+        val localMangaMap = localMangaList.associateBy { it.source to it.url }
 
         nonFavorites.forEach { nonFavorite ->
-            val key = Triple(nonFavorite.source, nonFavorite.url, nonFavorite.title)
+            val key = nonFavorite.source to nonFavorite.url
             localMangaMap[key]?.let { localManga ->
                 if (localManga.favorite != nonFavorite.favorite) {
-                    val updatedManga = localManga.copy(favorite = nonFavorite.favorite)
-                    mangaRestorer.updateManga(updatedManga)
+                    val remoteFavTime = nonFavorite.favoriteModifiedAt
+                    val localFavTime = localManga.favoriteModifiedAt
+                    val shouldUnfavorite = remoteFavTime != null &&
+                        (localFavTime == null || remoteFavTime > localFavTime) &&
+                        nonFavorite.version >= localManga.version
+
+                    if (shouldUnfavorite) {
+                        val updatedManga = localManga.copy(
+                            favorite = false,
+                            favoriteModifiedAt = remoteFavTime,
+                            version = maxOf(localManga.version, nonFavorite.version),
+                        )
+                        mangaRestorer.updateManga(updatedManga)
+                    }
                 }
             }
         }
+        // KUN <--
     }
 }

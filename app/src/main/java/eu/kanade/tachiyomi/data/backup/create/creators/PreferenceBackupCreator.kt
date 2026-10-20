@@ -52,11 +52,16 @@ class PreferenceBackupCreator(
                     is String -> BackupPreference(key, StringPreferenceValue(value))
                     is Boolean -> BackupPreference(key, BooleanPreferenceValue(value))
                     is Set<*> -> (value as? Set<String>)?.let {
-                        BackupPreference(key, StringSetPreferenceValue(it))
+                        // KUN -->
+                        BackupPreference(key, StringSetPreferenceValue(it.sorted().toSet()))
+                        // KUN <--
                     }
                     else -> null
                 }
             }
+            // KUN -->
+            .sortedBy { it.key }
+        // KUN <--
     }
 
     private fun List<BackupPreference>.withPrivatePreferences(include: Boolean) =

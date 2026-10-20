@@ -160,6 +160,14 @@ class RestoreRepositoryImpl(
             lastModifiedAt = newer.lastModifiedAt,
             // SY <--
             nextUpdate = this.nextUpdate ?: newer.nextUpdate,
+            // KUN -->
+            viewerFlags = newer.viewerFlags,
+            chapterFlags = newer.chapterFlags,
+            notes = newer.notes,
+            memo = newer.memo,
+            updateStrategy = newer.updateStrategy,
+            favoriteModifiedAt = max(this.favoriteModifiedAt ?: 0L, newer.favoriteModifiedAt ?: 0L).takeIf { it > 0L },
+            // KUN <--
         )
     }
 
@@ -280,16 +288,43 @@ class RestoreRepositoryImpl(
 
     private fun updateChapterBasedOnSyncState(chapter: Chapter, dbChapter: Chapter, isSync: Boolean): Chapter {
         return if (isSync) {
-            chapter.copy(
-                id = dbChapter.id,
-                bookmark = chapter.bookmark || dbChapter.bookmark,
-                read = chapter.read,
-                lastPageRead = chapter.lastPageRead,
-                // KUN -->
+            // KUN -->
+            val incomingIsNewer = chapter.version > dbChapter.version ||
+                (chapter.version == dbChapter.version && chapter.lastModifiedAt > dbChapter.lastModifiedAt)
+            val localIsNewer = dbChapter.version > chapter.version ||
+                (chapter.version == dbChapter.version && dbChapter.lastModifiedAt > chapter.lastModifiedAt)
+
+            val base = when {
+                incomingIsNewer -> chapter.copy(
+                    id = dbChapter.id,
+                    bookmark = chapter.bookmark,
+                    read = chapter.read,
+                    lastPageRead = chapter.lastPageRead,
+                    version = chapter.version,
+                    lastModifiedAt = chapter.lastModifiedAt,
+                )
+                localIsNewer -> dbChapter.copy(
+                    id = dbChapter.id,
+                    bookmark = dbChapter.bookmark,
+                    read = dbChapter.read,
+                    lastPageRead = dbChapter.lastPageRead,
+                    version = dbChapter.version,
+                    lastModifiedAt = dbChapter.lastModifiedAt,
+                )
+                else -> chapter.copy(
+                    id = dbChapter.id,
+                    bookmark = chapter.bookmark || dbChapter.bookmark,
+                    read = chapter.read || dbChapter.read,
+                    lastPageRead = max(chapter.lastPageRead, dbChapter.lastPageRead),
+                    version = max(chapter.version, dbChapter.version),
+                    lastModifiedAt = max(chapter.lastModifiedAt, dbChapter.lastModifiedAt),
+                )
+            }
+            base.copy(
                 sourceOrder = max(chapter.sourceOrder, dbChapter.sourceOrder),
                 dateUpload = listOfNotNull(chapter.dateUpload, dbChapter.dateUpload).minOrNull(),
-                // KUN <--
             )
+            // KUN <--
         } else {
             chapter.copyFrom(dbChapter)
                 // KUN -->
@@ -438,10 +473,38 @@ class RestoreRepositoryImpl(
                         mangaId = manga.id,
                     )
 
-                if (track.lastChapterRead <= dbTrack.lastChapterRead) return@mapNotNull null
+                // KUN -->
+                val mergedLastChapterRead = max(track.lastChapterRead, dbTrack.lastChapterRead)
+                val mergedScore = if (track.score > 0.0) track.score else dbTrack.score
+                val mergedStatus = if (track.lastChapterRead >= dbTrack.lastChapterRead && track.status != 0L) {
+                    track.status
+                } else if (dbTrack.status != 0L) {
+                    dbTrack.status
+                } else {
+                    track.status
+                }
+                val mergedStartDate = listOfNotNull(track.startDate, dbTrack.startDate).minOrNull()
+                val mergedFinishDate = listOfNotNull(track.finishDate, dbTrack.finishDate).maxOrNull()
+                val mergedTotalChapters = max(track.totalChapters, dbTrack.totalChapters)
+                val mergedPrivate = track.private || dbTrack.private
 
-                // Update to an existing track
-                dbTrack.copy(lastChapterRead = track.lastChapterRead)
+                val updatedTrack = dbTrack.copy(
+                    title = if (track.title.isNotBlank()) track.title else dbTrack.title,
+                    remoteUrl = if (track.remoteUrl.isNotBlank()) track.remoteUrl else dbTrack.remoteUrl,
+                    remoteId = if (track.remoteId > 0) track.remoteId else dbTrack.remoteId,
+                    libraryId = track.libraryId ?: dbTrack.libraryId,
+                    lastChapterRead = mergedLastChapterRead,
+                    totalChapters = mergedTotalChapters,
+                    status = mergedStatus,
+                    score = mergedScore,
+                    startDate = mergedStartDate,
+                    finishDate = mergedFinishDate,
+                    private = mergedPrivate,
+                )
+
+                if (updatedTrack == dbTrack) return@mapNotNull null
+                updatedTrack
+                // KUN <--
             }
             .partition { it.id > 0 }
 

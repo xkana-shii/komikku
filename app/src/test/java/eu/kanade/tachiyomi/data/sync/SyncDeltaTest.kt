@@ -3,6 +3,8 @@ package eu.kanade.tachiyomi.data.sync
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
+import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
+import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -182,6 +184,34 @@ class SyncDeltaTest {
         val merged = mergeSyncCategories(local, remote, protocolV2 = false)
 
         assertEquals(listOf("Remote Category"), merged.map { it.name })
+    }
+
+    @Test
+    fun `encodes and decodes backup with extension stores and feeds`() {
+        val backup = Backup(
+            backupExtensionStores = listOf(
+                BackupExtensionStore(
+                    indexUrl = "https://example.com/repo/index.min.json",
+                    name = "Example Repo",
+                ),
+            ),
+            backupFeeds = listOf(
+                BackupFeed(
+                    source = 100L,
+                    global = true,
+                ),
+            ),
+        )
+        val bytes = ProtoBuf.encodeToByteArray(Backup.serializer(), backup)
+        val decoded = ProtoBuf.decodeFromByteArray(Backup.serializer(), bytes)
+
+        assertEquals(1, decoded.backupExtensionStores.size)
+        assertEquals("Example Repo", decoded.backupExtensionStores[0].name)
+        assertEquals("https://example.com/repo/index.min.json", decoded.backupExtensionStores[0].indexUrl)
+
+        assertEquals(1, decoded.backupFeeds.size)
+        assertEquals(100L, decoded.backupFeeds[0].source)
+        assertTrue(decoded.backupFeeds[0].global)
     }
     // KUN <--
 }

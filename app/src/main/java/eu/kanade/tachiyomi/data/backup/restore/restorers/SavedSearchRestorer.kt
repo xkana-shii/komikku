@@ -16,33 +16,47 @@ class SavedSearchRestorer(
 
         val currentSavedSearches = savedSearchRepository.getAll()
 
-        val savedSearchesToRestore = backupSavedSearches
+        // KUN -->
+        val currentSavedSearchesMap = currentSavedSearches.associateBy { it.source to it.name }
+        val toInsert = mutableListOf<SavedSearch>()
+
+        backupSavedSearches
             .map {
                 // KMK -->
                 EXHMigrations.migrateBackupSavedSearch(it)
                 // KMK <--
             }
-            .filter { backupSavedSearch ->
-                currentSavedSearches.none { currentSavedSearch ->
-                    currentSavedSearch.source == backupSavedSearch.source &&
-                        currentSavedSearch.name == backupSavedSearch.name &&
-                        // KMK -->
-                        currentSavedSearch.query.orEmpty() == backupSavedSearch.query &&
-                        (currentSavedSearch.filtersJson ?: "[]") == backupSavedSearch.filterList
-                    // KMK <--
+            .forEach { backupSavedSearch ->
+                val key = backupSavedSearch.source to backupSavedSearch.name
+                val existing = currentSavedSearchesMap[key]
+                val query = backupSavedSearch.query.nullIfBlank()
+                val filtersJson = backupSavedSearch.filterList.nullIfBlank()?.takeUnless { it == "[]" }
+
+                if (existing != null) {
+                    if (existing.query != query || existing.filtersJson != filtersJson) {
+                        savedSearchRepository.update(
+                            existing.copy(
+                                query = query,
+                                filtersJson = filtersJson,
+                            ),
+                        )
+                    }
+                } else {
+                    toInsert.add(
+                        SavedSearch(
+                            id = -1,
+                            source = backupSavedSearch.source,
+                            name = backupSavedSearch.name,
+                            query = query,
+                            filtersJson = filtersJson,
+                        ),
+                    )
                 }
             }
-            .map { backupSavedSearch ->
-                SavedSearch(
-                    id = -1,
-                    source = backupSavedSearch.source,
-                    name = backupSavedSearch.name,
-                    query = backupSavedSearch.query.nullIfBlank(),
-                    filtersJson = backupSavedSearch.filterList.nullIfBlank()
-                        ?.takeUnless { it == "[]" },
-                )
-            }
 
-        savedSearchRepository.insertAll(savedSearchesToRestore)
+        if (toInsert.isNotEmpty()) {
+            savedSearchRepository.insertAll(toInsert)
+        }
+        // KUN <--
     }
 }

@@ -5,6 +5,8 @@ import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
+import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
+import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
@@ -59,32 +61,73 @@ abstract class SyncService(
      * @return The JSON string containing the merged sync data.
      */
     protected fun mergeSyncData(localSyncData: SyncData, remoteSyncData: SyncData): SyncData {
-        val mergedCategoriesList =
-            mergeCategoriesLists(localSyncData.backup?.backupCategories, remoteSyncData.backup?.backupCategories)
+        // KUN -->
+        val syncSettings = syncPreferences.getSyncSettings()
 
-        val mergedMangaList = mergeMangaLists(
-            localSyncData.backup?.backupManga,
-            remoteSyncData.backup?.backupManga,
-            localSyncData.backup?.backupCategories ?: emptyList(),
-            remoteSyncData.backup?.backupCategories ?: emptyList(),
-            mergedCategoriesList,
-        )
+        val mergedCategoriesList = if (!syncSettings.categories) {
+            remoteSyncData.backup?.backupCategories.orEmpty()
+        } else {
+            mergeCategoriesLists(localSyncData.backup?.backupCategories, remoteSyncData.backup?.backupCategories)
+        }
+
+        val mergedMangaList = if (!syncSettings.libraryEntries && !syncSettings.readEntries) {
+            remoteSyncData.backup?.backupManga.orEmpty()
+        } else {
+            mergeMangaLists(
+                localSyncData.backup?.backupManga,
+                remoteSyncData.backup?.backupManga,
+                localSyncData.backup?.backupCategories ?: emptyList(),
+                remoteSyncData.backup?.backupCategories ?: emptyList(),
+                mergedCategoriesList,
+            )
+        }
 
         val mergedSourcesList =
             mergeSourcesLists(localSyncData.backup?.backupSources, remoteSyncData.backup?.backupSources)
-        val mergedPreferencesList =
+
+        val mergedPreferencesList = if (!syncSettings.appSettings) {
+            remoteSyncData.backup?.backupPreferences.orEmpty()
+        } else {
             mergePreferencesLists(localSyncData.backup?.backupPreferences, remoteSyncData.backup?.backupPreferences)
-        val mergedSourcePreferencesList = mergeSourcePreferencesLists(
-            localSyncData.backup?.backupSourcePreferences,
-            remoteSyncData.backup?.backupSourcePreferences,
-        )
+        }
+
+        val mergedSourcePreferencesList = if (!syncSettings.sourceSettings) {
+            remoteSyncData.backup?.backupSourcePreferences.orEmpty()
+        } else {
+            mergeSourcePreferencesLists(
+                localSyncData.backup?.backupSourcePreferences,
+                remoteSyncData.backup?.backupSourcePreferences,
+            )
+        }
 
         // SY -->
-        val mergedSavedSearchesList = mergeSavedSearchesLists(
-            localSyncData.backup?.backupSavedSearches,
-            remoteSyncData.backup?.backupSavedSearches,
-        )
+        val mergedSavedSearchesList = if (!syncSettings.savedSearchesFeeds) {
+            remoteSyncData.backup?.backupSavedSearches.orEmpty()
+        } else {
+            mergeSavedSearchesLists(
+                localSyncData.backup?.backupSavedSearches,
+                remoteSyncData.backup?.backupSavedSearches,
+            )
+        }
         // SY <--
+
+        val mergedExtensionStoresList = if (!syncSettings.extensionStores) {
+            remoteSyncData.backup?.backupExtensionStores.orEmpty()
+        } else {
+            mergeExtensionStoresLists(
+                localSyncData.backup?.backupExtensionStores,
+                remoteSyncData.backup?.backupExtensionStores,
+            )
+        }
+
+        val mergedFeedsList = if (!syncSettings.savedSearchesFeeds) {
+            remoteSyncData.backup?.backupFeeds.orEmpty()
+        } else {
+            mergeFeedsLists(
+                localSyncData.backup?.backupFeeds,
+                remoteSyncData.backup?.backupFeeds,
+            )
+        }
 
         // Create the merged Backup object
         val mergedBackup = Backup(
@@ -93,11 +136,16 @@ abstract class SyncService(
             backupSources = mergedSourcesList,
             backupPreferences = mergedPreferencesList,
             backupSourcePreferences = mergedSourcePreferencesList,
+            backupExtensionStores = mergedExtensionStoresList,
 
             // SY -->
             backupSavedSearches = mergedSavedSearchesList,
             // SY <--
+            // KMK -->
+            backupFeeds = mergedFeedsList,
+            // KMK <--
         )
+        // KUN <--
 
         // Create the merged SData object
         return SyncData(
@@ -629,4 +677,59 @@ abstract class SyncService(
         return mergedSearches
     }
     // SY <--
+
+    // KUN -->
+    private fun mergeExtensionStoresLists(
+        localStores: List<BackupExtensionStore>?,
+        remoteStores: List<BackupExtensionStore>?,
+    ): List<BackupExtensionStore> {
+        val localStoreMap = localStores?.associateBy { it.indexUrl } ?: emptyMap()
+        val remoteStoreMap = remoteStores?.associateBy { it.indexUrl } ?: emptyMap()
+
+        return (localStoreMap.keys + remoteStoreMap.keys).distinct().mapNotNull { indexUrl ->
+            val localStore = localStoreMap[indexUrl]
+            val remoteStore = remoteStoreMap[indexUrl]
+            when {
+                localStore != null && remoteStore == null -> localStore
+                remoteStore != null && localStore == null -> remoteStore
+                localStore != null && remoteStore != null -> {
+                    BackupExtensionStore(
+                        indexUrl = indexUrl,
+                        name = localStore.name.ifBlank { remoteStore.name },
+                        badgeLabel = localStore.badgeLabel ?: remoteStore.badgeLabel,
+                        signingKey = localStore.signingKey.ifBlank { remoteStore.signingKey },
+                        contactWebsite = localStore.contactWebsite.ifBlank { remoteStore.contactWebsite },
+                        contactDiscord = localStore.contactDiscord ?: remoteStore.contactDiscord,
+                        isLegacy = localStore.isLegacy ?: remoteStore.isLegacy,
+                        extensionListUrl = localStore.extensionListUrl ?: remoteStore.extensionListUrl,
+                    )
+                }
+                else -> null
+            }
+        }
+    }
+
+    private fun mergeFeedsLists(
+        localFeeds: List<BackupFeed>?,
+        remoteFeeds: List<BackupFeed>?,
+    ): List<BackupFeed> {
+        fun feedKey(feed: BackupFeed): String = "${feed.source}|${feed.global}|${feed.savedSearch?.name.orEmpty()}"
+
+        val localFeedMap = localFeeds?.associateBy { feedKey(it) } ?: emptyMap()
+        val remoteFeedMap = remoteFeeds?.associateBy { feedKey(it) } ?: emptyMap()
+
+        return (localFeedMap.keys + remoteFeedMap.keys).distinct().mapNotNull { key ->
+            val localFeed = localFeedMap[key]
+            val remoteFeed = remoteFeedMap[key]
+            when {
+                localFeed != null && remoteFeed == null -> localFeed
+                remoteFeed != null && localFeed == null -> remoteFeed
+                localFeed != null && remoteFeed != null -> {
+                    if (localFeed.savedSearch != null) localFeed else remoteFeed
+                }
+                else -> null
+            }
+        }
+    }
+    // KUN <--
 }

@@ -35,5 +35,13 @@ insert {
 deleteById:
 DELETE FROM saved_search WHERE _id = :id;
 
+-- KUN -->
+update:
+UPDATE saved_search
+SET query = :query,
+    filters_json = :filtersJson
+WHERE _id = :id;
+-- KUN <--
+
 deleteAll:
 DELETE FROM saved_search;

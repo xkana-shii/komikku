@@ -91,4 +91,14 @@ class SavedSearchRepositoryImpl(
             }
         }
     }
+
+    // KUN -->
+    override suspend fun update(savedSearch: SavedSearch) {
+        database.saved_searchQueries.update(
+            query = savedSearch.query,
+            filtersJson = savedSearch.filtersJson,
+            id = savedSearch.id,
+        )
+    }
+    // KUN <--
 }

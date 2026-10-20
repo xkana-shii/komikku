@@ -151,7 +151,9 @@ class PreferenceRestorer(
         }
 
         if (ids.isNotEmpty()) {
-            preferenceStore.getStringSet(key) += ids
+            // KUN -->
+            preferenceStore.getStringSet(key).set(ids.toSet())
+            // KUN <--
         }
         return true
     }

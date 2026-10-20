@@ -11,6 +11,8 @@ interface SavedSearchRepository {
     suspend fun getAll(): List<SavedSearch>
 
     suspend fun deleteAll()
+
+    suspend fun update(savedSearch: SavedSearch)
     // KUN <--
 
     suspend fun getBySourceId(sourceId: Long): List<SavedSearch>

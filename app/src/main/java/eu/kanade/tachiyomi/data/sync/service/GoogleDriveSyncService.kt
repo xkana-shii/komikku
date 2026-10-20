@@ -90,15 +90,12 @@ class GoogleDriveSyncService(context: Context, json: Json, syncPreferences: Sync
 
                 // check if the last sync was done by the same device if so overwrite the remote data with the local data
                 // SY -->
-                return if (lastSyncDeviceId == localDeviceId) {
-                    pushSyncData(syncData)
-                    SyncResult(syncData.backup, changed = false, protocolV2 = false)
-                } else {
-                    // Merge the local and remote sync data
-                    val mergedSyncData = mergeSyncData(syncData, remoteSData)
-                    pushSyncData(mergedSyncData)
-                    SyncResult(mergedSyncData.backup, changed = true, protocolV2 = false)
-                }
+                // KUN -->
+                // Always merge so selective sync options or missing local entities do not overwrite remote data.
+                val mergedSyncData = mergeSyncData(syncData, remoteSData)
+                pushSyncData(mergedSyncData)
+                return SyncResult(mergedSyncData.backup, changed = true, protocolV2 = false)
+                // KUN <--
                 // SY <--
             }
 
