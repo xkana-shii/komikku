@@ -2,6 +2,10 @@
 <resources>
     <color name="ic_launcher">#ff5555</color>
 
-    <color name="accent_blue">#0058A0</color>
-    <color name="icon_background">#FAFAFA</color>
+    <color name="accent_blue">#54759E</color>
+    <!-- KUN: the fork keeps the shortcut/notification colors in :app (Komikun's own
+         launcher icon), so upstream's @color/ic_launcher_background alias resolves to
+         the Ink Disc tile instead of a shared launcher-background color. -->
+    <color name="icon_background">#FBF6EC</color>
+    <color name="icon_foreground">#2E84BF</color>
 </resources>
