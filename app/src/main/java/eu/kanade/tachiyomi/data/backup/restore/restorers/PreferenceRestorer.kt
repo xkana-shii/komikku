@@ -163,9 +163,10 @@ class PreferenceRestorer(
         value: Set<String>,
         preferenceStore: PreferenceStore,
     ) {
-        if (value.isEmpty()) return
-
+        // KUN -->
         val valueToSet = EXHMigrations.migrateSourceIds(value)
-        preferenceStore.getStringSet(key).set(valueToSet)
+        val existing = preferenceStore.getStringSet(key).get()
+        preferenceStore.getStringSet(key).set(existing + valueToSet)
+        // KUN <--
     }
 }

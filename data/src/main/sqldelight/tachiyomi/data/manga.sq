@@ -45,7 +45,9 @@ CREATE INDEX manga_user_favorite_at_index ON manga(user_favorite_at) WHERE user_
 CREATE TRIGGER update_last_modified_at_mangas
 AFTER UPDATE ON manga
 FOR EACH ROW
-WHEN new.is_syncing = 0 AND old.is_syncing = 0
+-- KUN -->
+WHEN new.is_syncing = 0 AND old.is_syncing = 0 AND new.last_modified_at IS old.last_modified_at
+-- KUN <--
 BEGIN
   UPDATE manga
   SET last_modified_at = strftime('%s', 'now')
@@ -68,17 +70,33 @@ BEGIN
   WHERE id = new.id;
 END;
 
+-- KUN -->
+CREATE TRIGGER insert_last_favorited_at_mangas
+AFTER INSERT ON manga
+WHEN new.user_favorite_at IS NOT NULL AND new.favorite_modified_at IS NULL
+BEGIN
+  UPDATE manga
+  SET favorite_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+-- KUN <--
+
 -- Routine cover URL churn must not bump the whole-row sync version; the stale-cover recovery
 -- path bumps it explicitly in updateCover.
+-- KUN -->
 CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
 BEGIN
     UPDATE manga SET version = version + 1
     WHERE id = new.id AND new.is_syncing = 0 AND (
         new.remote_url != old.remote_url OR
         new.remote_description != old.remote_description OR
-        new.user_favorite_at IS NOT old.user_favorite_at
+        new.user_favorite_at IS NOT old.user_favorite_at OR
+        new.user_reader_flags != old.user_reader_flags OR
+        new.user_chapter_flags != old.user_chapter_flags OR
+        new.user_notes != old.user_notes
     );
 END;
+-- KUN <--
 -- SY <--
 
 getMangaById:

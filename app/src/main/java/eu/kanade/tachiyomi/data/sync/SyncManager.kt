@@ -170,12 +170,13 @@ class SyncManager(
             backupSources = backupCreator.backupSources(backupManga.mapTo(mutableSetOf()) { it.source }),
             // SY -->
             // KUN -->
-            // `categorized_display` is derived from the categories; a sync restore sets it, which would
-            // otherwise make the next delta echo it back to the server. Device-local category ID preferences
-            // are also excluded to avoid cross-device ping-pong and preference corruption.
+            // Exclude derived flags, unmapped category IDs, device-specific hardware/layout settings,
+            // and credentials to prevent cross-device ping-pong and corruption.
             backupPreferences = backupCreator.backupAppPreferences(backupOptions)
                 .filterNot {
-                    it.key == "categorized_display" ||
+                    it.key in NON_SYNCABLE_PREFERENCE_KEYS ||
+                        it.key.startsWith("connection_webdav_") ||
+                        it.key.startsWith("pref_connections_password_") ||
                         it.key in LibraryPreferences.categoryPreferenceKeys ||
                         it.key in DownloadPreferences.categoryPreferenceKeys
                 },
@@ -470,6 +471,12 @@ class SyncManager(
             .getChapterByMangaId(localManga.id, applyFilter = false)
         val localCategories = getCategories.await(localManga.id).map { it.order }
 
+        // KUN -->
+        if (localManga.favorite != remoteManga.favorite) {
+            return true
+        }
+        // KUN <--
+
         if (areChaptersDifferent(localChapters, remoteManga.chapters)) {
             return true
         }
@@ -538,12 +545,21 @@ class SyncManager(
                 when {
                     // Checks if the manga is in favorites and needs updating or adding
                     remoteManga.favorite -> {
-                        if (localManga == null || isMangaDifferent(localManga, remoteManga)) {
+                        // KUN -->
+                        val localFavTime = localManga?.favoriteModifiedAt
+                        val remoteFavTime = remoteManga.favoriteModifiedAt
+                        val localUnfavoritedMoreRecently = localManga != null &&
+                            !localManga.favorite &&
+                            localFavTime != null &&
+                            (remoteFavTime == null || localFavTime > remoteFavTime)
+
+                        if (!localUnfavoritedMoreRecently && (localManga == null || isMangaDifferent(localManga, remoteManga))) {
                             logcat(LogPriority.DEBUG, logTag) { "Adding to favorites: ${remoteManga.title}" }
                             favorites.add(remoteManga)
                         } else {
                             logcat(LogPriority.DEBUG, logTag) { "Already up-to-date favorite: ${remoteManga.title}" }
                         }
+                        // KUN <--
                     }
                     // Handle non-favorites
                     !remoteManga.favorite -> {
@@ -602,4 +618,47 @@ class SyncManager(
         }
         // KUN <--
     }
+
+    // KUN -->
+    companion object {
+        private val NON_SYNCABLE_PREFERENCE_KEYS = setOf(
+            "categorized_display",
+            // Local unmapped category IDs
+            "pref_filter_upcoming_included_categories",
+            "pref_filter_upcoming_excluded_categories",
+            "pref_filter_updates_included_categories",
+            "pref_filter_updates_excluded_categories",
+            "discord_rpc_incognito_categories",
+            "eh_enabled_categories",
+            // Biometrics & screen privacy
+            "use_biometric_lock",
+            "lock_app_after",
+            "secure_screen_v2",
+            // Hardware & display profiles (file URIs or device GPU constraints)
+            "pref_high_quality_renderer_key",
+            "pref_display_profile_key",
+            "pref_always_decode_long_strip_with_ssiv",
+            // Form factor & device layout
+            "tablet_ui_mode",
+            "pref_library_columns_portrait_key",
+            "pref_library_columns_landscape_key",
+            "pref_dual_page_view",
+            "pref_dual_page_split",
+            "pref_dual_page_rotate",
+            "page_layout",
+            "pref_default_orientation_type_key",
+            "cutout_short",
+            "webgpu_cutout_mode",
+            "webgpu_dual_cutout_mode",
+            // Network & battery constraints
+            "pref_download_only_over_wifi_key",
+            "pref_reader_load_ahead_only_over_wifi",
+            "library_update_restriction",
+            // Sync engine service selector & credentials
+            "sync_service",
+            "connection_sync_client_host",
+            "connection_sync_client_api_key",
+        )
+    }
+    // KUN <--
 }

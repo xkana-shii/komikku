@@ -34,7 +34,9 @@ CREATE INDEX chapter_unread_state_date_fetch_index ON chapter(state_date_fetch) 
 CREATE TRIGGER update_last_modified_at_chapters
 AFTER UPDATE ON chapter
 FOR EACH ROW
-WHEN new.is_syncing = 0 AND old.is_syncing = 0
+-- KUN -->
+WHEN new.is_syncing = 0 AND old.is_syncing = 0 AND new.last_modified_at IS old.last_modified_at
+-- KUN <--
 BEGIN
   UPDATE chapter
   SET last_modified_at = strftime('%s', 'now')

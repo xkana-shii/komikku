@@ -557,10 +557,12 @@ abstract class SyncService(
                     remotePreference
                 }
                 else -> {
+                    // KUN -->
                     logcat(LogPriority.DEBUG, logTag) {
-                        "Both remote and local have the same preference key: $key. Keeping local."
+                        "Both remote and local have the same preference key: $key. Keeping remote."
                     }
-                    localPreference
+                    remotePreference
+                    // KUN <--
                 }
             }
         }

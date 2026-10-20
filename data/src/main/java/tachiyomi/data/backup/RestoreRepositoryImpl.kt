@@ -134,11 +134,15 @@ class RestoreRepositoryImpl(
         isSync: Boolean,
         syncingFlag: Long,
     ): Manga {
-        return if (manga.version > dbManga.version) {
+        // KUN -->
+        val incomingIsNewer = manga.version > dbManga.version ||
+            (manga.version == dbManga.version && manga.lastModifiedAt > dbManga.lastModifiedAt)
+        return if (incomingIsNewer) {
             updateManga(dbManga.copyFrom(manga).copy(id = dbManga.id), isSync, syncingFlag)
         } else {
             updateManga(manga.copyFrom(dbManga).copy(id = dbManga.id), isSync, syncingFlag)
         }
+        // KUN <--
     }
 
     private fun Manga.copyFrom(newer: Manga): Manga {
@@ -153,6 +157,9 @@ class RestoreRepositoryImpl(
                 null
             },
             // SY -->
+            // KUN -->
+            ogTitle = newer.ogTitle.ifBlank { newer.title.ifBlank { this.ogTitle } },
+            // KUN <--
             ogAuthor = newer.author,
             ogArtist = newer.artist,
             ogDescription = newer.description,
@@ -282,6 +289,10 @@ class RestoreRepositoryImpl(
 
                 when {
                     dbChapter == null -> chapter // New chapter
+                    // KUN -->
+                    isSync && (chapter.version != dbChapter.version || chapter.lastModifiedAt != dbChapter.lastModifiedAt) ->
+                        updateChapterBasedOnSyncState(chapter, dbChapter, isSync)
+                    // KUN <--
                     chapter.forComparison() == dbChapter.forComparison() -> null // Same state; skip
                     else -> updateChapterBasedOnSyncState(chapter, dbChapter, isSync) // Update existed chapter
                 }
@@ -303,17 +314,17 @@ class RestoreRepositoryImpl(
             val base = when {
                 incomingIsNewer -> chapter.copy(
                     id = dbChapter.id,
-                    bookmark = chapter.bookmark,
-                    read = chapter.read,
-                    lastPageRead = chapter.lastPageRead,
+                    bookmark = chapter.bookmark || dbChapter.bookmark,
+                    read = chapter.read || dbChapter.read,
+                    lastPageRead = max(chapter.lastPageRead, dbChapter.lastPageRead),
                     version = chapter.version,
                     lastModifiedAt = chapter.lastModifiedAt,
                 )
                 localIsNewer -> dbChapter.copy(
                     id = dbChapter.id,
-                    bookmark = dbChapter.bookmark,
-                    read = dbChapter.read,
-                    lastPageRead = dbChapter.lastPageRead,
+                    bookmark = chapter.bookmark || dbChapter.bookmark,
+                    read = chapter.read || dbChapter.read,
+                    lastPageRead = max(chapter.lastPageRead, dbChapter.lastPageRead),
                     version = dbChapter.version,
                     lastModifiedAt = dbChapter.lastModifiedAt,
                 )
@@ -327,7 +338,7 @@ class RestoreRepositoryImpl(
                 )
             }
             base.copy(
-                sourceOrder = max(chapter.sourceOrder, dbChapter.sourceOrder),
+                sourceOrder = if (incomingIsNewer) chapter.sourceOrder else dbChapter.sourceOrder,
                 dateUpload = listOfNotNull(chapter.dateUpload, dbChapter.dateUpload).minOrNull(),
             )
             // KUN <--
