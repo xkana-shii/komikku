@@ -14,6 +14,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ### Other
 - Rebuilt the fork's foundation on official Komikku `master` (`1656575e8f`) with Komi-kun's architecture (`2c6743696d`): Metro DI, AndroidX ViewModels, async SQLDelight on the AndroidX bundled driver with the Mihon schema rework, SyncYomi v2, the WebGPU reader and the Mihon/TachiyomiSY backlog Komi-kun ported. Keeps the `app.komikku.kns` identity, signing and release workflows. Personal features from the previous `main` are re-implemented separately (`features.md`); see `docs/komikun-foundation-progress.md`.
 - Fixed the database upgrade of fresh-installed Komikku databases through migration 49 (`mangas_categories.last_modified_at` missing).
+- Imported Komi-kun's SyncYomi fixes: category tabs no longer flicker or lose the selection on restore, a confirmed force-push repair for devices whose sync versions fell behind, and restored chapter metadata (title, number, scanlator, fetch date) on existing chapters.
 
 ### Added
 - [Hikka](https://hikka.io/) tracker support ([@Lorg0n](https://github.com/Lorg0n)) ([#1386](https://github.com/mihonapp/mihon/pull/1386))

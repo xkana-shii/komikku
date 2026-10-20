@@ -77,12 +77,14 @@ Markers record where code first diverged, so the tree can still be diffed agains
 ## Foundation integration (Oct 2026)
 
 The foundation branch was built from Komikku `master` `1656575e8f` plus Komi-kun `master`
-`2c6743696d` (24 of its 31 non-merge commits picked with `-x`; branding, icon, nightly-release, MAL
+`2c6743696d` (26 of its 31 non-merge commits picked with `-x`; branding, icon, nightly-release, MAL
 OAuth client and its release-notes workflow commit not imported), followed by `KNS` commits for the
 application identity, CI/release infrastructure, a migration fix for fresh-installed Komikku
 databases (`49.sqm`) and documentation. Komikku's own commits after the shared base are all
 represented by Komi-kun equivalents, except two MangaDex-cover reverts (`c10081a5d6`, `411523a2a0`)
-that conflict with Komi-kun's `NetworkHelper` and stay pending. Full record:
+that conflict with Komi-kun's `NetworkHelper` and stay pending. A follow-up batch picked Komi-kun
+`eece71d0e3`, `a52730100f` and `6611a4dbb5` (category-tab restore, SyncYomi force-push repair, chapter
+metadata restore) and skipped the OpenCode PR-review workflow `9853e52eb3`. Full record:
 [`docs/komikun-foundation-progress.md`](docs/komikun-foundation-progress.md).
 
 > The sections below are carried over from Komi-kun's `FORK.md`. "The fork" there means Komi-kun,

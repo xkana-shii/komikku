@@ -17,10 +17,17 @@ migrated from the old `main`; they will be re-implemented one by one from `featu
 | Old personal `main` (= `origin/main` at start) | `main` | `0ff967c77feab85bc77b91f1350bb789264388e9` |
 | Permanent backup of it | `backup/pre-komikun-foundation-20261020` | `0ff967c77feab85bc77b91f1350bb789264388e9` |
 | Official Komikku | `komikku/master` (komikku-app/komikku) | `1656575e8fdaaef010c652f9758130c2a01d8890` |
-| Komi-kun | `komikun/master` (komi-kun/komi-kun) | `2c6743696d745e25703822f82cf74f96a45bc61b` |
+| Komi-kun (initial integration) | `komikun/master` (komi-kun/komi-kun) | `2c6743696d745e25703822f82cf74f96a45bc61b` |
+| Komi-kun (follow-up batch, fetched 2026-10-20) | `komikun/master` | `9215170d59b7bd99c5f9fca4396ebe314f66efa2` |
 | Komikku/Komi-kun merge base | — | `43e92b62949a33a672f16a6a084f86c54b6e7f10` |
 | Mihon (cherry-pick log only) | `mihon/main` | `487c313d31ae9cf746a5d324550fdbae5f6c7b99` |
 | TachiyomiSY (cherry-pick log only) | `tachiyomiSY/master` | `5a469745d39e8f8cea9a1669bea6108cd71dc951` |
+
+> **SHA note:** after the initial integration the branch's committer identity was rewritten
+> (`git filter-branch`; old tip `020bdb4899`, new tip `775f85b9ef`, identical tree). Integration and
+> `KNS` SHAs in the tables below that predate the follow-up batch are the **pre-rewrite** values; find
+> the current commit by title (`git log --oneline --grep='<title>' codex/komikun-foundation`).
+> `cherrypick_log.md` is regenerated and shows the current SHAs.
 
 Integration branch: **`codex/komikun-foundation`**, created from `komikku/master` `1656575e8f` (not
 from the old `main`). The old `main` is untouched; nothing from it was merged or cherry-picked.
@@ -70,6 +77,29 @@ names, README, `bump_version.sh`/`bump.yml`, `features.md`).
 
 26 of 31 non-merge commits imported; all picks after the first applied without conflicts.
 
+### Follow-up batch (Komi-kun after `2c6743696d`)
+
+Five newer commits were reviewed on 2026-10-20 (`2c6743696d..9215170d59`). Three functional ones were
+picked with `git cherry-pick -x` onto `775f85b9ef`, in upstream order:
+
+| Komi-kun | Integration | Title |
+|----------|-------------|-------|
+| `eece71d0e3` | `b152f459a2` | Sync: stop category tabs flickering and losing the selection on restore (single-transaction `restoreCategories`, pager realigned by category id, `CategoryRepositoryRestoreTest`) |
+| `a52730100f` | `c93caf330b` | Sync: user-confirmed force-push repair for stale SyncYomi v2 devices (resumable `forcePushPending`, disabled sections preserved from the server snapshot, version-winner chapter merge; `SyncForcePushTest`, `SyncSettingsTest`) |
+| `6611a4dbb5` | `a3ccc29298` | Sync: restore chapter metadata (name, scanlator, number, fetch date) on existing chapters; ordinary restores keep the local fetch date (`RestoreRepositoryChapterMetadataTest`) |
+
+All three applied without conflicts. The only file they touched that carries a `KNS` delta
+(`i18n-kmk/.../base/strings.xml`) auto-merged with the delta unchanged; every other touched file is
+byte-identical to Komi-kun's. No `.sqm` was added (only `.sq` queries changed), so the schema version
+stays 56. No compatibility commit was needed.
+
+Not imported from this batch:
+
+| Komi-kun | Status | Reason |
+|----------|--------|--------|
+| `9853e52eb3` | `X` (skipped) | OpenCode automated PR-review workflow (`.github/workflows/opencode_review.yml`, its script/config and docs) — Komi-kun repository infrastructure, not app functionality; this fork's workflows stay unchanged. |
+| `9215170d59` | pending | Backup restore: feed identity and extension-store metadata merge (+ tests). Published after the requested batch; not imported pending a maintainer decision. |
+
 ## Skipped Komi-kun commits
 
 | Komi-kun | Reason |
@@ -80,6 +110,7 @@ names, README, `bump_version.sh`/`bump.yml`, `features.md`).
 | `64fb7b9bf5` | Komikun launcher icon. |
 | `17a11a16f9` | Switches MyAnimeList to Komi-kun's own OAuth client (`komikun://` redirect) and drops tokens from other clients, which would log existing users out. Komikku's client is kept. |
 | `6dd80a5155` | Merge commit; its content (`fe52935fe8`, `67f981e197`) was picked individually. |
+| `9853e52eb3` | OpenCode automated PR-review workflow (follow-up batch, see above). |
 
 These rows are marked `X` with notes in `cherrypick_log.md`.
 
@@ -218,6 +249,14 @@ git diff --check
 
 The Komi-kun code itself was built and tested by Komi-kun's CI; the risk added here is limited to the
 `KNS` commits (identity strings/ids, `getGithubRepo`, comment-only changes, `49.sqm`, the new test).
+
+### Local Gradle validation (follow-up batch, 2026-10-20, Windows, JDK 21)
+
+Run on `codex/komikun-foundation` after the three picks; every task exited 0:
+`spotlessApply` (no changes), `spotlessCheck`, `:data:generateSqlDelightInterface`,
+`:data:verifyDebugDatabaseMigration`, `testDebugUnitTest` (app 155, data 30, domain 119 tests; 0
+failures; 1 pre-existing `@Disabled` `Tester.stripBackup`), `assembleDebug`, `assembleRelease`
+(debug-key signing), `git diff --check`. This also covers the earlier "not yet run" list above.
 
 ## External follow-ups
 
