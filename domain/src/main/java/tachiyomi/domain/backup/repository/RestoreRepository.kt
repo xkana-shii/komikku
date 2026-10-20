@@ -21,6 +21,12 @@ interface RestoreRepository {
         // KMK/SY <--
         // KUN -->
         restoreCategories: Boolean = true,
+        // Epoch seconds of the upload snapshot, or null to leave local chapters alone. When set,
+        // the incoming chapter list is authoritative as of that instant: local chapters missing
+        // from it are deleted, except chapters created at or after the snapshot. An empty list is
+        // authoritative too (every chapter was deleted), so the caller must only set this for a
+        // complete SyncYomi v2 response.
+        removeMissingChaptersBefore: Long? = null,
         // KUN <--
         update: suspend (Manga) -> MangaUpdate,
     )

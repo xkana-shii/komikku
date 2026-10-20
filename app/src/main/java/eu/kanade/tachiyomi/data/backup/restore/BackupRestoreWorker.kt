@@ -62,12 +62,21 @@ class BackupRestoreWorker(private val context: Context, workerParams: WorkerPara
         // KMK <--
 
         val isSync = inputData.getBoolean(SYNC_KEY, false)
+        // KUN -->
+        val removeMissingChaptersBefore = inputData.getLong(REMOVE_MISSING_CHAPTERS_BEFORE_KEY, 0L).takeIf { it > 0 }
+        // KUN <--
 
         setForegroundSafely()
 
         return try {
             withContext(Dispatchers.IO) {
-                backupRestorerFactory.create(notifier = notifier, isSync = isSync).restore(uri, options)
+                backupRestorerFactory.create(
+                    notifier = notifier,
+                    isSync = isSync,
+                    // KUN -->
+                    removeMissingChaptersBefore = removeMissingChaptersBefore,
+                    // KUN <--
+                ).restore(uri, options)
             }
             Result.success()
         } catch (e: Exception) {
@@ -111,9 +120,14 @@ class BackupRestoreWorker(private val context: Context, workerParams: WorkerPara
             uri: Uri,
             options: RestoreOptions,
             sync: Boolean = false,
+            // KUN -->
+            removeMissingChaptersBefore: Long? = null,
+            // KUN <--
         ) {
             // SY -->
-            enqueue(workManager, uri, options, sync)
+            // KUN -->
+            enqueue(workManager, uri, options, sync, removeMissingChaptersBefore)
+            // KUN <--
             // SY <--
         }
 
@@ -130,8 +144,13 @@ class BackupRestoreWorker(private val context: Context, workerParams: WorkerPara
             uri: Uri,
             options: RestoreOptions,
             sync: Boolean = false,
+            // KUN -->
+            removeMissingChaptersBefore: Long? = null,
+            // KUN <--
         ): Boolean {
-            val request = enqueue(context.workManager, uri, options, sync)
+            // KUN -->
+            val request = enqueue(context.workManager, uri, options, sync, removeMissingChaptersBefore)
+            // KUN <--
             val own = context.workManager.getWorkInfoByIdFlow(request.id)
                 .first { it == null || it.state.isFinished }
             if (own != null) {
@@ -147,11 +166,17 @@ class BackupRestoreWorker(private val context: Context, workerParams: WorkerPara
             uri: Uri,
             options: RestoreOptions,
             sync: Boolean,
+            // KUN -->
+            removeMissingChaptersBefore: Long?,
+            // KUN <--
         ): OneTimeWorkRequest {
             val inputData = workDataOf(
                 LOCATION_URI_KEY to uri.toString(),
                 SYNC_KEY to sync,
                 OPTIONS_KEY to options.asBooleanArray(),
+                // KUN -->
+                REMOVE_MISSING_CHAPTERS_BEFORE_KEY to (removeMissingChaptersBefore ?: 0L),
+                // KUN <--
             )
             val request = OneTimeWorkRequestBuilder<BackupRestoreWorker>()
                 .addTag(TAG)
@@ -177,3 +202,6 @@ private const val TAG = "BackupRestore"
 private const val LOCATION_URI_KEY = "location_uri" // String
 private const val SYNC_KEY = "sync" // Boolean
 private const val OPTIONS_KEY = "options" // BooleanArray
+// KUN -->
+private const val REMOVE_MISSING_CHAPTERS_BEFORE_KEY = "remove_missing_chapters_before" // Long (epoch seconds, 0 = disabled)
+// KUN <--

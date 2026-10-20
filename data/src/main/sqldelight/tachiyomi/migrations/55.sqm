@@ -1,0 +1,85 @@
+-- KUN -->
+-- Bring a migrated database in line with the fresh schema. The manga/chapter/manga_track
+-- triggers were edited in the .sq files without a matching migration, which made
+-- `verifyDebugDatabaseMigration` fail: a fresh install and an upgraded one ended with different
+-- trigger bodies (and upgraded installs were missing the insert/manga_track triggers entirely).
+--
+-- This only recreates triggers; no table or column changes. Keep these definitions byte-for-byte
+-- equivalent to manga.sq, chapter.sq and manga_track.sq.
+DROP TRIGGER IF EXISTS update_last_modified_at_mangas;
+
+CREATE TRIGGER update_last_modified_at_mangas
+AFTER UPDATE ON manga
+FOR EACH ROW
+WHEN new.is_syncing = 0 AND old.is_syncing = 0 AND new.last_modified_at IS old.last_modified_at
+BEGIN
+  UPDATE manga
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+DROP TRIGGER IF EXISTS insert_last_favorited_at_mangas;
+
+CREATE TRIGGER insert_last_favorited_at_mangas
+AFTER INSERT ON manga
+WHEN new.user_favorite_at IS NOT NULL AND new.favorite_modified_at IS NULL
+BEGIN
+  UPDATE manga
+  SET favorite_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+DROP TRIGGER IF EXISTS update_manga_version;
+
+CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
+BEGIN
+    UPDATE manga SET version = version + 1
+    WHERE id = new.id AND new.is_syncing = 0 AND (
+        new.remote_url != old.remote_url OR
+        new.remote_description != old.remote_description OR
+        new.user_favorite_at IS NOT old.user_favorite_at OR
+        new.user_reader_flags != old.user_reader_flags OR
+        new.user_chapter_flags != old.user_chapter_flags OR
+        new.user_notes != old.user_notes
+    );
+END;
+
+DROP TRIGGER IF EXISTS update_last_modified_at_chapters;
+
+CREATE TRIGGER update_last_modified_at_chapters
+AFTER UPDATE ON chapter
+FOR EACH ROW
+WHEN new.is_syncing = 0 AND old.is_syncing = 0 AND new.last_modified_at IS old.last_modified_at
+BEGIN
+  UPDATE chapter
+  SET last_modified_at = strftime('%s', 'now')
+  WHERE id = new.id;
+END;
+
+DROP TRIGGER IF EXISTS insert_manga_track_update_version;
+
+CREATE TRIGGER insert_manga_track_update_version AFTER INSERT ON manga_track
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = new.manga_id AND (SELECT is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+
+DROP TRIGGER IF EXISTS update_manga_track_update_version;
+
+CREATE TRIGGER update_manga_track_update_version AFTER UPDATE ON manga_track
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = new.manga_id AND (SELECT is_syncing FROM manga WHERE id = new.manga_id) = 0;
+END;
+
+DROP TRIGGER IF EXISTS delete_manga_track_update_version;
+
+CREATE TRIGGER delete_manga_track_update_version AFTER DELETE ON manga_track
+BEGIN
+    UPDATE manga
+    SET version = version + 1
+    WHERE id = old.manga_id AND (SELECT is_syncing FROM manga WHERE id = old.manga_id) = 0;
+END;
+-- KUN <--

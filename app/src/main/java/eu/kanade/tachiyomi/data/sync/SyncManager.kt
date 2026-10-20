@@ -241,7 +241,12 @@ class SyncManager(
         // KUN <--
         // SY <--
 
-        val (filteredFavorites, nonFavorites) = filterFavoritesAndNonFavorites(remoteBackup)
+        // KUN -->
+        // A v2 response carries each manga's complete chapter list, so a local chapter missing
+        // from it was deleted elsewhere and counts as a change to restore.
+        val completeChapterList = result.protocolV2 && syncOptions.chapters
+        // KUN <--
+        val (filteredFavorites, nonFavorites) = filterFavoritesAndNonFavorites(remoteBackup, completeChapterList)
         updateNonFavorites(nonFavorites)
         // SY -->
         // the restore below may not run, so its reset of the sync flag cannot be relied on
@@ -380,6 +385,12 @@ class SyncManager(
                     savedSearchesFeeds = syncOptions.savedSearchesFeeds,
                     // KMK <--
                 ),
+                // KUN -->
+                // Drop local chapters that the v2 server no longer returns (tombstoned there).
+                // Chapters added after this snapshot survive; the restorer also skips everything
+                // when library entries are disabled, before it ever reaches this call.
+                removeMissingChaptersBefore = syncStart.takeIf { completeChapterList },
+                // KUN <--
             )
             // SY <--
             if (applied) {
@@ -466,7 +477,11 @@ class SyncManager(
     }
     // SY <--
 
-    private suspend fun isMangaDifferent(localManga: Manga, remoteManga: BackupManga): Boolean {
+    private suspend fun isMangaDifferent(
+        localManga: Manga,
+        remoteManga: BackupManga,
+        completeChapterList: Boolean,
+    ): Boolean {
         val localChapters = chapterRepository
             .getChapterByMangaId(localManga.id, applyFilter = false)
         val localCategories = getCategories.await(localManga.id).map { it.order }
@@ -477,7 +492,7 @@ class SyncManager(
         }
         // KUN <--
 
-        if (areChaptersDifferent(localChapters, remoteManga.chapters)) {
+        if (areChaptersDifferent(localChapters, remoteManga.chapters, completeChapterList)) {
             return true
         }
 
@@ -495,11 +510,22 @@ class SyncManager(
     }
 
     // KUN -->
-    private fun areChaptersDifferent(localChapters: List<Chapter>, remoteChapters: List<BackupChapter>): Boolean {
-        if (remoteChapters.isEmpty()) {
+    private fun areChaptersDifferent(
+        localChapters: List<Chapter>,
+        remoteChapters: List<BackupChapter>,
+        // A v2 response carries the manga's complete chapter list, so a local chapter that is
+        // missing from it was deleted on another device.
+        completeChapterList: Boolean,
+    ): Boolean {
+        if (!completeChapterList && remoteChapters.isEmpty()) {
             return false
         }
         val localChapterMap = localChapters.associateBy { it.url }
+        val remoteChapterUrls = remoteChapters.mapTo(mutableSetOf()) { it.url }
+
+        if (completeChapterList && missingRemoteChapterUrls(localChapterMap.keys, remoteChapterUrls).isNotEmpty()) {
+            return true
+        }
 
         for (remoteChapter in remoteChapters) {
             val localChapter = localChapterMap[remoteChapter.url]
@@ -526,7 +552,12 @@ class SyncManager(
      * @return a Pair of lists, where the first list contains different favorite manga
      * and the second list contains non-favorite manga.
      */
-    private suspend fun filterFavoritesAndNonFavorites(backup: Backup): Pair<List<BackupManga>, List<BackupManga>> {
+    private suspend fun filterFavoritesAndNonFavorites(
+        backup: Backup,
+        // KUN -->
+        completeChapterList: Boolean,
+        // KUN <--
+    ): Pair<List<BackupManga>, List<BackupManga>> {
         val favorites = mutableListOf<BackupManga>()
         val nonFavorites = mutableListOf<BackupManga>()
         val logTag = "filterFavoritesAndNonFavorites"
@@ -555,7 +586,9 @@ class SyncManager(
                             localFavTime != null &&
                             (remoteFavTime == null || localFavTime > remoteFavTime)
 
-                        if (!localUnfavoritedMoreRecently && (localManga == null || isMangaDifferent(localManga, remoteManga))) {
+                        if (!localUnfavoritedMoreRecently &&
+                            (localManga == null || isMangaDifferent(localManga, remoteManga, completeChapterList))
+                        ) {
                             logcat(LogPriority.DEBUG, logTag) { "Adding to favorites: ${remoteManga.title}" }
                             favorites.add(remoteManga)
                         } else {

@@ -45,6 +45,18 @@ internal fun chapterTombstoneKey(sourceId: Long, mangaUrl: String, chapterUrl: S
 
 // KUN -->
 /**
+ * Chapters missing from a complete remote chapter list. A SyncYomi v2 response carries each
+ * manga's complete (remaining) chapter list, so a local chapter absent from it was tombstoned on
+ * the server by another device.
+ */
+internal fun missingRemoteChapterUrls(
+    localUrls: Collection<String>,
+    remoteUrls: Collection<String>,
+): Set<String> = localUrls.filterNotTo(mutableSetOf()) { it in remoteUrls }
+// KUN <--
+
+// KUN -->
+/**
  * Merges local and remote categories for a sync restore.
  *
  * In SyncYomi protocol v2, [remote] is a delta of changed/new categories (often empty when categories

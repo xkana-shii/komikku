@@ -115,6 +115,18 @@ class SyncDeltaTest {
 
     // KUN -->
     @Test
+    fun `a complete remote chapter list marks local-only chapters as removed`() {
+        assertEquals(
+            setOf("/c2"),
+            missingRemoteChapterUrls(listOf("/c1", "/c2"), listOf("/c1")),
+        )
+        assertEquals(
+            emptySet<String>(),
+            missingRemoteChapterUrls(listOf("/c1"), listOf("/c1", "/c2")),
+        )
+    }
+
+    @Test
     fun `mergeSyncCategories preserves local categories when v2 delta is empty`() {
         val local = listOf(
             BackupCategory(name = "Reading", order = 0, uid = 1),

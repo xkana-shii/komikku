@@ -73,6 +73,38 @@ class MangaRestorerTest {
     }
 
     @Test
+    fun `restore forwards the chapter pruning snapshot to the repository`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        restorer.removeMissingChaptersBefore = 1_000L
+        coEvery { getCategories.await() } returns emptyList()
+
+        coEvery {
+            restoreRepository.restoreManga(
+                any(),
+                isSync = true,
+                restoreCategories = true,
+                removeMissingChaptersBefore = 1_000L,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(BackupManga(url = "/test/1", title = "Test Manga")),
+            backupCategories = emptyList(),
+        )
+
+        coVerify(exactly = 1) {
+            restoreRepository.restoreManga(
+                any(),
+                isSync = true,
+                restoreCategories = true,
+                removeMissingChaptersBefore = 1_000L,
+                update = any(),
+            )
+        }
+    }
+
+    @Test
     fun `restore leaves categoryIds empty and passes restoreCategories false when disabled`() = runTest {
         val restorer = createRestorer(isSync = true)
         val dbCategories = listOf(

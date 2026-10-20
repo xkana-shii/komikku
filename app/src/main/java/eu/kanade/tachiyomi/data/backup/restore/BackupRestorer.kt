@@ -56,6 +56,9 @@ import kotlin.concurrent.atomics.incrementAndFetch
 class BackupRestorer(
     @Assisted private val notifier: BackupNotifier,
     @Assisted private val isSync: Boolean,
+    // KUN -->
+    @Assisted private val removeMissingChaptersBefore: Long?,
+    // KUN <--
     private val context: Context,
     private val downloadCache: DownloadCache,
     private val categoriesRestorer: CategoriesRestorer,
@@ -75,7 +78,13 @@ class BackupRestorer(
 
     @AssistedFactory
     fun interface Factory {
-        fun create(notifier: BackupNotifier, isSync: Boolean): BackupRestorer
+        fun create(
+            notifier: BackupNotifier,
+            isSync: Boolean,
+            // KUN -->
+            removeMissingChaptersBefore: Long?,
+            // KUN <--
+        ): BackupRestorer
     }
 
     private var restoreAmount = 0
@@ -87,6 +96,9 @@ class BackupRestorer(
         mangaRestorer.isSync = isSync
         categoriesRestorer.isSync = isSync
         // SY <--
+        // KUN -->
+        mangaRestorer.removeMissingChaptersBefore = removeMissingChaptersBefore
+        // KUN <--
     }
 
     /**
