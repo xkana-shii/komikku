@@ -1,7 +1,7 @@
 name: Release Builder
-# Build a bleeding-edge release on a tag v* newly pushed.
-# This fork has no stable channel: every release is a prerelease and the newest
-# build is the one users get.
+# Build a release on a tag v* newly pushed.
+# xkana-shii/komikku: the v* tag is created by bump.yml; releases are published as
+# regular (non-prerelease) releases.
 
 on:
   push:
@@ -27,6 +27,7 @@ jobs:
       PREV_RELEASE_SHA: ${{ steps.previous_commit.outputs.PREV_RELEASE_SHA }}
       COMMIT_LOGS: ${{ steps.commit_logs.outputs.COMMIT_LOGS }}
       PREV_TAG_NAME: ${{ steps.previous_commit.outputs.PREV_TAG_NAME }}
+      CHANGELOG_MD: ${{ steps.changelog.outputs.CHANGELOG_MD }}
     steps:
       - name: Get tag name (${{ github.ref }})
         id: get_tag
@@ -45,9 +46,7 @@ jobs:
         uses: InsonusK/get-latest-release@7a9ff16c8c6b7ead5d71c0f1cc61f2703170eade # v1.1.0
         with:
           myToken: ${{ github.token }}
-          # Only exclude drafts: every published release here is a prerelease, so
-          # excluding prereleases would find no "previous release" at all.
-          exclude_types: "draft"
+          exclude_types: "draft|prerelease"
           view_top: 1
 
       - name: Curren commit
@@ -77,15 +76,20 @@ jobs:
           echo "PREV_TAG_NAME=${{ steps.last_release.outputs.tag_name }}"
           echo "PREV_TAG_NAME=${{ steps.last_release.outputs.tag_name }}" >> $GITHUB_OUTPUT
 
-      - name: Commit logs
-        id: commit_logs
+      # xkana-shii/komikku: no commit-log scrape of the compare API (release notes are written by hand).
+
+      # Adapted from Komi-kun bf9ab9f1ef: build the changelog link here so the first release
+      # (no previous tag) links to its release page instead of compare/<empty>...<tag>.
+      - name: Full changelog link
+        id: changelog
         run: |
-          echo "COMMIT_LOGS<<{delimiter}
-          $(curl -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/komi-kun/komi-kun/compare/${{ steps.previous_commit.outputs.PREV_RELEASE_SHA }}...${{ steps.current_commit.outputs.CURRENT_SHA }}" \
-            | jq '[.commits[]|{message:(.commit.message | split("\n")), username:.author.login}]' \
-            | jq -r '.[]|"- \(.message | first) (@\(.username))"')
-          {delimiter}" >> $GITHUB_OUTPUT
+          prev="${{ steps.previous_commit.outputs.PREV_TAG_NAME }}"
+          tag="${{ steps.get_tag.outputs.VERSION_TAG }}"
+          if [ -n "$prev" ]; then
+            echo "CHANGELOG_MD=**Full Changelog**: [xkana-shii/komikku@$prev...$tag](https://github.com/xkana-shii/komikku/compare/$prev...$tag)" >> "$GITHUB_OUTPUT"
+          else
+            echo "CHANGELOG_MD=**Full Changelog**: [xkana-shii/komikku@$tag](https://github.com/xkana-shii/komikku/releases/tag/$tag)" >> "$GITHUB_OUTPUT"
+          fi
 
   build-app:
     name: Build release app
@@ -139,7 +143,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        run: ./gradlew assembleRelease -Pdist=github ${{ steps.opt_secrets.outputs.telemetry_flag }}
+        run: ./gradlew assembleRelease -Pdist=github ${{ steps.opt_secrets.outputs.telemetry_flag }} -PdevSecret="${{ secrets.DEV_SECRETS }}"
         env:
           storeFileBase64: ${{ secrets.SIGNING_KEY }}
           storePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -189,7 +193,7 @@ jobs:
           tag_name: ${{ needs.prepare-build.outputs.VERSION_TAG }}
           name: Komikku ${{ needs.prepare-build.outputs.VERSION_TAG }}
           body: |
-            [![GitHub downloads](https://img.shields.io/github/downloads/komi-kun/komi-kun/${{ needs.prepare-build.outputs.VERSION_TAG }}/total?label=Downloaded&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/komi-kun/komi-kun/releases/${{ needs.prepare-build.outputs.VERSION_TAG }})
+            [![GitHub downloads](https://img.shields.io/github/downloads/xkana-shii/komikku/${{ needs.prepare-build.outputs.VERSION_TAG }}/total?label=Downloaded&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/xkana-shii/komikku/releases/tag/${{ needs.prepare-build.outputs.VERSION_TAG }})
             #### What's Changed
             ##### New
 
@@ -201,7 +205,7 @@ jobs:
 
             ##### Based on
 
-            **Full Changelog**: [komi-kun/komi-kun@${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }}](https://github.com/komi-kun/komi-kun/compare/${{ needs.prepare-build.outputs.PREV_TAG_NAME }}...${{ needs.prepare-build.outputs.VERSION_TAG }})
+            ${{ needs.prepare-build.outputs.CHANGELOG_MD }}
 
             <!-->
             > [!TIP]
@@ -213,11 +217,6 @@ jobs:
             Komikku-armeabi-v7a-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
             Komikku-x86-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
             Komikku-x86_64-${{ needs.prepare-build.outputs.VERSION_TAG }}.apk
-          # Bleeding-edge fork: publish (non-draft, so users actually see it and the
-          # updater can offer it) as a prerelease. GitHub forbids marking a prerelease
-          # as "latest" ("Latest release cannot be draft or prerelease"), so
-          # `make_latest: true` is intentionally omitted; the in-app updater lists
-          # all releases and offers the newest one instead.
           draft: false
-          prerelease: true
+          prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
