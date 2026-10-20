@@ -1,7 +1,7 @@
 # Komikku Fork — Fork-Specific Features and Changes (Mihon/TachiyomiSY Imports Excluded)
 
 **Project:** xkana-shii/komikku
-**Purpose:** Detailed specification of the fork-specific behavior to retain or rebuild in Komi-kun, excluding identifiable direct Mihon and TachiyomiSY cherry-picks and their dependent adjustments.
+**Purpose:** Detailed specification of fork-specific behavior to retain or rebuild **on top of the existing Komi-kun integration, without removing or regressing any behavior already brought over by Komi-kun commits**. Identifiable Mihon/TachiyomiSY cherry-picks are omitted only from the list of work to import.
 **Basis:** The two supplied audits, `2features.md` and `features(2).md`, comparing the fork's `main` with official Komikku as of **19 October 2026**.
 
 ## How to read this document
@@ -15,7 +15,34 @@ The source audits examined **730 differing tracked paths** and included **1,218 
 - **Historical / verify before porting:** mentioned in the commit history, but the audits did not establish that the complete behavior survives in the final tree.
 - **Removed / superseded:** an older implementation or option was removed, replaced, or explicitly reverted. It must not automatically be restored as a separate feature.
 
-This document covers **fork-specific differences with identified Mihon/TachiyomiSY cherry-picks removed**. It does not repeat every normal feature shared unchanged with official Komikku. When integrating with Komi-kun, preserve its own existing functions as well; **add the missing fork behaviors rather than replacing Komi-kun's newer implementations with older ones**.
+This document covers **fork-specific differences with identified Mihon/TachiyomiSY cherry-picks omitted from the import requirements**. It does not repeat every normal feature shared unchanged with official Komikku. **Nothing omitted from this document is authorized to be removed from Komi-kun.** The destination is the **actual current local integration branch**, including all Komi-kun commits already brought over and any subsequent local fixes, not the older original Komikku fork or an earlier recorded integration HEAD. **Add only missing fork-specific behavior while preserving the full set of existing Komi-kun behaviors.**
+
+---
+
+## Mandatory preservation contract — Komi-kun integration
+
+**Non-negotiable:** The Komi-kun features and behavioral changes already integrated into the target branch are **existing functionality**, not disposable scaffolding. This document is an **additive parity checklist for the fork**, never instructions to rebuild Komi-kun from scratch, roll back imported commits, or make the target match an older fork snapshot by subtracting features.
+
+- **Start from the real integration state.** Inspect the actual current local branch, HEAD, index, and working tree before changing anything. The Komi-kun integration may include later commits, conflict resolutions, and validation fixes after the previously documented integration range. Treat **all of those changes**, not merely the original Komi-kun source tip or an old checkpoint, as the starting baseline.
+- **Preserve every Komi-kun-origin behavior already brought over.** Keep existing features, interactions, settings, defaults, state transitions, persistence semantics, navigation, network behavior, reader and chapter handling, extension/source compatibility, tracking, downloads, backup/restore, synchronization, performance safeguards, and previous bug fixes. Do not restrict preservation to items explicitly named in this fork-focused document.
+- **Do not reverse or drop previous integration work.** Do not reset the integration branch to an older Komikku or Komi-kun revision; revert, overwrite, or silently bypass existing integrated functionality; or replace entire modules/files with older fork versions merely because they implement the same feature name. Do not discard uncommitted local work.
+- **Cherry-pick exclusion is not a removal instruction.** Excluding a Mihon/TachiyomiSY-origin feature here means **do not independently re-port it from this fork**. If it already exists in Komi-kun or in the current integration, **keep it as-is**, including its required supporting changes and fixes. The same rule applies to features that are not listed because they were unchanged in official Komikku.
+- **Build on existing implementations.** Before importing any requested behavior, determine whether the current integration already provides it. If fully present, retain it without duplicating it. If partially present, add only the missing behavior. If its semantics differ, reconcile them deliberately without dropping existing use cases, settings, capabilities, or data compatibility.
+- **Feature completeness includes all layers.** Preserve the existing implementation's user interaction, background work, state management, business rules, storage, migrations, backup/restore, synchronization, source/tracker integrations, and error handling. A newer screen that looks correct is not a replacement if it loses behavior behind the screen.
+- **Merges must preserve both sides.** When a fork requirement and existing Komi-kun behavior touch the same area, implement a compatible union wherever feasible. Do not resolve conflicts by keeping the fork version wholesale and deleting Komi-kun handling, or by retaining Komi-kun while silently omitting a required fork enhancement. If requirements are genuinely incompatible, record the conflict and seek an explicit choice instead of unilaterally removing either behavior.
+- **Do not equate absence from this document with absence from the application.** The detailed sections describe what to add from this fork. They are not an exhaustive catalogue of Komi-kun's features and must not be used as a deletion whitelist.
+- **Protect migrations and existing data.** Retain all schema/data compatibility required by the current integration, including Komi-kun's added persistence models, when adding category, bookmark, blacklist, reader, feed, tracker, or sync changes. Existing user data must not be invalidated to make an older implementation fit.
+- **Regression-test the current integration, not just the imported feature.** Before modifying each subsystem, identify its existing Komi-kun behavior and tests; after modification, verify both those established behaviors and the new fork requirements. Passing a build alone is not proof of preservation.
+
+### Required decision process for each feature below
+
+1. **Already present and correct in the current integration:** leave its existing implementation and behavior intact; do not duplicate or overwrite it.
+2. **Present, but missing a fork-specific detail:** extend the existing implementation and test both old and newly added behavior.
+3. **Not present:** add the behavior using the current integration's architecture and compatible data model.
+4. **Potentially conflicting:** compare real user-visible behavior and dependencies; preserve the Komi-kun behavior while designing a compatible addition. Never silently treat a conflict as permission to remove an existing feature.
+5. **Excluded as a Mihon/TachiyomiSY import:** do not use this file to request another import, and **do not remove, disable, downgrade, or refactor away** the implementation already present in Komi-kun.
+
+**Meaning of “removed,” “replaced,” or “superseded” elsewhere in this file:** these words describe the fork's historical evolution. They **do not** authorize deleting an unrelated or more capable feature currently present in the Komi-kun integration. A retired fork implementation can remain retired while its equivalent or successor in Komi-kun stays fully functional.
 
 ---
 
@@ -704,16 +731,18 @@ These historical changes are not all demonstrated in the pinned final tree. Inve
 
 ## 25. Fork-specific removed or replaced behavior
 
-- **Fillermark UI:** Legacy Fillermarks are migrated into the fork's chapter blacklist/colored-bookmark model rather than reinstated as a separate permanent feature.
-- **Old SY-style auto-scroll UI:** The fork's later reader automation replaces obsolete legacy controls. The imported WebGPU renderer and its adaptation are not requirements in this filtered specification.
-- **Experimental duplicate-management screen:** This historical work was reverted and is not equivalent to Smart Scanlator Merge.
+**Interpretation warning:** The items in this section describe historical replacements **inside the fork**. They are **not instructions to uninstall or disable** any corresponding features already provided by Komi-kun or brought over during its integration. Preserve the integrated behavior first, then migrate or adapt fork-specific data and interactions only where needed.
+
+- **Fillermark UI:** Legacy Fillermarks are migrated into the fork's chapter blacklist/colored-bookmark model rather than reinstated as a separate permanent fork feature. **Do not delete any existing Komi-kun markers, annotations, or equivalent behavior** without first ensuring that their user-visible function and existing data survive the combined implementation.
+- **Old SY-style auto-scroll UI:** The fork's later reader automation replaces obsolete legacy controls. The imported WebGPU renderer and its adaptation are not requirements to **re-port** in this filtered specification. **Preserve any existing Komi-kun reader, WebGPU, automation, and related controls**, and add only missing fork-specific behavior.
+- **Experimental duplicate-management screen:** This particular fork experiment was reverted and is not equivalent to Smart Scanlator Merge. This does **not** authorize removing a different duplicate-management capability already present in Komi-kun.
 - **Fork-specific migrations:** Preserve user data and relevant backward compatibility when replacing local behavior, without importing unrelated Mihon/SY database/decoder infrastructure.
 
 ---
 
 ## 26. Functional acceptance scenarios for the remaining fork-specific features
 
-These are observable behavior requirements, not directions to reapply upstream cherry-picks.
+These are observable behavior requirements, not directions to reapply upstream cherry-picks. **All scenarios are additive:** they must pass **alongside** the existing Komi-kun functionality, not at its expense.
 
 ### Categories
 
@@ -765,13 +794,18 @@ These are observable behavior requirements, not directions to reapply upstream c
 
 ## 27. Final integration rules
 
+**Priority:** Preserve the current Komi-kun integration and the behavior of all commits it already contains. Use this document to fill gaps from the fork, not to decide which existing Komi-kun features may be deleted.
+
 - **Use behavior as the contract.** The document intentionally does not dictate class names, source paths, cherry-pick order, or exact commits.
 - **Do not omit fork-specific small changes.** Interface details, settings defaults, loading/empty states and corrections remaining above are part of the desired parity. Imported upstream fixes were deliberately removed.
 - **Do not resurrect reverted experiments.** Historical-only material requires confirmation before being classified as an active feature.
 - **Preserve fork-owned dependencies together.** A feature is not complete if only its UI appears while storage, background workers, migration, tracking, backup and sync support are missing; keep the destination's existing Mihon/SY-equivalent infrastructure.
-- **Respect Komi-kun's existing features.** Keep its current architecture and implementations where possible. Do not cherry-pick Mihon/TachiyomiSY functionality merely because the fork once imported it; reproduce only missing fork-owned behavior.
-- **Never solve conflicts by deleting functional capabilities.** The desired result is the union of supported behavior, not a source-file overwrite that happens to build.
+- **Respect all existing Komi-kun features, especially previously imported commits.** Preserve the actual current local integration branch, all subsequent compatibility fixes, and every behavior those commits introduced. Keep its current architecture and implementations unless an explicitly behavior-preserving adaptation is necessary. Do not re-port Mihon/TachiyomiSY functionality just because the fork once imported it; **also never remove it if Komi-kun already contains it**. Implement only missing fork-owned behavior.
+- **Never solve conflicts by deleting functional capabilities.** The desired result is the union of supported Komi-kun behavior **including imported integration commits** plus missing fork-specific behavior, not a source-file overwrite that happens to build.
 - **Treat existing users' data as a compatibility requirement.** Older local databases and backups must migrate to the new combined application without silent data loss.
 - **Test observable behavior.** Passing compilation alone is insufficient; exercise the distinct category, blacklist, Smart Merge, tracking, reader, feed, restore, and performance regression cases.
+- **Audit the baseline before editing.** Inventory existing Komi-kun-specific feature paths and user flows in every touched subsystem; check for lost behavior and lost settings after each integration step.
+- **Keep new and old regression checks together.** Re-run any tests carried by the Komi-kun integration in addition to the fork-specific cases here. Test combined workflows (such as reader/navigation, chapter filtering, tracking, background updates, and backup/restore), not just isolated additions.
+- **No blind whole-file replacement.** Cherry-picked features may have introduced logic to files also changed by this fork. Merge at the behavior level, carrying forward both sides' code paths and supported configuration where necessary.
 
 **Evidence limitation:** This filtered inventory is based on the supplied audits and inspected upstream-origin records. Only identifiable Mihon/TachiyomiSY cherry-picks and their direct effects have been excluded; ambiguous mixed-origin items are retained or qualified instead of deleted on a guess. It does not claim complete line-by-line Git provenance for every historical commit. See the accompanying exclusion audit.
