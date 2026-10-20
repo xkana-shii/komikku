@@ -59,7 +59,15 @@ ALTER TABLE history_copy RENAME TO history;
 
 CREATE TABLE mangas_categories_copy AS
 SELECT _id, manga_id, category_id, last_modified_at
-FROM mangas_categories NOT INDEXED;
+FROM mangas_categories NOT INDEXED
+-- KNS -->
+-- Komikku creates mangas_categories without last_modified_at on a fresh install; only migration 28
+-- adds it to databases that upgraded through it. When the column exists it is the natural join key
+-- and its value comes from the left table; when it does not, the join has no key and the one-row
+-- subquery supplies 0.
+NATURAL LEFT JOIN (SELECT 0 AS last_modified_at)
+-- KNS <--
+;
 DROP TABLE mangas_categories;
 ALTER TABLE mangas_categories_copy RENAME TO mangas_categories;
 
