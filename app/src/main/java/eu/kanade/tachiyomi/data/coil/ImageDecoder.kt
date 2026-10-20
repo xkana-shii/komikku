@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import androidx.core.graphics.createBitmap
-import androidx.core.graphics.scale
 import ca.mpreg.imagedecoder.ImageDecoder
 import coil3.Canvas
 import coil3.Image
@@ -86,74 +85,45 @@ class ImageDecoder(
             }
         }
         // SY <--
-        val res = resources.source().use {
+        return resources.source().use {
             // KUN -->
             coverStream.use { cover ->
                 ImageDecoder.open(cover ?: it.inputStream()).use { dec ->
-                    DecodeResultImage(
-                        dec.decodeNext(),
-                        dec.isHdr,
-                        dec.hdrHeadroom,
-                        if (dec.hdrKind == ImageDecoder.HdrKind.GAINMAP) dec.getGainmap() else null,
+                    // Raw frame for custom rendering; sampling is the caller's.
+                    if (options.newDecoder) {
+                        return@use DecodeResult(
+                            image = DecodeResultImage(
+                                dec.decodeNext(),
+                                dec.isHdr,
+                                dec.hdrHeadroom,
+                                if (dec.hdrKind == ImageDecoder.HdrKind.GAINMAP) dec.getGainmap() else null,
+                            ),
+                            isSampled = false,
+                        )
+                    }
+
+                    // Shrunk while decoding. Sizes round up, so may be a pixel over BitmapFactory's.
+                    val sampleSize = DecodeUtils.calculateInSampleSize(
+                        srcWidth = dec.width,
+                        srcHeight = dec.height,
+                        dstWidth = options.size.widthPx(options.scale) { dec.width },
+                        dstHeight = options.size.heightPx(options.scale) { dec.height },
+                        scale = options.scale,
+                    )
+                    DecodeResult(
+                        image = dec.decodeToBitmap(null, sampleSize).asImage(),
+                        isSampled = sampleSize > 1,
                     )
                 }
             }
             // KUN <--
         }
-
-        val srcWidth = res.width
-        val srcHeight = res.height
-
-        // newDecoder path: caller wants the raw DecodeResult (e.g. for custom rendering).
-        // Hand it back as-is; sampling is the caller's responsibility.
-        if (options.newDecoder) {
-            return DecodeResult(
-                image = res,
-                isSampled = false,
-            )
-        }
-
-        // Normal path: produce a Bitmap scaled to the requested output size.
-        val dstWidth = options.size.widthPx(options.scale) { srcWidth }
-        val dstHeight = options.size.heightPx(options.scale) { srcHeight }
-        val sampleSize = DecodeUtils.calculateInSampleSize(
-            srcWidth = srcWidth,
-            srcHeight = srcHeight,
-            dstWidth = dstWidth,
-            dstHeight = dstHeight,
-            scale = options.scale,
-        )
-
-        // Copy RGBA pixels from the native buffer into a full-resolution bitmap.
-        // We must do this while `res` (and its native memory) is still alive.
-        // HDR frames are half-float RGBA.
-        val config = if (res.isHdr) Bitmap.Config.RGBA_F16 else Bitmap.Config.ARGB_8888
-        val fullBitmap = createBitmap(srcWidth, srcHeight, config)
-        res.image.rewind()
-        fullBitmap.copyPixelsFromBuffer(res.image)
-        res.frame.close()
-
-        // Downsample if needed. sampleSize is a power-of-two factor; the target
-        // dimensions are src / sampleSize, matching BitmapFactory inSampleSize behaviour.
-        val bitmap = if (sampleSize > 1) {
-            val scaledWidth = (srcWidth / sampleSize).coerceAtLeast(1)
-            val scaledHeight = (srcHeight / sampleSize).coerceAtLeast(1)
-            val scaled = fullBitmap.scale(scaledWidth, scaledHeight)
-            fullBitmap.recycle()
-            scaled
-        } else {
-            fullBitmap
-        }
-
-        return DecodeResult(
-            image = bitmap.asImage(),
-            isSampled = sampleSize > 1,
-        )
     }
 
     /**
      * Copies bands of rows straight from the native frame into strips, so the page never exists as
-     * one Java bitmap on top of the frame.
+     * one Java bitmap on top of the frame. The frame is decoded once, at the largest whole fraction
+     * still at least the strip width: per-strip regions would re-decode the rows above each.
      *
      * Strips keep the resolution a power-of-two sample size leaves, like the other paths, so zooming
      * in still shows the page's detail, unless that would make the page take more than
@@ -161,7 +131,27 @@ class ImageDecoder(
      */
     private suspend fun decodeStrips(): DecodeResult = stripDecodes.withPermit {
         val (frame, isHdr) = resources.source().use {
-            ImageDecoder.open(it.inputStream()).use { dec -> dec.decodeNext() to dec.isHdr }
+            ImageDecoder.open(it.inputStream()).use { dec ->
+                // Decode at the largest whole fraction that still leaves at least the view width.
+                // Border cropping happens after decoding, so this is based on the full frame width.
+                val bytesPerPixel = if (dec.isHdr) 8 else 4
+                val viewWidth = options.size.widthPx(options.scale) { dec.width }
+                val sampleSize = DecodeUtils.calculateInSampleSize(
+                    srcWidth = dec.width,
+                    srcHeight = dec.height,
+                    dstWidth = viewWidth,
+                    dstHeight = options.size.heightPx(options.scale) { dec.height },
+                    scale = options.scale,
+                )
+                val budgetWidth = sqrt(MAX_PAGE_BYTES.toDouble() / bytesPerPixel * dec.width / dec.height).toInt()
+                val stripWidth = maxOf(viewWidth, min(dec.width / sampleSize, budgetWidth))
+                    // Older GPUs can't draw a texture wider than this
+                    .coerceAtMost(MAX_STRIP_WIDTH)
+                    .coerceIn(1, dec.width)
+                // ceil(width / decodeSample) >= stripWidth: strips only scale down
+                val decodeSample = (dec.width / stripWidth).coerceAtLeast(1)
+                dec.decode(null, decodeSample) to dec.isHdr
+            }
         }
         frame.use {
             val config = if (isHdr) Bitmap.Config.RGBA_F16 else Bitmap.Config.ARGB_8888

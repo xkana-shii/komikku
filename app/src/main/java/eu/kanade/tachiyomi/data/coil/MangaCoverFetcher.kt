@@ -100,9 +100,9 @@ class MangaCoverFetcher(
      * Called each time a cover is displayed
      */
     override suspend fun fetch(): FetchResult {
-        // Use custom cover if exists
+        // Use custom cover if exists, which only library manga can have
         val useCustomCover = options.extras.getOrDefault(USE_CUSTOM_COVER_KEY)
-        if (useCustomCover) {
+        if (useCustomCover && isLibraryManga) {
             val customCoverFile = customCoverFileLazy.value
             if (customCoverFile.exists()) {
                 return fileLoader(customCoverFile)

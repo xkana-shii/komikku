@@ -421,11 +421,10 @@ open class BrowseSourceViewModel(
             val source = source ?: return@launch
             val favorite = !manga.favorite
             val update = if (manga.favorite) {
-                val coverLastModified = manga.removeCovers(coverCache).coverLastModified
+                manga.removeCovers(coverCache)
                 MangaUpdate(manga.id) {
                     this.favorite = false
                     dateAdded = null
-                    if (coverLastModified != manga.coverLastModified) this.coverLastModified = coverLastModified
                 }
             } else {
                 setMangaDefaultChapterFlags.await(manga)

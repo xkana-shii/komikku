@@ -706,6 +706,12 @@ class SyncManager(
             "pref_high_quality_renderer_key",
             "pref_display_profile_key",
             "pref_always_decode_long_strip_with_ssiv",
+            // WebGPU shaders are files in this device's filesDir; syncing their names would point
+            // the other device at files it does not have (prune() then deletes the entries).
+            "webgpu_image_filters",
+            "webgpu_tile_filters",
+            // Removed from the app; upgraded installs still carry the stale value.
+            "split_tall_images",
             // Form factor & device layout
             "tablet_ui_mode",
             "pref_library_columns_portrait_key",
