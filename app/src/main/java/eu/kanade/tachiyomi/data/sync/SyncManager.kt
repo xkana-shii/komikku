@@ -485,9 +485,11 @@ class SyncManager(
             return true
         }
 
-        if (localCategories.toSet() != remoteManga.categories.toSet()) {
+        // KUN -->
+        if (remoteManga.categories.isNotEmpty() && localCategories.toSet() != remoteManga.categories.toSet()) {
             return true
         }
+        // KUN <--
 
         return false
     }

@@ -62,6 +62,9 @@ class CategoryRepositoryImpl(
 
     // SY -->
     override suspend fun insert(category: Category): Long? {
+        // KUN -->
+        val uid = if (category.uid != 0L) category.uid else Category.nameToUid(category.name)
+        // KUN <--
         return database.transactionWithResult {
             database.categoryQueries.insertWithNextOrder(
                 name = category.name,
@@ -71,7 +74,9 @@ class CategoryRepositoryImpl(
                 // KMK <--
                 // SY -->
                 version = category.version,
-                uid = category.uid,
+                // KUN -->
+                uid = uid,
+                // KUN <--
                 lastModifiedAt = category.lastModifiedAt,
                 isSyncing = 0L,
                 // SY <--
@@ -83,18 +88,25 @@ class CategoryRepositoryImpl(
         val dbCategories = database.categoryQueries
             .getCategories(CategoryMapper::mapCategory)
             .awaitAsList()
-        val dbCategoriesByName = dbCategories.associateBy { it.name }
-        val dbCategoriesByUid = dbCategories.associateBy { it.uid } // Map by UID
-
-        // SY -->
         // KUN -->
+        val dbCategoriesByName = dbCategories.associateBy { it.name.trim().lowercase() }
+        val dbCategoriesByUid = dbCategories.filter { it.uid != 0L }.associateBy { it.uid } // Map by UID
+
+        // Deduplicate incoming categories by normalized name and ensure deterministic UIDs
+        val deduplicatedCategories = categories
+            .map { cat ->
+                val uid = if (cat.uid != 0L) cat.uid else Category.nameToUid(cat.name)
+                cat.copy(uid = uid)
+            }
+            .distinctBy { it.name.trim().lowercase() }
+
         // `order` is UNIQUE, so a reorder would trip it mid-swap. Free the positions of every category
         // we are about to reorder first, then assign the server's positions.
         val reordered = if (isSync) {
-            categories.mapNotNull { category ->
+            deduplicatedCategories.mapNotNull { category ->
                 (if (category.uid != 0L) dbCategoriesByUid[category.uid] else null)
-                    ?: dbCategoriesByName[category.name]
-            }
+                    ?: dbCategoriesByName[category.name.trim().lowercase()]
+            }.distinctBy { it.id }
         } else {
             emptyList()
         }
@@ -127,9 +139,10 @@ class CategoryRepositoryImpl(
         // KUN <--
         // SY <--
 
-        val restored = categories
+        val restored = deduplicatedCategories
             .sortedBy { it.order }
             .map { category ->
+                val normalizedName = category.name.trim().lowercase()
                 var dbCategory = if (category.uid != 0L) {
                     dbCategoriesByUid[category.uid]
                 } else {
@@ -137,7 +150,7 @@ class CategoryRepositoryImpl(
                 }
 
                 if (dbCategory == null) {
-                    dbCategory = dbCategoriesByName[category.name]
+                    dbCategory = dbCategoriesByName[normalizedName]
                 }
 
                 if (dbCategory != null) {
@@ -149,6 +162,7 @@ class CategoryRepositoryImpl(
                     if (!isSync) return@map dbCategory
                     val order = if (category.order !in usedOrders) category.order else freeOrder()
                     usedOrders.add(order)
+                    val canonicalUid = if (category.uid != 0L) category.uid else dbCategory.uid
                     // KUN <--
                     database.categoryQueries.update(
                         name = category.name,
@@ -160,12 +174,16 @@ class CategoryRepositoryImpl(
                         hidden = if (category.hidden) 1L else 0L,
                         // KMK <--
                         version = category.version,
-                        uid = if (category.uid != 0L) category.uid else dbCategory.uid,
+                        // KUN -->
+                        uid = canonicalUid,
+                        // KUN <--
                         lastModifiedAt = category.lastModifiedAt,
                         isSyncing = 1,
                         categoryId = dbCategory.id,
                     )
-                    return@map dbCategory
+                    // KUN -->
+                    return@map dbCategory.copy(order = order, uid = canonicalUid)
+                    // KUN <--
                 }
 
                 // A sync delta is a converging replica, not an import: new

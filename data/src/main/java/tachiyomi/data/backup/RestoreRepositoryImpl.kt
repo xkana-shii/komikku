@@ -102,13 +102,23 @@ class RestoreRepositoryImpl(
         // For a sync restore an empty list must clear the assignment, or removing a manga's only
         // category never reaches the other devices (the stale assignment stays forever).
         // KUN -->
-        // But a restore may be run with the "Categories" option off, which makes `entry.categoryIds`
-        // empty for every entry; clearing unconditionally would then wipe every manga's category
-        // assignments. Only clear or update when categories are actually being restored and incoming is not older.
-        val incomingIsNewerOrEqual = dbManga == null || entry.manga.version >= dbManga.version
+        // But an empty category list in a sync delta must only clear local categories if the incoming
+        // manga is strictly newer (i.e. explicitly uncategorized by user on another device).
+        // If versions/timestamps are equal (such as after restoring a regular backup on both devices),
+        // or if categories were not modified, local categories must be preserved rather than wiped.
+        val incomingIsStrictlyNewer = dbManga == null ||
+            entry.manga.version > dbManga.version ||
+            (entry.manga.version == dbManga.version && entry.manga.lastModifiedAt > dbManga.lastModifiedAt)
+        val incomingIsNewerOrEqual = incomingIsStrictlyNewer ||
+            (entry.manga.version == dbManga.version && entry.manga.lastModifiedAt == dbManga.lastModifiedAt)
+
         val categoryIds = entry.categoryIds
-        if (restoreCategories && incomingIsNewerOrEqual && categoryIds != null && (isSync || categoryIds.isNotEmpty())) {
-            mangaRepository.setMangaCategories(manga.id, categoryIds)
+        if (restoreCategories && categoryIds != null) {
+            if (categoryIds.isNotEmpty() && incomingIsNewerOrEqual) {
+                mangaRepository.setMangaCategories(manga.id, categoryIds)
+            } else if (categoryIds.isEmpty() && isSync && incomingIsStrictlyNewer) {
+                mangaRepository.setMangaCategories(manga.id, emptyList())
+            }
         }
         // KUN <--
         // SY <--

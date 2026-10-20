@@ -49,7 +49,8 @@ internal fun chapterTombstoneKey(sourceId: Long, mangaUrl: String, chapterUrl: S
  *
  * In SyncYomi protocol v2, [remote] is a delta of changed/new categories (often empty when categories
  * did not change on the remote). An empty delta must preserve local categories rather than wiping them.
- * When remote has updates, they are merged by UID or name, with any new remote categories appended.
+ * When remote has updates, they are merged by UID or normalized name, with any new remote categories appended.
+ * Categories are deduplicated by normalized name to prevent cross-device UID drift from creating duplicate rows.
  */
 internal fun mergeSyncCategories(
     local: List<BackupCategory>,
@@ -61,18 +62,20 @@ internal fun mergeSyncCategories(
             local
         } else {
             val remoteByUid = remote.filter { it.uid != 0L }.associateBy { it.uid }
-            val remoteByName = remote.associateBy { it.name }
+            val remoteByName = remote.associateBy { it.name.trim().lowercase() }
             val updated = local.map { loc ->
                 (if (loc.uid != 0L) remoteByUid[loc.uid] else null)
-                    ?: remoteByName[loc.name]
+                    ?: remoteByName[loc.name.trim().lowercase()]
                     ?: loc
             }
             val existingUids = updated.map { it.uid }.toSet()
-            val existingNames = updated.map { it.name }.toSet()
+            val existingNames = updated.map { it.name.trim().lowercase() }.toSet()
             val brandNew = remote.filter {
-                (it.uid == 0L || it.uid !in existingUids) && it.name !in existingNames
+                (it.uid == 0L || it.uid !in existingUids) && it.name.trim().lowercase() !in existingNames
             }
-            (updated + brandNew).sortedBy { it.order }
+            (updated + brandNew)
+                .distinctBy { it.name.trim().lowercase() }
+                .sortedBy { it.order }
         }
     } else {
         remote.ifEmpty { local }

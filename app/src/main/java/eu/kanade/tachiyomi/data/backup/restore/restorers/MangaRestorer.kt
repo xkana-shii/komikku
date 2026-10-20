@@ -54,11 +54,15 @@ class MangaRestorer(
     ) {
         // KUN -->
         val dbCategories = getCategories.await()
-        val dbCategoriesByName = dbCategories.associateBy { it.name }
+        val dbCategoriesByName = dbCategories.associateBy { it.name.trim().lowercase() }
         val dbCategoriesByUid = dbCategories.filter { it.uid != 0L }.associateBy { it.uid }
         val dbCategoriesByOrder = dbCategories.associateBy { it.order }
+        val dbCategoriesById = dbCategories.associateBy { it.id }
         // KUN <--
         val backupCategoriesByOrder = backupCategories.associateBy { it.order }
+        // KUN -->
+        val backupCategoriesList = backupCategories.sortedBy { it.order }
+        // KUN <--
 
         val entries = backupMangas.map { backupManga ->
             var manga = backupManga.getMangaImpl()
@@ -72,16 +76,18 @@ class MangaRestorer(
                 categoryIds = if (restoreCategories) {
                     val resolved = backupManga.categories.mapNotNull { backupCategoryOrder ->
                         val backupCat = backupCategoriesByOrder[backupCategoryOrder]
+                            ?: backupCategoriesList.getOrNull(backupCategoryOrder.toInt())
                         if (backupCat != null) {
                             (if (backupCat.uid != 0L) dbCategoriesByUid[backupCat.uid]?.id else null)
-                                ?: dbCategoriesByName[backupCat.name]?.id
+                                ?: dbCategoriesByName[backupCat.name.trim().lowercase()]?.id
                                 ?: dbCategoriesByOrder[backupCat.order]?.id
                         } else {
                             dbCategoriesByOrder[backupCategoryOrder]?.id
+                                ?: dbCategoriesById[backupCategoryOrder]?.id
                         }
                     }
                     if (isSync && backupManga.categories.isNotEmpty() && resolved.isEmpty()) {
-                        // Backup had categories, but none could be matched locally (e.g. order shift).
+                        // Backup had categories, but none could be matched locally (e.g. order shift or UID drift).
                         // Preserve local categories rather than wiping them.
                         null
                     } else {

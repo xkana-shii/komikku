@@ -182,5 +182,54 @@ class MangaRestorerTest {
         val captured = entriesSlot.captured.single()
         assertEquals(null, captured.categoryIds)
     }
+
+    @Test
+    fun `restore resolves categories by normalized name when case differs or orders shifted`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        val dbCategories = listOf(
+            Category(id = 15L, name = "Action", order = 5, flags = 0, hidden = false, uid = 999L),
+        )
+        coEvery { getCategories.await() } returns dbCategories
+
+        // Remote backup category has order 0 and different case, but same name
+        val backupCategories = listOf(
+            BackupCategory(name = "action", order = 0, uid = 888L),
+        )
+        val backupManga = BackupManga(
+            url = "/test/1",
+            title = "Test Manga",
+            categories = listOf(0L),
+        )
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(backupManga),
+            backupCategories = backupCategories,
+            restoreCategories = true,
+        )
+
+        val captured = entriesSlot.captured.single()
+        assertEquals(listOf(15L), captured.categoryIds)
+    }
+
+    @Test
+    fun `Category nameToUid generates deterministic positive 63-bit UIDs`() {
+        val uid1 = Category.nameToUid("Action")
+        val uid2 = Category.nameToUid("action ")
+        val uid3 = Category.nameToUid("ACTION")
+
+        assertEquals(uid1, uid2)
+        assertEquals(uid1, uid3)
+        org.junit.jupiter.api.Assertions.assertTrue(uid1 > 0L)
+    }
 }
 // KUN <--

@@ -187,6 +187,40 @@ class SyncDeltaTest {
     }
 
     @Test
+    fun `mergeSyncCategories deduplicates categories by normalized name and converges UIDs`() {
+        val local = listOf(
+            BackupCategory(name = "Action", order = 0, uid = 222222222),
+        )
+        // Remote has category with same name but different UID (from another device)
+        val remote = listOf(
+            BackupCategory(name = "action", order = 0, uid = 111111111),
+        )
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = true)
+
+        assertEquals(1, merged.size)
+        assertEquals("action", merged.single().name)
+        assertEquals(111111111L, merged.single().uid)
+    }
+
+    @Test
+    fun `mergeSyncCategories collapses duplicate remote categories with differing UIDs`() {
+        val local = listOf(
+            BackupCategory(name = "Action", order = 0, uid = 222222222),
+        )
+        // Remote from server has accumulated two categories with same name and different UIDs
+        val remote = listOf(
+            BackupCategory(name = "Action", order = 0, uid = 111111111),
+            BackupCategory(name = "action", order = 1, uid = 222222222),
+        )
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = true)
+
+        assertEquals(1, merged.size)
+        assertEquals("Action".lowercase(), merged.single().name.lowercase())
+    }
+
+    @Test
     fun `encodes and decodes backup with extension stores and feeds`() {
         val backup = Backup(
             backupExtensionStores = listOf(

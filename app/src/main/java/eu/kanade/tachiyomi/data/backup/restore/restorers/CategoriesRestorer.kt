@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 
@@ -20,12 +21,17 @@ class CategoriesRestorer(
         if (backupCategories.isEmpty()) return
 
         val dbCategories = getCategories.await()
+        // KUN -->
         val categories = categoryRepository.restoreCategories(
             categories = backupCategories
                 .sortedBy { it.order }
-                .map { it.toCategory(id = 0) },
+                .map {
+                    val uid = if (it.uid != 0L) it.uid else Category.nameToUid(it.name)
+                    it.toCategory(id = 0).copy(uid = uid)
+                },
             isSync = isSync,
         )
+        // KUN <--
 
         libraryPreferences.categorizedDisplaySettings.set(
             (dbCategories + categories)
