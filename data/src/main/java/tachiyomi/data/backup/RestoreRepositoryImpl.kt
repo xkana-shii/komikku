@@ -479,6 +479,15 @@ class RestoreRepositoryImpl(
                     // KUN -->
                     sourceOrder = chapter.sourceOrder,
                     dateUpload = chapter.dateUpload,
+                    // Existing chapters kept their old title/scanlator/number, so a restore only
+                    // refreshed new URLs. Direct assignment is safe for them: the merged chapter is
+                    // the incoming copy when it wins on a sync restore, and an explicit null must
+                    // clear a stale scanlator. dateFetch is gated by isSync so an ordinary restore of
+                    // an older backup cannot move the Updates feed chronology backwards.
+                    name = chapter.name,
+                    scanlator = chapter.scanlator,
+                    chapterNumber = chapter.chapterNumber,
+                    dateFetch = if (isSync) chapter.dateFetch else null,
                     // KUN <--
                     chapterId = chapter.id,
                     version = chapter.version,
