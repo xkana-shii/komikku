@@ -300,10 +300,11 @@ fun VerticalGridFastScroller(
         val scrollerConstraints = constraints.copy(minWidth = 0, minHeight = 0)
         val scrollerPlaceable = subcompose("scroller") {
             val layoutInfo = state.layoutInfo
-            val showScroller = remember(columns, layoutInfo.totalItemsCount) {
-                layoutInfo.visibleItemsInfo.size < layoutInfo.totalItemsCount
+            // KUN --> guard empty layouts and don't cache the scrollable decision
+            if (layoutInfo.visibleItemsInfo.isEmpty() || layoutInfo.visibleItemsInfo.size >= layoutInfo.totalItemsCount) {
+                return@subcompose
             }
-            if (!showScroller) return@subcompose
+            // KUN <--
             val thumbTopPadding = with(LocalDensity.current) { topContentPadding.toPx() }
             var thumbOffsetY by remember(thumbTopPadding) { mutableFloatStateOf(thumbTopPadding) }
 
@@ -324,8 +325,13 @@ fun VerticalGridFastScroller(
             val thumbHeightPx = with(LocalDensity.current) { ThumbLength.toPx() }
             val trackHeightPx = heightPx - thumbHeightPx
 
-            val columnCount = remember(columns) { slotSizesSums(constraints).size.coerceAtLeast(1) }
-            val scrollRange = remember(columns) { computeGridScrollRange(state = state, columnCount = columnCount) }
+            // KUN --> invalidate the estimate when the content or the column count changes; keeping
+            // it cached for the previous list made the thumb reach the end before the actual end
+            val columnCount = slotSizesSums(constraints).size.coerceAtLeast(1)
+            val scrollRange = remember(columnCount, layoutInfo.totalItemsCount) {
+                computeGridScrollRange(state = state, columnCount = columnCount)
+            }
+            // KUN <--
 
             // When thumb dragged
             LaunchedEffect(thumbOffsetY) {
@@ -347,7 +353,8 @@ fun VerticalGridFastScroller(
             }
 
             // When list scrolled
-            LaunchedEffect(state.firstVisibleItemScrollOffset) {
+            // KUN --> key on the index too, the offset alone misses row-aligned scrolls
+            LaunchedEffect(state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset) {
                 if (state.layoutInfo.totalItemsCount == 0 || isThumbDragged) return@LaunchedEffect
                 val scrollOffset = computeGridScrollOffset(state = state, columnCount = columnCount)
                 /*
@@ -359,6 +366,7 @@ fun VerticalGridFastScroller(
                 thumbOffsetY = trackHeightPx * proportion + thumbTopPadding
                 scrolled.tryEmit(Unit)
             }
+            // KUN <--
 
             // Thumb alpha
             val alpha = remember { Animatable(0f) }
