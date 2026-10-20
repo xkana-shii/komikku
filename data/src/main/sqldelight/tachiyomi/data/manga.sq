@@ -172,6 +172,11 @@ SELECT source_id, remote_url
 FROM manga;
 
 -- SY -->
+-- KUN -->
+-- A manga inserted while the favorite-timestamp trigger was missing can have
+-- user_favorite_at set with favorite_modified_at NULL. Treat currently favorited rows as
+-- ever-favorited too, or they stay invisible to every sync upload query.
+-- KUN <--
 getMangasWithFavoriteTimestamp:
 SELECT
     id, source_id, remote_url, remote_title, remote_author, remote_artist, remote_description,
@@ -181,12 +186,16 @@ SELECT
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at
 FROM manga
-WHERE favorite_modified_at IS NOT NULL;
+-- KUN -->
+WHERE favorite_modified_at IS NOT NULL OR user_favorite_at IS NOT NULL;
+-- KUN <--
 
 getMangasModifiedSince:
 SELECT M.*
 FROM manga M
-WHERE M.favorite_modified_at IS NOT NULL
+-- KUN -->
+WHERE (M.favorite_modified_at IS NOT NULL OR M.user_favorite_at IS NOT NULL)
+-- KUN <--
 AND (M.last_modified_at >= :since
 OR EXISTS (SELECT 1 FROM chapter C WHERE C.manga_id = M.id AND C.last_modified_at >= :since));
 -- SY <--
