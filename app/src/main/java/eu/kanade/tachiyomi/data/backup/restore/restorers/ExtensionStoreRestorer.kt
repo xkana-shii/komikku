@@ -21,19 +21,41 @@ class ExtensionStoreRestorer(
             backupStore.indexUrl
         }
         // KMK <--
-        extensionStoreRepository.upsert(
-            ExtensionStore(
-                indexUrl = indexUrl,
-                name = backupStore.name,
-                badgeLabel = backupStore.badgeLabel ?: backupStore.name,
-                signingKey = backupStore.signingKey,
-                contact = ExtensionStore.Contact(
-                    website = backupStore.contactWebsite,
-                    discord = backupStore.contactDiscord,
-                ),
-                isLegacy = backupStore.isLegacy ?: true,
-                extensionListUrl = backupStore.extensionListUrl,
+        // KUN -->
+        val incomingStore = ExtensionStore(
+            indexUrl = indexUrl,
+            name = backupStore.name,
+            badgeLabel = backupStore.badgeLabel ?: backupStore.name,
+            signingKey = backupStore.signingKey,
+            contact = ExtensionStore.Contact(
+                website = backupStore.contactWebsite,
+                discord = backupStore.contactDiscord,
             ),
+            isLegacy = backupStore.isLegacy ?: true,
+            extensionListUrl = backupStore.extensionListUrl,
+        )
+        val existingStore = extensionStoreRepository.getAll().firstOrNull { it.indexUrl == indexUrl }
+        extensionStoreRepository.upsert(
+            if (existingStore == null) incomingStore else mergeExistingStore(existingStore, incomingStore),
+        )
+        // KUN <--
+    }
+
+    // KUN -->
+    /**
+     * Merges a store from a backup into the store already installed locally.
+     *
+     * Older payloads can carry `signingKey = ""`, `extensionListUrl = null` and the `isLegacy`
+     * default as empty placeholders. Those placeholders must not erase newer local metadata, so
+     * blank/null incoming values keep the local value. A local non-legacy store is never
+     * downgraded to legacy: `isLegacy` only ends up true when both sides say so.
+     */
+    private fun mergeExistingStore(existing: ExtensionStore, incoming: ExtensionStore): ExtensionStore {
+        return incoming.copy(
+            signingKey = incoming.signingKey.ifBlank { existing.signingKey },
+            extensionListUrl = incoming.extensionListUrl ?: existing.extensionListUrl,
+            isLegacy = existing.isLegacy && incoming.isLegacy,
         )
     }
+    // KUN <--
 }

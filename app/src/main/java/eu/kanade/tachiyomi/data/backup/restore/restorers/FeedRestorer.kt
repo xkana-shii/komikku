@@ -2,9 +2,11 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
+import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import exh.EXHMigrations
 import exh.util.nullIfBlank
 import tachiyomi.domain.source.model.FeedSavedSearch
+import tachiyomi.domain.source.model.FeedWithSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.FeedSavedSearchRepository
 import tachiyomi.domain.source.repository.SavedSearchRepository
@@ -25,24 +27,16 @@ class FeedRestorer(
             EXHMigrations.migrateBackupFeed(it)
             // KMK <--
         }.filter { backupFeed ->
-            // Filter out source's global Popular/Latest feed already existed
-            (
-                backupFeed.savedSearch == null &&
-                    currentFeeds.none { currentFeed ->
-                        currentFeed.feed.source == backupFeed.source && backupFeed.global
-                    }
-                ) ||
-                // Filter out feed with saveSearch already existed (both global/non-global)
-                (
-                    backupFeed.savedSearch != null &&
-                        currentFeeds.none { currentFeed ->
-                            currentFeed.feed.source == backupFeed.source &&
-                                currentFeed.feed.global == backupFeed.global &&
-                                currentFeed.savedSearch?.name == backupFeed.savedSearch.name &&
-                                currentFeed.savedSearch?.query.orEmpty() == backupFeed.savedSearch.query &&
-                                (currentFeed.savedSearch?.filtersJson ?: "[]") == backupFeed.savedSearch.filterList
-                        }
-                    )
+            // KUN -->
+            // A feed's identity is its source, whether it is global, and (for saved searches) the
+            // saved search itself. A saved-search feed for the same source must not suppress
+            // restoring that source's global Popular/Latest feed, and vice versa.
+            currentFeeds.none { currentFeed ->
+                currentFeed.feed.source == backupFeed.source &&
+                    currentFeed.feed.global == backupFeed.global &&
+                    currentFeed.matchesSavedSearchOf(backupFeed)
+            }
+            // KUN <--
         }.forEach { backupFeed ->
             val savedSearchId = backupFeed.savedSearch?.let {
                 val existedSavedSearchId = currentSavedSearches.find { currentSavedSearch ->
@@ -76,4 +70,18 @@ class FeedRestorer(
             )
         }
     }
+
+    // KUN -->
+    /**
+     * Whether this stored feed represents the same saved search as [backupFeed]. A feed without a
+     * saved search (the source's global Popular/Latest feed) only matches another feed without one.
+     */
+    private fun FeedWithSavedSearch.matchesSavedSearchOf(backupFeed: BackupFeed): Boolean {
+        val backupSavedSearch: BackupSavedSearch = backupFeed.savedSearch ?: return savedSearch == null
+        val currentSavedSearch: SavedSearch = savedSearch ?: return false
+        return currentSavedSearch.name == backupSavedSearch.name &&
+            currentSavedSearch.query.orEmpty() == backupSavedSearch.query &&
+            (currentSavedSearch.filtersJson ?: "[]") == backupSavedSearch.filterList
+    }
+    // KUN <--
 }
