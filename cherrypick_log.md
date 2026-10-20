@@ -14,13 +14,13 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | mihon | 871 | 28 | 65 | 353 | 0 | 1317 |
 | tachiyomiSY | 820 | 1 | 15 | 182 | 0 | 1018 |
 | komikku | 10 | 0 | 0 | 0 | 0 | 10 |
-| komikun | 29 | 0 | 6 | 1 | 0 | 36 |
+| komikun | 30 | 0 | 6 | 0 | 0 | 36 |
 
 ## Commits
 
 | Status | Commit | Upstream | Date | Title | Author | Details | Notes |
 |:-:|---|---|---|---|---|---|---|
-|   | [9215170d59](https://github.com/komi-kun/komi-kun/commit/9215170d59b7bd99c5f9fca4396ebe314f66efa2) | komikun | 2026-10-21 | fix(backup): preserve feed identity and extension-store metadata (#59) | Luca Auer |  | AI checked 2026-10-20: not imported - published after the requested batch (eece71d0e3, a52730100f, 6611a4dbb5); awaiting maintainer decision |
+| O | [9215170d59](https://github.com/komi-kun/komi-kun/commit/9215170d59b7bd99c5f9fca4396ebe314f66efa2) | komikun | 2026-10-21 | fix(backup): preserve feed identity and extension-store metadata (#59) | Luca Auer | codex/komikun-foundation `ff21b56966` [hash of komikun, title+author] | AI checked 2026-10-20: not imported - published after the requested batch (eece71d0e3, a52730100f, 6611a4dbb5); awaiting maintainer decision |
 | O | [6611a4dbb5](https://github.com/komi-kun/komi-kun/commit/6611a4dbb5cc92ffc3cb8404fb847cefced3e424) | komikun | 2026-10-20 | fix(sync): restore chapter metadata on existing chapters (#58) | Luca Auer | codex/komikun-foundation `a3ccc29298` [hash of komikun, title+author] |  |
 | X | [9853e52eb3](https://github.com/komi-kun/komi-kun/commit/9853e52eb3310a30243d72cc6fb4b2d4e7961285) | komikun | 2026-10-20 | ci: add OpenCode automated PR review workflow (#57) | Luca Auer |  | Foundation 2026-10-20: intentionally skipped (maintainer decision) - OpenCode automated PR-review workflow is Komi-kun repository infrastructure, not app functionality; this fork's workflows stay unchanged |
 | O | [a52730100f](https://github.com/komi-kun/komi-kun/commit/a52730100fcb95e20602f598c5f5759a61a763ad) | komikun | 2026-10-20 | feat(sync): add a force-push repair for stale devices (#53) | Luca Auer | codex/komikun-foundation `c93caf330b` [hash of komikun, title+author] |  |

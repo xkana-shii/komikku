@@ -88,7 +88,13 @@ picked with `git cherry-pick -x` onto `775f85b9ef`, in upstream order:
 | `a52730100f` | `c93caf330b` | Sync: user-confirmed force-push repair for stale SyncYomi v2 devices (resumable `forcePushPending`, disabled sections preserved from the server snapshot, version-winner chapter merge; `SyncForcePushTest`, `SyncSettingsTest`) |
 | `6611a4dbb5` | `a3ccc29298` | Sync: restore chapter metadata (name, scanlator, number, fetch date) on existing chapters; ordinary restores keep the local fetch date (`RestoreRepositoryChapterMetadataTest`) |
 
-All three applied without conflicts. The only file they touched that carries a `KNS` delta
+Then, at the maintainer's request, the fifth commit:
+
+| Komi-kun | Integration | Title |
+|----------|-------------|-------|
+| `9215170d59` | `ff21b56966` | Backup: feed identity by source + global + saved search; extension-store restore merges into the local store (blank signing key / null list URL keep local values, never downgrade to legacy) (`FeedRestorerTest`, `ExtensionStoreRestorerTest`) |
+
+All four applied without conflicts. The only file they touched that carries a `KNS` delta
 (`i18n-kmk/.../base/strings.xml`) auto-merged with the delta unchanged; every other touched file is
 byte-identical to Komi-kun's. No `.sqm` was added (only `.sq` queries changed), so the schema version
 stays 56. No compatibility commit was needed.
@@ -98,7 +104,6 @@ Not imported from this batch:
 | Komi-kun | Status | Reason |
 |----------|--------|--------|
 | `9853e52eb3` | `X` (skipped) | OpenCode automated PR-review workflow (`.github/workflows/opencode_review.yml`, its script/config and docs) — Komi-kun repository infrastructure, not app functionality; this fork's workflows stay unchanged. |
-| `9215170d59` | pending | Backup restore: feed identity and extension-store metadata merge (+ tests). Published after the requested batch; not imported pending a maintainer decision. |
 
 ## Skipped Komi-kun commits
 
@@ -252,7 +257,7 @@ The Komi-kun code itself was built and tested by Komi-kun's CI; the risk added h
 
 ### Local Gradle validation (follow-up batch, 2026-10-20, Windows, JDK 21)
 
-Run on `codex/komikun-foundation` after the three picks; every task exited 0:
+Run on `codex/komikun-foundation` after the three picks and again after `9215170d59`; every task exited 0 both times:
 `spotlessApply` (no changes), `spotlessCheck`, `:data:generateSqlDelightInterface`,
 `:data:verifyDebugDatabaseMigration`, `testDebugUnitTest` (app 155, data 30, domain 119 tests; 0
 failures; 1 pre-existing `@Disabled` `Tester.stripBackup`), `assembleDebug`, `assembleRelease`
