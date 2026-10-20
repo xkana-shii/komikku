@@ -1,20 +1,21 @@
 ---
 name: komikku-sync
-description: Sync komi-kun's master forward from its base upstream, Komikku (komikku-app/komikku) — list the Komikku commits the fork is behind on, decide which to pull in, merge/cherry-pick them on a feature branch, verify, and open a PR. Use when asked to update or merge Komikku, see how far behind Komikku the fork is, or bring Komikku changes into the fork. For Mihon/TachiyomiSY cherry-picks use the upstream-port skill instead.
+description: Sync xkana-shii/komikku forward from its direct upstream, Komikku (komikku-app/komikku) — list the Komikku commits the fork is behind on, decide which to pull in, merge/cherry-pick them on a feature branch, verify, and open a PR. Use when asked to update or merge Komikku, see how far behind Komikku the fork is, or bring Komikku changes into the fork. For Mihon/TachiyomiSY cherry-picks use the upstream-port skill instead.
 ---
 
 # Syncing the Komikku base upstream
 
-komi-kun is a vendoring fork of **Komikku**; its `master` *is* a Komikku commit (see `FORK.md`'s
-upstream table — remote `komikku`, `komikku-app/komikku`). "Syncing" means moving `master` forward to
-include newer Komikku commits, on top of which the fork's own work sits.
+xkana-shii/komikku is a fork of **Komikku**: the foundation branch starts from a Komikku commit (see
+`FORK.md`'s upstream table — remote `komikku`, `komikku-app/komikku`), with Komi-kun's commits and
+the fork's own `KNS` work on top. "Syncing" means bringing newer Komikku commits in.
 
 ## 1. See what is new
 
 ```bash
 git fetch komikku master
-git rev-list --count master..komikku/master        # how far behind
-git log --oneline --no-merges master..komikku/master
+T=main   # the foundation branch (codex/komikun-foundation) until it replaces main
+git rev-list --count $T..komikku/master        # how far behind
+git log --oneline --no-merges $T..komikku/master
 ```
 
 This graph query is the reliable source: a date filter would miss Komikku commits whose committer
@@ -28,24 +29,28 @@ For every commit decide **already present** vs **worth pulling**:
 git show <sha>
 ```
 
-- The fork **ports Mihon directly**, so a Komikku commit that cherry-picks a Mihon commit is often
+- Komi-kun **ports Mihon directly**, so a Komikku commit that cherry-picks a Mihon commit is often
   already present here (same change, adapted) — check the fork's file before porting.
-- The fork migrated to **Metro DI**: Komikku's `AppModule.kt` / `*DomainModule.kt` do **not** exist
+- **Komi-kun wins:** where a Komikku change conflicts with Komi-kun's implementation (DI, ViewModels,
+  database, reader, sync, …), keep Komi-kun's and record the Komikku commit as skipped/pending with a
+  reason; port only what does not conflict, adapting it to Komi-kun's architecture.
+- The tree uses **Metro DI**: Komikku's `AppModule.kt` / `*DomainModule.kt` do **not** exist
   here — the wiring lives in `mihon/app/di/AppBindings.kt` (+ `AppGraph.kt`) and
   `data/src/main/java/tachiyomi/data/DatabaseBindings.kt`. Adapt such commits instead of copying them.
-- SQLDelight files (`*.sq`, `migrations/*.sqm`) carry SyncYomi deltas here — reconcile, don't clobber.
+- SQLDelight files (`*.sq`, `migrations/*.sqm`) carry SyncYomi deltas and Komi-kun's schema rework
+  here, and Komikku's migration numbers do not match this chain (both have a different `47.sqm`) —
+  reconcile by content into a **new** migration, never clobber or renumber.
 
 ## 3. Pull them in
 
 ```bash
-git checkout -b chore/komikku-sync-<what> master
+git checkout -b chore/komikku-sync-<what> main
 ```
 
-- Want everything? `git merge komikku/master` and resolve conflicts by adapting to the fork (the
-  fork's own commits sit on top of the base, so conflicts are expected in shared files).
-- Want only some? Cherry-pick those with `-x` and adapt (see `upstream-port`).
-- Markers (`AGENTS.md`): Komikku code is `// KMK`; komi-kun's own deltas are `// KUN` (nest inside an
-  inherited block when editing within one). Mihon base stays unmarked.
+- Prefer cherry-picking with `-x` and adapting (see `upstream-port`); a `git merge komikku/master` is
+  possible but every conflict must still follow the Komi-kun-wins rule, file by file.
+- Markers (`AGENTS.md`): Komikku code is `// KMK`, Komi-kun's is `// KUN`, this fork's adaptations
+  are `// KNS` (nest inside an inherited block when editing within one). Mihon base stays unmarked.
 
 ## 4. Verify + PR
 
@@ -55,7 +60,7 @@ git checkout -b chore/komikku-sync-<what> master
 ./gradlew :data:verifyDebugDatabaseMigration   # if .sq / .sqm changed
 ```
 
-Open a PR from the feature branch to `master` (**never** push `master`).
+Open a PR from the feature branch to `main` (**never** push `main` / `master`).
 
 ## 5. Keep the log in step
 

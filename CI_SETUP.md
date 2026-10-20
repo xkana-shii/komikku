@@ -1,232 +1,183 @@
 # CI Setup Guide
 
-How to enable GitHub Actions for **komi-kun**, add the repository secrets,
-configure repo settings, and verify each workflow.
+How GitHub Actions is set up for **xkana-shii/komikku**, which repository secrets
+it uses, how releases are cut, and how to verify each workflow.
 
-komi-kun is a personal fork of [Komikku](https://github.com/komikku-app/komikku)
-(`komi-kun/komi-kun`, app id `app.komikun`). The workflows under
-`.github/workflows/` are inherited from Komikku/Mihon; this guide describes their
-current state in this repo.
+xkana-shii/komikku is a personal fork of [Komikku](https://github.com/komikku-app/komikku)
+that also imports [Komi-kun](https://github.com/komi-kun/komi-kun)'s architecture
+(see [`FORK.md`](FORK.md)). The workflows under `.github/workflows/` come from
+Komikku/Mihon through Komi-kun and are adapted to this repository's existing
+release infrastructure. This guide describes their state on the branch it ships on.
 
-- **Repo:** `komi-kun/komi-kun`
-- **Default branch:** `master`
-- **App id:** `app.komikun`
-- **JDK:** 21 (`.github/.java-version`)
-- **Gradle:** 9.8.1 (wrapper)
+- **Repo:** `xkana-shii/komikku`
+- **Default branch:** `main`
+- **Preview/nightly repo:** `xkana-shii/komikku-preview` (separate repository, own workflow)
+- **App id:** `app.komikku.kns` (`.dev` debug, `.beta` nightly, `.rt`, `.foss`, `.benchmark`)
+- **Version line:** `versionCode`/`versionName` in `app/build.gradle.kts`, bumped by `bump.yml`
+- **JDK:** 21 (`.github/.java-version`); the Gradle daemon toolchain is pinned in
+  `gradle/gradle-daemon-jvm.properties` (resolved through the foojay plugin)
+- **Gradle:** wrapper version in `gradle/wrapper/gradle-wrapper.properties`
 
-> **Scope note:** none of this requires editing Kotlin/Gradle. The build already
-> supports the `-Pdist` / `MIHON_GITHUB_RELEASE` / env-var signing contract the
-> workflows use. The only things to configure are repo settings and secrets.
+> **Scope note:** none of this requires editing Kotlin/Gradle. The build supports
+> the `-Pdist` / `MIHON_GITHUB_RELEASE` / env-var signing contract the workflows
+> use. The things to configure are repo settings and secrets.
 
 ---
 
 ## 0. TL;DR checklist
 
-1. [ ] Enable Actions on the fork (one-time UI acknowledgement).
-2. [ ] Confirm default branch = `master`; make the repo public or enable Dependency Graph.
-3. [ ] Add the 4 signing secrets. The 2 Google secrets are **optional** — CI is
-   green without them.
-4. [ ] Leave Actions workflow permissions at "Read repository contents".
-5. [ ] No environments / no Actions variables required.
-6. [ ] Test: same-repo PR → push to `master` → `Nightly Builder` → `v*` tag release.
+1. [ ] Actions enabled on the repository (already true for this fork).
+2. [ ] Default branch `main`; public repo or Dependency Graph enabled.
+3. [ ] The 4 signing secrets exist (`SIGNING_KEY`, `KEY_STORE_PASSWORD`, `ALIAS`,
+   `KEY_PASSWORD`). The same keystore must keep signing every release, or installed
+   apps cannot update.
+4. [ ] `BOT_PAT` exists (bump/tag workflow and the preview dispatch need it).
+5. [ ] `DEV_SECRETS` exists if you use it (passed as `-PdevSecret`; see §3.4).
+6. [ ] The 2 Google secrets are **optional**.
+7. [ ] Leave Actions workflow permissions at "Read repository contents".
+8. [ ] Release path: **Actions → Spotless, bump version, and tag → Run workflow** on `main`.
 
 ---
 
-## 1. Enable Actions for the fork
+## 1. Enable Actions
 
-Forks ship with workflows **disabled** until the owner acknowledges them.
+Forks ship with workflows **disabled** until the owner acknowledges them. This
+repository already has them enabled. On a fresh fork:
 
-1. Open `https://github.com/komi-kun/komi-kun/actions`.
-2. Click the green **"I understand my workflows, go ahead and enable them"**
-   button.
-3. After this, any workflow with a matching trigger runs normally
-   (`push`, `pull_request`, `tags`, `workflow_dispatch`).
+1. Open `https://github.com/xkana-shii/komikku/actions`.
+2. Click **"I understand my workflows, go ahead and enable them"**.
 
-If you later want to stop a single workflow without deleting it, use
-**Actions → <workflow> → ⋯ → Disable workflow**. Three upstream-only workflows
-are already disabled by renaming them to `*.yml.disabled` — see
+To stop a single workflow without deleting it, use
+**Actions → <workflow> → ⋯ → Disable workflow**. Two upstream-only workflows are
+disabled by renaming them to `*.yml.disabled` — see
 [§4](#4-which-workflows-are-active-disabled-and-why).
 
 ---
 
 ## 2. Repository settings
 
-Go to **Settings**.
-
 ### 2.1 Default branch
 
-**Settings → General → Default branch** must be **`master`**. The push, nightly,
-and release workflows all key off `master`. (Already true for this fork.)
+The default branch is **`main`**. Note the inherited triggers:
+
+- `build_push.yml` (CI) runs on pushes to **`master`** only, and the Nightly
+  Builder's build job only runs for `refs/heads/master`. On this repository they are
+  therefore dormant unless started from a `master` branch. This is unchanged from
+  the previous `main` of this fork; switch the branch names to `main` in those two
+  workflows if you want push CI / in-repo nightlies.
+- `bump.yml`, `build_release.yml` (tags `v*`), `build_dispatch_preview.yml` and
+  `build_pull_request.yml` work from `main`.
 
 ### 2.2 Dependency Graph (for `dependency-review-action`)
 
 `build_pull_request.yml` runs `actions/dependency-review-action`, which needs the
 **Dependency Graph**.
 
-- **Public repo (recommended):** Dependency Graph is on by default. Nothing to do.
+- **Public repo:** on by default. Nothing to do.
 - **Private repo:** `Settings → Code security and analysis → Dependency graph`
-  → **Enable**. If you don't want it, remove the "Dependency Review" step from
-  `build_pull_request.yml` instead, or the PR job fails at that step.
+  → **Enable**, or remove the "Dependency Review" step from `build_pull_request.yml`.
 
 ### 2.3 Actions permissions
 
 **Settings → Actions → General → Workflow permissions:** leave the default
-**"Read repository contents and packages permissions"**.
+**"Read repository contents and packages permissions"**. The release, nightly and
+bump workflows declare `permissions: contents: write` themselves.
 
-Do **not** switch to "Read and write permissions" globally. The release and
-nightly workflows declare their own `permissions: contents: write` at the
-workflow level, which is the least-privilege way to let them create releases.
+### 2.4 Environments / variables
 
-### 2.4 Environments
-
-**No environments are needed.** No workflow declares an `environment:` block, so
-there are no environment-scoped secrets or protection rules to configure.
-
-### 2.5 Actions variables
-
-**None required.** All build flags (`-Pdist=…`, `-Pinclude-telemetry`,
-`-Penable-updater`, …) are passed inline in the workflow commands, not via repo
-variables.
+**None required.** No workflow declares an `environment:` block, and all build
+flags (`-Pdist=…`, `-Pinclude-telemetry`, `-PdevSecret`, …) are passed inline.
 
 ---
 
 ## 3. Repository secrets
 
-**Settings → Secrets and variables → Actions → New repository secret.**
-
-Add the **4 signing secrets** below. The **2 Google secrets are optional**: the
-workflows check for `GOOGLE_SERVICES_JSON` at runtime and, when it is absent,
-skip writing the Google files and pass `-Pinclude-telemetry=false` so the build
-stays green (see [§7](#7-what-each--pdist-does)).
+**Settings → Secrets and variables → Actions.** Values are never printed by the
+workflows; don't echo them in new steps either.
 
 | # | Secret name | Required? | Used by | What it is |
 |---|-------------|-----------|---------|------------|
-| 1 | `SIGNING_KEY` | **Yes** | push, PR (same-repo), nightly, release, benchmark | base64 of the release keystore |
+| 1 | `SIGNING_KEY` | **Yes** | release (AGP signing), push, PR (same-repo), nightly, benchmark (`r0adkll` signer) | base64 of the release keystore |
 | 2 | `KEY_STORE_PASSWORD` | **Yes** | all signing | keystore password |
 | 3 | `ALIAS` | **Yes** | all signing | key alias |
 | 4 | `KEY_PASSWORD` | **Yes** | all signing | key password |
-| 5 | `GOOGLE_SERVICES_JSON` | No | push, PR (same-repo), nightly, release | Firebase `google-services.json` for `app.komikun` |
-| 6 | `GOOGLE_CLIENT_SECRETS_JSON` | No | push, PR (same-repo), nightly, release | OAuth client secrets (trackers) |
+| 5 | `BOT_PAT` | **Yes** for releases | `bump.yml` (creates the `v*` tag so it triggers `build_release.yml`), `build_dispatch_preview.yml` | personal access token with `contents: write` on this repo and `actions: write` on `xkana-shii/komikku-preview` |
+| 6 | `DEV_SECRETS` | No | release, push, nightly (`-PdevSecret`) | value forwarded to the build as the `devSecret` Gradle property |
+| 7 | `GOOGLE_SERVICES_JSON` | No | push, PR (same-repo), nightly, release | Firebase `google-services.json` |
+| 8 | `GOOGLE_CLIENT_SECRETS_JSON` | No | push, PR (same-repo), nightly, release | OAuth client secrets for Google Drive backup |
 
-> **Current state of this fork:** the four signing secrets are set; neither
-> Google secret is set yet (no Firebase project exists). That is why the
-> telemetry flag is `-Pinclude-telemetry=false` and CI is green. See
-> [`GOOGLE_SERVICES_SETUP.md`](GOOGLE_SERVICES_SETUP.md) if you later want to
-> enable telemetry or Google Drive backup.
+### 3.1 Signing secrets
 
-### 3.1 `SIGNING_KEY`, `KEY_STORE_PASSWORD`, `ALIAS`, `KEY_PASSWORD`
+The release workflow signs through AGP: it sets `MIHON_GITHUB_RELEASE=true` and
+passes `storeFileBase64`/`storePassword`/`keyAlias`/`keyPassword` from the four
+secrets; `app/build.gradle.kts` writes `$RUNNER_TEMP/komikku.keystore` and uses it
+for the `release` signing config. The other workflows sign afterwards with
+`r0adkll/sign-android-release` using the same secrets. **Keep using the existing
+keystore** — a different key makes every installed copy refuse the update.
 
-Create (or reuse) an Android release keystore:
+To create a keystore for a brand-new fork (not needed here):
 
 ```bash
-keytool -genkeypair -v \
-  -keystore release.keystore \
-  -alias komikku \
+keytool -genkeypair -v -keystore release.keystore -alias komikku \
   -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 release.keystore   # value of SIGNING_KEY
 ```
 
-The prompts set your **store password** and **key password**. Pick an alias
-(the example uses `komikku`).
+`*.keystore` is git-ignored; never commit it. `SIGNING_KEY` must be single-line
+base64 (`-w0`).
 
-Generate each secret value:
+### 3.2 `BOT_PAT`
 
-```bash
-# SIGNING_KEY — single line, no wrapping newlines
-base64 -w0 release.keystore
+`GITHUB_TOKEN` pushes do not trigger other workflows, so `bump.yml` creates the
+release tag through the REST API with `BOT_PAT` (it creates a release for the tag
+and immediately deletes it, leaving the tag), which then triggers
+`build_release.yml`. `build_dispatch_preview.yml` uses the same token to dispatch
+`build_app.yml` in `xkana-shii/komikku-preview`.
 
-# KEY_STORE_PASSWORD — the store password you entered
-# ALIAS              — the alias you entered (e.g. komikku)
-# KEY_PASSWORD       — the key password you entered
-```
+### 3.3 `GOOGLE_SERVICES_JSON` / `GOOGLE_CLIENT_SECRETS_JSON` (optional)
 
-Paste the `base64 -w0` output as the value of `SIGNING_KEY`. Keep
-`release.keystore` somewhere safe — it is git-ignored (`*.keystore`) and must
-never be committed.
+See [`GOOGLE_SERVICES_SETUP.md`](GOOGLE_SERVICES_SETUP.md). When
+`GOOGLE_SERVICES_JSON` is **absent**, the workflows skip writing it and add
+`-Pinclude-telemetry=false`, so the build needs no Firebase setup. When it is
+**present**, `-Pdist=ci`/`github` compile telemetry in and the JSON must contain a
+client for every built package (`app.komikku.kns`, `app.komikku.kns.beta`).
 
-> **Why base64:** `SIGNING_KEY` is consumed two ways. The `r0adkll` signer
-> (`push`/`PR`/`nightly`/`benchmark`) reads it as `signingKeyBase64`; the release
-> workflow passes it as the `storeFileBase64` env var so the AGP signing config
-> writes `$RUNNER_TEMP/komikku.keystore`. Both expect the raw base64 of the
-> keystore file with no line breaks, hence `-w0`.
+> The previous `main` of this fork never built with telemetry (no
+> `-Pinclude-telemetry`, no google-services step). Keeping `GOOGLE_SERVICES_JSON`
+> unset preserves that. Even when compiled in, Firebase stays inactive for this app:
+> `TelemetryConfig` only initializes for `app.komikku`/`app.komikku.beta` signed with
+> upstream's certificate.
 
-### 3.2 `GOOGLE_SERVICES_JSON` (optional)
+`GOOGLE_CLIENT_SECRETS_JSON` is written to `app/src/main/assets/client_secrets.json`
+when present. Without it the build succeeds but Google Drive backup/sync is
+unavailable at runtime.
 
-Contents of a **valid Firebase `google-services.json`**, written to
-`app/google-services.json` at build time. Add it only if you want telemetry
-compiled in.
+### 3.4 `DEV_SECRETS`
 
-- The `package_name` inside must match every variant you build **with telemetry
-  on**. CI builds the **`nightly`** variant (`app.komikun.beta`) for PR/push/
-  nightly and the **`release`** variant (`app.komikun`) for tags, so include at
-  least both (`app.komikun.dev` too if you want local debug telemetry to resolve).
-- When this secret is present, the workflows write the file and build with
-  `-Pdist=ci`/`github`, which applies the Google Services (and Crashlytics)
-  plugins. A missing client for the variant's package then fails the build.
-- When this secret is **absent**, the workflows skip the write and add
-  `-Pinclude-telemetry=false`, so the plugins are never applied and the build
-  succeeds without the file. No configuration is required.
-- **Crashlytics:** `-Pdist=github` (used only by the release workflow) sets
-  `uploadCrashlyticsMapping = true`. If you keep `-Pdist=github` in release, the
-  Firebase project must have **Crashlytics enabled**, or the release job fails
-  while uploading the mapping. If you don't use Crashlytics, switch the release
-  build to `-Pdist=ci` or keep the secret unset (telemetry off). See
-  [§7](#7-what-each--pdist-does).
+Forwarded as `-PdevSecret="…"` by the release, push and nightly workflows (as on
+the previous `main`, and by the preview repository's `build_app.yml`). The rebuilt
+foundation does not read the property yet: the developer-options feature that
+consumed it will be re-implemented separately. Passing an unused property is
+harmless.
 
-### 3.3 `GOOGLE_CLIENT_SECRETS_JSON` (optional)
+### 3.5 Setting secrets with the `gh` CLI
 
-Contents of the OAuth client-secrets JSON used by Google Drive backup, written to
-`app/src/main/assets/client_secrets.json`.
-
-- Absence is **not** a build failure. Without it, Google Drive backup/sync is
-  unavailable at runtime (it throws when it tries to read the file). If you don't
-  use Drive backup, leave it unset.
-
-### 3.4 Setting the secrets with the `gh` CLI
-
-If you have the [GitHub CLI](https://cli.github.com/) installed, you can skip the
-web UI entirely. Run these from the repo root.
-
-> **This checkout has multiple remotes** (`origin`, `mihon`, `tachiyomiSY`,
-> `komikku`), so `gh` cannot infer the target — every command needs `--repo`
-> (or `-R`). Use `komi-kun/komi-kun`.
+This checkout usually has several remotes (`origin`, `komikku`, `komikun`, `mihon`,
+`tachiyomiSY`), so pass `--repo`:
 
 ```bash
-# one-time
-gh auth login
-
-REPO=komi-kun/komi-kun
-
-# 1-4: signing. SIGNING_KEY must be single-line base64, so pipe it in.
+REPO=xkana-shii/komikku
 base64 -w0 release.keystore | gh secret set SIGNING_KEY --repo "$REPO"
 gh secret set KEY_STORE_PASSWORD --repo "$REPO" --body 'YOUR_STORE_PASSWORD'
-gh secret set KEY_PASSWORD       --repo "$REPO" --body 'YOUR_KEY_PASSWORD'   # same as the store password for PKCS12
-gh secret set ALIAS              --repo "$REPO" --body 'komikku'
-
-# 5-6 (optional): Google JSON files -- pipe the file's exact bytes as the secret value.
-gh secret set GOOGLE_SERVICES_JSON       --repo "$REPO" < app/google-services.json
+gh secret set KEY_PASSWORD       --repo "$REPO" --body 'YOUR_KEY_PASSWORD'
+gh secret set ALIAS              --repo "$REPO" --body 'YOUR_ALIAS'
 gh secret set GOOGLE_CLIENT_SECRETS_JSON --repo "$REPO" < path/to/client_secrets.json
-
-# verify (lists names + updated dates; values are never printed)
-gh secret list --repo "$REPO"
+gh secret list --repo "$REPO"     # names + dates only; values are never shown
 ```
 
-Notes:
+### 3.6 Secrets you do **not** need
 
-- `--repo` is required here (multiple remotes); if you only had one it could be
-  omitted.
-- `gh secret set NAME < file` stores the file's exact bytes. For `SIGNING_KEY`
-  use the `base64 -w0 … | gh secret set` form so there are no wrapping newlines.
-- Secrets set via `gh` are identical to ones added in the web UI.
-- Overwrite with `gh secret set NAME …`; remove with `gh secret delete NAME`.
-- For an organisation repo, add `--org <org>` (or `--env <env>` for an
-  environment secret) instead of `--repo`.
-
-### 3.5 Secrets you do **not** need
-
-- `BOT_PAT` — belonged to the disabled upstream-dispatch workflows.
-- `CODEBERG_SSH` — belonged to the disabled mirror workflow.
-
-Do not add these unless you deliberately re-purpose those workflows.
+- `CODEBERG_SSH` — belonged to the disabled Codeberg mirror workflow.
 
 ---
 
@@ -234,90 +185,66 @@ Do not add these unless you deliberately re-purpose those workflows.
 
 | Workflow (name) | Status | Notes |
 |----------|--------|-------|
-| `build_pull_request.yml` (PR build check) | **Keep** | Safe: uses `pull_request` (not `pull_request_target`). Fork PRs build unsigned with no secrets; same-repo PRs use the secrets when present. |
-| `build_push.yml` (CI) | **Keep** | Runs on `master` pushes. Runs `spotlessCheck`, `assembleNightly`, unit tests, and the SQLDelight migration gate. |
-| `build_nightly.yml` (Nightly Builder) | **Keep** (optional) | Manual, `master`-only. Auto-tags `r<count>` and publishes a **non-draft prerelease** with 5 APKs. Requires the 4 signing secrets. |
-| `build_release.yml` (Release Builder) | **Keep** | `v*` tag → non-draft prerelease, 5 APKs, AGP signing. Needs a Crashlytics-capable config for `-Pdist=github` (or telemetry off). |
-| `build_benchmark.yml` (Benchmark Builder) | **Keep** (optional) | Manual benchmark build; needs only the 4 signing secrets. Niche. |
-| `pr_label.yml` (Label PRs) | **Keep** (low value) | Labels Weblate-authored PRs `translations`. Harmless, safe. |
-| `build_dispatch_preview.yml.disabled` | **Disabled** | Cross-repo dispatch to upstream `komikku-app/komikku-preview` with `BOT_PAT` — cannot work on the fork. |
-| `codeberg_mirror.yml.disabled` | **Disabled** | Guarded `github.repository == 'komikku-app/komikku'` → permanent no-op; mirrors to an upstream Codeberg repo. |
-| `update_website.yml.disabled` | **Disabled** | Cross-repo dispatch to upstream `komikku-app/komikku-app.github.io` with `BOT_PAT` — cannot work. |
-| `.github/dependabot.yml` | **Keep** | Opens weekly GitHub Actions dependency PRs against `master`. |
+| `bump.yml` (Spotless, bump version, and tag) | **Release entry point** | Manual. Runs `spotlessApply` (skipped when the last commit message has `[no spotless]`), commits the result, runs `.github/scripts/bump_version.sh` (versionCode +1, versionName patch +1, rolling to the next minor after `.10`), commits, then creates `v<versionName>` with `BOT_PAT`. |
+| `build_release.yml` (Release Builder) | **Keep** | `v*` tag → `spotlessCheck` → `assembleRelease -Pdist=github` with AGP signing → `testDebugUnitTest` → **regular (non-prerelease) release** with 5 APKs. |
+| `build_dispatch_preview.yml` (Remote Dispatch Preview Build) | **Keep** | Manual. Dispatches `build_app.yml` in `xkana-shii/komikku-preview` for the current branch. |
+| `build_pull_request.yml` (PR build check) | **Keep** | `pull_request`: dependency review → wrapper validation → `spotlessCheck` → `assembleNightly` → `testDebugUnitTest` → `:data:verifyDebugDatabaseMigration` → sign (same-repo PRs). |
+| `build_push.yml` (CI) | Dormant here | Runs on pushes to `master` (see §2.1) or manually. Same checks as the PR job. |
+| `build_nightly.yml` (Nightly Builder) | Dormant here | Komikku's preview builder, renamed with the `preview` → `nightly` build type. Manual, `master`-only build job; tags `r<count>` and publishes in this repository. Previews normally come from the preview repository instead. |
+| `build_benchmark.yml` (Benchmark Builder) | **Keep** (optional) | Manual benchmark build; needs only the signing secrets. |
+| `pr_label.yml` (Label PRs) | **Keep** | Labels Weblate-authored PRs. |
+| `codeberg_mirror.yml.disabled` | **Disabled** | Guarded to `komikku-app/komikku`; mirrors Komikku to Codeberg. |
+| `update_website.yml.disabled` | **Disabled** | Dispatches into `komikku-app/komikku-app.github.io`, which this repository's token cannot reach; it would fail on every release. |
+| `.github/dependabot.yml` | **Keep** | Weekly GitHub Actions update PRs against `main`. |
 
-Renaming to `*.yml.disabled` keeps the file in git but out of GitHub Actions,
-which only loads `.yml`/`.yaml` files in `.github/workflows/`. To re-enable one,
-rename it back to `.yml` **and** fix its upstream URLs/guards first.
+### 4.1 The preview repository after the foundation lands on `main`
+
+`xkana-shii/komikku-preview`'s `build_app.yml` checks out this repository and runs
+`./gradlew assemblePreview`, then signs `app/build/outputs/apk/preview/*-preview-*.apk`.
+The integrated foundation follows Mihon/Komi-kun in renaming the build type
+`preview` → **`nightly`** (still `.beta`, still `r<count>` tags, read by the
+in-app updater from `xkana-shii/komikku-preview`). Before dispatching a preview
+build of the new foundation, update that workflow in the preview repository:
+
+- `assemblePreview` → `assembleNightly`
+- `apk/preview` → `apk/nightly`, and `*-preview-signed.apk` → `*-nightly-signed.apk`
+  in the rename step (`artifacts_prefix=nightly/app`).
+- Optionally add `-Pdist=ci -Pinclude-telemetry=false` to match this repository's
+  CI builds (the updater is enabled either way through `-Penable-updater`).
+
+Builds of the old `main` keep working with the old workflow until then.
 
 ---
 
 ## 5. How to test each workflow
 
-Do the setup in [§1](#1-enable-actions-for-the-fork)–[§3](#3-repository-secrets)
-first. Then walk through these in order.
+### 5.1 Same-repo PR (`build_pull_request.yml`)
 
-### 5.1 Throwaway same-repo PR (exercises `build_pull_request.yml`)
+1. `git checkout -b chore/ci-smoke-test main`, push, open a PR against `main` in
+   this repository.
+2. Expected artifact: **`Komikku-p<PR number>-r<count>.apk`** plus `mapping-<sha>`;
+   on test failure also `test-report-<sha>`.
+3. Close the PR without merging.
 
-1. Branch off `master`: `git checkout -b chore/ci-smoke-test`.
-2. Push the branch to `komi-kun/komi-kun` and open a PR **against `master` in the
-   same repo** (not a fork).
-3. Expected steps: Dependency Review → Validate Gradle Wrapper → Set up JDK →
-   Check optional secrets → (write Google files, if the secrets exist) →
-   `spotlessCheck` → `assembleNightly -Pdist=ci` → `testDebugUnitTest` →
-   `:data:verifyDebugDatabaseMigration` → sign → rename → upload APK + mapping.
-4. Expected artifact: **`Komikku-p<PR number>-r<count>.apk`** (e.g.
-   `Komikku-p123-r85.apk`), plus **`mapping-<sha>`**. On test failure,
-   **`test-report-<sha>`** is also uploaded.
-5. Close the PR and delete the branch when done; don't merge it.
+### 5.2 Release (`bump.yml` → `build_release.yml`)
 
-> A PR **from a fork** (e.g. an upstream contributor) runs the same job but with
-> **no secrets** and plain `assembleNightly` (no `-Pdist`), so it builds unsigned
-> with telemetry off. That path needs no configuration.
+1. **Actions → Spotless, bump version, and tag → Run workflow** on `main`.
+2. Expected: optional `chore: spotlessApply` commit, `chore: bump version` commit,
+   tag `v<versionName>`.
+3. The tag starts **Release Builder**: assets `Komikku-v<version>.apk`,
+   `Komikku-arm64-v8a-v<version>.apk`, `Komikku-armeabi-v7a-v<version>.apk`,
+   `Komikku-x86-v<version>.apk`, `Komikku-x86_64-v<version>.apk`, published as a
+   regular release (the in-app updater of release builds reads `v*` releases from
+   this repository).
 
-### 5.2 Push to `master` (exercises `build_push.yml`)
+> Do **not** cut a release from the rebuilt foundation until the database upgrade
+> path from the previous app is resolved — see `docs/komikun-foundation-progress.md`
+> ("Old-fork database compatibility").
 
-1. Push one non-`.md` commit to `master` (or trigger via
-   **Actions → CI → Run workflow**).
-2. Expected: same chain as the PR job, ending in the sign + rename + upload.
-3. Expected artifact: **`Komikku-master-r<count>.apk`** and `mapping-<sha>`.
+### 5.3 Preview (`build_dispatch_preview.yml`)
 
-### 5.3 Nightly (exercises `build_nightly.yml`)
-
-1. **Actions → Nightly Builder → Run workflow**, choose branch **`master`**.
-   (The `build-app` job only runs when `github.ref == 'refs/heads/master'`.)
-2. Expected: creates tag `r<commit-count>`, builds `assembleNightly -Pdist=ci`,
-   signs with `r0adkll`, publishes a **non-draft prerelease**.
-3. Expected assets (5): **`Komikku-r<count>.apk`**, `Komikku-arm64-v8a-r<count>.apk`,
-   `Komikku-armeabi-v7a-r<count>.apk`, `Komikku-x86-r<count>.apk`,
-   `Komikku-x86_64-r<count>.apk`.
-4. Visit **Releases** to confirm it, then delete it (and the auto-tag) if it was
-   just a smoke test.
-
-### 5.4 Tag release (exercises `build_release.yml`)
-
-1. Tag `master` and push the tag:
-   ```bash
-   git tag v1.14.1-ci-test
-   git push origin v1.14.1-ci-test
-   ```
-   (Tags must start with `v`.)
-2. Expected: `prepare-build` (changelog compare) → `assembleRelease -Pdist=github`
-   with AGP signing → non-draft prerelease.
-3. Expected assets (5): **`Komikku-v1.14.1-ci-test.apk`**,
-   `Komikku-arm64-v8a-v1.14.1-ci-test.apk`,
-   `Komikku-armeabi-v7a-v1.14.1-ci-test.apk`,
-   `Komikku-x86-v1.14.1-ci-test.apk`,
-   `Komikku-x86_64-v1.14.1-ci-test.apk`.
-4. Delete the tag/release after verifying.
-
-> This fork has no stable channel: both the nightly and the tag release are
-> published as **prereleases**, and the in-app updater offers the newest one.
-
-### 5.5 Benchmark (exercises `build_benchmark.yml`, optional)
-
-**Actions → Benchmark Builder → Run workflow.** Builds `assembleBenchmark`,
-signs with `r0adkll`, uploads APK artifacts (retained 30 days). Needs only the 4
-signing secrets.
+**Actions → Remote Dispatch Preview Build → Run workflow** on the branch to build.
+See §4.1 first.
 
 ---
 
@@ -325,28 +252,26 @@ signing secrets.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| PR job fails at **Dependency Review** | Dependency Graph disabled (private repo) | Enable Dependency Graph, or remove that step from `build_pull_request.yml`. |
-| Same-repo PR / push / nightly build fails applying the **google-services plugin** | `GOOGLE_SERVICES_JSON` present but the JSON lacks a client for the variant package (`app.komikun.beta` for nightly, `app.komikun` for release) | Add the missing package in Firebase and re-download the combined JSON; or unset the secret to build with telemetry off. |
-| Release job fails **uploading the Crashlytics mapping** | `-Pdist=github` sets `uploadCrashlyticsMapping=true`, but the Firebase project has no Crashlytics | Enable Crashlytics in Firebase, switch the release build to `-Pdist=ci`, or leave `GOOGLE_SERVICES_JSON` unset. |
-| Build fails **signing** | Wrong `SIGNING_KEY` (not `base64 -w0`), or wrong password/alias | Regenerate: `base64 -w0 release.keystore`; verify `KEY_STORE_PASSWORD`/`ALIAS`/`KEY_PASSWORD` match the keystore. |
-| Nightly/release job fails at **Sign APK** | The 4 signing secrets are missing | Add `SIGNING_KEY`, `KEY_STORE_PASSWORD`, `ALIAS`, `KEY_PASSWORD`. |
-| Google Drive backup broken at runtime (not a build failure) | `GOOGLE_CLIENT_SECRETS_JSON` missing | Add the client-secrets JSON; see [`GOOGLE_SERVICES_SETUP.md`](GOOGLE_SERVICES_SETUP.md). |
-| Nightly/release `workflow_dispatch` does nothing | Triggered from a non-`master` branch | Run from `master`. |
-| Release workflow doesn't run on a tag | Tag doesn't start with `v` | Use `v*` tags. |
-| `resource not accessible by integration` when creating a release | Missing `contents: write` | The workflows already declare it; ensure you didn't override repo-level permissions to "read only". |
+| PR job fails at **Dependency Review** | Dependency Graph disabled | Enable it, or remove that step. |
+| Build fails applying the **google-services plugin** | `GOOGLE_SERVICES_JSON` present but lacks the variant's package | Add `app.komikku.kns` / `app.komikku.kns.beta` in Firebase, or unset the secret. |
+| Release job fails **uploading the Crashlytics mapping** | `GOOGLE_SERVICES_JSON` present and `-Pdist=github` uploads mappings, but Crashlytics is not enabled | Enable Crashlytics, switch the release build to `-Pdist=ci`, or unset the secret. |
+| Build fails **signing** | `SIGNING_KEY` not `base64 -w0`, or wrong password/alias | Re-set the secret from the original keystore. |
+| `bump.yml` fails at **Tag release** | `BOT_PAT` missing/expired, or the tag already exists | Renew the token; bump again if the tag exists. |
+| Release workflow doesn't run after bumping | Tag created with `GITHUB_TOKEN` instead of `BOT_PAT` | Keep the `BOT_PAT` step. |
+| Preview dispatch builds fail on the new foundation | Preview repo still runs `assemblePreview` | See §4.1. |
 
 ---
 
 ## 7. What each `-Pdist` does
 
-Distributions are `LOCAL | CI | GITHUB | FOSS`; an unknown value fails the build
-with `error(...)`. Default (no flag) is **LOCAL**.
+Distributions are `LOCAL | CI | GITHUB | FOSS`; an unknown value fails the build.
+Default (no flag) is **LOCAL**.
 
 | `-Pdist` | Telemetry | Crashlytics mapping upload | Updater | `google-services.json` needed | Used by |
 |----------|-----------|----------------------------|---------|-------------------------------|---------|
-| *(none)* = `LOCAL` | off | no | off | no | fork PRs, benchmark |
-| `CI` | on | no | on | **yes**, unless the workflow passes `-Pinclude-telemetry=false` | same-repo PR, `push`, nightly |
-| `GITHUB` | on | **yes** | on | **yes** (Crashlytics-capable), unless the workflow passes `-Pinclude-telemetry=false` | release |
+| *(none)* = `LOCAL` | off | no | off | no | local builds, fork PRs, benchmark |
+| `CI` | on | no | on | **yes**, unless `-Pinclude-telemetry=false` | same-repo PR, push, nightly |
+| `GITHUB` | on | **yes** | on | **yes** (Crashlytics-capable), unless `-Pinclude-telemetry=false` | release |
 | `FOSS` | off | no | on | no | not used by any workflow |
 
 Derived from `buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`:
@@ -357,8 +282,8 @@ Derived from `buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`:
 - `enableCodeShrink = !-Pdisable-code-shrink`
 - `includeDependencyInfo = -Pinclude-dependency-info ?: false`
 
-To force telemetry **off** even for `CI`/`GITHUB`, pass
-`-Pinclude-telemetry=false` (note: an empty value counts as *true*). Every
-workflow that builds with `-Pdist=ci`/`github` appends this flag automatically
-when `GOOGLE_SERVICES_JSON` is absent, which is why the same-repo CI paths are
-green without any Google setup.
+The `debug` build type always compiles `UPDATER_ENABLED=false`.
+
+To force telemetry **off** for `CI`/`GITHUB`, pass `-Pinclude-telemetry=false`
+(an empty value counts as *true*). Every workflow that builds with
+`-Pdist=ci`/`github` appends it automatically when `GOOGLE_SERVICES_JSON` is absent.

@@ -1,22 +1,29 @@
-# komi-kun — personal fork of Komikku
+# xkana-shii/komikku — personal fork of Komikku with the Komi-kun foundation
 
-This repository is a **personal vendoring fork of [Komikku](../AGENTS.md)**. It intends to stay a
-superset of Komikku while also tracking two further upstreams. This file documents the upstreams,
-the provenance markers, and the workflow that keeps future porting cheap. `AGENTS.md` is still the
-mandatory rulebook for code style, markers and i18n — read it first; this file only adds the fork's
-upstream topology.
+This repository is a **personal fork of [Komikku](https://github.com/komikku-app/komikku)** that
+imports **[Komi-kun](https://github.com/komi-kun/komi-kun)**'s architecture and keeps its own app
+identity (`app.komikku.kns`, published as Komikku) and release infrastructure. This file documents
+the upstream topology, the provenance markers and the porting workflow. `AGENTS.md` is the mandatory
+rulebook for code style, markers and i18n — read it first. How the foundation was assembled
+(pinned SHAs, imported/skipped commits, conflict decisions, validation) is recorded in
+[`docs/komikun-foundation-progress.md`](docs/komikun-foundation-progress.md).
 
 ## Upstreams
 
 | Role | Remote | Branch | What we take |
 |------|--------|--------|--------------|
-| Base upstream (the fork's parent) | `komikku` (`komikku-app/komikku`) | `master` | Everything. Our `master` is a Komikku commit; fast-forward it from `komikku/master` regularly. |
-| This fork | `origin` (`komi-kun/komi-kun`) | `master` | Our own work lives on feature branches, not on `master`. |
-| Additional upstream (primary) | `mihon` (`mihonapp/mihon`) | `main` | Bug fixes and features, cherry-picked individually. |
-| Additional upstream (secondary) | `tachiyomiSY` (`jobobby04/TachiyomiSY`) | `master` | Sync and SY features the fork wants, cherry-picked individually. |
+| **Direct upstream** (Git foundation) | `komikku` (`komikku-app/komikku`) | `master` | Everything that does not conflict with Komi-kun. The foundation branch starts from a `komikku/master` commit. |
+| **Additional upstream** (indirect) | `komikun` (`komi-kun/komi-kun`) | `master` | Its functional and architectural changes, cherry-picked with `-x`. **Komi-kun wins** where it conflicts with Komikku. Not its branding or release model. |
+| Inherited upstream | `mihon` (`mihonapp/mihon`) | `main` | Usually arrives through Komi-kun/Komikku; ported directly on request. |
+| Inherited upstream | `tachiyomiSY` (`jobobby04/TachiyomiSY`) | `master` | Usually arrives through Komi-kun/Komikku; ported directly on request. |
+| This fork | `origin` (`xkana-shii/komikku`) | `main` (target, after replacement) | Personal features (`KNS`) on feature branches. The rebuilt foundation lives on `codex/komikun-foundation` until it replaces `main`; the old `main` is preserved as `backup/pre-komikun-foundation-20261020`. |
 
 ```bash
-git fetch komikku mihon tachiyomiSY
+git remote add komikku https://github.com/komikku-app/komikku
+git remote add komikun https://github.com/komi-kun/komi-kun
+git remote add mihon https://github.com/mihonapp/mihon
+git remote add tachiyomiSY https://github.com/jobobby04/TachiyomiSY
+git fetch komikku komikun mihon tachiyomiSY
 ```
 
 The upstreams are configured in `.agents/skills/cherrypick-log/config.json`; the
@@ -25,60 +32,67 @@ what has and has not been ported (`cherrypick_log.md`).
 
 ## Provenance markers
 
-Markers are how we can still diff our tree against an upstream later. Markers record **divergence from
-upstream** — they never mark upstream code itself. Rules (extending `AGENTS.md`):
+Markers record where code first diverged, so the tree can still be diffed against each upstream.
 
 | Code origin | Marker |
 |-------------|--------|
-| This fork (komi-kun) — our own code | `// KUN -->` … `// KUN <--` |
-| Komikku upstream | `// KMK -->` … `// KMK <--` |
-| TachiyomiSY upstream | `// SY -->` … `// SY <--` (legacy `// EXH` also) |
-| Mihon upstream (base) | no block marker — keep the commit's `(cherry picked from commit <sha>)` trailer |
-| Changes *we* make inside an inherited `// KMK` / `// SY` / `// EXH` block | nest a `// KUN -->` … `// KUN <--` block inside it |
+| This fork (xkana-shii/komikku) | `// KNS -->` … `// KNS <--` |
+| Komi-kun | `// KUN -->` … `// KUN <--` |
+| Komikku | `// KMK -->` … `// KMK <--` |
+| TachiyomiSY | `// SY -->` … `// SY <--` (legacy `// EXH` also) |
+| Mihon (base) | no block marker — keep the commit's `(cherry picked from commit <sha>)` trailer |
+| Changes *we* make inside an inherited `KUN`/`KMK`/`SY`/`EXH` block | nest a `// KNS -->` … `// KNS <--` block inside it |
 
-- `// KMK` is **not** this fork's marker: it means the code came from the **Komikku** upstream (this
-  repo's base). komi-kun's own code uses `// KUN`.
-- New strings go to `i18n-kmk/.../base/strings.xml` and are referenced via `KMR` (`AGENTS.md`).
-  Weblate is **not** connected to this repo, so non-`base` locales are maintained here: translation
-  updates arrive by porting upstream translation commits, and new strings ship with best-effort
-  translations instead of waiting for a translation service.
-- Markers also apply inside `.sq` / `.sqm` files (use `-- KUN -->` / `-- KUN <--`).
-- A pure cherry-pick needs no marker: the trailing `(cherry picked from commit <sha>)` is the
-  provenance, and `update_cherrypick_log.py` detects it as `O`.
+- `KMK`/`KUN` are **not** this fork's markers; never relabel imported code, never mass-rename markers.
+- New strings go to `i18n-kmk/.../base/strings.xml` via `KMR` (no `KNSMR`, no `i18n-kns`). Weblate is
+  not connected; translations arrive by porting upstream translation commits.
+- Markers also apply inside `.sq` / `.sqm` (`-- KNS -->` / `-- KNS <--`) and XML (`<!-- KNS -->`).
+- A pure cherry-pick needs no marker: the `-x` trailer is the provenance, and
+  `update_cherrypick_log.py` detects it as `O`.
 
-## Porting workflow (Mihon / TachiyomiSY → this fork)
+## Porting workflow
 
 1. `python3 .agents/skills/cherrypick-log/update_cherrypick_log.py` — refresh the log.
-2. Review the `?` rows (and, when asked, the empty ones) with the `cherrypick-log` skill; mark
-   verdicts through the script (`mark`), never by hand.
-3. Port on a **feature branch**, one upstream sync per branch/PR:
-   `git checkout -b chore/upstream-<what> master`.
-4. Prefer `git cherry-pick -x <sha>` in **chronological order** — earlier commits in a series often
-   unblock later ones. Resolve conflicts by adapting to this fork, never by reverting Komikku
-   features. When a port needs local changes, keep the `(cherry picked from …)` trailer and wrap the
-   local delta in `// KUN` markers.
-5. **Prefer the TachiyomiSY copy of a Mihon commit** when one exists (the log shows them as a
-   `↳ tachiyomiSY` row): Komikku descends from SY, so the SY-adapted version conflicts far less.
-6. After each batch: `./gradlew spotlessApply spotlessCheck :app:compileDebugKotlin`, then the unit
-   tests (`:app:testDebugUnitTest`, `:domain:testDebugUnitTest`) where relevant.
-7. **Translation commits are ports too.** “Translations update from Hosted Weblate” commits are never
-   skipped (`X`): Weblate is not connected to this repo, so they are the only source of refreshed
-   translations. Resolve locale-file conflicts with `scripts/resolve_i18n_union.py` from the
-   `upstream-port` skill (upstream wins per key, base-less entries are dropped, fork-only
-   translations are re-appended), then
-   validate the XML and that no base key lost its translation.
-8. For SQL changes append a **new** migration at the next number
-   (`data/src/main/sqldelight/tachiyomi/migrations/<n+1>.sqm`); never renumber or edit an existing
-   migration. Reconcile the incoming triggers/columns with what Komikku already has — some may
-   already exist.
-9. After the PR is merged into `master`, run the generator again: it finds the ported commits by
-   their cherry-pick trailer and marks them `O`.
-10. Push the feature branch and open a PR; never push to `master`.
+2. Review `?` rows (and empty ones when asked) with the `cherrypick-log` skill; record verdicts with
+   the script's `mark` command, never by hand.
+3. Port on a **feature branch**, one sync per branch/PR: `git checkout -b chore/upstream-<what> main`
+   (the foundation branch until it replaces `main`).
+4. `git cherry-pick -x <sha>` in **chronological order**. Conflict policy:
+   - **Komi-kun vs Komikku:** take Komi-kun's complete implementation for a genuinely conflicting
+     source file (`git checkout <komikun-sha> -- <path>`), keep its deletions, keep nonconflicting
+     Komikku changes, and put required compatibility fixes in a separate `KNS` commit.
+   - **Mihon/TachiyomiSY:** adapt to this fork, never revert Komikku/Komi-kun features. Prefer the
+     TachiyomiSY copy of a Mihon commit when one exists (`↳ tachiyomiSY` rows).
+   - Repository identity, signing, workflows and the migration chain are never overwritten by an
+     upstream file (see `AGENTS.md`).
+5. After each batch: `./gradlew spotlessApply spotlessCheck :app:compileDebugKotlin`, the relevant unit
+   tests, and `:data:verifyDebugDatabaseMigration` for SQL changes.
+6. **Translation commits are ports too** — never `X`; resolve locale conflicts with
+   `scripts/resolve_i18n_union.py` from the `upstream-port` skill.
+7. SQL: append a **new** migration at the next number; never renumber. Komikku and Komi-kun numbered
+   migrations diverge (e.g. both have a different `47.sqm`): reconcile by content, not by number.
+8. After merging, rerun the generator so ported rows flip to `O`; record skipped commits as `X` with a
+   reason.
 
-## Followed Mihon re-architectures
+## Foundation integration (Oct 2026)
 
-The fork now follows Mihon on its internal re-architectures (adopted Oct 2026). When porting,
-assume these are the current state, not divergences:
+The foundation branch was built from Komikku `master` `1656575e8f` plus Komi-kun `master`
+`2c6743696d` (24 of its 31 non-merge commits picked with `-x`; branding, icon, nightly-release, MAL
+OAuth client and its release-notes workflow commit not imported), followed by `KNS` commits for the
+application identity, CI/release infrastructure, a migration fix for fresh-installed Komikku
+databases (`49.sqm`) and documentation. Komikku's own commits after the shared base are all
+represented by Komi-kun equivalents, except two MangaDex-cover reverts (`c10081a5d6`, `411523a2a0`)
+that conflict with Komi-kun's `NetworkHelper` and stay pending. Full record:
+[`docs/komikun-foundation-progress.md`](docs/komikun-foundation-progress.md).
+
+> The sections below are carried over from Komi-kun's `FORK.md`. "The fork" there means Komi-kun,
+> whose code this repository now contains, so they describe this tree as well.
+
+## Inherited from Komi-kun: followed Mihon re-architectures
+
+Komi-kun follows Mihon on its internal re-architectures (adopted Oct 2026) and this fork inherits
+them through the foundation integration. When porting, assume these are the current state, not
+divergences:
 
 - **Metro DI** (`dev.zacsweers.metro` + `metrox-viewmodel`) replacing Injekt, with the `AppGraph`
   dependency graph and `AppBindings`/`DatabaseBindings` binding containers.
@@ -113,7 +127,7 @@ assume these are the current state, not divergences:
 - `MangaViewModel` collects the entry only while subscribed.
 - compileSdk 37.2, aboutLibraries v15.
 
-## Still divergent (do not port blindly)
+## Inherited from Komi-kun: still divergent from Mihon (do not port blindly)
 
 - **Injekt is not fully removed.** Mihon keeps Injekt in ~32 files; this fork keeps it in ~51
   Komikku/SY/KMK files (extension-facing sources, the SyncYomi/connections stacks, abstract
@@ -155,9 +169,9 @@ Residual fork-only divergence:
   `getPageLoadResult` handles `MetadataMangasPage` (using its explicit `nextKey` when present) so
   the separate EHentai variants are no longer needed.
 
-## Status of the first big upstream sync (Oct 2026)
+## Komi-kun history: the first big upstream sync (Oct 2026)
 
-The branch that introduced this file ports:
+Komi-kun's squashed port `5d0a67227d` (imported here as the first foundation commit) contains:
 
 - **TachiyomiSY PR #1648** — SyncYomi protocol v2 with v1 fallback — plus its related fixes
   (PRs #1641/#1650 assessed) and the SY category-uid prerequisite (SY #1559).
@@ -181,19 +195,15 @@ The items under "Still divergent" remain in `cherrypick_log.md` for dedicated fo
   The `15c4b5beef` port of TachiyomiSY #1641 cites the merged squash `148496e754` (its branch commit
   `4e8e01d4f4` was superseded when #1641 landed).
 
-## Known divergences / review notes
+## Known divergences / review notes (Komi-kun, plus this fork)
 
 Accepted divergences, recorded during review of the first big upstream sync (Oct 2026):
 
-- **Brand strings live inside upstream-owned i18n files.** The app-name strings are edited in
-  `i18n/src/commonMain/moko-resources/base/strings.xml` and
-  `i18n-sy/src/commonMain/moko-resources/base/strings.xml` (name → Komikun), i.e. inside modules
-  `AGENTS.md` marks as upstream-owned. The edits are `// KUN`-wrapped and are an intentional
-  divergence, not a sync mistake — so default to keeping the Komikun brand when resolving conflicts
-  there. But treat that as a default, not a hard rule: if an incoming upstream change supplants or
-  improves on the fork's branding (a rebrand, a better string/plumbing mechanism, a translation
-  fix), adopt the upstream version and drop or adapt the local edit instead of preserving the fork
-  string blindly.
+- **Brand strings (this fork).** Komi-kun renames the app to "Komikun" inside upstream-owned i18n
+  files and tracker User-Agents. xkana-shii/komikku ships as **Komikku** (`app.komikku.kns`), so
+  foundation commit `chore(identity): keep the xkana-shii/komikku application identity` restores Komikku's exact strings where Komi-kun only renamed them
+  and nests `// KNS` blocks where the code is Komi-kun's own. When syncing Komi-kun, keep the Komikku
+  brand; don't re-import `Komikun` strings.
 - **The Mihon copy was preferred over the TachiyomiSY copy in ~57 cases.** The porting workflow
   above says to prefer the SY copy when one exists, but this sync (and earlier history, ~60 commits
   in total) often took the Mihon copy instead. This is a known, accepted deviation: it increases

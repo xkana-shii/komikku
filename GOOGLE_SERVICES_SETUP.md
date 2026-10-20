@@ -87,8 +87,8 @@ if (Config.includeTelemetry) {
 > (`assembleNightly -Pdist=ci`) and the **`release`** variant for tags
 > (`assembleRelease -Pdist=github`). Their package names are **different** (see
 > [§2](#2-which-application-ids-you-must-register)), so a `google-services.json`
-> containing only `app.komikun` will make the **nightly** build fail with a "no
-> matching client for `app.komikun.beta`" error.
+> containing only `app.komikku.kns` will make the **nightly** build fail with a "no
+> matching client for `app.komikku.kns.beta`" error.
 
 ### 1.2 `app/src/main/assets/client_secrets.json`
 
@@ -117,19 +117,19 @@ if (Config.includeTelemetry) {
 
 ## 2. Which application IDs you must register
 
-From `app/build.gradle.kts`: `defaultConfig.applicationId = "app.komikun"`, plus
+From `app/build.gradle.kts`: `defaultConfig.applicationId = "app.komikku.kns"`, plus
 per-build-type `applicationIdSuffix`:
 
 | Build type | Variant built by | Final `applicationId` | Register in Firebase? |
 |---|---|---|---|
-| `release` | release workflow (`assembleRelease`) | `app.komikun` | **Yes** (required) |
-| `nightly` | PR / push / nightly workflows (`assembleNightly`) | `app.komikun.beta` | **Yes** (required for that CI path) |
-| `debug` | local `assembleDebug` | `app.komikun.dev` | Optional (local debugging) |
-| `releaseTest` | — | `app.komikun.rt` | No |
-| `foss` | — | `app.komikun.foss` | No |
-| `benchmark` | benchmark workflow (`assembleBenchmark`) | `app.komikun.benchmark` | No (no telemetry) |
+| `release` | release workflow (`assembleRelease`) | `app.komikku.kns` | **Yes** (required) |
+| `nightly` | PR / push / nightly workflows (`assembleNightly`) | `app.komikku.kns.beta` | **Yes** (required for that CI path) |
+| `debug` | local `assembleDebug` | `app.komikku.kns.dev` | Optional (local debugging) |
+| `releaseTest` | — | `app.komikku.kns.rt` | No |
+| `foss` | — | `app.komikku.kns.foss` | No |
+| `benchmark` | benchmark workflow (`assembleBenchmark`) | `app.komikku.kns.benchmark` | No (no telemetry) |
 
-**Register at least `app.komikun` and `app.komikun.beta`** (and `.dev` if you
+**Register at least `app.komikku.kns` and `app.komikku.kns.beta`** (and `.dev` if you
 want debug telemetry to resolve). One Firebase project can hold all of them; the
 downloaded `google-services.json` then contains one `client` per package.
 
@@ -209,12 +209,12 @@ Do the sections in order.
    Analytics is the Firebase product that sends usage stats, so keep it on if you
    want that product. Accept the terms and click **Create project**.
 3. On the project home, click the **Android** icon (or **Add app → Android**):
-   - **Android package name:** `app.komikun` → **Register app**.
+   - **Android package name:** `app.komikku.kns` → **Register app**.
    - **Download `google-services.json`.** (You'll re-download once at the end
      after adding all packages, to get a single combined file.)
 4. Repeat **Add app → Android** for:
-   - `app.komikun.beta` (the `nightly` variant — required for PR/push/nightly CI),
-   - optionally `app.komikun.dev` (local `debug`).
+   - `app.komikku.kns.beta` (the `nightly` variant — required for PR/push/nightly CI),
+   - optionally `app.komikku.kns.dev` (local `debug`).
    - The SHA-1 field is optional here; add it ([§4.3](#43-get-the-release-keystore-sha-1))
      if you have the keystore. If prompted for a nickname, anything works.
 5. After adding every package, go to **⚙ (Project settings) → General → Your
@@ -223,7 +223,7 @@ Do the sections in order.
 
 **Verify the file** before trusting it: it should be JSON with a `client` array
 whose entries have `client_info.android_client_info.package_name` equal to
-`app.komikun` and `app.komikun.beta` (and `.dev` if you added it). A quick check:
+`app.komikku.kns` and `app.komikku.kns.beta` (and `.dev` if you added it). A quick check:
 
 ```bash
 grep -o '"package_name": *"[^"]*"' app/google-services.json | sort -u
@@ -285,7 +285,7 @@ one at **https://console.cloud.google.com/**.
      - Application type: **Android**.
      - **Package name:** the upstream instructions say `eu.kanade.google.oauth`,
        but that is the app's redirect **scheme**, not its `applicationId`. Use
-       the real application id you sign with — `app.komikun` for release builds.
+       the real application id you sign with — `app.komikku.kns` for release builds.
      - **SHA-1 certificate fingerprint:** the value from [§4.3](#43-get-the-release-keystore-sha-1).
      - Expand **Advanced settings**, enable **Custom URL scheme**, enter
        `eu.kanade.google.oauth` (matches the manifest/redirect URI).
@@ -338,7 +338,7 @@ so do **not** base64-encode them). This checkout has several remotes, so pass
 `--repo`:
 
 ```bash
-REPO=komi-kun/komi-kun
+REPO=xkana-shii/komikku
 gh secret set GOOGLE_SERVICES_JSON       --repo "$REPO" < app/google-services.json
 gh secret set GOOGLE_CLIENT_SECRETS_JSON --repo "$REPO" < path/to/client_secrets.json
 ```
@@ -467,10 +467,10 @@ Trigger each path as described in `CI_SETUP.md` §5. Success looks like:
 | Symptom | Cause | Fix |
 |---|---|---|
 | `File google-services.json is missing` (or empty) when applying the plugin | `GOOGLE_SERVICES_JSON` set to an empty value, or telemetry forced on without the file | Set a valid raw-JSON secret, or leave it unset / pass `-Pinclude-telemetry=false`. |
-| `No matching client found for package name 'app.komikun.beta'` (and the PR/push/nightly job fails) | The JSON only has `app.komikun`; `assembleNightly` builds `app.komikun.beta` | In Firebase, **Add app → Android** with package `app.komikun.beta`, then re-download the combined `google-services.json` and update the secret. Repeat for `.dev` if debugging locally. |
+| `No matching client found for package name 'app.komikku.kns.beta'` (and the PR/push/nightly job fails) | The JSON only has `app.komikku.kns`; `assembleNightly` builds `app.komikku.kns.beta` | In Firebase, **Add app → Android** with package `app.komikku.kns.beta`, then re-download the combined `google-services.json` and update the secret. Repeat for `.dev` if debugging locally. |
 | Release job fails **uploading the Crashlytics mapping** (`-Pdist=github`) — e.g. 403 / "The caller does not have permission" | Crashlytics not enabled in Firebase, or the project/app isn't wired for it | Enable **Crashlytics** in the Firebase console; or switch the release build to `-Pdist=ci`; or leave `GOOGLE_SERVICES_JSON` unset (see [§3.2](#32-the-exact-flag-to-avoid-google-even-when-ci-uses--pdistci)). |
 | JSON parse error, or `400`/`403` from the Google plugin | Secret pasted as base64, wrapped in quotes, or with stray characters | Re-copy the **raw** JSON (no base64, no surrounding quotes). |
-| Build/agent error about `applicationId` mismatch | Registered the wrong package (`app.komikun` vs `app.komikun.beta`) | Register every variant package you actually build ([§2](#2-which-application-ids-you-must-register)). |
+| Build/agent error about `applicationId` mismatch | Registered the wrong package (`app.komikku.kns` vs `app.komikku.kns.beta`) | Register every variant package you actually build ([§2](#2-which-application-ids-you-must-register)). |
 | Google Drive sign-in fails at runtime with `FileNotFoundException: client_secrets.json` | File not packaged — wrong path | Put it at `app/src/main/assets/client_secrets.json` (create the folder). |
 | Google Drive sign-in: `invalid_client` / `unauthorized_client` / redirect error | Wrong OAuth client type, missing redirect URI, or consent screen in **Testing** without your account as a test user | Use an `installed` client with `eu.kanade.google.oauth:/oauth2redirect` allowed, and add yourself as a test user or publish the app. |
 | Sign-in rejected for a specific APK | SHA-1 registered doesn't match the APK's signing cert | Re-read the SHA-1 (`keytool -printcert -jarfile …`) and update the OAuth/Firebase client. |
@@ -495,7 +495,7 @@ Trigger each path as described in `CI_SETUP.md` §5. Success looks like:
   the app's signing certificate fingerprint (SHA-256) with the hardcoded upstream
   value. Sign with your own keystore (which you must, to sign CI builds) and the
   check fails, so Firebase never initializes. Note the package list is
-  **`app.komikku`** (upstream's app id), not this fork's `app.komikun`.
+  **`app.komikku`** (upstream's app id), not this fork's `app.komikku.kns`.
 - **Collection is opt-in anyway.** `telemetry/src/main/AndroidManifest.xml` sets
   `firebase_analytics_collection_enabled=false` and
   `firebase_crashlytics_collection_enabled=false`, and removes ad-id

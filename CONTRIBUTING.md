@@ -1,3 +1,8 @@
+> **xkana-shii/komikku** is a personal fork of Komikku with Komi-kun's architecture. Development rules
+> (markers, strings, architecture, Git) are in [`AGENTS.md`](AGENTS.md); upstream topology and the
+> porting workflow are in [`FORK.md`](FORK.md). The upstream contribution guide below is kept for
+> reference; its links point to Komikku.
+
 Looking to report an issue/bug or make a feature request? Please refer to the [README file](https://github.com/komikku-app/komikku#issues-feature-requests-and-contributing).
 
 ---

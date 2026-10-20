@@ -1,6 +1,6 @@
 ---
 name: cherrypick-log
-description: Update and review cherrypick_log.md, the todo list of upstream commits not yet cherry-picked into the fork's target branch. The upstreams are set in config.json (one main upstream plus one or more additional ones; in Komikku, main mihon/main, additional tachiyomiSY/master). Use when asked to refresh/update the cherry-pick log, list new upstream commits, resolve '?' (uncertain) entries by checking whether an upstream change is already in master, or clean the log by omitting (marking X) commits that only bump the app version.
+description: Update and review cherrypick_log.md, the todo list of upstream commits not yet cherry-picked into the fork's target branch. The upstreams are set in config.json (one main upstream plus one or more additional ones; here main mihon/main, additional tachiyomiSY/master, komikku/master and komikun/master). Use when asked to refresh/update the cherry-pick log, list new upstream commits, resolve '?' (uncertain) entries by checking whether an upstream change is already in the target branch, or clean the log by omitting (marking X) commits that only bump the app version.
 ---
 
 # Cherry-pick log: update + AI review
@@ -54,15 +54,16 @@ pair cancels out and the fork has neither side, since dropping the pair (X) is t
 For upstream commit `H` (already fetched locally):
 
 1. `git show --stat --format=fuller H` and then the diff (`git show H -- <path>`) for the main files.
-2. If Details names target commits (``master `abc` [title]``, `[pr only …]`), inspect them:
+2. If Details names target commits (``<target> `abc` [title]``, `[pr only …]`; `<target>` is
+   `target_branch` from `config.json`), inspect them:
    `git show --stat abc`, then compare the hunks with the upstream change.
-3. Otherwise, search `master` for the change itself:
-   - `git grep -n -F '<distinctive added line>' master -- <path>` (Komikku keeps most upstream paths;
+3. Otherwise, search the target branch (`T=$(python3 -c "import json;print(json.load(open('.agents/skills/cherrypick-log/config.json'))['target_branch'])")`) for the change itself:
+   - `git grep -n -F '<distinctive added line>' $T -- <path>` (Komikku keeps most upstream paths;
      changes may be wrapped in `// KMK` / `// SY` markers or be in a renamed file).
-   - `git log master --oneline -S'<distinctive snippet>' --since=<upstream date - 6 months>`.
-   - For removals, check that the removed code is gone from `master`.
+   - `git log $T --oneline -S'<distinctive snippet>' --since=<upstream date - 6 months>`.
+   - For removals, check that the removed code is gone from `$T`.
 4. Decide:
-   - **O**: the change is in `master` (cherry-picked, squashed into another commit, or re-implemented).
+   - **O**: the change is in `$T` (cherry-picked, squashed into another commit, or re-implemented).
    - **?**: partly present, conflicts with a Komikku rework, or you can't tell.
    - **empty**: not present.
    Never set **X** here. That is the maintainer's "won't pick" decision. The only exception is
@@ -71,7 +72,7 @@ For upstream commit `H` (already fetched locally):
 ## 4. Record the verdict (never hand-edit the table)
 
 ```bash
-python3 $P mark <hash> --status O    --note "AI checked YYYY-MM-DD: present in master <kmk-hash or file> - <why>"
+python3 $P mark <hash> --status O    --note "AI checked YYYY-MM-DD: present in <target> <hash or file> - <why>"
 python3 $P mark <hash> --status '?'  --note "AI checked YYYY-MM-DD: partial - <what is missing>"
 python3 $P mark <hash> --status none --note "AI checked YYYY-MM-DD: not found - <what you searched>"
 ```
@@ -114,7 +115,7 @@ are the only source of refreshed translations.
    applies the script's revert-chain omission.
 2. Report to the user how many rows you reviewed, how many became O / stayed ? / empty / X, and any rows
    that need a human decision (big reworks, likely X candidates).
-3. Do not commit unless asked. If asked, follow `AGENTS.md` git rules (feature branch, never `master`).
+3. Do not commit unless asked. If asked, follow `AGENTS.md` git rules (feature branch, never `main` / `master`).
 
 ## Large batches
 

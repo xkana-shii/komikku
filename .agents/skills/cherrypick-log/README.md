@@ -26,9 +26,11 @@ python3 .agents/skills/cherrypick-log/update_cherrypick_log.py mark 1a2b3c4d --s
 python3 .agents/skills/cherrypick-log/update_cherrypick_log.py mark 5e6f7a8b --status X --note "SY-only release bump"
 ```
 
-The upstream remotes named in `config.json` must exist. In Komikku these are `git remote add mihon https://github.com/mihonapp/mihon`
-and `git remote add tachiyomiSY https://github.com/jobobby04/TachiyomiSY`. The script fetches them itself
-unless you pass `--no-fetch`.
+The upstream remotes named in `config.json` must exist. In xkana-shii/komikku these are
+`git remote add mihon https://github.com/mihonapp/mihon`, `git remote add tachiyomiSY https://github.com/jobobby04/TachiyomiSY`,
+`git remote add komikku https://github.com/komikku-app/komikku` and `git remote add komikun https://github.com/komi-kun/komi-kun`.
+The script fetches them itself unless you pass `--no-fetch`. `target_branch` is the rebuilt foundation
+branch until it replaces `main`; switch it to `main` then.
 
 ## Commands
 
@@ -161,7 +163,8 @@ templates). Their note is `AI checked <date>: omitted - version bump only (<file
 | `additional_upstreams` | List of one or more `{name, remote, branch, github, since?}`. Their commits are paired with, and interleaved into, the main upstream's. Names must be unique. The optional per-upstream `since` (`YYYY-MM-DD`) overrides the global one for that upstream |
 
 A **base / merge upstream** (in this fork: `komikku`, the project it is forked from) is listed as an
-additional upstream too. Its commits are *merged* into `master`, not cherry-picked, so the generator
+additional upstream too; Komi-kun (`komikun`) is listed the same way, but its commits are cherry-picked
+with `-x`, so they are detected by their trailers. Its commits are *merged* into `master`, not cherry-picked, so the generator
 marks them `O` automatically once their hash is reachable from the target branch. Give it its own
 `since` close to the current base commit — otherwise every Komikku commit back to the global `since`
 would be listed — and advance that `since` whenever you sync the base forward.

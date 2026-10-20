@@ -1,5 +1,5 @@
 {
-  "target_branch": "master",
+  "target_branch": "codex/komikun-foundation",
   "since": "2024-01-01",
   "output": "cherrypick_log.md",
   "exclude_identity_regex": "renovate",
@@ -21,6 +21,13 @@
       "remote": "komikku",
       "branch": "master",
       "github": "komikku-app/komikku",
+      "since": "2026-10-08"
+    },
+    {
+      "name": "komikun",
+      "remote": "komikun",
+      "branch": "master",
+      "github": "komi-kun/komi-kun",
       "since": "2026-10-08"
     }
   ]
