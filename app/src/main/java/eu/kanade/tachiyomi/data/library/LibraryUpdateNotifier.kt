@@ -31,6 +31,8 @@ import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import eu.kanade.tachiyomi.util.system.notify
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
@@ -93,6 +95,12 @@ class LibraryUpdateNotifier(
 
     private var lastProgressNotificationTime = 0L
 
+    // KUN -->
+    // Serializes access to the shared [progressNotificationBuilder]. Upstream relies on
+    // @Synchronized, which cannot be used here because this function suspends.
+    private val notificationMutex = Mutex()
+    // KUN <--
+
     /**
      * Shows the notification containing the currently updating manga and the progress.
      *
@@ -103,14 +111,15 @@ class LibraryUpdateNotifier(
      * @param current the current progress.
      * @param total the total progress.
      */
-    // KUN --> stays suspend: [libraryUpdateStatus.updateProgress] below suspends, so upstream's
-    // @Synchronized cannot be applied; the throttle below is kept
-    // KUN <--
     suspend fun showProgressNotification(manga: List<Manga>, current: Int, total: Int) {
-        val now = SystemClock.elapsedRealtime()
-        if (current < total && now - lastProgressNotificationTime < NOTIF_PROGRESS_INTERVAL_MS) return
-        lastProgressNotificationTime = now
+        // KUN --> upstream marks this @Synchronized, which a suspend function cannot use
+        notificationMutex.withLock {
+            showProgressNotificationLocked(manga, current, total)
+        }
+        // KUN <--
+    }
 
+    private suspend fun showProgressNotificationLocked(manga: List<Manga>, current: Int, total: Int) {
         progressNotificationBuilder
             .setContentTitle(
                 context.stringResource(
@@ -125,8 +134,23 @@ class LibraryUpdateNotifier(
 
         if (!securityPreferences.hideNotificationContent.get()) {
             val updatingText = manga.joinToString("\n") { it.title.chop(40) }
-            progressNotificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(updatingText))
+            // KUN -->
+            // Keep the last non-empty list. The worker also reports after removing an entry,
+            // when nothing is in progress anymore; clearing the big text there is what left the
+            // expanded notification empty, since throttled posts often land on those calls.
+            if (updatingText.isNotEmpty()) {
+                progressNotificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(updatingText))
+            }
+            // KUN <--
         }
+
+        // KUN -->
+        // Only throttle posting. The builder is updated on every call, so the next post still
+        // carries the latest entries even when this call itself is skipped.
+        val now = SystemClock.elapsedRealtime()
+        if (current < total && now - lastProgressNotificationTime < NOTIF_PROGRESS_INTERVAL_MS) return
+        lastProgressNotificationTime = now
+        // KUN <--
 
         context.notify(
             Notifications.ID_LIBRARY_PROGRESS,
