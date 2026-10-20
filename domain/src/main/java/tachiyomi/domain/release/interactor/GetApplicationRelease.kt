@@ -82,11 +82,15 @@ class GetApplicationRelease(
         // Removes prefixes like "r" or "v"
         val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
         return if (isNightly) {
-            // Nightly builds: based on releases in "komi-kun/komi-kun" repo
+            // KNS -->
+            // Nightly builds: based on releases in "xkana-shii/komikku-preview" repo
+            // KNS <--
             // tagged as something like "r1234"
             newVersion.toInt() > commitCount
         } else {
-            // Release builds: based on releases in "komi-kun/komi-kun" repo
+            // KNS -->
+            // Release builds: based on releases in "xkana-shii/komikku" repo
+            // KNS <--
             // tagged as something like "v0.1.2"
             val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
 

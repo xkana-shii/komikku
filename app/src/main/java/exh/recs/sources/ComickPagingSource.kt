@@ -55,7 +55,9 @@ internal class ComickPagingSource(
             val headers = Headers.Builder().apply {
                 add("Referer", "api.comick.fun/")
                 // KUN -->
-                add("User-Agent", "Komikun ${System.getProperty("http.agent")}")
+                // KNS -->
+                add("User-Agent", "Komikku ${System.getProperty("http.agent")}")
+                // KNS <--
                 // KUN <--
             }
 

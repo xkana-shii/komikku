@@ -33,9 +33,7 @@ class MyAnimeListInterceptor(private val myanimelist: MyAnimeList) : Interceptor
         val authRequest = originalRequest.newBuilder()
             .addHeader("Authorization", "Bearer ${oauth!!.accessToken}")
             // TODO(antsy): Add back custom user agent when they stop blocking us for no apparent reason
-            // KUN -->
-            // .header("User-Agent", "Komikun v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
-            // KUN <--
+            // .header("User-Agent", "Komikku v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
             .build()
 
         return chain.proceed(authRequest)

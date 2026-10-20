@@ -346,7 +346,7 @@ private fun onViewCreated(
             manga.ogThumbnailUrl?.let {
                 it.chop(40) + if (it.length > 46) "." + it.substringAfterLast(".").chop(6) else ""
             },
-            "file:///storage/emulated/0/Pictures/Komikun/Cover.jpg",
+            "file:///storage/emulated/0/Pictures/Komikku/Cover.jpg",
         )
         // KMK <--
         binding.thumbnailUrl.hint =

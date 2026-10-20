@@ -88,12 +88,16 @@ class AppUpdateChecker(
 
 val GITHUB_REPO: String by lazy { getGithubRepo() }
 
-// KUN -->
-// The fork has no separate stable/preview repositories: every build (preview
-// "r<count>" and tagged "v<semver>") is published as a prerelease under
-// komi-kun/komi-kun, so both build types read releases from there.
-fun getGithubRepo(peekIntoPreview: Boolean = false): String = "komi-kun/komi-kun"
-// KUN <--
+// KNS -->
+// xkana-shii/komikku publishes stable "v<semver>" releases in its own repository and nightly
+// ("preview") "r<count>" builds in xkana-shii/komikku-preview.
+fun getGithubRepo(peekIntoPreview: Boolean = false): String =
+    if (isNightlyBuildType || peekIntoPreview) {
+        "xkana-shii/komikku-preview"
+    } else {
+        "xkana-shii/komikku"
+    }
+// KNS <--
 
 val RELEASE_TAG: String by lazy { getReleaseTag() }
 

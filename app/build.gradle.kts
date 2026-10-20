@@ -32,10 +32,14 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.komikun"
+        // KNS -->
+        // xkana-shii/komikku keeps its own application identity and version line (bumped by
+        // .github/workflows/bump.yml via .github/scripts/bump_version.sh), not Komi-kun's.
+        applicationId = "app.komikku.kns"
 
-        versionCode = 83
-        versionName = "1.14.1"
+        versionCode = 172
+        versionName = "1.24.8"
+        // KNS <--
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getGitSha()}\"")
@@ -428,10 +432,12 @@ apollo {
         introspection {
             // Kitsu doesn't like requests without a UA
             // KUN -->
+            // KNS -->
             headers.put(
                 "User-Agent",
-                "Komikun v${android.defaultConfig.versionName} (${android.defaultConfig.applicationId})",
+                "Komikku v${android.defaultConfig.versionName} (${android.defaultConfig.applicationId})",
             )
+            // KNS <--
             // KUN <--
             endpointUrl.set("https://kitsu.app/api/graphql")
             schemaFile.set(file("$srcDir/kitsu.graphqls"))

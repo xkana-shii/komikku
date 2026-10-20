@@ -31,7 +31,7 @@ class BangumiInterceptor(private val bangumi: Bangumi) : Interceptor {
             // KUN -->
             .header(
                 "User-Agent",
-                "Komikun v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})",
+                "Komikku v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})",
             )
             // KUN <--
             .addHeader("Authorization", "Bearer ${currAuth.accessToken}")

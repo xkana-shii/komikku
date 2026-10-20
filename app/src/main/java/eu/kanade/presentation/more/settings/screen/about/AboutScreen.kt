@@ -295,7 +295,9 @@ class AboutScreen : Screen() {
                         LinkIcon(
                             label = "GitHub",
                             icon = SimpleIcons.Github,
-                            url = "https://github.com/komikku-app",
+                            // KNS -->
+                            url = "https://github.com/xkana-shii",
+                            // KNS <--
                         )
                     }
                 }
