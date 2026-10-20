@@ -241,9 +241,19 @@ class SyncManager(
         syncRepository.resetSyncing()
         // SY <--
 
+        // KUN -->
+        val mergedBackupCategories = mergeSyncCategories(
+            local = backup.backupCategories,
+            remote = remoteBackup.backupCategories,
+            protocolV2 = result.protocolV2,
+        )
+        // KUN <--
+
         val newSyncData = backup.copy(
             backupManga = filteredFavorites,
-            backupCategories = remoteBackup.backupCategories,
+            // KUN -->
+            backupCategories = mergedBackupCategories,
+            // KUN <--
             // SY -->
             // a v2 delta only carries changed sources
             backupSources = remoteBackup.backupSources.ifEmpty { backup.backupSources },
@@ -263,7 +273,13 @@ class SyncManager(
 
         // SY -->
         val hasMangaChanges = filteredFavorites.isNotEmpty()
-        val hasCategoryChanges = categoriesDiffer(backup.backupCategories, remoteBackup.backupCategories)
+        // KUN -->
+        val hasCategoryChanges = if (result.protocolV2) {
+            remoteBackup.backupCategories.isNotEmpty()
+        } else {
+            categoriesDiffer(backup.backupCategories, remoteBackup.backupCategories)
+        }
+        // KUN <--
         // a v2 delta leaves out the sections nothing changed in; an absent section is not a change
         val hasSourceChanges = newSyncData.backupSources != backup.backupSources
         val hasPreferenceChanges = remoteBackup.backupPreferences.isNotEmpty() &&
@@ -286,7 +302,9 @@ class SyncManager(
         // SY <--
 
         // SY -->
-        if (syncOptions.categories) {
+        // KUN -->
+        // Only prune categories when not on protocol v2 (v2 uses tombstones) and the category list is non-empty.
+        if (!result.protocolV2 && syncOptions.categories && newSyncData.backupCategories.isNotEmpty()) {
             val mergedUids = newSyncData.backupCategories.map { it.uid }.toSet()
             val mergedNames = newSyncData.backupCategories.map { it.name }.toSet()
             val localCategories = getCategories.await().filterNot { it.id == 0L } // Exclude system category
@@ -300,6 +318,7 @@ class SyncManager(
                 categoriesToDelete.forEach { syncPreferences.rememberDeletedCategory(it.uid) }
             }
         }
+        // KUN <--
         // SY <--
 
         // SY -->

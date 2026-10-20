@@ -110,4 +110,78 @@ class SyncDeltaTest {
             Json.decodeFromString(serializer, Json.encodeToString(serializer, listOf(oddKey))),
         )
     }
+
+    // KUN -->
+    @Test
+    fun `mergeSyncCategories preserves local categories when v2 delta is empty`() {
+        val local = listOf(
+            BackupCategory(name = "Reading", order = 0, uid = 1),
+            BackupCategory(name = "Completed", order = 1, uid = 2),
+        )
+        val remote = emptyList<BackupCategory>()
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = true)
+
+        assertEquals(2, merged.size)
+        assertEquals(listOf("Reading", "Completed"), merged.map { it.name })
+        assertEquals(listOf(0L, 1L), merged.map { it.order })
+    }
+
+    @Test
+    fun `mergeSyncCategories merges remote updates into local by UID in v2`() {
+        val local = listOf(
+            BackupCategory(name = "Reading", order = 0, uid = 1),
+            BackupCategory(name = "Plan to read", order = 1, uid = 2),
+        )
+        val remote = listOf(
+            BackupCategory(name = "Reading Renamed", order = 0, uid = 1),
+        )
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = true)
+
+        assertEquals(2, merged.size)
+        assertEquals(listOf("Reading Renamed", "Plan to read"), merged.map { it.name })
+    }
+
+    @Test
+    fun `mergeSyncCategories appends new remote categories in v2`() {
+        val local = listOf(
+            BackupCategory(name = "Reading", order = 0, uid = 1),
+        )
+        val remote = listOf(
+            BackupCategory(name = "On Hold", order = 1, uid = 3),
+        )
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = true)
+
+        assertEquals(2, merged.size)
+        assertEquals(listOf("Reading", "On Hold"), merged.map { it.name })
+    }
+
+    @Test
+    fun `mergeSyncCategories falls back to local in v1 when remote is empty`() {
+        val local = listOf(
+            BackupCategory(name = "Reading", order = 0, uid = 1),
+        )
+        val remote = emptyList<BackupCategory>()
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = false)
+
+        assertEquals(listOf("Reading"), merged.map { it.name })
+    }
+
+    @Test
+    fun `mergeSyncCategories uses remote in v1 when remote is present`() {
+        val local = listOf(
+            BackupCategory(name = "Reading", order = 0, uid = 1),
+        )
+        val remote = listOf(
+            BackupCategory(name = "Remote Category", order = 0, uid = 5),
+        )
+
+        val merged = mergeSyncCategories(local, remote, protocolV2 = false)
+
+        assertEquals(listOf("Remote Category"), merged.map { it.name })
+    }
+    // KUN <--
 }

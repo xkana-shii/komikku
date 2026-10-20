@@ -48,8 +48,16 @@ class MangaRestorer(
     suspend fun restore(
         backupMangas: List<BackupManga>,
         backupCategories: List<BackupCategory>,
+        // KUN -->
+        restoreCategories: Boolean = true,
+        // KUN <--
     ) {
-        val dbCategoriesByName = getCategories.await().associateBy { it.name }
+        // KUN -->
+        val dbCategories = getCategories.await()
+        val dbCategoriesByName = dbCategories.associateBy { it.name }
+        val dbCategoriesByUid = dbCategories.filter { it.uid != 0L }.associateBy { it.uid }
+        val dbCategoriesByOrder = dbCategories.associateBy { it.order }
+        // KUN <--
         val backupCategoriesByOrder = backupCategories.associateBy { it.order }
 
         val entries = backupMangas.map { backupManga ->
@@ -60,11 +68,22 @@ class MangaRestorer(
             RestoredManga(
                 manga = manga,
                 chapters = backupManga.chapters.map { it.toChapterImpl() },
-                categoryIds = backupManga.categories.mapNotNull { backupCategoryOrder ->
-                    backupCategoriesByOrder[backupCategoryOrder]?.let { backupCategory ->
-                        dbCategoriesByName[backupCategory.name]?.id
+                // KUN -->
+                categoryIds = if (restoreCategories) {
+                    backupManga.categories.mapNotNull { backupCategoryOrder ->
+                        val backupCat = backupCategoriesByOrder[backupCategoryOrder]
+                        if (backupCat != null) {
+                            (if (backupCat.uid != 0L) dbCategoriesByUid[backupCat.uid]?.id else null)
+                                ?: dbCategoriesByName[backupCat.name]?.id
+                                ?: dbCategoriesByOrder[backupCat.order]?.id
+                        } else {
+                            dbCategoriesByOrder[backupCategoryOrder]?.id
+                        }
                     }
+                } else {
+                    emptyList()
                 },
+                // KUN <--
                 history = backupManga.history.map {
                     val history = it.getHistoryImpl()
                     RestoredHistory(it.url, history.readAt, history.readDuration)
@@ -81,7 +100,9 @@ class MangaRestorer(
             )
         }
 
-        restoreRepository.restoreManga(entries, isSync) { manga ->
+        // KUN -->
+        restoreRepository.restoreManga(entries, isSync, restoreCategories) { manga ->
+            // KUN <--
             val update = fetchInterval.withFetchInterval(manga, now, timeZone, currentFetchWindow)
             // A next update still ahead was worked out with the chapters the backup came from
             val preservedNextUpdate = manga.nextUpdate

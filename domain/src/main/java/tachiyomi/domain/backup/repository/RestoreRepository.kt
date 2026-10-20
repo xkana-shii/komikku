@@ -19,6 +19,9 @@ interface RestoreRepository {
         // rows as local changes, so the raw inserts/updates go through with is_syncing set.
         isSync: Boolean,
         // KMK/SY <--
+        // KUN -->
+        restoreCategories: Boolean = true,
+        // KUN <--
         update: suspend (Manga) -> MangaUpdate,
     )
 

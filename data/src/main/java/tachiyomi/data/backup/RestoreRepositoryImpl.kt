@@ -55,6 +55,9 @@ class RestoreRepositoryImpl(
     override suspend fun restoreManga(
         entries: List<RestoredManga>,
         isSync: Boolean,
+        // KUN -->
+        restoreCategories: Boolean,
+        // KUN <--
         update: suspend (Manga) -> MangaUpdate,
     ) {
         // SY -->
@@ -65,7 +68,9 @@ class RestoreRepositoryImpl(
             entries.forEach { entry ->
                 // A cancelled restore stops between entries and rolls the whole batch back
                 currentCoroutineContext().ensureActive()
-                mangaRepository.update(update(restore(entry, isSync, syncingFlag)))
+                // KUN -->
+                mangaRepository.update(update(restore(entry, isSync, syncingFlag, restoreCategories)))
+                // KUN <--
             }
             if (isSync) {
                 database.mangaQueries.resetIsSyncing()
@@ -78,7 +83,14 @@ class RestoreRepositoryImpl(
         updateManga(manga, isSync, if (isSync) 1L else 0L)
     }
 
-    private suspend fun restore(entry: RestoredManga, isSync: Boolean, syncingFlag: Long): Manga {
+    private suspend fun restore(
+        entry: RestoredManga,
+        isSync: Boolean,
+        syncingFlag: Long,
+        // KUN -->
+        restoreCategories: Boolean,
+        // KUN <--
+    ): Manga {
         val dbManga = mangaRepository.getMangaByUrlAndSourceId(entry.manga.url, entry.manga.source)
         val manga = if (dbManga == null) {
             entry.manga.copy(id = insertManga(entry.manga, syncingFlag))
@@ -90,10 +102,10 @@ class RestoreRepositoryImpl(
         // For a sync restore an empty list must clear the assignment, or removing a manga's only
         // category never reaches the other devices (the stale assignment stays forever).
         // KUN -->
-        // But a normal (non-sync) restore may be run with the "Categories" option off, which makes
-        // `entry.categoryIds` empty for every entry; clearing unconditionally would then wipe every
-        // manga's category assignments. Only clear when the entry actually carries categories.
-        if (isSync || entry.categoryIds.isNotEmpty()) {
+        // But a restore may be run with the "Categories" option off, which makes `entry.categoryIds`
+        // empty for every entry; clearing unconditionally would then wipe every manga's category
+        // assignments. Only clear or update when categories are actually being restored.
+        if (restoreCategories && (isSync || entry.categoryIds.isNotEmpty())) {
             mangaRepository.setMangaCategories(manga.id, entry.categoryIds)
         }
         // KUN <--

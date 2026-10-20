@@ -183,11 +183,14 @@ class BackupRestorer(
             }
             if (options.libraryEntries) {
                 // SY -->
+                // KUN -->
                 restoreManga(
-                    uri,
-                    if (options.categories) backup.backupCategories else emptyList(),
-                    categoriesRestoreJob,
+                    uri = uri,
+                    backupCategories = if (options.categories) backup.backupCategories else emptyList(),
+                    restoreCategories = options.categories,
+                    categoriesRestoreJob = categoriesRestoreJob,
                 )
+                // KUN <--
                 // SY <--
             }
             if (options.extensionStores) {
@@ -258,6 +261,9 @@ class BackupRestorer(
     private fun CoroutineScope.restoreManga(
         uri: Uri,
         backupCategories: List<BackupCategory>,
+        // KUN -->
+        restoreCategories: Boolean,
+        // KUN <--
         // SY -->
         categoriesRestoreJob: Job? = null,
         // SY <--
@@ -296,7 +302,9 @@ class BackupRestorer(
             .collect { chunk ->
                 val restoredAsBatch = try {
                     ensureActive()
-                    mangaRestorer.restore(chunk, backupCategories)
+                    // KUN -->
+                    mangaRestorer.restore(chunk, backupCategories, restoreCategories)
+                    // KUN <--
                     true
                 } catch (e: Exception) {
                     ensureActive()
@@ -311,7 +319,9 @@ class BackupRestorer(
                         ensureActive()
 
                         try {
-                            mangaRestorer.restore(listOf(it), backupCategories)
+                            // KUN -->
+                            mangaRestorer.restore(listOf(it), backupCategories, restoreCategories)
+                            // KUN <--
                         } catch (e: Exception) {
                             ensureActive()
                             val sourceName = sourceMapping[it.source] ?: it.source.toString()
