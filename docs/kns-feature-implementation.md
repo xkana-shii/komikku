@@ -451,7 +451,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 18.2-d | Foreground-service compatibility | HISTORICAL | | — | — |
 | 18.2-e | Cover/chapter formatting | HISTORICAL | | — | — |
 | 18.2-f | Auth/API resilience | HISTORICAL | | — | — |
-| 18.2-g | Tokens not exported as normal prefs | PARTIAL | Verify private-pref handling | — | — |
+| 18.2-g | Tokens not exported as normal prefs | DONE | `discord_accounts` (contains tokens) and connection passwords use private keys; `PrivateConnectionsMigration` moves existing values and removes public copies on every start | `PrivateConnectionsMigrationTest` | batch 10 |
 
 ### 19. Storage and downloads
 
@@ -925,3 +925,17 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Still open:** device test of an in-place upgrade from the old fork (database + preferences); Discord RPC
   verification (18.2, historical); acceptance #28 device checks.
+
+### Batch 10 (part 4) — Discord secrets out of backups
+
+- **Finding:** Komikku's `discord_accounts` preference (a JSON list including each account's token) and
+  `pref_connections_password_<id>` used ordinary keys, so app-preference backups contained them.
+- **Fix:** both use `Preference.privateKey(...)` now (`ConnectionsPreferences`, `KNS`); `PrivateConnectionsMigration`
+  (runs every start, acts only while public keys exist) copies values into the private keys (keeping an existing
+  private value) and deletes the public ones, which also handles older backups restoring them.
+- **Tests:** `PrivateConnectionsMigrationTest` (2).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 242 with 1 skipped
+, data 89
+, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
+  Discord Rich Presence behavior review (18.2-a–f, historical); acceptance #28 device checks.

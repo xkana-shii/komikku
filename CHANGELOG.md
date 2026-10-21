@@ -61,6 +61,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - The library's download badge and Downloaded filter count only downloads of the chapters the chapter list shows for entries with a blacklist or Smart Merge.
 - Tapping the manga title in the reader now goes back like the arrow, to the screen the reader was opened from, instead of opening the entry in a new main screen.
 - Restoring a backup of the previous personal fork no longer turns its last-update time into the next expected update: that fork stored the next update in another field, which is now read.
+- Discord account tokens and connection passwords are no longer written into backups: they were stored as ordinary settings and are now private ones (included only when private settings are backed up on purpose). Existing logins are moved over on the next start, and the public copies are removed, also when an older backup brings them back.
 - Manga with blacklisted chapters or Smart Scanlator Merge show chapter, unread and bookmark counts and continue-reading targets for the chapters actually listed. Manga without these rules are counted exactly as before and cost nothing extra.
 - Don't use GMS to detect if GMS is available ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3525](https://github.com/mihonapp/mihon/pull/3525))
 

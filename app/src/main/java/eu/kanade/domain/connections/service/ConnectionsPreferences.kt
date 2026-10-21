@@ -58,13 +58,22 @@ class ConnectionsPreferences(
 
     val discordShowDiscordButton = preferenceStore.getBoolean("pref_discord_show_discord_button", true)
 
-    val discordAccounts = preferenceStore.getString("discord_accounts", "")
+    // KNS --> the accounts hold Discord tokens, so they are private (never in backups)
+    val discordAccounts = preferenceStore.getString(Preference.privateKey(DISCORD_ACCOUNTS_KEY), "")
+    // KNS <--
 
     companion object {
 
         fun connectionsUsername(syncId: Long) = "pref_connections_username_$syncId"
 
-        private fun connectionsPassword(syncId: Long) = "pref_connections_password_$syncId"
+        // KNS --> private, like tracker passwords
+        private fun connectionsPassword(syncId: Long) = Preference.privateKey(connectionsPasswordKey(syncId))
+
+        /** Before KNS: the public keys these were stored under; [PrivateConnectionsMigration] moves them. */
+        fun connectionsPasswordKey(syncId: Long) = "pref_connections_password_$syncId"
+
+        const val DISCORD_ACCOUNTS_KEY = "discord_accounts"
+        // KNS <--
 
         private fun connectionsToken(syncId: Long) = "connection_token_$syncId"
     }
