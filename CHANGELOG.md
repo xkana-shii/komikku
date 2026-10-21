@@ -11,6 +11,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Fixed
+- History day headers now use the shared Updates-style date heading and count badge. The badge continues to show the number of distinct manga read in the currently displayed entries for that day.
+
 ### Changed
 - Create backup can again back up only some categories (a feature of the previous personal fork). The Categories section is collapsed by default, showing what is selected (All, None or how many); expanding it lists All categories, Default and every category as an indented tree. Selecting or clearing a category does the same to its subcategories, so a branch can be chosen exactly, and same-named subcategories under different parents are separate. A selective backup contains the library entries filed in a selected category (each once), the members a selected merged entry needs, the selected categories and their parent categories, and files each entry only under its selected categories, so a restore does not add unwanted category assignments. Read entries outside the library are only included in full backups. Automatic backups always contain everything.
 - Autofill from tracker in the metadata editor also fills genres/tags and the publication status for MangaBaka, AniList, MyAnimeList and MangaUpdates. Fetched tags are added to the tags already in the editor (case-insensitive duplicates skipped), and a known status is selected; unknown or missing values leave the editor as it is. Nothing is saved until Save, and the tracker's own reading status, progress, score and dates are not touched. MangaUpdates tags are its genres plus the categories readers voted up, and its status is the series' status in the country of origin.

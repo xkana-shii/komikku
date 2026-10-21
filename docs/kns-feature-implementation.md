@@ -1243,3 +1243,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Not done:** the phone's dev install still has the 4,198 + 9 stray keys from the crashed restore; they
   are keyed by the old ids. Clearing that app's data (or reinstalling) and restoring again removes them.
 - **Validation:** see Batch 18 (validated together).
+
+### Batch 19 — History date-heading presentation
+
+- History date groups now reuse Updates' shared `DateHeading`, including its date formatting, count badge,
+  padding and fast-scroll animation. The existing `HistoryUiModel.Header.mangaCount` calculation remains
+  unchanged: it counts distinct manga from the visible, locally grouped History entries.

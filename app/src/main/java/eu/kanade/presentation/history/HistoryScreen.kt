@@ -22,7 +22,6 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
-import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
@@ -39,11 +38,10 @@ import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
+import mihon.feature.upcoming.DateHeading
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
-import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.Scaffold
-import tachiyomi.presentation.core.i18n.pluralStringResource
+import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -196,16 +194,11 @@ private fun HistoryScreenContent(
         ) { item ->
             when (item) {
                 is HistoryUiModel.Header -> {
-                    ListGroupHeader(
-                        modifier = Modifier.animateItemFastScroll(),
-                        // KNS -->
-                        text = if (item.mangaCount > 0) {
-                            "${relativeDateText(item.date)} · " +
-                                pluralStringResource(KMR.plurals.history_day_manga_count, item.mangaCount, item.mangaCount)
-                        } else {
-                            relativeDateText(item.date)
-                        },
-                        // KNS <--
+                    DateHeading(
+                        modifier = Modifier.animateItemFastScroll()
+                            .padding(top = MaterialTheme.padding.extraSmall),
+                        date = item.date,
+                        mangaCount = item.mangaCount,
                     )
                 }
                 is HistoryUiModel.Item -> {
