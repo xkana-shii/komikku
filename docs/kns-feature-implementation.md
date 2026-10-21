@@ -1168,3 +1168,40 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   lists only `testDebugUnitTest`), so `testDebugUnitTest` ran for the three modules instead: exit 0
   (app 304 with 1 skipped, data 93, domain 198; 0 failures).
 - **Not verified:** on a device.
+
+### Batch 18 — selective category backups
+
+- **Selection model:** `BackupOptions.includedCategoryIds` (null = every category, a set = exactly those,
+  `0` = Default; empty selects nothing and is never read as "all"). `BackupCategorySelection` holds the
+  rules: toggling a category toggles its subtree, selecting everything again turns back into null,
+  membership is exact (a manga with any selected category; uncategorized only with Default), and the
+  backup's categories are the selected ones plus their ancestors (hierarchy only, no manga through
+  an ancestor). Adapted from the old `main` (`includedCategoryIds`, `selectAllCategories`,
+  `toggleCategory`), which had flat semantics and one category query per manga.
+- **Creator:** `BackupCreator.selectManga` keeps the full backup unchanged (library, read entries,
+  merged members); a selective one filters the library with one `getCategoriesByMangaIds` batch and
+  adds the members of selected merged entries as non-library entries. `backupCategories` keeps the
+  selected categories and their ancestors (their parent ids, Smart Category status and intervals come
+  from `backupCategoryOf` as before). `MangaBackupCreator` writes only a manga's selected categories,
+  so every category order in the backup resolves inside it and the restore never falls back to a
+  local category with the same order. The streaming writer and chunked batch queries are unchanged.
+- **Worker:** the positional `BooleanArray` stays as it was; `BackupCreateWorker.manualInputData` adds a
+  `category_ids` `LongArray` only for a selective backup, and `optionsOf` reads it back (absent = all).
+  Automatic backups pass no options and back up everything.
+- **UI:** `CreateBackupScreen` has a Categories card, collapsed by default (`rememberSaveable`), with a
+  `KeyboardArrowRight`/`KeyboardArrowDown` chevron and an All/None/"N selected" summary; expanded it shows
+  All categories, Default and the category tree indented by depth. Collapsing keeps the selection.
+- **Tests:** `SelectiveBackupTest` (10, real `BackupCreator` and `MangaBackupCreator` with mocked
+  repositories): all/none/empty never "all", subtree toggling, same-named children, Default, tree rows,
+  manga selection for child/parent/grandchild/Default/empty selections without duplicates, merged
+  members, ancestors kept and unrelated categories dropped, written category references resolving in
+  the backup's own `BackupCategoryHierarchy`, worker input round trip (all, none, some).
+- **Emulator check (read-only AVD, your 20,335-entry backup restored):** the section starts collapsed
+  with "All"; clearing All showed "None", selecting Normal "1 selected", collapsing and expanding kept
+  it; the backup (545 KB vs 19.6 MB) held 84 library entries, one category (Normal) and no category
+  reference outside the backup; the full backup has exactly 84 entries filed under Normal. Restoring a
+  selective backup was not run on the emulator; the resolution of its references is unit-tested.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 320 with 1 skipped, data 93, domain 198; 0
+  failures; validated together with Batch 19), assembleDebug, assembleRelease, `git diff --check`.
+  `testReleaseUnitTest` does not exist in this build (see Batch 17).

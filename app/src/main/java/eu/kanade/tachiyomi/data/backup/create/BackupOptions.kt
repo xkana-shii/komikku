@@ -20,6 +20,10 @@ data class BackupOptions(
     val customInfo: Boolean = true,
     val savedSearchesFeeds: Boolean = true,
     // SY <--
+    // KNS --> not part of the positional BooleanArray; BackupCreateWorker passes it separately
+    /** Categories of a manual backup: null = all, else the selected ids (0 = Default). */
+    val includedCategoryIds: Set<Long>? = null,
+    // KNS <--
 ) {
 
     fun asBooleanArray() = booleanArrayOf(

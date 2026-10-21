@@ -437,4 +437,8 @@
     <string name="autofill_no_eligible_tracker">None of this entry\'s trackers can fill in metadata. Log in to one that can.</string>
     <string name="autofill_no_metadata">%1$s returned no metadata to fill in</string>
     <!-- KNS <-->
+    <!-- KNS --> selective category backups
+    <string name="backup_all_categories">All categories</string>
+    <string name="backup_categories_selected">%1$d selected</string>
+    <!-- KNS <-->
 </resources>

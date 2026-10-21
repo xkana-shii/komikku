@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
@@ -61,8 +62,9 @@ class BackupCreateWorker(private val context: Context, workerParams: WorkerParam
 
         setForegroundSafely()
 
-        val options = inputData.getBooleanArray(OPTIONS_KEY)?.let { BackupOptions.fromBooleanArray(it) }
-            ?: BackupOptions()
+        // KNS -->
+        val options = optionsOf(inputData)
+        // KNS <--
 
         return try {
             val location =
@@ -130,17 +132,34 @@ class BackupCreateWorker(private val context: Context, workerParams: WorkerParam
         }
 
         fun startNow(context: Context, uri: Uri, options: BackupOptions) {
-            val inputData = workDataOf(
-                IS_AUTO_BACKUP_KEY to false,
-                LOCATION_URI_KEY to uri.toString(),
-                OPTIONS_KEY to options.asBooleanArray(),
-            )
+            // KNS -->
+            val inputData = manualInputData(uri.toString(), options)
+            // KNS <--
             val request = OneTimeWorkRequestBuilder<BackupCreateWorker>()
                 .addTag(TAG_MANUAL)
                 .setInputData(inputData)
                 .build()
             context.workManager.enqueueUniqueWork(TAG_MANUAL, ExistingWorkPolicy.KEEP, request)
         }
+
+        // KNS -->
+        /**
+         * The input of a manual backup. The options stay the positional BooleanArray; the category
+         * selection travels as its own LongArray, present (possibly empty) only for a selective backup.
+         */
+        internal fun manualInputData(uri: String, options: BackupOptions): Data = Data.Builder()
+            .putBoolean(IS_AUTO_BACKUP_KEY, false)
+            .putString(LOCATION_URI_KEY, uri)
+            .putBooleanArray(OPTIONS_KEY, options.asBooleanArray())
+            .apply { options.includedCategoryIds?.let { putLongArray(CATEGORY_IDS_KEY, it.toLongArray()) } }
+            .build()
+
+        /** The options in [data]; automatic backups carry none and back up everything. */
+        internal fun optionsOf(data: Data): BackupOptions {
+            val options = data.getBooleanArray(OPTIONS_KEY)?.let { BackupOptions.fromBooleanArray(it) } ?: BackupOptions()
+            return options.copy(includedCategoryIds = data.getLongArray(CATEGORY_IDS_KEY)?.toSet())
+        }
+        // KNS <--
 
         // KMK -->
         /**
@@ -162,3 +181,7 @@ private const val TAG_MANUAL = "$TAG_AUTO:manual"
 private const val IS_AUTO_BACKUP_KEY = "is_auto_backup" // Boolean
 private const val LOCATION_URI_KEY = "location_uri" // String
 private const val OPTIONS_KEY = "options" // BooleanArray
+
+// KNS -->
+private const val CATEGORY_IDS_KEY = "category_ids" // LongArray, absent = all categories
+// KNS <--

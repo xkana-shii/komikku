@@ -125,7 +125,11 @@ class MangaBackupCreator(
 
             if (options.categories) {
                 // Backup categories for this manga
-                mangaObject.categories = categoriesByMangaId[manga.id].orEmpty().map { it.order }
+                mangaObject.categories = categoriesByMangaId[manga.id].orEmpty()
+                    // KNS --> a selective backup only files the manga under the selected categories
+                    .filter { options.includedCategoryIds?.contains(it.id) ?: true }
+                    // KNS <--
+                    .map { it.order }
             }
 
             if (options.tracking) {
