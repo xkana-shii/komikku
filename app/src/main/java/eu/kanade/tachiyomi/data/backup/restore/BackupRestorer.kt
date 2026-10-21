@@ -5,6 +5,7 @@ import android.net.Uri
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
@@ -22,6 +23,7 @@ import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -72,6 +74,9 @@ class BackupRestorer(
     // KMK <--
     // SY -->
     private val savedSearchRestorer: SavedSearchRestorer,
+    // KNS -->
+    private val webhookNotifier: WebhookNotifier,
+    // KNS <--
     private val feedRestorer: FeedRestorer,
     // SY <--
 ) {
@@ -131,6 +136,9 @@ class BackupRestorer(
             logFile.name,
             isSync,
         )
+        // KNS -->
+        if (!isSync) webhookNotifier.notify(WebhookEvent.BACKUP_RESTORED)
+        // KNS <--
     }
 
     private suspend fun restoreFromFile(uri: Uri, options: RestoreOptions) {

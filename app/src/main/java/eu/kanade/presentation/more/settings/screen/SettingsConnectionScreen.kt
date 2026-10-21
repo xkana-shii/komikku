@@ -99,6 +99,18 @@ object SettingsConnectionScreen : SearchableSettings {
                     ),
                 ),
             ),
+            // KNS -->
+            Preference.PreferenceGroup(
+                title = stringResource(KMR.strings.webhooks),
+                preferenceItems = listOf(
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(KMR.strings.webhooks),
+                        subtitle = stringResource(KMR.strings.webhooks_summary),
+                        onClick = { navigator.push(SettingsWebhookScreen) },
+                    ),
+                ),
+            ),
+            // KNS <--
         )
     }
 

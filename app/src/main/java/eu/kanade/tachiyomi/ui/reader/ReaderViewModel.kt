@@ -21,6 +21,7 @@ import dev.zacsweers.metrox.viewmodel.ViewModelAssistedFactory
 import dev.zacsweers.metrox.viewmodel.ViewModelAssistedFactoryKey
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.chapter.model.toSChapter
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.interactor.SetMangaViewerFlags
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.readerOrientation
@@ -28,7 +29,9 @@ import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.domain.track.interactor.StartReread
 import eu.kanade.domain.track.interactor.TrackChapter
+import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
@@ -42,8 +45,10 @@ import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -69,6 +74,7 @@ import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.DiskUtil.MAX_FILE_NAME_BYTES
 import eu.kanade.tachiyomi.util.storage.cacheImageDir
 import eu.kanade.tachiyomi.util.system.activeNetworkState
+import eu.kanade.tachiyomi.util.system.toast
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.source.MERGED_SOURCE_ID
 import exh.source.getMainSource
@@ -101,6 +107,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.core.metro.AppCoroutineScope
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.storage.UniFileTempFileManager
 import tachiyomi.core.common.util.lang.launchIO
@@ -130,6 +137,8 @@ import tachiyomi.domain.manga.interactor.GetMergedMangaById
 import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.source.local.image.LocalCoverManager
 import tachiyomi.source.local.isLocal
 import kotlin.getValue
@@ -155,6 +164,10 @@ class ReaderViewModel(
     private val downloadPreferences: DownloadPreferences,
     private val trackPreferences: TrackPreferences,
     private val trackChapter: TrackChapter,
+    // KNS -->
+    private val startReread: StartReread,
+    private val webhookNotifier: WebhookNotifier,
+    // KNS <--
     private val getManga: GetManga,
     private val getChaptersByMangaId: GetChaptersByMangaId,
     private val getNextChapters: GetNextChapters,
@@ -978,6 +991,10 @@ class ReaderViewModel(
 
         if (incognitoMode || page.status is Page.State.Error) return
 
+        // KNS -->
+        notifyChapterStarted(readerChapter)
+        // KNS <--
+
         val read = readerChapter.chapter.read || readerChapter.pages?.lastIndex == pageIndex
         // A page change in another chapter would replace that chapter's pending save
         if (pendingProgressChapter != readerChapter) saveChapterProgress()
@@ -1055,6 +1072,10 @@ class ReaderViewModel(
         // SY <--
 
         updateTrackChapterRead(readerChapter)
+        // KNS -->
+        notifyChapterRead(readerChapter)
+        maybeStartReread()
+        // KNS <--
         deleteChapterIfNeeded(readerChapter)
 
         val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead.get()
@@ -1405,6 +1426,78 @@ class ReaderViewModel(
         mutableState.update { it.copy(dialog = Dialog.Settings) }
     }
 
+    // KNS -->
+    private val webhookStartedChapters = mutableSetOf<Long>()
+
+    private fun notifyChapterStarted(readerChapter: ReaderChapter) {
+        val manga = manga ?: return
+        if (!webhookStartedChapters.add(readerChapter.chapter.id)) return
+        webhookNotifier.notify(WebhookEvent.CHAPTER_STARTED, manga, mapOf("chapter" to readerChapter.chapter.name))
+        if (webhookStartedChapters.size == 1 && chapterList.none { it.chapter.read }) {
+            webhookNotifier.notify(WebhookEvent.NEW_MANGA_STARTED, manga)
+        }
+    }
+
+    private fun notifyChapterRead(readerChapter: ReaderChapter) {
+        val manga = manga ?: return
+        webhookNotifier.notify(WebhookEvent.CHAPTER_READ, manga, mapOf("chapter" to readerChapter.chapter.name))
+        val caughtUp = chapterList.all { it.chapter.read || it.chapter.id == readerChapter.chapter.id }
+        if (caughtUp) {
+            webhookNotifier.notify(WebhookEvent.MANGA_CAUGHT_UP, manga)
+            if (manga.status.toInt() in FINISHED_STATUSES) webhookNotifier.notify(WebhookEvent.MANGA_FINISHED, manga)
+        }
+    }
+
+    /**
+     * Completing a chapter of a manga that is completed on a tracker starts a reread, asks first, or does
+     * nothing ([TrackPreferences.autoRereadBehavior]); asked at most once per reader session.
+     */
+    private fun maybeStartReread() {
+        if (incognitoMode || state.value.rereadHandled) return
+        val manga = manga ?: return
+        mutableState.update { it.copy(rereadHandled = true) }
+        viewModelScope.launch {
+            val behavior = trackPreferences.autoRereadBehavior.get()
+            if (behavior == AutoTrackState.NEVER) return@launch
+            val candidates = withIOContext { startReread.candidates(manga.id) }
+            if (candidates.isEmpty()) return@launch
+            when (behavior) {
+                AutoTrackState.ALWAYS -> confirmStartReread()
+                AutoTrackState.ASK -> mutableState.update { it.copy(dialog = Dialog.RereadPrompt) }
+                AutoTrackState.NEVER -> Unit
+            }
+        }
+    }
+
+    fun confirmStartReread() {
+        val manga = manga ?: return
+        closeDialog()
+        val current = getCurrentChapter()?.chapter
+        val chapters = chapterList.map { it.chapter }
+        appScope.launch {
+            val failures = withIOContext {
+                startReread.await(manga.id, chapters, current, trackPreferences.autoRereadResetMode.get())
+            }
+            failures.forEach { (tracker, error) ->
+                logcat(LogPriority.WARN, error) { "Failed to start rereading on ${tracker.name}" }
+            }
+            withUIContext {
+                context.toast(
+                    if (failures.isEmpty()) {
+                        context.stringResource(KMR.strings.reread_started)
+                    } else {
+                        context.stringResource(
+                            MR.strings.track_error,
+                            failures.first().first.name,
+                            failures.first().second.message.orEmpty(),
+                        )
+                    },
+                )
+            }
+        }
+    }
+    // KNS <--
+
     fun closeDialog() {
         mutableState.update { it.copy(dialog = null) }
     }
@@ -1729,6 +1822,8 @@ class ReaderViewModel(
         val bookmarked: Boolean = false,
         // KNS -->
         val bookmarkColor: Int = BookmarkColor.DEFAULT_ID,
+        /** Whether this reader session already decided about starting a reread. */
+        val rereadHandled: Boolean = false,
         // KNS <--
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
@@ -1776,6 +1871,7 @@ class ReaderViewModel(
 
         // KNS -->
         data object BookmarkColorPicker : Dialog
+        data object RereadPrompt : Dialog
         // KNS <--
 
         data class PageActions(
@@ -1811,3 +1907,7 @@ class ReaderViewModel(
 }
 
 private val PROGRESS_SAVE_DELAY = 2.seconds
+
+// KNS --> statuses after which reading every chapter means the manga is finished
+private val FINISHED_STATUSES = setOf(SManga.COMPLETED, SManga.PUBLISHING_FINISHED)
+// KNS <--

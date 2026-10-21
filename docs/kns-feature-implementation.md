@@ -63,8 +63,8 @@ row will be re-checked when its subsystem is touched.
 | 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | partial (progress safety, unified editor, preferred/priority); batch actions open | `689b2339df` |
 | 6 | Manga details/relations, reader controls & automation | partial (tracker relations `12a038e658`, reader automation `65e92a8e98`); title/back parity open | see session log |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
-| 8 | History, Updates, release prediction, category update schedules | partial (category schedules, refresh scope, History day counts); release prediction open | see session log |
-| 9 | Auto Reread, webhooks, Discord verification, storage, settings | planned | — |
+| 8 | History, Updates, release prediction, category update schedules | partial (category schedules, refresh scope, History day counts `0f759e47aa`); release prediction open | see session log |
+| 9 | Auto Reread, webhooks, Discord verification, storage, settings | partial (Auto Reread, webhooks); storage screen open | see session log |
 | 10 | Final audit, acceptance matrix, full validation | planned | — |
 
 ## Requirements
@@ -425,12 +425,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 17.1-a | Detect reread start | MISSING | | — | — |
-| 17.1-b | Configurable reset mode | MISSING | | — | — |
-| 17.1-c | Confirmation/prompt | MISSING | | — | — |
-| 17.1-d | Correct chapter reset scope | MISSING | | — | — |
-| 17.1-e | Tracker coordination (status/progress/reread count) | MISSING | | — | — |
-| 17.1-f | Saved settings | MISSING | | — | — |
+| 17.1-a | Detect reread start | DONE | Completing a chapter of a manga completed on a tracker with a rereading status (`StartReread.candidates`), once per reader session | `StartRereadTest` | batch 9 |
+| 17.1-b | Configurable reset mode | DONE | `pref_auto_reread_reset_mode` (reset to zero / to the current chapter; old keys) | `StartRereadTest` | batch 9 |
+| 17.1-c | Confirmation/prompt | DONE | `pref_auto_reread_behavior` ask (dialog) / always / never | manual pending | batch 9 |
+| 17.1-d | Correct chapter reset scope | DONE | Only read chapters of the reader's visible list; never other manga | `StartRereadTest` | batch 9 |
+| 17.1-e | Tracker coordination (status/progress/reread count) | DONE | Tracker status → rereading, progress per reset mode, start date kept or set; failures reported; reread counters are not touched (no tracker API used for them) | `StartRereadTest` | batch 9 |
+| 17.1-f | Saved settings | DONE | Settings → Tracking | — | batch 9 |
 | 17.2-a | Automatic tracker progress on reading | PRESENT | Mihon | — | — |
 | 17.2-b | Category movement by tracker status | DONE-UNVERIFIED | See 1.4; device check pending | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
 | 17.2-c | No duplicate automation operations | MISSING | | — | — |
@@ -439,12 +439,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 18.1-a | Configurable webhooks | MISSING | | — | — |
-| 18.1-b | Discord webhook | MISSING | | — | — |
-| 18.1-c | Structured payloads | MISSING | | — | — |
-| 18.1-d | Asynchronous bounded queue | MISSING | | — | — |
-| 18.1-e | Private endpoint storage | MISSING | | — | — |
-| 18.1-f | Failure handling | MISSING | | — | — |
+| 18.1-a | Configurable webhooks | DONE | `WebhookPreferences.enabled` + per-event switches (old keys) | `WebhookNotifierTest` | batch 9 |
+| 18.1-b | Discord webhook | DONE | Discord embed payload, mentions disabled | `WebhookNotifierTest` | batch 9 |
+| 18.1-c | Structured payloads | DONE | Generic JSON `{event, timestamp, app, data, cover_url}` | `WebhookNotifierTest` | batch 9 |
+| 18.1-d | Asynchronous bounded queue | DONE | `Channel(64)` drained by one app-scoped coroutine; extra events dropped | `WebhookNotifierTest` | batch 9 |
+| 18.1-e | Private endpoint storage | DONE | URLs are private preferences; failures logged without the URL | `WebhookNotifierTest` | batch 9 |
+| 18.1-f | Failure handling | DONE | Delivery errors caught per endpoint; the originating action never waits | `WebhookNotifierTest` | batch 9 |
 | 18.2-a | Presence integration | PARTIAL | Komikku Discord RPC present on HEAD; compare old fork | — | — |
 | 18.2-b | Account/login management | HISTORICAL | | — | — |
 | 18.2-c | Restart/stop controls | HISTORICAL | | — | — |
@@ -603,13 +603,13 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 10 | Continue from hidden chapter in History; history record unchanged | Next visible opens | `GetNextChaptersVisibilityTest` | PASS (unit) | batch 3 | Device check pending |
 | 11 | Source refresh keeps colors, blacklist, read flags, merge decisions | Preserved | `SyncChaptersBookmarkColorTest`, `ChapterBlacklistTest` refresh cases | PASS (unit) | batch 3 | Read flags: upstream behavior, not re-tested |
 | 12 | Bookmark color changes propagate (manga + reader navigator) | Immediate | Manual (device) | not run | batch 3 | Implemented; needs a device check |
-| 13 | Multi-service status/score/date edit with partial failure | Successful writes kept | Unit test | not run | — | — |
-| 14 | Reading older chapter does not lower progress | No rollback | Unit test | not run | — | — |
+| 13 | Multi-service status/score/date edit with partial failure | Successful writes kept | `UpdateTracksTest` (updated/failed/skipped, failed save, concurrent writes) | PASS (unit) | batch 5 | Live services not tested |
+| 14 | Reading older chapter does not lower progress | No rollback | `TrackChapterProgressTest` | PASS (unit) | batch 5 | Live services not tested |
 | 15 | MangaBaka metadata/dates/search/relations/bindings survive restart/backup | Preserved | Unit + manual | not run | — | — |
 | 16 | Category movement only after persisted status change | Ordering | `UpsertTrackTest` | PASS (unit) | batch 2a | `SyncCategoryTrackStatus` with real trackers not unit-tested |
-| 17 | Auto-scroll/auto-flip speed, duration, sleep/background, end | Stops correctly | Manual (device) | not run | — | — |
-| 18 | Reader title/back destination; bookmark icon color + rounded feedback | Correct | Manual (device) | not run | — | — |
-| 19 | Confirmed Webtoon fit/gap controls | Where they exist | Manual (device) | not run | — | — |
+| 17 | Auto-scroll/auto-flip speed, duration, sleep/background, end | Stops correctly | `ReaderAutomationTest` (limits, stall/end, speed); device run pending | PASS (unit, partial) | batch 7 | Stop on tap/screen-off/background only checked by code review |
+| 18 | Reader title/back destination; bookmark icon color + rounded feedback | Correct | Bookmark color + round ripple implemented (batch 3); title/back parity not verified | not run | batch 3 | Device check pending |
+| 19 | Confirmed Webtoon fit/gap controls | Where they exist | Komikku already provides Webtoon scale type, smart gap, pinch-zoom switches | PRESENT | — | Device check pending |
 | 20 | Saved filtered search as feed; retry; refresh-all; filters intact | Preserved | Unit + manual | not run | — | — |
 | 21 | Source-category Global Search only eligible sources; disabled sources idle | Scoped | Unit test | not run | — | — |
 | 22 | Browse search input usable during long request | Responsive | Manual (device) | not run | — | — |
@@ -617,8 +617,8 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 24 | Backup/restore custom metadata, hierarchy, colors, blacklist, scanlator rules; no same-title mixing | Round trip | `BackupForkStateTest`, `RestoreRepositoryForkStateTest` (colors, blacklist, scanlator rules); hierarchy see #7 | PASS (unit, partial) | batch 2a + 3 | Custom metadata round trip not re-tested; full backup file on device pending |
 | 25 | SyncYomi preserves fork fields | Preserved | `RestoreRepositoryForkStateTest` sync-winner cases | PASS (unit, partial) | batch 3 | SyncYomi server round trip not tested |
 | 26 | One override/blacklist change does not recompute unrelated results | Targeted | `LibraryVisibleCountsTest` cache case | PASS (unit) | batch 3 | — |
-| 27 | Release prediction + category update policies | Correct selection | Unit test | not run | — | — |
-| 28 | Unit tests, migrations, debug/release builds, device checks | All pass | Gradle + manual | not run | — | — |
+| 27 | Release prediction + category update policies | Correct selection | `CategoryUpdateScheduleTest` (category policies) | PASS (unit, partial) | batch 8 | Release-interval prediction not implemented (historical algorithm not established) |
+| 28 | Unit tests, migrations, debug/release builds, device checks | All pass | Every batch: spotlessCheck, verifyDebugDatabaseMigration, testDebugUnitTest, assembleDebug, assembleRelease | PASS (Gradle) | batches 3-9 | No device checks yet |
 
 ## Session log
 
@@ -844,3 +844,31 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 224 with 1 skipped, data 89, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Open:** release-interval prediction (14.2, historical algorithm not established), visibility-aware History
   filters (13.1-d), parallel update slots (14.3-b).
+
+### Batch 9 (part 1) — Auto Reread and webhooks
+
+- **Auto Reread:** `StartReread` (candidates = logged-in trackers where the manga is completed and that have a
+  rereading status; chapter reset per `AutoRereadResetMode`; trackers moved to rereading through `trackerBatch`,
+  returned records saved). `ReaderViewModel.maybeStartReread` after a chapter completes (once per session, never
+  in incognito), `Dialog.RereadPrompt`, settings in Settings → Tracking with the old fork's keys
+  (`pref_auto_reread_behavior`, `pref_auto_reread_reset_mode`). The old fork hard-coded MAL/AniList/MangaBaka; this
+  uses each tracker's `getRereadingStatus()`.
+- **Webhooks:** `WebhookPreferences` (old keys; URLs private), `WebhookNotifier` (bounded queue, suppression for
+  incognito/merged-incognito/excluded categories/private tracks), `WebhookTransport` (OkHttp, 15 s), `WebhookPayload`,
+  `SettingsWebhookScreen` linked from Settings → Connections. Events wired: reader (chapter started/read, new manga
+  started, caught up, finished), `UpdateManga.awaitUpdateFavorite` (added/removed), library update, downloader
+  queue finished, backup created/restored. Not ported: "manga migrated" and "app updated" events.
+- **Tests:** `StartRereadTest` (3), `WebhookNotifierTest` (4).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 231 with 1 skipped, data 89, domain 190; 0 failures), assembleDebug, assembleRelease (first run hit a stale incremental-compile state after files were moved mid-build; passed after `:app:compileReleaseKotlin --rerun`), diff check.
+- **Not verified:** real Discord/endpoint delivery; reread on a device.
+
+### Resume point (end of session 2, 2026-10-21)
+
+- Branch `codex/komikun-foundation`; batches 3–9 committed this session (`2af2c9215a`, `5f901e1f43`, `689b2339df`,
+  `12a038e658`, `65e92a8e98`, `0f759e47aa` and the Batch 9 commit). Nothing pushed.
+- **Next, in order:** storage overview screen (19.1, old fork `ui/storage` + `presentation/more/storage`, needs
+  `DownloadManager.getDownloadSize` and a percentage loading screen; merged entries must size their member folders);
+  visibility-aware History filters (13.1-d) and downloaded counts for hidden chapters (2.2-f gap); range-rule editor
+  UI (6.2-b); multi-title tracker batch actions (8.1-f); old-fork SharedPreferences/backup conversion (15.3-a);
+  reader title/back parity (9.1-c); Discord RPC verification (18.2, historical); release-interval prediction (14.2,
+  historical — confirm the old algorithm first); final audit and device checks (acceptance #28).

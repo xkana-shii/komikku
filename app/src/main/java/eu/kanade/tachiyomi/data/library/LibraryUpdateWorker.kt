@@ -20,6 +20,7 @@ import androidx.work.WorkQuery
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dev.zacsweers.metro.Inject
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
@@ -31,6 +32,7 @@ import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.util.system.isConnectedToWifi
@@ -172,6 +174,8 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
     // KNS -->
     @Inject private lateinit var getCategories: GetCategories
 
+    @Inject private lateinit var webhookNotifier: WebhookNotifier
+
     /** Interval categories this scheduled run updates; their last-run time is saved once it completes. */
     private var dueIntervalCategories: Set<Long> = emptySet()
     // KNS <--
@@ -222,6 +226,7 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
                         updateChapterList()
                         // KNS -->
                         recordCategoryRuns()
+                        webhookNotifier.notify(WebhookEvent.LIBRARY_UPDATE)
                         // KNS <--
                     }
                     // SY -->

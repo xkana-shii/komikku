@@ -490,6 +490,22 @@ class ReaderActivity : BaseActivity() {
                 }
 
                 // KNS -->
+                ReaderViewModel.Dialog.RereadPrompt -> AlertDialog(
+                    onDismissRequest = onDismissRequest,
+                    title = { Text(text = stringResource(KMR.strings.reread_prompt_title)) },
+                    text = { Text(text = stringResource(KMR.strings.reread_prompt_message)) },
+                    confirmButton = {
+                        TextButton(onClick = viewModel::confirmStartReread) {
+                            Text(text = stringResource(KMR.strings.reread_start))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = onDismissRequest) {
+                            Text(text = stringResource(MR.strings.action_cancel))
+                        }
+                    },
+                )
+
                 ReaderViewModel.Dialog.BookmarkColorPicker -> BookmarkColorDialog(
                     current = BookmarkColor.fromValue(state.bookmarkColor).takeIf { state.bookmarked },
                     onSelect = viewModel::setChapterBookmarkColor,

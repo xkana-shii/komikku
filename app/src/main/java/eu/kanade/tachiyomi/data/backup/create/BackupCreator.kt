@@ -6,6 +6,7 @@ import com.hippo.unifile.UniFile
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.backup.BackupFileValidator
 import eu.kanade.tachiyomi.data.backup.BackupWriter
@@ -25,6 +26,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -67,6 +69,9 @@ class BackupCreator(
     private val savedSearchBackupCreator: SavedSearchBackupCreator,
     private val getMergedManga: GetMergedManga,
     // SY <--
+    // KNS -->
+    private val webhookNotifier: WebhookNotifier,
+    // KNS <--
 ) {
     @AssistedFactory
     fun interface Factory {
@@ -147,6 +152,9 @@ class BackupCreator(
                 backupPreferences.lastAutoBackupTimestamp.set(Clock.System.now().toEpochMilliseconds())
             }
 
+            // KNS -->
+            webhookNotifier.notify(WebhookEvent.BACKUP_CREATED)
+            // KNS <--
             return fileUri.toString()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)

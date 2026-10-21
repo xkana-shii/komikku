@@ -8,6 +8,7 @@ import dev.zacsweers.metrox.viewmodel.MetroViewModelFactory
 import dev.zacsweers.metrox.viewmodel.ViewModelGraph
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
+import eu.kanade.domain.connections.service.WebhookPreferences
 import eu.kanade.domain.extension.interactor.TrustExtension
 import eu.kanade.domain.source.interactor.ToggleIncognito
 import eu.kanade.domain.source.service.SourcePreferences
@@ -39,6 +40,7 @@ import eu.kanade.tachiyomi.data.sync.service.GoogleDriveService
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.util.ExtensionInstallActivity
 import eu.kanade.tachiyomi.network.JavaScriptEngine
@@ -148,6 +150,11 @@ interface AppGraph : ViewModelGraph {
 
     // KUN -->
     val connectionsManager: ConnectionsManager
+
+    // KNS -->
+    val webhookPreferences: WebhookPreferences
+    val webhookNotifier: WebhookNotifier
+    // KNS <--
     val connectionsPreferences: ConnectionsPreferences
     val syncPreferences: SyncPreferences
     val exhPreferences: ExhPreferences

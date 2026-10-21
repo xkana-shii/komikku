@@ -3,6 +3,7 @@ package eu.kanade.domain.track.service
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import eu.kanade.domain.track.model.AutoRereadResetMode
 import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
@@ -78,6 +79,14 @@ class TrackPreferences(
     val preferredTrackerForManga = preferenceStore.getString(
         Preference.appStateKey("pref_preferred_tracker_for_manga"),
         "",
+    )
+
+    /** Whether completing a chapter of a manga completed on its trackers starts a reread (old fork key). */
+    val autoRereadBehavior = preferenceStore.getEnum("pref_auto_reread_behavior", AutoTrackState.ASK)
+
+    val autoRereadResetMode = preferenceStore.getEnum(
+        "pref_auto_reread_reset_mode",
+        AutoRereadResetMode.RESET_TO_CURRENT_CHAPTER,
     )
 
     /** The tracker preferred when a manga has no preference of its own; 0 = none. */

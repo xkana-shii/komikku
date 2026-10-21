@@ -6,12 +6,14 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.chapter.model.toSChapter
+import eu.kanade.domain.connections.service.WebhookEvent
 import eu.kanade.domain.manga.model.getComicInfo
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import eu.kanade.tachiyomi.network.HttpException
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Page
@@ -97,6 +99,9 @@ class Downloader(
     private val getTracks: GetTracks,
     private val store: DownloadStore,
     private val notifier: DownloadNotifier,
+    // KNS -->
+    private val webhookNotifier: WebhookNotifier,
+    // KNS <--
     // SY -->
     private val sourcePreferences: SourcePreferences,
     // SY <--
@@ -152,7 +157,17 @@ class Downloader(
     // Download jobs check these under the lock: by the time they get it, chapters may have been queued or the
     // downloader stopped and started again, and that newer run must not be stopped
     private suspend fun stopIfFinished(owner: Job) = lock.withLock {
-        if (downloaderJob === owner && owner.isActive && areAllDownloadsFinished()) stopLocked()
+        if (downloaderJob === owner && owner.isActive && areAllDownloadsFinished()) {
+            // KNS -->
+            val downloaded = queueState.value.count { it.status == Download.State.DOWNLOADED }
+            // KNS <--
+            stopLocked()
+            // KNS -->
+            if (downloaded > 0) {
+                webhookNotifier.notify(WebhookEvent.DOWNLOADS_FINISHED, data = mapOf("chapters" to downloaded.toString()))
+            }
+            // KNS <--
+        }
     }
 
     private suspend fun stopIfCurrent(owner: Job) = lock.withLock {

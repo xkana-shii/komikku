@@ -40,6 +40,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.domain.track.model.AutoRereadResetMode
 import eu.kanade.domain.track.model.AutoTrackState
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
@@ -159,6 +160,17 @@ object SettingsTrackingScreen : SearchableSettings {
                     trackerManager.trackers.forEach { put(it.id, it.name) }
                 },
                 title = stringResource(KMR.strings.pref_priority_tracker),
+            ),
+            Preference.PreferenceItem.ListPreference(
+                preference = trackPreferences.autoRereadBehavior,
+                entries = AutoTrackState.entries.associateWith { stringResource(it.titleRes) },
+                title = stringResource(KMR.strings.pref_auto_reread),
+                subtitle = stringResource(KMR.strings.pref_auto_reread_summary),
+            ),
+            Preference.PreferenceItem.ListPreference(
+                preference = trackPreferences.autoRereadResetMode,
+                entries = AutoRereadResetMode.entries.associateWith { stringResource(it.titleRes) },
+                title = stringResource(KMR.strings.pref_auto_reread_reset_mode),
             ),
             // KNS <--
             // SY -->

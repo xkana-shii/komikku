@@ -1,6 +1,8 @@
 package eu.kanade.domain.manga.interactor
 
 import dev.zacsweers.metro.Inject
+import eu.kanade.domain.connections.service.WebhookEvent
+import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -16,6 +18,9 @@ import kotlin.time.Instant
 class UpdateManga(
     private val mangaRepository: MangaRepository,
     private val fetchInterval: FetchInterval,
+    // KNS -->
+    private val webhookNotifier: WebhookNotifier,
+    // KNS <--
 ) {
 
     suspend fun await(mangaUpdate: MangaUpdate): Boolean {
@@ -81,5 +86,15 @@ class UpdateManga(
                 this.dateAdded = dateAdded
             },
         )
+            // KNS -->
+            .also { updated ->
+                if (updated) {
+                    webhookNotifier.notify(
+                        if (favorite) WebhookEvent.MANGA_ADDED else WebhookEvent.MANGA_REMOVED,
+                        mangaRepository.getMangaById(mangaId),
+                    )
+                }
+            }
+        // KNS <--
     }
 }
