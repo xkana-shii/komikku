@@ -24,7 +24,6 @@ private inline fun Any.safeXLog(androidLevel: Int, log: Any?, block: () -> Unit)
         Log.println(androidLevel, this::class.java.simpleName, log.toString())
     }
 }
-
 private inline fun Any.safeXLog(androidLevel: Int, log: Any?, e: Throwable, block: () -> Unit) {
     try {
         block()
@@ -63,9 +62,6 @@ fun Any.xLog(logLevel: LogLevel, log: String) {
     if (logLevel is LogLevel.None) return
     safeXLog(logLevel.androidLevel, log) { xLog().log(logLevel.int, log) }
 }
-fun Any.xLogJson(log: String) = safeXLog(Log.DEBUG, log) { xLog().json(log) }
-fun Any.xLogXML(log: String) = safeXLog(Log.DEBUG, log) { xLog().xml(log) }
-
 fun Any.xLogE(log: String, e: Throwable) = safeXLog(Log.ERROR, log, e) { xLogStack().e(log, e) }
 fun Any.xLogW(log: String, e: Throwable) = safeXLog(Log.WARN, log, e) { xLogStack().w(log, e) }
 fun Any.xLogD(log: String, e: Throwable) = safeXLog(Log.DEBUG, log, e) { xLogStack().d(log, e) }
