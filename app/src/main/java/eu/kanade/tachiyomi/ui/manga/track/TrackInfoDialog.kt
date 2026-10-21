@@ -238,6 +238,7 @@ data class TrackInfoDialogHomeScreen(
                                 progressMismatch = state.progressMismatch,
                                 syncTarget = state.syncTarget.toInt().toString(),
                                 onSyncProgress = viewModel::syncProgress,
+                                onRemove = viewModel::removeTrackers,
                                 onEdit = { field ->
                                     val source = viewModel.editSource(bound) ?: return@UnifiedTrackerPanel
                                     navigator.push(
@@ -364,6 +365,19 @@ data class TrackInfoDialogHomeScreen(
                 state.value.preferredTrackerId,
             )
             return bound.find { it.track == preferred }
+        }
+
+        fun removeTrackers(trackerIds: Set<Long>, remotely: Boolean) {
+            appScope.launch {
+                val failures = unifiedTrackerEdits.remove(mangaId, trackerIds, remotely)
+                withContext(Dispatchers.Main) {
+                    failures.forEach { (tracker, error) ->
+                        context.toast(
+                            context.stringResource(MR.strings.track_error, tracker?.name.orEmpty(), error.message ?: ""),
+                        )
+                    }
+                }
+            }
         }
 
         /** Brings every linked tracker to the preferred (or furthest) progress. */

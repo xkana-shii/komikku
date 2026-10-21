@@ -713,6 +713,7 @@ class MangaScreen(
                     priority = dialog.priority,
                     smartMergeOverride = dialog.smartMergeOverride,
                     globalSmartMerge = dialog.globalSmartMerge,
+                    rangeRules = dialog.rangeRules,
                     onConfirm = viewModel::setScanlatorPreferences,
                     onDismissRequest = onDismissRequest,
                 )

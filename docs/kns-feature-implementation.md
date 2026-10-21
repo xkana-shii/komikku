@@ -132,7 +132,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 2.2-c | All-category subcategory exclusion | HISTORICAL | | — | — |
 | 2.2-d | Tracker filters without per-title queries | PARTIAL | Mihon tracker filters exist | — | — |
 | 2.2-e | Bookmark-color filter | DONE | `pref_filter_library_bookmark_colors` + filter sheet row/dialog; colors read with one query (`getBookmarkColorsByManga`, merged members included) only while the filter is set | `BookmarkColorsByMangaTest`, `BookmarkColorFilterTest` | batch 4 |
-| 2.2-f | Built-in filters account for blacklist/Smart Merge | DONE | Unread/started/bookmarked filters read the counts `LibraryVisibleCounts` rewrote for entries with rules; the downloaded filter still counts downloaded hidden chapters; the color filter uses stored colors, including hidden chapters' | `LibraryVisibleCountsTest` | batch 3 + 4 |
+| 2.2-f | Built-in filters account for blacklist/Smart Merge | DONE | Unread/started/bookmarked filters read the recomputed counts; downloaded badge/filter count downloads of visible chapters (`LibraryVisibleCounts.visibleChapters`); the color filter still uses stored colors | `LibraryVisibleCountsTest` | batch 3 + 4 + 10 |
 | 2.2-g | Merged-entry downloaded/unread correctness | PARTIAL | Continue-reading of merged entries fixed (merged check compared the manga id); downloaded/unread filters for merged entries batch 4 | — | batch 3 |
 | 2.3-a | Group by source without expensive regrouping | PRESENT | Komikku/Komi-kun group by source (non-blocking source-name snapshot); nothing fork-specific to add | — | — |
 | 2.3-b | Source language in source grouping (+ flag option) | HISTORICAL | The old fork's language suffix on source groups was commented out (`TODO`), so it never shipped; covers already show language badges/flags (KMK `useLangIcon`) | — | — |
@@ -213,7 +213,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 6.1-c | Manga-specific settings | DONE | Per-manga priority + override on the manga row | `RestoreRepositoryForkStateTest` | batch 3 |
 | 6.1-d | No deletion of hidden chapter records | DONE | Display-only filtering | `ChapterSmartMergeTest` | batch 3 |
 | 6.2-a | Group duplicates, show representative | DONE | `applySmartScanlatorMerge` | `ChapterSmartMergeTest` | batch 3 |
-| 6.2-b | Priority-based representative | DONE | Range rules over priority, last matching rule wins (rules stored/backed up; no editor UI yet) | `ChapterSmartMergeTest` | batch 3 |
+| 6.2-b | Priority-based representative | DONE | Range rules over priority, last matching rule wins; editor in Scanlator preferences (add/remove) | `ChapterSmartMergeTest` (rule parsing/precedence) | batch 3 + 10 |
 | 6.2-c | Per-manga override | DONE | `manga.user_smart_merge_override` (null = global); old prefs migrated by `SmartMergeOverrideMigration`; backup #618 | `SmartMergeOverrideMigrationTest`, `BackupForkStateTest` | batch 3 |
 | 6.2-d | Incremental override updates | DONE | Library counts cached per entry, keyed by counts + rules | `LibraryVisibleCountsTest` | batch 3 |
 | 6.2-e | Counts reflect representatives | DONE | See 5.2-d | `LibraryVisibleCountsTest` | batch 3 |
@@ -249,8 +249,8 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 8.1-b | Edit statuses together with per-service translation | DONE | Status translated per service (MangaUpdates list names mapped), skipped without an equivalent; completion fills progress | `UpdateTracksTest` | batch 5 |
 | 8.1-c | Edit scores with scale conversion | DONE | Score via the ten-point scale to the closest score of each service; services without scores skipped | `UpdateTracksTest` | batch 5 |
 | 8.1-d | Edit start/finish dates | DONE | Start/finish dates with removal; order validated per service; services without dates skipped | `UpdateTracksTest` | batch 5 |
-| 8.1-e | Track/untrack incl. remote removal | PARTIAL | Individual sheet keeps track/untrack; `UpdateTracks.remove` (local + remote, per-service failures) exists but has no unified UI yet | `UpdateTracksTest` | batch 5 |
-| 8.1-f | Multi-title batch actions | MISSING | Multi-title batch tracker actions not implemented | — | — |
+| 8.1-e | Track/untrack incl. remote removal | DONE | Remove trackers dialog in the All trackers panel (local unlink + optional remote removal, per-service failures) | `UpdateTracksTest`, `UnifiedTrackerEditsTest` | batch 5 + 10 |
+| 8.1-f | Multi-title batch actions | HISTORICAL | The old fork's batch operations were across a manga's linked services (`TrackerBatch`, done in batch 5); no multi-title library action existed there | — | — |
 | 8.1-g | Operation queue | DONE | `UnifiedTrackerEdits` serializes unified edits app-wide (services within one edit run concurrently) | `UnifiedTrackerEditsTest` | batch 5 |
 | 8.1-h | Partial-failure resilience | DONE | `trackerBatch` (supervisor scope; per-service and per-save failures) | `UpdateTracksTest` | batch 5 |
 | 8.2-a | Preferred tracker per manga | DONE | `pref_preferred_tracker_for_manga` (`PreferredTrackerMap`, bounded JSON), chosen in the panel | `TrackerProgressSyncTest` | batch 5 |
@@ -270,7 +270,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 |----|-------------|--------|-------|-------|--------|
 | 9.1-a | Paged and vertical compatibility | PRESENT | Keep Komi-kun WebGPU/SSIV | — | — |
 | 9.1-b | Chapter navigation honors Smart Merge/blacklist | DONE | See 5.2-b | `ChapterSmartMergeTest` | batch 3 |
-| 9.1-c | Title tap = back navigation parity | MISSING | Verify | — | — |
+| 9.1-c | Title tap = back navigation parity | DONE | Title tap = back (`onBackPressedDispatcher`), as in the old fork's fix | manual pending | batch 10 |
 | 9.1-d | Reader bookmark selection + colors | DONE | See 4.1-d | manual pending | batch 3 |
 | 9.1-e | Rounded bookmark touch feedback | DONE | See 4.1-h | manual pending | batch 3 |
 | 9.1-f | Reader chapter list updates on color change | DONE-UNVERIFIED | Reader chapter list shows bookmark colors and resets them on toggle (see 4.1-g) | manual pending | batch 3 |
@@ -889,3 +889,18 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , data 89
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Not verified:** on a device (sizes against the system's storage settings, deletion).
+
+### Batch 10 (part 2) — range rules UI, visible download counts, reader title, tracker removal
+
+- **Range rules:** `ScanlatorPreferencesDialog` gains a Chapter ranges section (from/to + scanlator, add/remove);
+  `Dialog.ScanlatorPreferences.rangeRules`, `setScanlatorPreferences(priority, override, rules)` writes
+  `manga.user_scanlator_range_rules` (already in backups/sync since batch 3).
+- **Download counts:** `LibraryVisibleCounts` keeps the visible chapters of regular entries with rules;
+  `LibraryViewModel` counts `getDownloadedChapterIds` of those for the badge and the Downloaded filter.
+- **Reader title:** tap = back (old fork commit `1790705b94`); Mihon's `openMangaScreen` intent removed.
+- **Tracker removal:** Remove trackers dialog in the All trackers panel through `UnifiedTrackerEdits.remove`
+  (queued; clears the failure markers of removed trackers).
+- **Tests:** `LibraryVisibleCountsTest` (+1), `UnifiedTrackerEditsTest` (+1).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 239 with 1 skipped
+, data 89
+, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.

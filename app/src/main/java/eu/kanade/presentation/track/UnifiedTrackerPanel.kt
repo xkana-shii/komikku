@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,6 +34,7 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.Warning
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
+import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.i18n.stringResource
 
 // KNS -->
@@ -48,7 +52,19 @@ fun UnifiedTrackerPanel(
     syncTarget: String,
     onSyncProgress: () -> Unit,
     onEdit: (UnifiedTrackField) -> Unit,
+    onRemove: (trackerIds: Set<Long>, remotely: Boolean) -> Unit,
 ) {
+    var showRemove by remember { mutableStateOf(false) }
+    if (showRemove) {
+        RemoveTrackersDialog(
+            trackers = trackers,
+            onConfirm = { ids, remotely ->
+                onRemove(ids, remotely)
+                showRemove = false
+            },
+            onDismissRequest = { showRemove = false },
+        )
+    }
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -75,6 +91,10 @@ fun UnifiedTrackerPanel(
                 if (trackers.any { it.getScoreList().isNotEmpty() }) {
                     AssistChip(onClick = { onEdit(UnifiedTrackField.SCORE) }, label = { Text(stringResource(MR.strings.score)) })
                 }
+                AssistChip(
+                    onClick = { showRemove = true },
+                    label = { Text(stringResource(KMR.strings.tracker_remove_trackers)) },
+                )
                 if (trackers.any { it.supportsReadingDates }) {
                     AssistChip(
                         onClick = { onEdit(UnifiedTrackField.START_DATE) },
@@ -108,6 +128,46 @@ fun UnifiedTrackerPanel(
             }
         }
     }
+}
+
+/** Picks linked trackers to unlink, and whether to also remove the entries on the services. */
+@Composable
+private fun RemoveTrackersDialog(
+    trackers: List<Tracker>,
+    onConfirm: (trackerIds: Set<Long>, remotely: Boolean) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    val selected = remember { mutableStateListOf<Long>() }
+    var remotely by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(KMR.strings.tracker_remove_trackers)) },
+        text = {
+            Column {
+                trackers.forEach { tracker ->
+                    LabeledCheckbox(
+                        label = tracker.name,
+                        checked = tracker.id in selected,
+                        onCheckedChange = { if (it) selected.add(tracker.id) else selected.remove(tracker.id) },
+                    )
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                LabeledCheckbox(
+                    label = stringResource(KMR.strings.tracker_remove_remotely),
+                    checked = remotely,
+                    onCheckedChange = { remotely = it },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selected.toSet(), remotely) }, enabled = selected.isNotEmpty()) {
+                Text(stringResource(MR.strings.action_remove))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_cancel)) }
+        },
+    )
 }
 
 @Composable

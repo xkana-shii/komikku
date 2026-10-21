@@ -11,14 +11,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,11 +31,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -40,6 +46,8 @@ import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
 import mihon.icons.materialsymbols.rounded.KeyboardArrowUp
 import mihon.icons.materialsymbols.rounded.Palette
 import tachiyomi.domain.chapter.model.BookmarkColor
+import tachiyomi.domain.chapter.model.ScanlatorRangeRule
+import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.service.chapterBlacklistKeyMetadata
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -262,6 +270,91 @@ fun BlacklistedChaptersDialog(
     )
 }
 
+/**
+ * Chapter-range rules: inside a range, the chosen scanlator is preferred over the priority order (the
+ * last matching rule wins). Rules can be added with a from/to chapter and a scanlator, and removed.
+ */
+@Composable
+private fun ScanlatorRangeRules(scanlators: List<String>, rules: SnapshotStateList<ScanlatorRangeRule>) {
+    Text(stringResource(KMR.strings.scanlator_range_rules), style = MaterialTheme.typography.titleSmall)
+    Text(
+        text = stringResource(KMR.strings.scanlator_range_rules_summary),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    rules.forEachIndexed { index, rule ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(
+                    KMR.strings.scanlator_range_rule,
+                    formatChapterNumber(rule.from),
+                    formatChapterNumber(rule.to),
+                    rule.scanlator,
+                ),
+                modifier = Modifier.weight(1f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            IconButton(onClick = { rules.removeAt(index) }) {
+                Icon(MaterialSymbols.Rounded.Delete, contentDescription = stringResource(MR.strings.action_delete))
+            }
+        }
+    }
+    if (scanlators.isEmpty()) return
+    var from by remember { mutableStateOf("") }
+    var to by remember { mutableStateOf("") }
+    var scanlator by remember(scanlators) { mutableStateOf(scanlators.first()) }
+    var expanded by remember { mutableStateOf(false) }
+    val newRule = parseScanlatorRangeRule("${from.trim()}:${to.trim()}:$scanlator")
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = from,
+            onValueChange = { from = it },
+            label = { Text(stringResource(KMR.strings.scanlator_range_from)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedTextField(
+            value = to,
+            onValueChange = { to = it },
+            label = { Text(stringResource(KMR.strings.scanlator_range_to)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.weight(1f),
+        )
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.weight(1f)) {
+            TextButton(onClick = { expanded = true }) {
+                Text(scanlator, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                scanlators.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            scanlator = option
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+        TextButton(
+            onClick = {
+                newRule?.let { rules.add(it) }
+                from = ""
+                to = ""
+            },
+            enabled = newRule != null,
+        ) { Text(stringResource(KMR.strings.scanlator_range_add)) }
+    }
+}
+
+private fun formatChapterNumber(number: Double): String =
+    if (number % 1.0 == 0.0) number.toLong().toString() else number.toString()
+
 /** A readable name for an entry whose chapter is no longer listed by the source. */
 private fun blacklistEntryFallback(key: String): String {
     val (number, scanlator) = chapterBlacklistKeyMetadata(key)
@@ -279,7 +372,8 @@ fun ScanlatorPreferencesDialog(
     priority: List<String>,
     smartMergeOverride: Boolean?,
     globalSmartMerge: Boolean,
-    onConfirm: (priority: List<String>, smartMergeOverride: Boolean?) -> Unit,
+    rangeRules: List<ScanlatorRangeRule>,
+    onConfirm: (priority: List<String>, smartMergeOverride: Boolean?, rangeRules: List<ScanlatorRangeRule>) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     val ordered = remember(scanlators, priority) {
@@ -287,6 +381,7 @@ fun ScanlatorPreferencesDialog(
             .toMutableStateList()
     }
     var override by remember { mutableStateOf(smartMergeOverride) }
+    val rules = remember(rangeRules) { rangeRules.toMutableStateList() }
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(stringResource(KMR.strings.scanlator_preferences)) },
@@ -349,10 +444,14 @@ fun ScanlatorPreferencesDialog(
                         }
                     }
                 }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                ScanlatorRangeRules(scanlators = ordered, rules = rules)
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(ordered.toList(), override) }) { Text(stringResource(MR.strings.action_ok)) }
+            TextButton(onClick = { onConfirm(ordered.toList(), override, rules.toList()) }) {
+                Text(stringResource(MR.strings.action_ok))
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_cancel)) }

@@ -941,8 +941,13 @@ class LibraryViewModel(
                 val downloadCount = if (manga.manga.source == MERGED_SOURCE_ID) {
                     getMergedMangaById.await(manga.manga.id).sumOf { downloadManager.getDownloadCount(it) }
                 } else {
-                    // KUN --> counts are batched for the whole library, so reuse them here
-                    downloadCounts.getValue(manga.id)
+                    // KNS --> with a blacklist or Smart Merge, count only downloads of listed chapters
+                    libraryVisibleCounts.visibleChapters(manga.id)
+                        ?.takeIf { downloadCounts.getValue(manga.id) > 0 }
+                        ?.let { downloadManager.getDownloadedChapterIds(it, manga.manga).size }
+                        // KNS <--
+                        // KUN --> counts are batched for the whole library, so reuse them here
+                        ?: downloadCounts.getValue(manga.id)
                     // KUN <--
                 }
                 // SY <--

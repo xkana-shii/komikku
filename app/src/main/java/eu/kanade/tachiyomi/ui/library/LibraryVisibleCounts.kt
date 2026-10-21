@@ -44,7 +44,15 @@ class LibraryVisibleCounts(
         val smartMerge: Boolean,
     )
 
-    private val cache = ConcurrentHashMap<Long, Pair<Key, VisibleChapterStats>>()
+    private data class Cached(val key: Key, val stats: VisibleChapterStats, val visible: List<Chapter>)
+
+    private val cache = ConcurrentHashMap<Long, Cached>()
+
+    /**
+     * The visible chapters of a regular entry with a rule, as of the last [apply]; null for entries without
+     * a rule and for merged entries (their chapters belong to their members).
+     */
+    fun visibleChapters(mangaId: Long): List<Chapter>? = cache[mangaId]?.visible
 
     suspend fun apply(library: List<LibraryManga>, globalSmartMerge: Boolean): List<LibraryManga> {
         val keys = library.mapNotNull { item ->
@@ -60,7 +68,7 @@ class LibraryVisibleCounts(
         cache.keys.retainAll(keys.keys)
         if (keys.isEmpty()) return library
 
-        val stale = library.filter { item -> keys[item.id]?.let { cache[item.id]?.first != it } == true }
+        val stale = library.filter { item -> keys[item.id]?.let { cache[item.id]?.key != it } == true }
         if (stale.isNotEmpty()) {
             val (merged, regular) = stale.partition { it.manga.source == MERGED_SOURCE_ID }
             val chaptersById: Map<Long, List<Chapter>> = buildMap {
@@ -79,12 +87,16 @@ class LibraryVisibleCounts(
                 val key = keys.getValue(item.id)
                 val chapters = chaptersById[item.id].orEmpty()
                 val visible = chapters.filterChapterVisibility(item.manga, key.smartMerge, chapters)
-                cache[item.id] = key to visible.visibleChapterStats()
+                cache[item.id] = Cached(
+                    key = key,
+                    stats = visible.visibleChapterStats(),
+                    visible = if (item.manga.source == MERGED_SOURCE_ID) emptyList() else visible,
+                )
             }
         }
 
         return library.map { item ->
-            val stats = cache[item.id]?.takeIf { keys[item.id] == it.first }?.second ?: return@map item
+            val stats = cache[item.id]?.takeIf { keys[item.id] == it.key }?.stats ?: return@map item
             item.copy(
                 totalChapters = stats.total,
                 readCount = stats.read,

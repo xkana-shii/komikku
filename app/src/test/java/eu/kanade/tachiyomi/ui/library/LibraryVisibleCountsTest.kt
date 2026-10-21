@@ -63,6 +63,16 @@ class LibraryVisibleCountsTest {
     }
 
     @Test
+    fun `the visible chapters are kept for download counts of entries with rules`() = runBlocking<Unit> {
+        val withRules = item(1, manga(1, blacklist = listOf(chapterUrlBlacklistKey("/4")), smartMerge = true), total = 4)
+        val plain = item(2, manga(2), total = 10)
+        counts.apply(listOf(withRules, plain), globalSmartMerge = false)
+
+        counts.visibleChapters(1)?.map { it.id } shouldBe listOf(1L, 2L)
+        counts.visibleChapters(2) shouldBe null
+    }
+
+    @Test
     fun `the global Smart Merge switch applies to entries without an override`() = runBlocking<Unit> {
         val entry = item(1, manga(1), total = 4)
         counts.apply(listOf(entry), globalSmartMerge = false).single().totalChapters shouldBe 4

@@ -30,6 +30,16 @@ class UnifiedTrackerEditsTest {
     }
 
     @Test
+    fun `removing a tracker drops its failure marker`() = runTest {
+        coEvery { updateTracks.await(1, any()) } returns result(failed = mapOf(anilist to IllegalStateException("401")))
+        coEvery { updateTracks.remove(1, setOf(2L), remotely = true) } returns emptyList()
+        subject.apply(1, UpdateTracks.Change.Progress(3))
+
+        subject.remove(1, setOf(2L), remotely = true) shouldBe emptyList()
+        subject.failures(1).first() shouldBe emptyMap()
+    }
+
+    @Test
     fun `edits run one after another`() = runTest {
         val release = CompletableDeferred<Unit>()
         val order = mutableListOf<Int>()

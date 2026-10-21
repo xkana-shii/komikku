@@ -149,7 +149,10 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
+import tachiyomi.domain.chapter.model.ScanlatorRangeRule
 import tachiyomi.domain.chapter.model.chapterListVisibility
+import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
+import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.model.smartScanlatorMergeEnabled
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
@@ -1748,16 +1751,22 @@ class MangaViewModel(
             priority = state.manga.scanlatorPriority,
             smartMergeOverride = state.manga.smartMergeOverride,
             globalSmartMerge = libraryPreferences.smartScanlatorMerge.get(),
+            rangeRules = state.manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
         )
     }
 
-    fun setScanlatorPreferences(priority: List<String>, smartMergeOverride: Boolean?) {
+    fun setScanlatorPreferences(
+        priority: List<String>,
+        smartMergeOverride: Boolean?,
+        rangeRules: List<ScanlatorRangeRule>,
+    ) {
         val manga = successState?.manga ?: return
         viewModelScope.launch {
             updateManga.await(
                 MangaUpdate(manga.id) {
                     scanlatorPriority = priority
                     this.smartMergeOverride = smartMergeOverride
+                    scanlatorRangeRules = rangeRules.map(::encodeScanlatorRangeRule)
                 },
             )
         }
@@ -2144,6 +2153,7 @@ class MangaViewModel(
             val priority: List<String>,
             val smartMergeOverride: Boolean?,
             val globalSmartMerge: Boolean,
+            val rangeRules: List<ScanlatorRangeRule>,
         ) : Dialog
         // KNS <--
     }

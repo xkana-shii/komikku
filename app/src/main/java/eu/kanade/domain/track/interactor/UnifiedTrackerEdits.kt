@@ -33,6 +33,16 @@ class UnifiedTrackerEdits(
         updateTracks.await(mangaId, change).also { record(mangaId, it) }
     }
 
+    /** Unlinks [trackerIds] (and removes the entries on the services when [remotely]) in the same queue. */
+    suspend fun remove(mangaId: Long, trackerIds: Set<Long>, remotely: Boolean) = queue.withLock {
+        updateTracks.remove(mangaId, trackerIds, remotely).also {
+            failures.update { all ->
+                val current = all[mangaId].orEmpty() - trackerIds
+                if (current.isEmpty()) all - mangaId else all + (mangaId to current)
+            }
+        }
+    }
+
     internal fun record(mangaId: Long, result: UpdateTracks.Result) {
         failures.update { all ->
             val current = all[mangaId].orEmpty() - result.updatedTrackerIds - result.skippedTrackerIds +

@@ -709,7 +709,9 @@ class ReaderActivity : BaseActivity() {
             mangaTitle = state.manga?.title,
             chapterTitle = state.currentChapter?.chapter?.name,
             navigateUp = onBackPressedDispatcher::onBackPressed,
-            onClickTopAppBar = ::openMangaScreen,
+            // KNS --> the title goes back like the arrow, to the screen the reader was opened from
+            onClickTopAppBar = onBackPressedDispatcher::onBackPressed,
+            // KNS <--
             bookmarked = state.bookmarked,
             onToggleBookmarked = viewModel::toggleChapterBookmark,
             // KNS -->
@@ -1050,18 +1052,6 @@ class ReaderActivity : BaseActivity() {
         binding.readerContainer.addView(loadingIndicator)
 
         startPostponedEnterTransition()
-    }
-
-    private fun openMangaScreen() {
-        viewModel.manga?.id?.let { id ->
-            startActivity(
-                Intent(this, MainActivity::class.java).apply {
-                    action = Constants.SHORTCUT_MANGA
-                    putExtra(Constants.MANGA_EXTRA, id)
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                },
-            )
-        }
     }
 
     private fun openChapterInWebView() {
