@@ -28,6 +28,7 @@ import mihon.core.metro.metroGraph
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.library.model.LibraryManga
+import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
@@ -43,6 +44,10 @@ class MetadataUpdateWorker(private val context: Context, workerParams: WorkerPar
     private val graph: AppGraph = context.metroGraph()
 
     @Inject private lateinit var sourceManager: SourceManager
+
+    // KNS -->
+    @Inject private lateinit var libraryPreferences: LibraryPreferences
+    // KNS <--
 
     @Inject private lateinit var getLibraryManga: GetLibraryManga
 
@@ -98,7 +103,11 @@ class MetadataUpdateWorker(private val context: Context, workerParams: WorkerPar
     }
 
     private suspend fun updateMetadata() {
-        val semaphore = Semaphore(5)
+        // KNS -->
+        val semaphore = Semaphore(
+            libraryPreferences.libraryUpdateParallelSlots.get().coerceIn(1, LibraryPreferences.MAX_PARALLEL_SLOTS),
+        )
+        // KNS <--
         val progressCount = AtomicInt(0)
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
 

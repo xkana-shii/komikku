@@ -379,12 +379,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 |----|-------------|--------|-------|-------|--------|
 | 14.1-a | Accurate read/download indicators | PARTIAL | | — | — |
 | 14.1-b | Correct refresh/error states | PARTIAL | | — | — |
-| 14.2-a | Smart release interval prediction | HISTORICAL | Old fork: `FetchInterval`/`GetUpcomingManga` changes; algorithm not established | — | — |
-| 14.2-b | Per-title predictions | PARTIAL | Mihon fetch interval is per title | — | — |
-| 14.2-c | Refresh on new evidence | PARTIAL | | — | — |
-| 14.2-d | Shown as estimates | PARTIAL | | — | — |
+| 14.2-a | Smart release interval prediction | SUPERSEDED | HEAD's `FetchInterval` (upstream) already predicts per title from upload/fetch history with hiatus, weekday and batch-release detection; the old fork's median/recurring-gap version (`calculateInterval`) is older and is not ported | `FetchIntervalTest` (upstream) | — |
+| 14.2-b | Per-title predictions | PRESENT | Per-title prediction (upstream `FetchInterval`) | `FetchIntervalTest` | — |
+| 14.2-c | Refresh on new evidence | PRESENT | Recomputed on chapter updates (upstream) | `FetchIntervalTest` | — |
+| 14.2-d | Shown as estimates | PRESENT | Shown as expected update dates in Upcoming/manga info (upstream wording) | — | — |
 | 14.3-a | Category-specific scheduling | DONE | See 1.5-a/1.5-d | `CategoryUpdateScheduleTest` | batch 8 |
-| 14.3-b | Controlled parallel update slots | PARTIAL | Verify | — | — |
+| 14.3-b | Controlled parallel update slots | DONE | `library_update_parallel_slots` (old key; 1–10, default 5) for library and metadata updates | — | batch 10 |
 | 14.3-c | Timestamp after completion | DONE | Category last-run times are saved only after a scheduled chapter update completes | — | batch 8 |
 | 14.3-d | Cancellation | PRESENT | | — | — |
 | 14.3-e | Reliable notifications | PARTIAL | Komi-kun #47 | — | — |
@@ -404,12 +404,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 15.1-h | Source preferences | PARTIAL | Verify | — | — |
 | 15.1-i | Feeds and saved searches | PRESENT | Komi-kun #59 | — | — |
 | 15.1-j | Synced identity data | PRESENT | Komi-kun | — | — |
-| 15.2-a | Old backups with missing fields | PARTIAL | Proto defaults; old-fork #113 meaning differs (documented) | — | — |
+| 15.2-a | Old backups with missing fields | DONE | Proto defaults for missing fields; old-fork backups: next update read from #114 (its #113 was last update) | `BackupForkStateTest` | batch 3 + 10 |
 | 15.2-b | Identity-safe restore (source+url) | PRESENT | Mihon restore by source+url; verify | — | — |
 | 15.2-c | Dependency-aware restore order | PARTIAL | Categories: parents before children (depth order) in `restoreCategories`; saved searches before feeds is Komi-kun #59 | `CategoryHierarchyTest` | batch 2a |
 | 15.2-d | Cancellation safety | PARTIAL | | — | — |
 | 15.2-e | Worker lifecycle | PARTIAL | | — | — |
-| 15.3-a | Migration safety for fork data | DONE-UNVERIFIED | `57.sqm` + `OldForkDatabaseConverter` (old lineage → current schema, all rows, fork columns kept). Device test with a real old-fork DB pending; old-fork SharedPreferences and backups not converted yet | `KnsColumnsMigrationTest`, `OldForkDatabaseConverterTest` | batch 1 |
+| 15.3-a | Migration safety for fork data | PARTIAL | Database: `OldForkDatabaseConverter` (batch 1). Preferences: the 331 literal old-fork keys were compared with HEAD — no key is reused with another type; fork features kept their old keys; Smart Merge override migrated. Old-only keys without a HEAD feature (dev options, rate limits, clean title, chapter rename, auto refresh/reset on open, cache skip, hardware bitmap threshold, vertical seekbar) are left unused. Device test with a real old-fork install still pending | `OldForkDatabaseConverterTest`, `SmartMergeOverrideMigrationTest` | batch 1 + 3 + 10 |
 | 15.3-b | Fillermark migration | DONE | Database converter + backup #15 | `OldForkDatabaseConverterTest`, `BackupForkStateTest` | batch 1 + 3 |
 | 15.3-c | Local/merged manga folder safety | PARTIAL | | — | — |
 | 15.3-d | Visibility separate from source migration matching | MISSING | | — | — |
@@ -617,7 +617,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 24 | Backup/restore custom metadata, hierarchy, colors, blacklist, scanlator rules; no same-title mixing | Round trip | `BackupForkStateTest`, `RestoreRepositoryForkStateTest` (colors, blacklist, scanlator rules); hierarchy see #7 | PASS (unit, partial) | batch 2a + 3 | Custom metadata round trip not re-tested; full backup file on device pending |
 | 25 | SyncYomi preserves fork fields | Preserved | `RestoreRepositoryForkStateTest` sync-winner cases | PASS (unit, partial) | batch 3 | SyncYomi server round trip not tested |
 | 26 | One override/blacklist change does not recompute unrelated results | Targeted | `LibraryVisibleCountsTest` cache case | PASS (unit) | batch 3 | — |
-| 27 | Release prediction + category update policies | Correct selection | `CategoryUpdateScheduleTest` (category policies) | PASS (unit, partial) | batch 8 | Release-interval prediction not implemented (historical algorithm not established) |
+| 27 | Release prediction + category update policies | Correct selection | `CategoryUpdateScheduleTest` (category policies); release prediction is upstream `FetchInterval` (`FetchIntervalTest`) | PASS (unit) | batch 8 + 10 | Device check pending |
 | 28 | Unit tests, migrations, debug/release builds, device checks | All pass | Every batch: spotlessCheck, verifyDebugDatabaseMigration, testDebugUnitTest, assembleDebug, assembleRelease | PASS (Gradle) | batches 3-9 | No device checks yet |
 
 ## Session log
@@ -904,3 +904,24 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 239 with 1 skipped
 , data 89
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
+
+### Batch 10 (part 3) — old-fork compatibility checks, parallel update slots
+
+- **Preferences:** compared every literal preference key of the old fork (331) with HEAD (325): no key is read
+  with a different type, so an in-place upgrade cannot crash on a preference read. Old-only keys belong to
+  features not in `features.md` (developer options, rate limits, clean title, chapter rename, auto refresh/reset on
+  open, cache skip, hardware bitmap threshold, vertical seekbar) and are simply ignored. Key-templated preferences
+  were kept identical by the batches that ported them.
+- **Backups:** `BackupManga.legacyNextUpdate` (#114, read only) — old-fork backups stored last update at #113,
+  which HEAD reads as next update; when #114 is present it wins.
+- **Parallel slots:** `LibraryPreferences.libraryUpdateParallelSlots` (`library_update_parallel_slots`, 1–10,
+  default 5 = the previous fixed limit) used by `LibraryUpdateWorker` and `MetadataUpdateWorker`; slider in
+  Settings → Library.
+- **Release prediction (14.2):** not ported — HEAD's upstream `FetchInterval` (hiatus, weekday and batch
+  detection) is newer than the old fork's median/recurring-gap variant; upstream priority keeps it.
+- **Tests:** `BackupForkStateTest` (+1).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 240 with 1 skipped
+, data 89
+, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Still open:** device test of an in-place upgrade from the old fork (database + preferences); Discord RPC
+  verification (18.2, historical); acceptance #28 device checks.

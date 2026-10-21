@@ -15,6 +15,18 @@ import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 class BackupForkStateTest {
 
     @Test
+    fun `an old fork backup's next update comes from field 114, not its last update at 113`() {
+        val oldFork = BackupManga(source = 1, url = "/m", nextUpdate = 1_000, legacyNextUpdate = 5_000)
+        val decoded = ProtoBuf.decodeFromByteArray<BackupManga>(ProtoBuf.encodeToByteArray(oldFork))
+        decoded.getMangaImpl().nextUpdate?.toEpochMilliseconds() shouldBe 5_000L
+
+        val current = BackupManga(source = 1, url = "/m", nextUpdate = 1_000)
+        val bytes = ProtoBuf.encodeToByteArray(current)
+        ProtoBuf.decodeFromByteArray<BackupManga>(bytes).legacyNextUpdate shouldBe 0L
+        ProtoBuf.decodeFromByteArray<BackupManga>(bytes).getMangaImpl().nextUpdate?.toEpochMilliseconds() shouldBe 1_000L
+    }
+
+    @Test
     fun `an entry without any fork state restores none`() {
         BackupManga(url = "/m", title = "M").getForkState() shouldBe null
     }

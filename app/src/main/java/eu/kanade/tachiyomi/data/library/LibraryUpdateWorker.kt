@@ -476,7 +476,11 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
      * @return an observable delivering the progress of each update.
      */
     private suspend fun updateChapterList() {
-        val semaphore = Semaphore(5)
+        // KNS -->
+        val semaphore = Semaphore(
+            libraryPreferences.libraryUpdateParallelSlots.get().coerceIn(1, LibraryPreferences.MAX_PARALLEL_SLOTS),
+        )
+        // KNS <--
         val progressCount = AtomicInt(0)
         val currentlyUpdatingManga = CopyOnWriteArrayList<Manga>()
         val newUpdates = CopyOnWriteArrayList<Pair<Manga, Array<Chapter>>>()

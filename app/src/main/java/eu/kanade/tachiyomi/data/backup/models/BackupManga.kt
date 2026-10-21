@@ -54,6 +54,11 @@ class BackupManga(
 
     @ProtoNumber(113) var nextUpdate: Long = 0,
 
+    // KNS --> read only: the previous personal fork wrote its last-update time at 113 and the next update
+    // at 114. A backup with 114 set is one of its backups, so 114 is the next update and 113 is not.
+    @ProtoNumber(114) var legacyNextUpdate: Long = 0,
+    // KNS <--
+
     // KNS -->
     // 614–620 keep the previous personal fork's numbers so its backups restore (613 categoryIds and
     // 617, used by Houri, are not used here).
@@ -115,7 +120,9 @@ class BackupManga(
             notes = this@BackupManga.notes,
             initialized = this@BackupManga.initialized,
             memo = this@BackupManga.memo.toJsonObject(),
-            nextUpdate = this@BackupManga.nextUpdate.toInstantOrNull(),
+            // KNS -->
+            nextUpdate = (legacyNextUpdate.takeIf { it != 0L } ?: this@BackupManga.nextUpdate).toInstantOrNull(),
+            // KNS <--
         )
     }
 

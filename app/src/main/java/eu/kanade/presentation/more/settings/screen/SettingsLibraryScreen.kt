@@ -225,6 +225,14 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_library_update_refresh_metadata),
                     subtitle = stringResource(MR.strings.pref_library_update_refresh_metadata_summary),
                 ),
+                // KNS -->
+                Preference.PreferenceItem.SliderPreference(
+                    preference = libraryPreferences.libraryUpdateParallelSlots,
+                    valueRange = 1..LibraryPreferences.MAX_PARALLEL_SLOTS,
+                    title = stringResource(KMR.strings.pref_library_update_parallel_slots),
+                    valueText = { pluralStringResource(KMR.plurals.library_update_parallel_slots, it, it) },
+                ),
+                // KNS <--
                 Preference.PreferenceItem.MultiSelectListPreference(
                     preference = libraryPreferences.autoUpdateMangaRestrictions,
                     entries = mapOf(

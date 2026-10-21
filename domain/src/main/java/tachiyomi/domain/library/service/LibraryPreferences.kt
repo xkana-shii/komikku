@@ -217,6 +217,12 @@ class LibraryPreferences(
         emptySet(),
     )
 
+    /**
+     * How many entries the library and metadata updates refresh at the same time (old fork key; this
+     * default keeps the updater's previous fixed limit).
+     */
+    val libraryUpdateParallelSlots = preferenceStore.getInt("library_update_parallel_slots", DEFAULT_PARALLEL_SLOTS)
+
     /** Same key as the previous personal fork. */
     val subcategoryUpdateScope = preferenceStore.getEnum(
         "pref_library_update_subcategory_scope",
@@ -318,6 +324,11 @@ class LibraryPreferences(
         const val DEVICE_ONLY_ON_WIFI = "wifi"
         const val DEVICE_NETWORK_NOT_METERED = "network_not_metered"
         const val DEVICE_CHARGING = "ac"
+
+        // KNS -->
+        const val DEFAULT_PARALLEL_SLOTS = 5
+        const val MAX_PARALLEL_SLOTS = 10
+        // KNS <--
 
         const val MANGA_NON_COMPLETED = "manga_ongoing"
         const val MANGA_HAS_UNREAD = "manga_fully_read"

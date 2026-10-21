@@ -367,6 +367,7 @@
     <string name="reread_prompt_message">This entry is completed on your trackers. Starting a reread marks its chapters unread as set in Settings → Tracking and sets the trackers to rereading.</string>
     <string name="reread_start">Reread</string>
     <string name="reread_started">Rereading started</string>
+    <string name="pref_library_update_parallel_slots">Entries updated at once</string>
     <string name="pref_subcategory_update_scope">Subcategory refresh scope</string>
     <string name="pref_subcategory_update_scope_whole_category">Entire category (default)</string>
     <string name="pref_subcategory_update_scope_subcategory_only">Selected subcategory only</string>
