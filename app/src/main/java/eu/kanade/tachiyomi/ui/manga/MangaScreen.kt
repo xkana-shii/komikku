@@ -571,6 +571,7 @@ class MangaScreen(
                 onScanlatorFilterClicked = { showScanlatorsDialog = true },
                 // KNS -->
                 bookmarkColorFilter = successState.bookmarkColorFilter,
+                bookmarkColorFilterExclude = successState.bookmarkColorFilterExclude,
                 onBookmarkColorFilterChanged = viewModel::setBookmarkColorFilter,
                 // KNS <--
             )

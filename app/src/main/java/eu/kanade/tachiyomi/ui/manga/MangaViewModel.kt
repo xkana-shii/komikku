@@ -448,7 +448,10 @@ class MangaViewModel(
     private val visibilitySettings = combine(
         libraryPreferences.smartScanlatorMerge.changes(),
         libraryPreferences.hideBlacklistedChapters(mangaId).changes(),
-        libraryPreferences.bookmarkColorFilter(mangaId).changes().map(BookmarkColor::fromNames),
+        combine(
+            libraryPreferences.bookmarkColorFilter(mangaId).changes(),
+            libraryPreferences.bookmarkColorFilterExclude(mangaId).changes(),
+        ) { included, excluded -> BookmarkColor.fromNames(included) to BookmarkColor.fromNames(excluded) },
         ::Triple,
     ).distinctUntilChanged()
     // KNS <--
@@ -466,7 +469,7 @@ class MangaViewModel(
         // KNS -->
         visibilitySettings,
         // KNS <--
-    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted, colorFilter) ->
+    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted, colorFilters) ->
         val effectiveManga = override ?: manga
         // KNS -->
         // The same visibility rule as the reader, History, downloads and library counts; revealed
@@ -492,7 +495,8 @@ class MangaViewModel(
             // KNS -->
             blacklistedCount = visibility.blacklistedChapterIds.size,
             hideBlacklistedChapters = hideBlacklisted,
-            bookmarkColorFilter = colorFilter,
+            bookmarkColorFilter = colorFilters.first,
+            bookmarkColorFilterExclude = colorFilters.second,
             // KNS <--
         )
     }
@@ -1723,8 +1727,12 @@ class MangaViewModel(
         libraryPreferences.hideBlacklistedChapters(mangaId).set(hide)
     }
 
-    fun setBookmarkColorFilter(colors: Set<BookmarkColor>) {
-        libraryPreferences.bookmarkColorFilter(mangaId).set(colors.mapTo(mutableSetOf()) { it.name })
+    fun setBookmarkColorFilter(included: Set<BookmarkColor>, excluded: Set<BookmarkColor>) {
+        libraryPreferences.bookmarkColorFilter(mangaId).set(included.mapTo(mutableSetOf()) { it.name })
+        libraryPreferences.bookmarkColorFilterExclude(mangaId).set(excluded.mapTo(mutableSetOf()) { it.name })
+        if ((included.isNotEmpty() || excluded.isNotEmpty()) && successState?.manga?.bookmarkedFilter == TriState.DISABLED) {
+            setBookmarkedFilter(TriState.ENABLED_IS)
+        }
     }
 
     fun showBlacklistDialog() {
@@ -2224,6 +2232,7 @@ class MangaViewModel(
         val blacklistedCount: Int,
         val hideBlacklistedChapters: Boolean,
         val bookmarkColorFilter: Set<BookmarkColor>,
+        val bookmarkColorFilterExclude: Set<BookmarkColor>,
         // KNS <--
     )
 
@@ -2294,6 +2303,7 @@ class MangaViewModel(
 
             /** Only bookmarks of these colors are listed; empty = no color filter. */
             val bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
+            val bookmarkColorFilterExclude: Set<BookmarkColor> = emptySet(),
             val sequelPrequel: List<SequelPrequelEntry> = emptyList(),
             // KNS <--
         ) : State {
@@ -2376,7 +2386,7 @@ class MangaViewModel(
             val filterActive: Boolean
                 get() = scanlatorFilterActive || manga.chaptersFiltered() ||
                     // KNS -->
-                    bookmarkColorFilter.isNotEmpty()
+                    bookmarkColorFilter.isNotEmpty() || bookmarkColorFilterExclude.isNotEmpty()
             // KNS <--
 
             /**
@@ -2394,8 +2404,15 @@ class MangaViewModel(
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
                     // KNS -->
                     .filter { (chapter) ->
-                        bookmarkColorFilter.isEmpty() ||
-                            (chapter.bookmark && BookmarkColor.matchesFilter(listOf(chapter.bookmarkColor), bookmarkColorFilter))
+                        bookmarkedFilter != TriState.ENABLED_IS ||
+                            (bookmarkColorFilter.isEmpty() && bookmarkColorFilterExclude.isEmpty()) ||
+                            (
+                                chapter.bookmark && BookmarkColor.matchesFilter(
+                                    listOf(chapter.bookmarkColor),
+                                    bookmarkColorFilter,
+                                    bookmarkColorFilterExclude,
+                                )
+                                )
                     }
                     // KNS <--
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }

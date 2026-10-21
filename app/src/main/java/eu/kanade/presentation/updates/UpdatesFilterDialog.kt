@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +27,11 @@ import androidx.compose.ui.util.fastForEachIndexed
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
+import eu.kanade.presentation.manga.components.BookmarkColorFilterDialog
+import eu.kanade.presentation.manga.components.BookmarkColorFilterRow
 import eu.kanade.tachiyomi.ui.updates.UpdatesSettingsViewModel
 import tachiyomi.core.common.preference.TriState
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.updates.service.UpdatesPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -88,11 +93,31 @@ private fun ColumnScope.FilterSheet(
     )
 
     val filterBookmarked by viewModel.updatesPreferences.filterBookmarked.collectAsState()
-    TriStateItem(
-        label = stringResource(MR.strings.action_filter_bookmarked),
+    // KNS --> The color dialog is shared with Library and chapter filters but its preferences stay local to Updates.
+    val filterBookmarkColors by viewModel.updatesPreferences.filterBookmarkColors.collectAsState()
+    val filterBookmarkColorsExclude by viewModel.updatesPreferences.filterBookmarkColorsExclude.collectAsState()
+    var showBookmarkColorFilter by remember { mutableStateOf(false) }
+    BookmarkColorFilterRow(
         state = filterBookmarked,
-        onClick = { viewModel.toggleFilter(UpdatesPreferences::filterBookmarked) },
+        onBookmarkedClick = { viewModel.toggleFilter(UpdatesPreferences::filterBookmarked) },
+        onEditClick = { showBookmarkColorFilter = true },
     )
+    if (showBookmarkColorFilter) {
+        BookmarkColorFilterDialog(
+            included = BookmarkColor.fromNames(filterBookmarkColors),
+            excluded = BookmarkColor.fromNames(filterBookmarkColorsExclude),
+            onChanged = { included, excluded ->
+                viewModel.updatesPreferences.filterBookmarkColors.set(included.mapTo(mutableSetOf()) { it.name })
+                viewModel.updatesPreferences.filterBookmarkColorsExclude.set(excluded.mapTo(mutableSetOf()) { it.name })
+                if ((included.isNotEmpty() || excluded.isNotEmpty()) && filterBookmarked == TriState.DISABLED) {
+                    viewModel.updatesPreferences.filterBookmarked.set(TriState.ENABLED_IS)
+                }
+                showBookmarkColorFilter = false
+            },
+            onDismissRequest = { showBookmarkColorFilter = false },
+        )
+    }
+    // KNS <--
 
     HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.small))
 

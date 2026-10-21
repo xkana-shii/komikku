@@ -11,6 +11,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Changed
+- Bookmark-color filters now use the same Bookmarked row and Edit-button tri-state editor as category filters in Library, Updates and each manga's chapter settings. Colors can be included, excluded or ignored independently; existing saved Library and per-manga selections are retained as included colors. Color filtering only refines the Bookmarked state, so disabled and Not bookmarked filters keep their prior behavior.
+
 ### Other
 - Rebuilt the fork's foundation on official Komikku `master` (`1656575e8f`) with Komi-kun's architecture (`2c6743696d`): Metro DI, AndroidX ViewModels, async SQLDelight on the AndroidX bundled driver with the Mihon schema rework, SyncYomi v2, the WebGPU reader and the Mihon/TachiyomiSY backlog Komi-kun ported. Keeps the `app.komikku.kns` identity, signing and release workflows. Personal features from the previous `main` are re-implemented separately (`features.md`); see `docs/komikun-foundation-progress.md`.
 - Fixed the database upgrade of fresh-installed Komikku databases through migration 49 (`mangas_categories.last_modified_at` missing).

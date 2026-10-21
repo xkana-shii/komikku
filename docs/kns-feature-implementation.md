@@ -953,3 +953,18 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
   device checks for acceptance #28 (Rich Presence included).
+### Batch 11 — tri-state bookmark-color filters
+
+- **Shared UI:** Library, Updates and manga chapter settings now place an independent Edit action beside
+  the existing Bookmarked tri-state control. `BookmarkColorFilterDialog` reuses the category dialog's
+  save/cancel tri-state interaction for the ordinary bookmark plus all six palette colors, with color
+  swatches. Closing or cancelling leaves stored preferences unchanged.
+- **Filtering:** included colors require a match; excluded colors reject a matching bookmarked chapter.
+  For Library, a mixed-color manga passes only when it has an included color and no excluded bookmark
+  color. The existing aggregate query remains the only Library color data source. Saved color choices
+  refine Bookmarked only; disabled and Not bookmarked states preserve their existing semantics.
+- **Persistence and Updates:** old Library/per-manga color keys remain the included side of the new
+  pair, making migration non-destructive and idempotent. Updates has its own keys and `updatesView`
+  now exposes bookmark color, so normal query invalidation immediately refreshes filter eligibility
+  without per-row queries.
+- **Tests:** `BookmarkColorFilterTest` adds full palette and combined include/exclude coverage.

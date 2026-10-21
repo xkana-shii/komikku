@@ -40,17 +40,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Delete
 import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
 import mihon.icons.materialsymbols.rounded.KeyboardArrowUp
 import mihon.icons.materialsymbols.rounded.Palette
+import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ScanlatorRangeRule
 import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.service.chapterBlacklistKeyMetadata
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
+import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
 
@@ -121,89 +124,59 @@ fun BookmarkColorDialog(
     )
 }
 
-/** Chooses bookmark colors to filter by; an empty choice turns the filter off. */
+/**
+ * Shared bookmark-color tri-state editor. Changes are kept locally until OK, so cancellation and
+ * dismissal never mutate a screen's saved filter.
+ */
 @Composable
 fun BookmarkColorFilterDialog(
-    selected: Set<BookmarkColor>,
-    onChanged: (Set<BookmarkColor>) -> Unit,
+    included: Set<BookmarkColor>,
+    excluded: Set<BookmarkColor>,
+    onChanged: (included: Set<BookmarkColor>, excluded: Set<BookmarkColor>) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    AlertDialog(
+    TriStateListDialog(
+        title = stringResource(KMR.strings.bookmark_color_filter),
+        message = stringResource(KMR.strings.bookmark_color_filter_summary),
+        items = BookmarkColor.entries,
+        initialChecked = BookmarkColor.entries.filter { it in included },
+        initialInversed = BookmarkColor.entries.filter { it in excluded },
+        itemLabel = BookmarkColor::label,
+        itemLeadingContent = { color ->
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(color.composeColor() ?: MaterialTheme.colorScheme.primary),
+            )
+        },
         onDismissRequest = onDismissRequest,
-        title = { Text(stringResource(KMR.strings.bookmark_color_filter)) },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(KMR.strings.bookmark_color_filter_summary),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                BookmarkColor.entries.forEach { color ->
-                    val checked = color in selected
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onChanged(if (checked) selected - color else selected + color) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Checkbox(
-                            checked = checked,
-                            onCheckedChange = { onChanged(if (checked) selected - color else selected + color) },
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(color.composeColor() ?: MaterialTheme.colorScheme.primary),
-                        )
-                        Text(color.label())
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_ok)) }
-        },
-        dismissButton = {
-            TextButton(onClick = { onChanged(emptySet()) }) { Text(stringResource(MR.strings.action_reset)) }
+        onValueChanged = { newIncluded, newExcluded ->
+            onChanged(newIncluded.toSet(), newExcluded.toSet())
         },
     )
 }
 
-/** A filter row that opens [BookmarkColorFilterDialog]; shows the chosen colors and is highlighted while active. */
+/** A Bookmarked tri-state control with an independent color-editor action. */
 @Composable
-fun BookmarkColorFilterItem(
-    selected: Set<BookmarkColor>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+fun BookmarkColorFilterRow(
+    state: TriState,
+    onBookmarkedClick: (TriState) -> Unit,
+    onEditClick: () -> Unit,
 ) {
     Row(
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        Icon(
-            imageVector = MaterialSymbols.Rounded.Palette,
-            contentDescription = null,
-            tint = if (selected.isNotEmpty()) MaterialTheme.colorScheme.active else LocalContentColor.current,
-        )
-        Text(
-            text = stringResource(KMR.strings.bookmark_color_filter),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        BookmarkColor.entries.filter { it in selected }.forEach { color ->
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(color.composeColor() ?: MaterialTheme.colorScheme.primary),
+        Box(modifier = Modifier.weight(1f)) {
+            TriStateItem(
+                label = stringResource(MR.strings.action_filter_bookmarked),
+                state = state,
+                onClick = onBookmarkedClick,
             )
+        }
+        TextButton(onClick = onEditClick) {
+            Text(stringResource(MR.strings.action_edit))
         }
     }
 }

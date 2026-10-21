@@ -91,6 +91,7 @@ class UpdatesRepositoryImpl(
         chapterUrl: String,
         read: Boolean,
         bookmark: Boolean,
+        bookmarkColor: Long,
         lastPageRead: Int,
         sourceId: Long,
         favorite: Boolean,
@@ -110,6 +111,9 @@ class UpdatesRepositoryImpl(
         chapterUrl = chapterUrl,
         read = read,
         bookmark = bookmark,
+        // KNS --> Keep color with the reactive update row instead of issuing a chapter query per item.
+        bookmarkColor = bookmarkColor.toInt(),
+        // KNS <--
         lastPageRead = lastPageRead,
         sourceId = sourceId,
         dateFetch = dateFetch,

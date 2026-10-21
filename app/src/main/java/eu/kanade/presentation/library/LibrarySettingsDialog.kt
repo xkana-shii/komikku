@@ -33,7 +33,7 @@ import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.BookmarkColorFilterDialog
-import eu.kanade.presentation.manga.components.BookmarkColorFilterItem
+import eu.kanade.presentation.manga.components.BookmarkColorFilterRow
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.library.LibrarySettingsViewModel
@@ -152,21 +152,28 @@ private fun ColumnScope.FilterPage(
         onClick = { viewModel.toggleFilter(LibraryPreferences::filterStarted) },
     )
     val filterBookmarked by viewModel.libraryPreferences.filterBookmarked.collectAsState()
-    TriStateItem(
-        label = stringResource(MR.strings.action_filter_bookmarked),
-        state = filterBookmarked,
-        onClick = { viewModel.toggleFilter(LibraryPreferences::filterBookmarked) },
-    )
     // KNS -->
     val filterBookmarkColors by viewModel.libraryPreferences.filterBookmarkColors.collectAsState()
-    val selectedBookmarkColors = remember(filterBookmarkColors) { BookmarkColor.fromNames(filterBookmarkColors) }
+    val filterBookmarkColorsExclude by viewModel.libraryPreferences.filterBookmarkColorsExclude.collectAsState()
+    val includedBookmarkColors = remember(filterBookmarkColors) { BookmarkColor.fromNames(filterBookmarkColors) }
+    val excludedBookmarkColors = remember(filterBookmarkColorsExclude) { BookmarkColor.fromNames(filterBookmarkColorsExclude) }
     var showBookmarkColorFilter by rememberSaveable { mutableStateOf(false) }
-    BookmarkColorFilterItem(selected = selectedBookmarkColors, onClick = { showBookmarkColorFilter = true })
+    BookmarkColorFilterRow(
+        state = filterBookmarked,
+        onBookmarkedClick = { viewModel.toggleFilter(LibraryPreferences::filterBookmarked) },
+        onEditClick = { showBookmarkColorFilter = true },
+    )
     if (showBookmarkColorFilter) {
         BookmarkColorFilterDialog(
-            selected = selectedBookmarkColors,
-            onChanged = { colors ->
-                viewModel.libraryPreferences.filterBookmarkColors.set(colors.mapTo(mutableSetOf()) { it.name })
+            included = includedBookmarkColors,
+            excluded = excludedBookmarkColors,
+            onChanged = { included, excluded ->
+                viewModel.libraryPreferences.filterBookmarkColors.set(included.mapTo(mutableSetOf()) { it.name })
+                viewModel.libraryPreferences.filterBookmarkColorsExclude.set(excluded.mapTo(mutableSetOf()) { it.name })
+                if ((included.isNotEmpty() || excluded.isNotEmpty()) && filterBookmarked == TriState.DISABLED) {
+                    viewModel.libraryPreferences.filterBookmarked.set(TriState.ENABLED_IS)
+                }
+                showBookmarkColorFilter = false
             },
             onDismissRequest = { showBookmarkColorFilter = false },
         )

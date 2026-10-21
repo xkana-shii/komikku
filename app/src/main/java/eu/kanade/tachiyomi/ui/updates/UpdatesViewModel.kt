@@ -59,6 +59,7 @@ import tachiyomi.core.common.util.lang.pausedWhileUnsubscribed
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
@@ -173,6 +174,10 @@ class UpdatesViewModel(
             )
                 .any { it != TriState.DISABLED } ||
                 prefs.filterExcludedScanlators ||
+                (
+                    prefs.filterBookmarked == TriState.ENABLED_IS &&
+                        (prefs.filterBookmarkColors.isNotEmpty() || prefs.filterBookmarkColorsExclude.isNotEmpty())
+                    ) ||
                 listOf(
                     prefs.filterIncludedCategories,
                     prefs.filterExcludedCategories,
@@ -279,7 +284,15 @@ class UpdatesViewModel(
         }
 
         return fastFilter {
-            filterFnDownloaded(it)
+            filterFnDownloaded(it) &&
+                (
+                    preferences.filterBookmarked != TriState.ENABLED_IS ||
+                        BookmarkColor.matchesFilter(
+                            listOf(it.update.bookmarkColor),
+                            preferences.filterBookmarkColors,
+                            preferences.filterBookmarkColorsExclude,
+                        )
+                    )
         }
     }
 
@@ -613,6 +626,8 @@ class UpdatesViewModel(
             updatesPreferences.filterUnread.changes(),
             updatesPreferences.filterStarted.changes(),
             updatesPreferences.filterBookmarked.changes(),
+            updatesPreferences.filterBookmarkColors.changes(),
+            updatesPreferences.filterBookmarkColorsExclude.changes(),
             updatesPreferences.filterExcludedScanlators.changes(),
             updatesPreferences.filterIncludedCategories.changes(),
             updatesPreferences.filterExcludedCategories.changes(),
@@ -623,9 +638,11 @@ class UpdatesViewModel(
                 filterUnread = it[1] as TriState,
                 filterStarted = it[2] as TriState,
                 filterBookmarked = it[3] as TriState,
-                filterExcludedScanlators = it[4] as Boolean,
-                filterIncludedCategories = it[5] as List<Long>,
-                filterExcludedCategories = it[6] as List<Long>,
+                filterBookmarkColors = BookmarkColor.fromNames((it[4] as Set<*>).filterIsInstance<String>()),
+                filterBookmarkColorsExclude = BookmarkColor.fromNames((it[5] as Set<*>).filterIsInstance<String>()),
+                filterExcludedScanlators = it[6] as Boolean,
+                filterIncludedCategories = it[7] as List<Long>,
+                filterExcludedCategories = it[8] as List<Long>,
             )
         }
     }
@@ -640,6 +657,8 @@ class UpdatesViewModel(
         val filterUnread: TriState,
         val filterStarted: TriState,
         val filterBookmarked: TriState,
+        val filterBookmarkColors: Set<BookmarkColor>,
+        val filterBookmarkColorsExclude: Set<BookmarkColor>,
         val filterExcludedScanlators: Boolean,
         val filterIncludedCategories: List<Long>,
         val filterExcludedCategories: List<Long>,
