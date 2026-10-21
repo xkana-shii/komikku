@@ -1205,3 +1205,41 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   verifyDebugDatabaseMigration, testDebugUnitTest (app 320 with 1 skipped, data 93, domain 198; 0
   failures; validated together with Batch 19), assembleDebug, assembleRelease, `git diff --check`.
   `testReleaseUnitTest` does not exist in this build (see Batch 17).
+
+### Batch 19 — App settings restore crash
+
+- **Evidence:** the phone's crash buffer (read-only, `app.komikku.kns.dev`, 2026-10-21 16:30) had a
+  `DispatchException` caused by `OutOfMemoryError` on the main thread in `AndroidPreferenceStore.keyFlow`
+  (`SharedPreferencesImpl.notifyListeners`), followed by an OOM on `queued-work-looper` in
+  `SharedPreferencesImpl.writeToFile`/`writeSetXml`. The dev app's preference file then held 4,198
+  `pref_hide_blacklisted_chapters_<id>` and 9 `pref_smart_scanlator_merge_override_<id>` keys. The backup
+  used (`app.komikku.kns_2026-10-21_12-33.tachibk`) has 20,741 app preferences, 20,323 of them
+  `pref_hide_blacklisted_chapters_<id>` and 51 `pref_smart_scanlator_merge_override_<id>`.
+- **Cause:** `PreferenceRestorer` wrote each value with its own `Preference.set` (one `apply()` each).
+  While a disk write is in flight, every `apply()` copies the whole map and queues it, and notifies every
+  listener: with ~20,000 values that is quadratic memory. The old `main` skipped these two id-keyed
+  families ("tied to old database IDs"); the foundation restored them. Not involved: category restore
+  ordering, enum values, WorkManager scheduling, `49.sqm`/migration 58 or `StorageScreenContent`.
+- **Reproduction (read-only AVD `Medium_Phone_API_36.0`, 576 MB large heap):** the July backup restored
+  fine; with 19,000 synthetic `pref_hide_blacklisted_chapters_<id>` entries, App settings only crashed the
+  old build after ~15 s with the same stack (OOM in `notifyListeners`/`keyFlow`); 4,200 entries took 28 s.
+- **Fix:** `PreferenceStore.putAll` (default: one `set` per value; `AndroidPreferenceStore`: one editor, one
+  `apply()`), and the restorer collects every value (with the existing type checks, category remap and
+  pinned-source merge) and writes once. Keys holding a local manga id (`pref_hide_blacklisted_chapters_`,
+  `pref_smart_scanlator_merge_override_`, `manga_bookmark_color_filter_[exclude_]` + digits) are skipped
+  and counted in a warning; they would otherwise apply to whichever entry gets that id. Category
+  preferences resolve backup ids through `BackupCategoryHierarchy` name paths (as the manga restore does),
+  falling back to a top-level name, instead of bare names.
+- **Verified with the real backup on the fixed build (emulator):** App settings only 4 s (20,375 skipped,
+  375 settings, 255 KB file, no id-keyed key); all sections 71 s (20,335 entries); all sections again
+  into the populated library with the Library tab open 94 s; Categories + App settings 4 s; Library +
+  App settings 84 s; Categories only 4 s; Library only 84 s; Library + Categories 75 s. No crash, every
+  worker SUCCESS. `pref_smart_scanlator_merge` and `default_category` are not in that backup (defaults).
+- **Tests:** `PreferenceRestorerTest` (6): 20,323 + 51 + 1 id-keyed values skipped and the rest written by
+  exactly one `putAll` (no per-key writes), type mismatches not written, unknown old keys kept, category
+  preferences mapped by path between same-named children, unmatched category values leave the current
+  setting, the key filter, and an unknown enum value reading as the default (the real `getEnum`
+  deserializer). A full device backup/restore round trip of settings is covered by the emulator runs.
+- **Not done:** the phone's dev install still has the 4,198 + 9 stray keys from the crashed restore; they
+  are keyed by the old ids. Clearing that app's data (or reinstalling) and restoring again removes them.
+- **Validation:** see Batch 18 (validated together).

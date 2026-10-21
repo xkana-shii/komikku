@@ -36,6 +36,27 @@ interface PreferenceStore {
     ): Preference<Set<T>>
 
     fun getAll(): Map<String, *>
+
+    // KNS -->
+    /**
+     * Writes several values ([Int], [Long], [Float], [String], [Boolean] or a `Set<String>`) at once.
+     * A store backed by one file writes them in a single transaction, so a large batch (a backup
+     * restore) does not copy the whole store once per value and observers see the values together.
+     */
+    fun putAll(values: Map<String, Any>) {
+        values.forEach { (key, value) ->
+            when (value) {
+                is Int -> getInt(key).set(value)
+                is Long -> getLong(key).set(value)
+                is Float -> getFloat(key).set(value)
+                is String -> getString(key).set(value)
+                is Boolean -> getBoolean(key).set(value)
+                is Set<*> -> getStringSet(key).set(value.filterIsInstance<String>().toSet())
+                else -> throw IllegalArgumentException("Unsupported preference type for $key")
+            }
+        }
+    }
+    // KNS <--
 }
 
 fun PreferenceStore.getLongArray(
