@@ -65,7 +65,6 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.ui.UiPreferences
-import eu.kanade.presentation.manga.components.BookmarkColorDialog
 import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
@@ -506,11 +505,6 @@ class ReaderActivity : BaseActivity() {
                     },
                 )
 
-                ReaderViewModel.Dialog.BookmarkColorPicker -> BookmarkColorDialog(
-                    current = BookmarkColor.fromValue(state.bookmarkColor).takeIf { state.bookmarked },
-                    onSelect = viewModel::setChapterBookmarkColor,
-                    onDismissRequest = onDismissRequest,
-                )
                 // KNS <--
 
                 ReaderViewModel.Dialog.AutoScrollHelp -> AlertDialog(
@@ -716,7 +710,7 @@ class ReaderActivity : BaseActivity() {
             onToggleBookmarked = viewModel::toggleChapterBookmark,
             // KNS -->
             bookmarkColor = state.bookmarkColor,
-            onLongClickBookmark = viewModel::showBookmarkColorPicker,
+            onBookmarkColorSelected = viewModel::setChapterBookmarkColor,
             automationControls = {
                 ReaderAutomationControls(
                     viewer = state.viewer,

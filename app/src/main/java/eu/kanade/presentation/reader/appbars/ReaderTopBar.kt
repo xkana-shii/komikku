@@ -7,13 +7,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.manga.components.BookmarkColorDropdownMenu
 import eu.kanade.presentation.manga.components.bookmarkColorOf
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Bookmark
@@ -32,13 +39,19 @@ fun ReaderTopBar(
     onToggleBookmarked: () -> Unit,
     // KNS -->
     bookmarkColor: Int = BookmarkColor.DEFAULT_ID,
-    onLongClickBookmark: (() -> Unit)? = null,
+    /** A long press on the bookmark opens the bookmark color menu; the choice goes here. */
+    onBookmarkColorSelected: ((BookmarkColor) -> Unit)? = null,
     // KNS <--
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    // KNS -->
+    // Lives here, not in the action, so the open menu survives the action list being rebuilt.
+    var bookmarkColorMenuExpanded by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    // KNS <--
     AppBar(
         modifier = modifier,
         backgroundColor = Color.Transparent,
@@ -62,8 +75,9 @@ fun ReaderTopBar(
                         MaterialSymbols.Rounded.Bookmark
                     }
                     val bookmarkTint = bookmarkColorOf(bookmarkColor).takeIf { bookmarked }
-                    if (onLongClickBookmark != null) {
-                        // A long press picks the bookmark color; the ripple stays round like an icon button.
+                    if (onBookmarkColorSelected != null) {
+                        // A long press opens the bookmark color menu anchored to the button (the same
+                        // menu as the chapter selection bars); the ripple stays round like an icon button.
                         add(
                             AppBar.ActionCompose(
                                 title = bookmarkTitle,
@@ -74,7 +88,10 @@ fun ReaderTopBar(
                                             .clip(CircleShape)
                                             .combinedClickable(
                                                 onClick = onToggleBookmarked,
-                                                onLongClick = onLongClickBookmark,
+                                                onLongClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    bookmarkColorMenuExpanded = true
+                                                },
                                                 onLongClickLabel = stringResource(KMR.strings.action_bookmark_color),
                                             ),
                                         contentAlignment = Alignment.Center,
@@ -83,6 +100,15 @@ fun ReaderTopBar(
                                             imageVector = bookmarkIcon,
                                             tint = bookmarkTint ?: LocalContentColor.current,
                                             contentDescription = bookmarkTitle,
+                                        )
+                                        BookmarkColorDropdownMenu(
+                                            expanded = bookmarkColorMenuExpanded,
+                                            selected = BookmarkColor.fromValue(bookmarkColor).takeIf { bookmarked },
+                                            onSelect = {
+                                                bookmarkColorMenuExpanded = false
+                                                onBookmarkColorSelected(it)
+                                            },
+                                            onDismissRequest = { bookmarkColorMenuExpanded = false },
                                         )
                                     }
                                 },

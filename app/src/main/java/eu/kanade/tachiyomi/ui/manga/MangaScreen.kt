@@ -56,7 +56,6 @@ import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.manga.EditCoverAction
 import eu.kanade.presentation.manga.MangaScreen
 import eu.kanade.presentation.manga.components.BlacklistedChaptersDialog
-import eu.kanade.presentation.manga.components.BookmarkColorDialog
 import eu.kanade.presentation.manga.components.ClearMangaDialog
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
@@ -415,7 +414,7 @@ class MangaScreen(
             chapterVisibilityActions = ChapterVisibilityActions(
                 onBlacklist = viewModel::blacklistChapters,
                 onUnblacklist = viewModel::unblacklistChapters,
-                onBookmarkColor = viewModel::showBookmarkColorDialog,
+                onBookmarkColor = viewModel::setBookmarkColor,
                 onOpenBlacklist = viewModel::showBlacklistDialog,
                 onOpenScanlatorPreferences = viewModel::showScanlatorPreferencesDialog,
             ),
@@ -695,16 +694,6 @@ class MangaScreen(
                     hideBlacklisted = successState.hideBlacklistedChapters,
                     onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
                     onRemove = viewModel::removeBlacklistEntries,
-                    onDismissRequest = onDismissRequest,
-                )
-            }
-            is MangaViewModel.Dialog.BookmarkColor -> {
-                BookmarkColorDialog(
-                    current = dialog.chapters
-                        .map { if (it.bookmark) BookmarkColor.fromValue(it.bookmarkColor) else null }
-                        .distinct()
-                        .singleOrNull(),
-                    onSelect = { viewModel.setBookmarkColor(dialog.chapters, it) },
                     onDismissRequest = onDismissRequest,
                 )
             }

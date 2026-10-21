@@ -1013,3 +1013,42 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   verifyDebugDatabaseMigration, testDebugUnitTest (app 250 with 1 skipped, data 89, domain 190; 0
   failures), assembleDebug, assembleRelease, `git diff --check`.
 - **Not verified:** on a device.
+
+### Batch 14 — main's bookmark long-press menu in manga, Updates and the reader
+
+- **Menu:** `BookmarkColorDropdownMenu` (adapted from the old `main`) is an anchored Material dropdown
+  with all seven palette entries; each row is `BookmarkColorLabel` (20dp `BookmarkColorSwatch` with
+  `MaterialTheme.shapes.small`, the ordinary bookmark in `surfaceVariant`, 12dp to the name) and a
+  trailing check for the current color. Unlike `main` the check uses the theme content color, and it
+  is shown only when the selection has one shared bookmark color (`ChapterBookmarks.currentColor`).
+- **Shared operations:** `tachiyomi.domain.chapter.service.ChapterBookmarks` builds the chapter
+  updates for the ordinary toggle (state change + color reset) and for a chosen color (bookmark +
+  color, unchanged chapters skipped). The manga screen, Updates and the reader all use it;
+  `Chapter.bookmarkTarget()` / `UpdatesWithRelations.bookmarkTarget()` adapt their rows. Updates'
+  bookmark toggle previously kept the old color on removal; it now resets it like the other screens.
+- **Selection bars:** `MangaBottomActionMenu` takes `onBookmarkColorSelected` + `bookmarkColor`. A long
+  press on Bookmark or Remove bookmark opens the menu (with haptic feedback) instead of the
+  hold-to-label hint; without the callback the old hint stays. The Palette action is removed and the
+  confirm slots shrink from 10 to 9 (blacklist 7, unblacklist 8). The phone and tablet manga
+  layouts share `SharedMangaBottomActionMenu`; Updates wires `UpdatesViewModel.setBookmarkColor`.
+  `MangaViewModel.Dialog.BookmarkColor` / `showBookmarkColorDialog` are gone.
+- **Reader:** `ReaderTopBar` hosts the menu next to the bookmark button (state kept outside the
+  rebuilt action list) and calls `ReaderViewModel.setChapterBookmarkColor`. The app bars are one
+  Compose overlay above every viewer, so pager, webtoon and both WebGPU viewers share it; no viewer
+  code changed. `Dialog.BookmarkColorPicker` / `showBookmarkColorPicker` are gone. The check follows
+  `state.bookmarkColor`, which is reset on every chapter change.
+- **Dialog:** `BookmarkColorDialog` rows use `BookmarkColorLabel`; the row is the `selectable`
+  target and the radio button has no own click target, so there is no extra gap. No screen opens
+  this dialog any more; the bookmark color filter dialogs are unchanged.
+- **Tests:** `ChapterBookmarksTest` (6): ordinary add/remove with color reset, all seven ids,
+  multi-selection, replacing colors, bookmarking plain chapters, skipped no-op writes, the current
+  color for single/mixed/unbookmarked selections, identical updates from a manga chapter and its
+  Updates row. The app has no Compose UI test setup (no Robolectric or ui-test), so the
+  interaction is not covered by automated tests.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 252 with 1 skipped, data 93, domain 198; 0
+  failures), assembleDebug, assembleRelease, assembleNightly, `git diff --check`.
+- **Device checks pending:** long press opens the menu without a tap; dismissal changes nothing; menu
+  anchoring in the manga (phone and tablet) and Updates bars; the reader in pager, webtoon and WebGPU
+  paged/continuous modes, both orientations and RTL, without page turns; the reader check following
+  chapter changes; the remaining bottom-bar long-press hints.

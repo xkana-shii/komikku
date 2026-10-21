@@ -113,6 +113,8 @@ import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.ChapterBookmarks
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
@@ -1323,7 +1325,10 @@ private fun SharedMangaBottomActionMenu(
             selected.fastAny { it.downloadState == Download.State.DOWNLOADED }
         },
         // KNS -->
-        onBookmarkColorClicked = { chapterVisibilityActions.onBookmarkColor(selected.fastMap { it.chapter }) },
+        onBookmarkColorSelected = { color ->
+            chapterVisibilityActions.onBookmarkColor(selected.fastMap { it.chapter }, color)
+        },
+        bookmarkColor = ChapterBookmarks.currentColor(selected.fastMap { it.chapter.bookmarkTarget() }),
         onBlacklistClicked = {
             chapterVisibilityActions.onBlacklist(selected.fastMap { it.chapter })
         }.takeIf { selected.fastAny { !it.blacklisted } },

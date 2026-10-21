@@ -35,6 +35,9 @@ import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.SelectAll
+import tachiyomi.domain.chapter.model.BookmarkColor
+import tachiyomi.domain.chapter.service.ChapterBookmarks
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
@@ -63,6 +66,9 @@ fun UpdateScreen(
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<UpdatesItem>, read: Boolean) -> Unit,
     onMultiDeleteClicked: (List<UpdatesItem>) -> Unit,
+    // KNS -->
+    onBookmarkColorSelected: (List<UpdatesItem>, BookmarkColor) -> Unit,
+    // KNS <--
     // KMK -->
     updateSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     updateSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
@@ -104,6 +110,9 @@ fun UpdateScreen(
                 onMultiBookmarkClicked = onMultiBookmarkClicked,
                 onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
                 onMultiDeleteClicked = onMultiDeleteClicked,
+                // KNS -->
+                onBookmarkColorSelected = onBookmarkColorSelected,
+                // KNS <--
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -249,6 +258,9 @@ private fun UpdatesBottomBar(
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<UpdatesItem>, read: Boolean) -> Unit,
     onMultiDeleteClicked: (List<UpdatesItem>) -> Unit,
+    // KNS -->
+    onBookmarkColorSelected: (List<UpdatesItem>, BookmarkColor) -> Unit,
+    // KNS <--
 ) {
     MangaBottomActionMenu(
         visible = selected.isNotEmpty(),
@@ -273,6 +285,10 @@ private fun UpdatesBottomBar(
         onDeleteClicked = {
             onMultiDeleteClicked(selected)
         }.takeIf { selected.fastAny { it.downloadStateProvider() == Download.State.DOWNLOADED } },
+        // KNS -->
+        onBookmarkColorSelected = { color -> onBookmarkColorSelected(selected, color) },
+        bookmarkColor = ChapterBookmarks.currentColor(selected.map { it.update.bookmarkTarget() }),
+        // KNS <--
     )
 }
 

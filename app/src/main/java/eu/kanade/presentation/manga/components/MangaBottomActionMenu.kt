@@ -64,11 +64,11 @@ import mihon.icons.materialsymbols.rounded.Delete
 import mihon.icons.materialsymbols.rounded.DoneAll
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.MoreVert
-import mihon.icons.materialsymbols.rounded.Palette
 import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.RemoveDone
 import mihon.icons.materialsymbols.rounded.SwapCalls
 import mihon.icons.materialsymbols.roundedfilled.Visibility
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -87,7 +87,10 @@ fun MangaBottomActionMenu(
     onDownloadClicked: (() -> Unit)? = null,
     onDeleteClicked: (() -> Unit)? = null,
     // KNS -->
-    onBookmarkColorClicked: (() -> Unit)? = null,
+    /** A long press on Bookmark / Remove bookmark picks a color for the selection. */
+    onBookmarkColorSelected: ((BookmarkColor) -> Unit)? = null,
+    /** The selection's single current color for the menu's check; null when unbookmarked or mixed. */
+    bookmarkColor: BookmarkColor? = null,
     onBlacklistClicked: (() -> Unit)? = null,
     onUnblacklistClicked: (() -> Unit)? = null,
     // KNS <--
@@ -104,9 +107,9 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            // KNS --> three more slots for the bookmark color and blacklist actions
+            // KNS --> two more slots for the blacklist actions
             val confirm = remember {
-                mutableStateListOf(false, false, false, false, false, false, false, false, false, false)
+                mutableStateListOf(false, false, false, false, false, false, false, false, false)
             }
             // KNS <--
             var resetJob by remember { mutableStateOf<Job?>(null) }
@@ -119,6 +122,28 @@ fun MangaBottomActionMenu(
                     if (isActive) confirm[toConfirmIndex] = false
                 }
             }
+            // KNS -->
+            var bookmarkColorMenuExpanded by remember { mutableStateOf(false) }
+            val onLongClickBookmark: (Int) -> Unit = { index ->
+                if (onBookmarkColorSelected != null) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    bookmarkColorMenuExpanded = true
+                } else {
+                    onLongClickItem(index)
+                }
+            }
+            val bookmarkColorMenu: @Composable () -> Unit = {
+                BookmarkColorDropdownMenu(
+                    expanded = bookmarkColorMenuExpanded,
+                    selected = bookmarkColor,
+                    onSelect = {
+                        bookmarkColorMenuExpanded = false
+                        onBookmarkColorSelected?.invoke(it)
+                    },
+                    onDismissRequest = { bookmarkColorMenuExpanded = false },
+                )
+            }
+            // KNS <--
             Row(
                 modifier = Modifier
                     .padding(
@@ -133,8 +158,13 @@ fun MangaBottomActionMenu(
                         title = stringResource(MR.strings.action_bookmark),
                         icon = MaterialSymbols.Rounded.BookmarkAdd,
                         toConfirm = confirm[0],
-                        onLongClick = { onLongClickItem(0) },
+                        // KNS -->
+                        onLongClick = { onLongClickBookmark(0) },
+                        // KNS <--
                         onClick = onBookmarkClicked,
+                        // KNS -->
+                        content = bookmarkColorMenu,
+                        // KNS <--
                     )
                 }
                 if (onRemoveBookmarkClicked != null) {
@@ -142,8 +172,13 @@ fun MangaBottomActionMenu(
                         title = stringResource(MR.strings.action_remove_bookmark),
                         icon = MaterialSymbols.Rounded.BookmarkRemove,
                         toConfirm = confirm[1],
-                        onLongClick = { onLongClickItem(1) },
+                        // KNS -->
+                        onLongClick = { onLongClickBookmark(1) },
+                        // KNS <--
                         onClick = onRemoveBookmarkClicked,
+                        // KNS -->
+                        content = bookmarkColorMenu,
+                        // KNS <--
                     )
                 }
                 if (onMarkAsReadClicked != null) {
@@ -192,21 +227,12 @@ fun MangaBottomActionMenu(
                     )
                 }
                 // KNS -->
-                if (onBookmarkColorClicked != null) {
-                    Button(
-                        title = stringResource(KMR.strings.action_bookmark_color),
-                        icon = MaterialSymbols.Rounded.Palette,
-                        toConfirm = confirm[7],
-                        onLongClick = { onLongClickItem(7) },
-                        onClick = onBookmarkColorClicked,
-                    )
-                }
                 if (onBlacklistClicked != null) {
                     Button(
                         title = stringResource(KMR.strings.action_blacklist_chapter),
                         icon = MaterialSymbols.Rounded.Block,
-                        toConfirm = confirm[8],
-                        onLongClick = { onLongClickItem(8) },
+                        toConfirm = confirm[7],
+                        onLongClick = { onLongClickItem(7) },
                         onClick = onBlacklistClicked,
                     )
                 }
@@ -214,8 +240,8 @@ fun MangaBottomActionMenu(
                     Button(
                         title = stringResource(KMR.strings.action_unblacklist_chapter),
                         icon = MaterialSymbols.RoundedFilled.Visibility,
-                        toConfirm = confirm[9],
-                        onLongClick = { onLongClickItem(9) },
+                        toConfirm = confirm[8],
+                        onLongClick = { onLongClickItem(8) },
                         onClick = onUnblacklistClicked,
                     )
                 }

@@ -154,6 +154,8 @@ import tachiyomi.domain.chapter.model.chapterListVisibility
 import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
 import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.model.smartScanlatorMergeEnabled
+import tachiyomi.domain.chapter.service.ChapterBookmarks
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.getChapterSort
@@ -1645,17 +1647,10 @@ class MangaViewModel(
      */
     fun bookmarkChapters(chapters: List<Chapter>, bookmarked: Boolean) {
         viewModelScope.launch {
-            chapters
-                .filterNot { it.bookmark == bookmarked }
-                .map {
-                    ChapterUpdate(it.id) {
-                        bookmark = bookmarked
-                        // KNS --> (re-)bookmarking is ordinary until a color is chosen
-                        bookmarkColor = BookmarkColor.DEFAULT_ID
-                        // KNS <--
-                    }
-                }
+            // KNS --> (re-)bookmarking is ordinary until a color is chosen; shared with Updates
+            ChapterBookmarks.toggle(chapters.map { it.bookmarkTarget() }, bookmarked)
                 .let { updateChapter.awaitAll(it) }
+            // KNS <--
         }
         toggleAllSelection(false)
     }
@@ -1664,18 +1659,10 @@ class MangaViewModel(
     /** Bookmarks [chapters] with [color] ([BookmarkColor.NONE] = an ordinary bookmark). */
     fun setBookmarkColor(chapters: List<Chapter>, color: BookmarkColor) {
         viewModelScope.launch {
-            chapters
-                .filterNot { it.bookmark && it.bookmarkColor == color.value }
-                .map {
-                    ChapterUpdate(it.id) {
-                        bookmark = true
-                        bookmarkColor = color.value
-                    }
-                }
+            ChapterBookmarks.setColor(chapters.map { it.bookmarkTarget() }, color)
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
-        dismissDialog()
     }
 
     /**
@@ -1745,11 +1732,6 @@ class MangaViewModel(
                 },
             )
         }
-    }
-
-    fun showBookmarkColorDialog(chapters: List<Chapter>) {
-        if (chapters.isEmpty()) return
-        dialog.value = Dialog.BookmarkColor(chapters)
     }
 
     fun showScanlatorPreferencesDialog() {
@@ -2155,7 +2137,6 @@ class MangaViewModel(
 
         // KNS -->
         data class BlacklistedChapters(val entries: List<BlacklistEntry>) : Dialog
-        data class BookmarkColor(val chapters: List<Chapter>) : Dialog
         data class ScanlatorPreferences(
             val scanlators: List<String>,
             val priority: List<String>,

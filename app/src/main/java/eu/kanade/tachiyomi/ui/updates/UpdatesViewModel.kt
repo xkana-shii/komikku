@@ -61,6 +61,8 @@ import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.service.ChapterBookmarks
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.applyFilter
@@ -388,13 +390,24 @@ class UpdatesViewModel(
      */
     fun bookmarkUpdates(updates: List<UpdatesItem>, bookmark: Boolean) {
         viewModelScope.launch {
-            updates
-                .filterNot { it.update.bookmark == bookmark }
-                .map { ChapterUpdate(it.update.chapterId) { this.bookmark = bookmark } }
+            // KNS --> the manga screen's bookmark action: ordinary bookmarks, no stale color on removal
+            ChapterBookmarks.toggle(updates.map { it.update.bookmarkTarget() }, bookmark)
+                .let { updateChapter.awaitAll(it) }
+            // KNS <--
+        }
+        toggleAllSelection(false)
+    }
+
+    // KNS -->
+    /** Bookmarks the selected chapters with [color], like the manga screen's long-press menu. */
+    fun setBookmarkColor(updates: List<UpdatesItem>, color: BookmarkColor) {
+        viewModelScope.launch {
+            ChapterBookmarks.setColor(updates.map { it.update.bookmarkTarget() }, color)
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
     }
+    // KNS <--
 
     /**
      * Downloads the given list of chapters with the manager.
