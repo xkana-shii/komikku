@@ -272,11 +272,6 @@ class AndroidSourceManager(
             it.id !in BlacklistedSources.HIDDEN_SOURCES
         }
 
-    fun getDelegatedSources() = sourcesMapFlow.value.orEmpty().values
-        .filterIsInstance<EnhancedHttpSource>()
-        .mapNotNull { enhancedHttpSource ->
-            enhancedHttpSource.enhancedSource as? DelegatedHttpSource
-        }
     // SY <--
 
     // KUN -->
