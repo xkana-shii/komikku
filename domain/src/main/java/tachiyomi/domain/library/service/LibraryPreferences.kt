@@ -11,6 +11,7 @@ import tachiyomi.domain.library.model.GroupLibraryMode
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibrarySort
+import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.manga.model.Manga
 
 @Inject
@@ -208,6 +209,20 @@ class LibraryPreferences(
     val updateCategories = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_PREF_KEY, emptySet())
 
     val updateCategoriesExclude = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
+
+    // KNS -->
+    /** When each category with an update interval was last updated by a scheduled run (`id:epochMillis`). */
+    val categoryUpdateLastRun = preferenceStore.getStringSet(
+        Preference.appStateKey("library_update_category_last_run"),
+        emptySet(),
+    )
+
+    /** Same key as the previous personal fork. */
+    val subcategoryUpdateScope = preferenceStore.getEnum(
+        "pref_library_update_subcategory_scope",
+        SubcategoryUpdateScope.WHOLE_CATEGORY,
+    )
+    // KNS <--
 
     // endregion
 

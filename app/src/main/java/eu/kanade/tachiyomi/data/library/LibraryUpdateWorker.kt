@@ -68,7 +68,9 @@ import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.service.CategoryUpdateSchedule
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.library.model.GroupLibraryMode
@@ -167,6 +169,13 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
 
     private var mangaToUpdate: List<LibraryManga> = mutableListOf()
 
+    // KNS -->
+    @Inject private lateinit var getCategories: GetCategories
+
+    /** Interval categories this scheduled run updates; their last-run time is saved once it completes. */
+    private var dueIntervalCategories: Set<Long> = emptySet()
+    // KNS <--
+
     override suspend fun doWork(): Result {
         graph.inject(this)
 
@@ -209,7 +218,12 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
         return withContext(Dispatchers.IO) {
             try {
                 when (target) {
-                    Target.CHAPTERS -> updateChapterList()
+                    Target.CHAPTERS -> {
+                        updateChapterList()
+                        // KNS -->
+                        recordCategoryRuns()
+                        // KNS <--
+                    }
                     // SY -->
                     Target.SYNC_FOLLOWS -> syncFollows()
                     Target.PUSH_FAVORITES -> pushFavorites()
@@ -232,6 +246,17 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
             }
         }
     }
+
+    // KNS -->
+    /** Saves the run time of the interval categories this completed scheduled run updated. */
+    private fun recordCategoryRuns() {
+        if (dueIntervalCategories.isEmpty()) return
+        val now = Clock.System.now()
+        val pref = libraryPreferences.categoryUpdateLastRun
+        val lastRun = CategoryUpdateSchedule.decodeLastRun(pref.get()) + dueIntervalCategories.associateWith { now }
+        pref.set(CategoryUpdateSchedule.encodeLastRun(lastRun))
+    }
+    // KNS <--
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return ForegroundInfo(
@@ -277,8 +302,15 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
         }
         // KMK <--
 
+        // KNS -->
+        val categories = getCategories.await()
+        val categoriesById = categories.associateBy(Category::id)
+        // KNS <--
         val listToUpdate = if (categoryId != -1L) {
-            libraryManga.filter { categoryId in it.categories }
+            // KNS --> a category refresh covers its subcategories too
+            val scope = CategoryUpdateSchedule.refreshScope(categoryId, categories)
+            libraryManga.filter { manga -> manga.categories.any { it in scope } }
+            // KNS <--
             // SY -->
         } else if (
             group == LibraryGroup.BY_DEFAULT ||
@@ -340,10 +372,28 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
             timeZone,
         ).endInclusive
 
+        // KNS --> scheduled runs follow category update intervals; manual refreshes do not
+        val isScheduledRun = tags.contains(WORK_NAME_AUTO)
+        val now = Clock.System.now()
+        val due = if (isScheduledRun) {
+            CategoryUpdateSchedule.dueIntervalCategories(
+                categories,
+                CategoryUpdateSchedule.decodeLastRun(libraryPreferences.categoryUpdateLastRun.get()),
+                now,
+            )
+        } else {
+            emptySet()
+        }
+        dueIntervalCategories = due
+        // KNS <--
+
         mangaToUpdate = listToUpdate
             // SY -->
             .distinctBy { it.manga.id }
             // SY <--
+            // KNS -->
+            .filter { !isScheduledRun || CategoryUpdateSchedule.isMangaDue(it.categories, categoriesById, due) }
+            // KNS <--
             .filter {
                 when {
                     it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {

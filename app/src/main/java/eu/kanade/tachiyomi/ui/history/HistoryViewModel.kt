@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.datetime.LocalDate
 import logcat.LogPriority
 import mihon.core.common.utils.mutate
 import mihon.core.metro.AppCoroutineScope
@@ -457,12 +458,26 @@ class HistoryViewModel(
         val selected
             get() = list.fastFilter { it.chapterId in selection }
 
-        fun getUiModel() = list.map { HistoryUiModel.Item(it) }
+        fun getUiModel(): List<HistoryUiModel> {
+            // KNS --> each day shows how many different manga were read, not how many chapters
+            val mangaPerDay = list.groupBy { it.readAt?.toLocalDate() }
+                .mapValues { (_, entries) -> entries.distinctBy { it.mangaId }.size }
+            // KNS <--
+            return getUiModel(mangaPerDay)
+        }
+
+        private fun getUiModel(mangaPerDay: Map<LocalDate?, Int>) = list.map { HistoryUiModel.Item(it) }
             .insertSeparators { before, after ->
                 val beforeDate = before?.item?.readAt?.toLocalDate()
                 val afterDate = after?.item?.readAt?.toLocalDate()
                 when {
-                    beforeDate != afterDate && afterDate != null -> HistoryUiModel.Header(afterDate)
+                    beforeDate != afterDate && afterDate != null ->
+                        HistoryUiModel.Header(
+                            afterDate,
+                            // KNS -->
+                            mangaCount = mangaPerDay[afterDate] ?: 0,
+                            // KNS <--
+                        )
                     // Return null to avoid adding a separator between two items.
                     else -> null
                 }

@@ -121,7 +121,9 @@ data object LibraryTab : Tab {
             // SY -->
             val started = LibraryUpdateWorker.startNow(
                 context = context,
-                category = if (state.groupType == LibraryGroup.BY_DEFAULT) category else null,
+                // KNS -->
+                category = if (state.groupType == LibraryGroup.BY_DEFAULT) viewModel.refreshCategory(category) else null,
+                // KNS <--
                 group = state.groupType,
                 groupExtra = when (state.groupType) {
                     LibraryGroup.BY_DEFAULT -> null

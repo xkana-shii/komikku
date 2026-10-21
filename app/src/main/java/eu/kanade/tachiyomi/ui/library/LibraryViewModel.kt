@@ -119,6 +119,7 @@ import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.library.model.LibrarySort
+import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
@@ -1585,6 +1586,20 @@ class LibraryViewModel(
     }
 
     // KNS -->
+    // KNS -->
+    /**
+     * The category a refresh of [category]'s tab updates: the selected subcategory when the refresh
+     * scope is set to the selected subcategory, else the tab's category (with all its subcategories).
+     */
+    fun refreshCategory(category: Category?): Category? {
+        if (category == null || libraryPreferences.subcategoryUpdateScope.get() != SubcategoryUpdateScope.SUBCATEGORY_ONLY) {
+            return category
+        }
+        val selected = subcategorySelection.value[category.id] ?: return category
+        return state.value.libraryData.categories.find { it.id == selected } ?: category
+    }
+    // KNS <--
+
     /** Shows [subcategoryId]'s subtree in [rootId]'s tab, or the whole tab with null. */
     fun selectSubcategory(rootId: Long, subcategoryId: Long?) {
         subcategorySelection.update { current ->

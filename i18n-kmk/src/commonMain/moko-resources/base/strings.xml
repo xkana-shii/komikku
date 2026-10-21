@@ -321,6 +321,9 @@
     <string name="tracker_updated_count">Trackers updated: %1$d</string>
     <string name="pref_priority_tracker">Priority tracker</string>
     <string name="pref_reader_automation">Automation</string>
+    <string name="pref_subcategory_update_scope">Subcategory refresh scope</string>
+    <string name="pref_subcategory_update_scope_whole_category">Entire category (default)</string>
+    <string name="pref_subcategory_update_scope_subcategory_only">Selected subcategory only</string>
     <string name="pref_auto_scroll">Auto-scroll long strips</string>
     <string name="pref_auto_scroll_speed">Scroll speed</string>
     <string name="pref_auto_flip">Auto-flip pages</string>

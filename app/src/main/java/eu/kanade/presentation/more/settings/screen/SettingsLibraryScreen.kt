@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import mihon.app.di.appGraph
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.GroupLibraryMode
+import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_CHARGING
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_NETWORK_NOT_METERED
@@ -207,6 +208,18 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(SYMR.strings.library_group_updates),
                 ),
                 // SY <--
+                // KNS -->
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.subcategoryUpdateScope,
+                    entries = mapOf(
+                        SubcategoryUpdateScope.WHOLE_CATEGORY to
+                            stringResource(KMR.strings.pref_subcategory_update_scope_whole_category),
+                        SubcategoryUpdateScope.SUBCATEGORY_ONLY to
+                            stringResource(KMR.strings.pref_subcategory_update_scope_subcategory_only),
+                    ),
+                    title = stringResource(KMR.strings.pref_subcategory_update_scope),
+                ),
+                // KNS <--
                 Preference.PreferenceItem.SwitchPreference(
                     preference = libraryPreferences.autoUpdateMetadata,
                     title = stringResource(MR.strings.pref_library_update_refresh_metadata),

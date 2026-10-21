@@ -61,9 +61,9 @@ row will be re-checked when its subsystem is touched.
 | 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | `2af2c9215a` |
 | 4 | Library search/filters/sort/presentation + performance | partial (search fields, color filters); sort/presentation open | `5f901e1f43` |
 | 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | partial (progress safety, unified editor, preferred/priority); batch actions open | `689b2339df` |
-| 6 | Manga details/relations, reader controls & automation | partial (tracker relations `12a038e658`, reader automation); title/back parity open | see session log |
+| 6 | Manga details/relations, reader controls & automation | partial (tracker relations `12a038e658`, reader automation `65e92a8e98`); title/back parity open | see session log |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
-| 8 | History, Updates, release prediction, category update schedules | planned | — |
+| 8 | History, Updates, release prediction, category update schedules | partial (category schedules, refresh scope, History day counts); release prediction open | see session log |
 | 9 | Auto Reread, webhooks, Discord verification, storage, settings | planned | — |
 | 10 | Final audit, acceptance matrix, full validation | planned | — |
 
@@ -112,10 +112,10 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 1.4-i | Hierarchy-safe status changes (start/complete/reset) | DONE | Status changes move between status categories inside each branch; the branch parent is kept as anchor | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
 | 1.4-j | Category update only after persisted tracker state | DONE | Triggered by `UpsertTrack` only after a successful write (`TrackPersistenceListener`); no usable persisted status = no change | `UpsertTrackTest` (3) | batch 2a |
 | 1.4-k | Category status policy configuration UI | DONE-UNVERIFIED | Manager row menu → Tracker status picker (unified `TrackStatus`, none) | — | batch 2a + 2b |
-| 1.5-a | Per-category update intervals | PARTIAL | `category.update_interval` + `SetCategoryUpdateInterval`; scheduler and UI pending (batch 8) | — | batch 2a |
-| 1.5-b | Subcategory update scope | MISSING | Old `SubcategoryUpdateScope` | — | — |
-| 1.5-c | Category-specific picker + persisted settings | PARTIAL | Manager row menu → Update interval picker (global / 1–30 days), persisted + backed up; the updater does not use it yet (batch 8) | — | batch 2a + 2b |
-| 1.5-d | Updater respects policy, no duplicate work for multi-category manga | MISSING | `LibraryUpdateWorker` | — | — |
+| 1.5-a | Per-category update intervals | DONE | Scheduled runs apply `category.update_interval` (inherited from the nearest ancestor) via `CategoryUpdateSchedule`; last run per category in `library_update_category_last_run` (device state) | `CategoryUpdateScheduleTest` | batch 2a + 8 |
+| 1.5-b | Subcategory update scope | DONE | `pref_library_update_subcategory_scope` (whole category / selected subcategory); category refreshes cover the subtree | `CategoryUpdateScheduleTest` | batch 8 |
+| 1.5-c | Category-specific picker + persisted settings | DONE | Manager picker (batch 2b) + Settings → Library scope; persisted and backed up (interval) | — | batch 2b + 8 |
+| 1.5-d | Updater respects policy, no duplicate work for multi-category manga | DONE | A manga is due through any of its categories, a global one always wins; `distinctBy` manga id kept | `CategoryUpdateScheduleTest` | batch 8 |
 
 ### 2. Library browsing, filtering, sorting, presentation
 
@@ -360,9 +360,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 13.1-a | Daily distinct-manga count | MISSING | Verify HistoryScreen header | — | — |
-| 13.1-b | Date-grouped history with count | PARTIAL | | — | — |
-| 13.1-c | Initial loading vs empty | PARTIAL | | — | — |
+| 13.1-a | Daily distinct-manga count | DONE | `HistoryUiModel.Header.mangaCount` (distinct manga per day) | `HistoryDayCountTest` | batch 8 |
+| 13.1-b | Date-grouped history with count | DONE | Date headers keep grouping and add the count | `HistoryDayCountTest` | batch 8 |
+| 13.1-c | Initial loading vs empty | PRESENT | KMK `State.isLoading` shows a loading screen before the empty screen | — | — |
 | 13.1-d | Visibility-aware history filters | MISSING | History filters not yet visibility-aware — batch 8 | — | — |
 | 13.2-a | Continue to next readable chapter | PARTIAL | Mihon `GetNextChapters` | — | — |
 | 13.2-b | Skip blacklisted | DONE | See 5.2-c | `GetNextChaptersVisibilityTest` | batch 3 |
@@ -383,9 +383,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 14.2-b | Per-title predictions | PARTIAL | Mihon fetch interval is per title | — | — |
 | 14.2-c | Refresh on new evidence | PARTIAL | | — | — |
 | 14.2-d | Shown as estimates | PARTIAL | | — | — |
-| 14.3-a | Category-specific scheduling | MISSING | See 1.5 | — | — |
+| 14.3-a | Category-specific scheduling | DONE | See 1.5-a/1.5-d | `CategoryUpdateScheduleTest` | batch 8 |
 | 14.3-b | Controlled parallel update slots | PARTIAL | Verify | — | — |
-| 14.3-c | Timestamp after completion | PARTIAL | | — | — |
+| 14.3-c | Timestamp after completion | DONE | Category last-run times are saved only after a scheduled chapter update completes | — | batch 8 |
 | 14.3-d | Cancellation | PRESENT | | — | — |
 | 14.3-e | Reliable notifications | PARTIAL | Komi-kun #47 | — | — |
 | 14.3-f | No duplicate chapter creation | PRESENT | Komi-kun #58 + Mihon | — | — |
@@ -827,3 +827,20 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Tests:** `ReaderAutomationTest` (7).
 - **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 223 with 1 skipped, data 89, domain 185; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Not verified:** on a device (speed feel, stop on tap/screen-off, WebGPU scrolling).
+
+### Batch 8 (part 1) — category update schedules, refresh scope, History day counts
+
+- **Schedules:** `tachiyomi.domain.category.service.CategoryUpdateSchedule` (`KNS`): effective interval (own, else
+  nearest ancestor), due interval categories from per-category last-run times, `isMangaDue` (no category or a
+  global category → always; else any due interval category), `refreshScope` (category + subtree, never the
+  default category's "children"). `manga.last_update` only changes with the chapter list, so last runs are kept
+  per category in `LibraryPreferences.categoryUpdateLastRun` (app-state, device-only) and written only after a
+  scheduled chapter update completes. Manual and category-targeted refreshes ignore intervals.
+- **Refresh scope:** `SubcategoryUpdateScope` + `pref_library_update_subcategory_scope` (old fork key);
+  `LibraryViewModel.refreshCategory` picks the selected subcategory chip when set to "selected subcategory only";
+  the worker covers the whole subtree of the category it is given.
+- **History:** day headers show the number of distinct manga read that day.
+- **Tests:** `CategoryUpdateScheduleTest` (5), `HistoryDayCountTest` (1).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 224 with 1 skipped, data 89, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Open:** release-interval prediction (14.2, historical algorithm not established), visibility-aware History
+  filters (13.1-d), parallel update slots (14.3-b).

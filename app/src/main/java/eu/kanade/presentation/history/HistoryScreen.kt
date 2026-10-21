@@ -39,9 +39,11 @@ import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -196,7 +198,14 @@ private fun HistoryScreenContent(
                 is HistoryUiModel.Header -> {
                     ListGroupHeader(
                         modifier = Modifier.animateItemFastScroll(),
-                        text = relativeDateText(item.date),
+                        // KNS -->
+                        text = if (item.mangaCount > 0) {
+                            "${relativeDateText(item.date)} · " +
+                                pluralStringResource(KMR.plurals.history_day_manga_count, item.mangaCount, item.mangaCount)
+                        } else {
+                            relativeDateText(item.date)
+                        },
+                        // KNS <--
                     )
                 }
                 is HistoryUiModel.Item -> {
@@ -255,7 +264,13 @@ private fun HistoryScreenContent(
 }
 
 sealed interface HistoryUiModel {
-    data class Header(val date: LocalDate) : HistoryUiModel
+    data class Header(
+        val date: LocalDate,
+        // KNS -->
+        /** Different manga read on [date]. */
+        val mangaCount: Int = 0,
+        // KNS <--
+    ) : HistoryUiModel
     // KMK -->
     data class Item(val item: HistoryWithRelations) : HistoryUiModel
     // KMK <--
