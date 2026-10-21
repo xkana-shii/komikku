@@ -61,10 +61,6 @@ class LocalFavoritesStorage(
         insertFavoriteEntries.await(dbMangas.toList())
     }
 
-    suspend fun clearSnapshots() {
-        deleteFavoriteEntries.await()
-    }
-
     private suspend fun Flow<FavoriteEntry>.getChangedEntries(): ChangeSet {
         val terminated = toList()
 

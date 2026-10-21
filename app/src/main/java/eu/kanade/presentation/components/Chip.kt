@@ -349,6 +349,8 @@ object SuggestionChipDefaults {
      * @param disabledLabelColor the label color of this chip when not enabled
      * @param disabledIconContentColor the color of this chip's icon when not enabled
      */
+    // KUN -->
+    // Kept: NamespaceTags' elevated tags (KMK) are the only consumer.
     @Composable
     fun elevatedSuggestionChipColors(
         containerColor: Color = MaterialTheme.colorScheme.surface,
@@ -369,35 +371,7 @@ object SuggestionChipDefaults {
         disabledLeadingIconContentColor = disabledIconContentColor,
         disabledTrailingIconContentColor = Color.Unspecified,
     )
-
-    /**
-     * Creates a [ChipElevation] that will animate between the provided values according to the
-     * Material specification for an elevated [SuggestionChip].
-     *
-     * @param defaultElevation the elevation used when the chip is has no other
-     * [Interaction]s
-     * @param pressedElevation the elevation used when the chip is pressed
-     * @param focusedElevation the elevation used when the chip is focused
-     * @param hoveredElevation the elevation used when the chip is hovered
-     * @param draggedElevation the elevation used when the chip is dragged
-     * @param disabledElevation the elevation used when the chip is not enabled
-     */
-    @Composable
-    fun elevatedSuggestionChipElevation(
-        defaultElevation: Dp = 1.0.dp,
-        pressedElevation: Dp = 1.0.dp,
-        focusedElevation: Dp = 1.0.dp,
-        hoveredElevation: Dp = 3.0.dp,
-        draggedElevation: Dp = 8.0.dp,
-        disabledElevation: Dp = 0.0.dp,
-    ): ChipElevation = ChipElevation(
-        defaultElevation = defaultElevation,
-        pressedElevation = pressedElevation,
-        focusedElevation = focusedElevation,
-        hoveredElevation = hoveredElevation,
-        draggedElevation = draggedElevation,
-        disabledElevation = disabledElevation,
-    )
+    // KUN <--
 }
 
 /**
