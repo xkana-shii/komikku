@@ -16,6 +16,7 @@ import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.manga.interactor.FetchInterval
+import tachiyomi.domain.manga.model.CustomMangaInfo
 
 class MangaRestorerTest {
 
@@ -251,6 +252,107 @@ class MangaRestorerTest {
 
         val captured = entriesSlot.captured.single()
         assertEquals(listOf(15L), captured.categoryIds)
+    }
+
+    @Test
+    fun `restore forwards a marked empty custom info section as an explicit clear`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(
+                BackupManga(url = "/test/1", title = "Test Manga", customInfoIncluded = true),
+            ),
+            backupCategories = emptyList(),
+        )
+
+        val captured = entriesSlot.captured.single()
+        assertEquals(true, captured.customInfoIncluded)
+        // Kept for the repository, which only writes it when the payload owns the manga.
+        assertEquals(CustomMangaInfo(id = 0L, title = null), captured.customMangaInfo)
+    }
+
+    @Test
+    fun `restore keeps an unmarked custom info section as unknown`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(BackupManga(url = "/test/1", title = "Test Manga")),
+            backupCategories = emptyList(),
+        )
+
+        val captured = entriesSlot.captured.single()
+        assertEquals(null, captured.customInfoIncluded)
+        assertEquals(null, captured.customMangaInfo)
+    }
+
+    @Test
+    fun `restore forwards the merged reference marker`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(
+                BackupManga(url = "/merge", title = "Merged", mergedMangaReferencesIncluded = true),
+            ),
+            backupCategories = emptyList(),
+        )
+
+        assertEquals(true, entriesSlot.captured.single().mergedMangaReferencesIncluded)
+    }
+
+    @Test
+    fun `restore keeps an unmarked merged reference section as unknown`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(BackupManga(url = "/merge", title = "Merged")),
+            backupCategories = emptyList(),
+        )
+
+        assertEquals(null, entriesSlot.captured.single().mergedMangaReferencesIncluded)
     }
 
     @Test

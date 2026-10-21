@@ -129,8 +129,14 @@ class MangaRestorer(
                 mergedMangaReferences = backupManga.mergedMangaReferences.map {
                     EXHMigrations.migrateBackupMergedMangaReference(it).getMergedMangaReference()
                 },
+                // KUN -->
+                mergedMangaReferencesIncluded = backupManga.mergedMangaReferencesIncluded,
+                // KUN <--
                 flatMetadata = backupManga.flatMetadata?.getFlatMetadata(mangaId = 0L),
                 customMangaInfo = backupManga.getCustomMangaInfo(),
+                // KUN -->
+                customInfoIncluded = backupManga.customInfoIncluded,
+                // KUN <--
                 // SY <--
                 // KNS -->
                 forkState = backupManga.getForkState(),
@@ -184,6 +190,12 @@ class MangaRestorer(
                 status = customStatus.takeUnless { it == 0 }?.toLong(),
             )
         }
+        // KUN -->
+        // The sender included the custom-info section but every override is empty: that is an
+        // explicit clear, not "unknown". Return the all-null value so the restore can remove the
+        // stored entry; the repository only acts on it when the payload owns the manga.
+        if (customInfoIncluded == true) return CustomMangaInfo(id = 0L, title = null)
+        // KUN <--
         return null
     }
     // SY <--

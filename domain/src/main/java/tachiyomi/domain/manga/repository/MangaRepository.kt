@@ -71,6 +71,13 @@ interface MangaRepository {
      * Whether a sync is currently applying to [mangaId]. Used to avoid racing a recovery write.
      */
     suspend fun isSyncing(mangaId: Long): Boolean
+
+    /**
+     * Bumps `version` and `last_modified_at` of [mangaId] so the next sync delta uploads the manga.
+     * Used by user actions that change data stored outside the manga row (history, custom info), which
+     * the sync triggers cannot see. It is a no-op while a sync is applying (`is_syncing != 0`).
+     */
+    suspend fun bumpSyncVersion(mangaId: Long)
     // KUN <--
 
     suspend fun updateAll(mangaUpdates: List<MangaUpdate>): Boolean

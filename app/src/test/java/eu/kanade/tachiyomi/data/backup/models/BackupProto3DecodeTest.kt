@@ -33,6 +33,47 @@ class BackupProto3DecodeTest {
     }
 
     @Test
+    fun `the custom info marker is absent when not sent and survives a round trip`() {
+        assertNull(ProtoBuf.decodeFromByteArray(BackupManga.serializer(), empty).customInfoIncluded)
+
+        val included = ProtoBuf.encodeToByteArray(
+            BackupManga.serializer(),
+            BackupManga(url = "/m", customInfoIncluded = true),
+        )
+        assertEquals(true, ProtoBuf.decodeFromByteArray(BackupManga.serializer(), included).customInfoIncluded)
+
+        // An explicit "excluded" must stay distinguishable from a field that was never sent.
+        val excluded = ProtoBuf.encodeToByteArray(
+            BackupManga.serializer(),
+            BackupManga(url = "/m", customInfoIncluded = false),
+        )
+        assertEquals(false, ProtoBuf.decodeFromByteArray(BackupManga.serializer(), excluded).customInfoIncluded)
+    }
+
+    @Test
+    fun `the merged reference marker is absent when not sent and survives a round trip`() {
+        assertNull(ProtoBuf.decodeFromByteArray(BackupManga.serializer(), empty).mergedMangaReferencesIncluded)
+
+        val included = ProtoBuf.encodeToByteArray(
+            BackupManga.serializer(),
+            BackupManga(url = "/m", mergedMangaReferencesIncluded = true),
+        )
+        assertEquals(
+            true,
+            ProtoBuf.decodeFromByteArray(BackupManga.serializer(), included).mergedMangaReferencesIncluded,
+        )
+
+        val excluded = ProtoBuf.encodeToByteArray(
+            BackupManga.serializer(),
+            BackupManga(url = "/m", mergedMangaReferencesIncluded = false),
+        )
+        assertEquals(
+            false,
+            ProtoBuf.decodeFromByteArray(BackupManga.serializer(), excluded).mergedMangaReferencesIncluded,
+        )
+    }
+
+    @Test
     fun `other models decode from nothing`() {
         ProtoBuf.decodeFromByteArray(BackupHistory.serializer(), empty)
         ProtoBuf.decodeFromByteArray(BackupChapter.serializer(), empty)

@@ -276,6 +276,55 @@ old-fork column maps to it under another name or meaning (`columnSources`); keep
 
 ---
 
+## Backup protobuf field numbers
+
+Backup and sync payloads are protobuf (`app/src/main/java/eu/kanade/tachiyomi/data/backup/models/`). A `@ProtoNumber` is a **permanent wire identifier**: changing it makes existing backups and peers decode the field as a different type or lose it entirely. Renumbering a field that has ever shipped is forbidden.
+
+### Upstream ownership
+
+| Range | Owner |
+|-------|-------|
+| `1-18`, `100-113` | Mihon |
+| `600-603` | TachiyomiSY |
+| `610` | Komikku |
+| `800-805` | J2K, via SY (`803` is skipped: earlier builds used a duplicate) |
+| `900` | Komikku |
+
+Open upstream claims also count as taken: TachiyomiSY `604` (`List<BackupSortedScanlator>`, SY PR #1420); Komikku `611`, `650`, `900`, `901`; Mihon `806`, `807`.
+
+### komi-kun reserved range: `10000-10999`
+
+komi-kun owns this block. No upstream uses `>= 1000`, so a collision can be avoided by construction. Per-model blocks:
+
+| Range | Model |
+|-------|-------|
+| `10000-10099` | `BackupManga` |
+| `10100-10199` | `BackupChapter` |
+| `10200-10299` | `BackupCategory` |
+| `10300-10399` | `BackupTracking` |
+| `10400-10499` | `BackupHistory` |
+| `10500-10599` | `Backup` root |
+| `10600-10699` | `BackupMergedMangaReference` |
+| `10700-10799` | `BackupFlatMetadata` / metadata |
+| `10800-10899` | Saved search / feed / extension store / source / preference |
+| `10900-10999` | New models / overflow |
+
+Current komi-kun allocations:
+
+- `BackupManga.customInfoIncluded` = `10000`
+- `BackupManga.mergedMangaReferencesIncluded` = `10001`
+
+Rules:
+
+- Never allocate a KUN field below `10000`; use the reserved block.
+- Never allocate an upstream/shared number inside `10000-10999`.
+- If an upstream number ever collides with a KUN allocation, **upstream wins**: renumber the KUN field only if it has never shipped; otherwise retire it and allocate a new number.
+- Never renumber a shipped field. Never reuse a retired number: leave a `// retired: ProtoNumber(<n>)` comment instead.
+- `19000-19999` is reserved by the protobuf specification; never use it.
+- A field number in the 10000 range costs a 3-byte tag instead of 1-2, which is negligible next to the payload, and backups are gzipped.
+
+---
+
 ## Extensions & sources
 
 - Catalog sources: installable APK extensions (not in this repo).
@@ -296,6 +345,8 @@ old-fork column maps to it under another name or meaning (`columnSources`); keep
 5. **Persistence:** preferences, database migration, backup/restore and sync where the feature owns user state.
 6. **Markers:** `// KNS` around fork-authored changes; nest inside inherited blocks.
 7. **Tests:** unit/regression tests for the acceptance scenarios in `features.md`.
+8. **Backup/sync fields:** new `@ProtoNumber`s must use the fork-reserved `10000-10999` block (see
+   [Backup protobuf field numbers](#backup-protobuf-field-numbers)); never take an upstream number.
 
 Reference: `domain/src/main/java/tachiyomi/domain/category/interactor/HideCategory.kt` and
 `app/src/main/java/eu/kanade/tachiyomi/ui/more/NewUpdateScreen.kt` + `NewUpdateViewModel.kt`.

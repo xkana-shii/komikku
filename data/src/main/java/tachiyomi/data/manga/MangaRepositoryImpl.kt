@@ -52,6 +52,9 @@ class MangaRepositoryImpl(
             ?.let { it != 0L }
             ?: false
     }
+    override suspend fun bumpSyncVersion(mangaId: Long) {
+        database.mangaQueries.bumpSyncVersion(mangaId)
+    }
     // KUN <--
 
     override fun getMangaByIdAsFlow(id: Long): Flow<Manga> {

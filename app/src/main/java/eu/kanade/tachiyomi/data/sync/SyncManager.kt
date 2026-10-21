@@ -456,8 +456,10 @@ class SyncManager(
 
         // KUN -->
         // The upload carried the server's values for disabled sections so the forced payload would
-        // not blank them. They must not be written back locally either: the restorer has no
-        // per-section flag for history, tracking or custom info, so it would apply them anyway.
+        // not blank them. They must not be written back locally either. `RestoreOptions` now carries
+        // per-section flags for history, tracking and custom info, so the restore already skips
+        // them; clearing them here additionally keeps the cached payload honest for any path that
+        // does not, instead of re-applying the server's copy as if it were a local change.
         //
         // `newSyncData.backupManga` holds the same instances as `remoteBackup.backupManga`, so this
         // mutates those too. It must run only after the upload; nothing below reads the cleared

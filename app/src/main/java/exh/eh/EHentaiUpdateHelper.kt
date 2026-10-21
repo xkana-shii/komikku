@@ -5,12 +5,16 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.manga.interactor.UpdateManga
+import eu.kanade.domain.sync.SyncStateBumper
 import exh.metadata.metadata.EHentaiSearchMetadata
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
+import mihon.core.metro.AppCoroutineScope
+import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.chapter.interactor.GetChapterByUrl
@@ -49,6 +53,10 @@ class EHentaiUpdateHelper(
     private val removeHistory: RemoveHistory,
     private val getHistory: GetHistory,
     private val insertFavoriteEntryAlternative: InsertFavoriteEntryAlternative,
+    // KUN -->
+    private val syncStateBumper: SyncStateBumper,
+    @AppCoroutineScope private val appScope: CoroutineScope,
+    // KUN <--
 ) {
     val parentLookupTable =
         MemAutoFlushingLookupTable(
@@ -136,6 +144,20 @@ class EHentaiUpdateHelper(
             // KMK -->
             removeHistory.await(deleteHistory)
             // KMK <--
+            // KUN -->
+            // The reset rows are tombstones (`read_at = NULL`) on the manga the duplicate chapters
+            // belonged to; without a bump their manga row is unchanged and the delta would skip them.
+            // The tombstone write above is already done, so the bump runs on the app-wide
+            // non-cancellable scope: a cancelled caller must not drop it.
+            val deletedHistoryIds = deleteHistory.toHashSet()
+            appScope.launchNonCancellable {
+                syncStateBumper.bumpForHistoryRemoval(
+                    chains
+                        .filter { chain -> chain.history.any { it.id in deletedHistoryIds } }
+                        .map { it.manga.id },
+                )
+            }
+            // KUN <--
 
             // Insert new history
             newHistory.forEach {

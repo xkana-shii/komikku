@@ -87,6 +87,11 @@ class MangaBackupCreator(
                 },
                 // SY <--
             )
+            // KUN -->
+            // Marks whether this entry carries the custom-info section, so a receiver can tell
+            // "the user cleared every override" from "this payload never spoke about them".
+            mangaObject.customInfoIncluded = options.customInfo
+            // KUN <--
             val chapters = chaptersByMangaId[manga.id].orEmpty()
 
             // SY -->
@@ -94,6 +99,10 @@ class MangaBackupCreator(
                 mangaObject.mergedMangaReferences = mangaMergeRepository
                     .getReferencesById(manga.id)
                     .map { it.toBackupMergedMangaReference() }
+                // KUN -->
+                // The list is complete for this entry, so a winning receiver may reconcile removals.
+                mangaObject.mergedMangaReferencesIncluded = true
+                // KUN <--
             }
 
             val source = sourceManager.get(manga.source)?.getMainSource<MetadataSource<*, *>>()

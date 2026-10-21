@@ -90,7 +90,18 @@ class MangaMergeRepositoryImpl(
 
     private suspend fun partialUpdate(vararg values: MergeMangaSettingsUpdate) {
         database.transaction {
+            val mergeIds = mutableSetOf<Long>()
             values.forEach { value ->
+                // KUN -->
+                // Write only when a provided value actually changes. A blanket bump would raise the
+                // merge parent's version for a no-op save and make every peer re-merge for nothing.
+                val dbReference = database.mergedQueries
+                    .selectById(value.id, MergedMangaMapper::map)
+                    .awaitAsOneOrNull()
+                    ?: return@forEach
+                if (!value.changesAgainst(dbReference)) return@forEach
+                dbReference.mergeId?.let(mergeIds::add)
+                // KUN <--
                 database.mergedQueries.updateSettingsById(
                     id = value.id,
                     getChapterUpdates = value.getChapterUpdates,
@@ -100,12 +111,27 @@ class MangaMergeRepositoryImpl(
                     chapterSortMode = value.chapterSortMode?.toLong(),
                 )
             }
+            // KUN -->
+            // The settings live in `merged`, not in the manga row, so no trigger bumps the merge
+            // parent. Do it explicitly or the change is never uploaded by the delta sync.
+            mergeIds.forEach { database.mangaQueries.bumpSyncVersion(it) }
+            // KUN <--
         }
     }
 
+    // KUN -->
+    /** Mirrors `updateSettingsById`'s `coalesce`: only a provided (non-null) value can change. */
+    private fun MergeMangaSettingsUpdate.changesAgainst(reference: MergedMangaReference): Boolean =
+        (getChapterUpdates != null && getChapterUpdates != reference.getChapterUpdates) ||
+            (downloadChapters != null && downloadChapters != reference.downloadChapters) ||
+            (isInfoManga != null && isInfoManga != reference.isInfoManga) ||
+            (chapterPriority != null && chapterPriority != reference.chapterPriority) ||
+            (chapterSortMode != null && chapterSortMode != reference.chapterSortMode)
+    // KUN <--
+
     override suspend fun insert(reference: MergedMangaReference): Long? {
         return database.transactionWithResult {
-            database.mergedQueries
+            val referenceId = database.mergedQueries
                 .insert(
                     infoManga = reference.isInfoManga,
                     getChapterUpdates = reference.getChapterUpdates,
@@ -119,6 +145,11 @@ class MangaMergeRepositoryImpl(
                     mangaSource = reference.mangaSourceId,
                 )
                 .awaitAsOneOrNull()
+            // KUN -->
+            // The reference lives in `merged`, so bump the merge parent explicitly.
+            reference.mergeId?.let { database.mangaQueries.bumpSyncVersion(it) }
+            // KUN <--
+            referenceId
         }
     }
 
@@ -138,17 +169,31 @@ class MangaMergeRepositoryImpl(
                     mangaSource = reference.mangaSourceId,
                 ).awaitAsOne()
             }
+            // KUN -->
+            references.map { it.mergeId!! }.distinct().forEach {
+                database.mangaQueries.bumpSyncVersion(it)
+            }
+            // KUN <--
         }
     }
 
     override suspend fun deleteById(id: Long) {
-        database.mergedQueries
-            .deleteById(id)
+        // KUN -->
+        database.transaction {
+            val mergeId = database.mergedQueries.selectMergeIdById(id).awaitAsOneOrNull()
+            database.mergedQueries.deleteById(id)
+            mergeId?.let { database.mangaQueries.bumpSyncVersion(it) }
+        }
+        // KUN <--
     }
 
     override suspend fun deleteByMergeId(mergeId: Long) {
-        database.mergedQueries
-            .deleteByMergeId(mergeId)
+        // KUN -->
+        database.transaction {
+            database.mergedQueries.deleteByMergeId(mergeId)
+            database.mangaQueries.bumpSyncVersion(mergeId)
+        }
+        // KUN <--
     }
 
     override suspend fun getMergeMangaForDownloading(mergeId: Long): List<Manga> {

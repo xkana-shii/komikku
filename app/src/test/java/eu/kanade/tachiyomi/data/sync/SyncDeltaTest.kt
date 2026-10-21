@@ -286,6 +286,7 @@ class SyncDeltaTest {
             categories = listOf(3),
             customTitle = "Remote title",
             customStatus = 2,
+            customInfoIncluded = true,
         )
         val local = BackupManga(source = 1, url = "/m", title = "Local title")
 
@@ -305,6 +306,7 @@ class SyncDeltaTest {
         assertEquals(remote.categories, local.categories)
         assertEquals("Remote title", local.customTitle)
         assertEquals(2, local.customStatus)
+        assertEquals(true, local.customInfoIncluded)
     }
 
     @Test
@@ -404,6 +406,7 @@ class SyncDeltaTest {
             customDescription = "Description",
             customGenre = listOf("Action"),
             customStatus = 2,
+            customInfoIncluded = true,
         )
         val backup = Backup(backupManga = listOf(manga))
 
@@ -423,6 +426,7 @@ class SyncDeltaTest {
         assertEquals(null, manga.customDescription)
         assertEquals(null, manga.customGenre)
         assertEquals(0, manga.customStatus)
+        assertEquals(false, manga.customInfoIncluded)
     }
 
     @Test
@@ -434,6 +438,7 @@ class SyncDeltaTest {
             tracking = listOf(BackupTracking(syncId = 2, title = "track")),
             customTitle = "Custom title",
             customStatus = 2,
+            customInfoIncluded = true,
         )
 
         clearDisabledSectionsForRestore(Backup(backupManga = listOf(manga)), SyncSettings())
@@ -442,6 +447,7 @@ class SyncDeltaTest {
         assertEquals(1, manga.tracking.size)
         assertEquals("Custom title", manga.customTitle)
         assertEquals(2, manga.customStatus)
+        assertEquals(true, manga.customInfoIncluded)
     }
 
     @Test
