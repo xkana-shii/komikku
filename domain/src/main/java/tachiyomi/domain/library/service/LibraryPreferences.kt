@@ -175,6 +175,13 @@ class LibraryPreferences(
 
     val categoryNumberOfItems = preferenceStore.getBoolean("display_number_of_items", false)
 
+    // KNS -->
+    // Category manager view state; same keys as the previous personal fork.
+    val categoryManagerSortMode = preferenceStore.getInt("category_manager_sort_mode", 0)
+
+    val categoryManagerCollapsedIds = preferenceStore.getStringSet("category_manager_collapsed_ids", emptySet())
+    // KNS <--
+
     val categorizedDisplaySettings = preferenceStore.getBoolean("categorized_display", false)
 
     // KMK -->

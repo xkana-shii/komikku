@@ -256,4 +256,44 @@
     <string name="pref_discord_show_download_button_summary">Displays a button to download the app</string>
     <string name="pref_discord_show_discord_button">Show Discord Button</string>
     <string name="pref_discord_show_discord_button_summary">Displays a button to join the Discord server</string>
+    <!-- KNS -->
+    <string name="action_show">Show</string>
+    <string name="category_expand">Expand</string>
+    <string name="category_collapse">Collapse</string>
+    <string name="category_track_status">Tracker status</string>
+    <string name="category_track_status_none">Not linked to a tracker status</string>
+    <string name="category_track_status_summary">Manga with this tracker status are filed here automatically. Inside a parent category this only applies to manga already in that parent's branch.</string>
+    <string name="category_update_interval">Update interval</string>
+    <string name="category_update_interval_global">Use the global update schedule</string>
+    <string name="category_create_subcategory">Create subcategory</string>
+    <string name="category_create_subcategory_in">In \"%s\"</string>
+    <string name="category_move">Move category</string>
+    <string name="category_root">Top level</string>
+    <string name="category_delete_children_move_up">Its subcategories move up one level.</string>
+    <string name="category_error_duplicate_sibling">A category with this name already exists here</string>
+    <string name="category_error_invalid_move">A category cannot be moved below itself or one of its subcategories</string>
+    <string name="category_manager_search">Search categories and subcategories…</string>
+    <string name="category_manager_sort">Sort</string>
+    <string name="category_manager_sort_manual">Manual</string>
+    <string name="category_manager_sort_az">A to Z</string>
+    <string name="category_manager_sort_za">Z to A</string>
+    <string name="category_manager_sort_most">Most manga</string>
+    <string name="category_manager_sort_least">Least manga</string>
+    <string name="category_manager_sort_date_added_newest">Date added (newest)</string>
+    <string name="category_manager_sort_date_added_oldest">Date added (oldest)</string>
+    <string name="category_manager_sort_date_modified_newest">Date modified (newest)</string>
+    <string name="category_manager_sort_date_modified_oldest">Date modified (oldest)</string>
+    <string name="category_manager_expand_all">Expand all</string>
+    <string name="category_manager_collapse_all">Collapse all</string>
+    <string name="category_manager_select">Select</string>
+    <string name="category_manager_select_all">Select all shown</string>
+    <string name="category_manager_show">Show selected</string>
+    <string name="category_manager_hide">Hide selected</string>
+    <string name="category_manager_move">Move</string>
+    <string name="category_manager_merge">Merge</string>
+    <string name="category_manager_move_title">Move to category</string>
+    <string name="category_manager_merge_title">Merge into category</string>
+    <string name="category_manager_merge_summary">The other selected categories are deleted; their manga and subcategories move into the one you pick.</string>
+    <string name="category_manager_delete_many_title">Delete selected</string>
+    <!-- KNS <-->
 </resources>

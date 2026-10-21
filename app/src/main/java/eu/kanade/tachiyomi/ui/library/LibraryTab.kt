@@ -341,6 +341,10 @@ data object LibraryTab : Tab {
                         getDisplayMode = { viewModel.getDisplayMode() },
                         getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
                         getItemsForCategory = { state.getItemsForCategory(it) },
+                        // KNS -->
+                        getSubcategoryNavigation = { state.subcategoryNavigation(it) },
+                        onSelectSubcategory = viewModel::selectSubcategory,
+                        // KNS <--
                     )
                 }
             }

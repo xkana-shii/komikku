@@ -27,6 +27,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.preference.asToggleableState
+import eu.kanade.presentation.category.categorySelectionChange
+import eu.kanade.presentation.category.orderedCategorySelection
 import eu.kanade.presentation.category.visualName
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.preference.CheckboxState
@@ -264,14 +266,11 @@ fun ChangeCategoryDialog(
                 tachiyomi.presentation.core.components.material.TextButton(
                     onClick = {
                         onDismissRequest()
-                        onConfirm(
-                            selection
-                                .filter { it is CheckboxState.State.Checked || it is CheckboxState.TriState.Include }
-                                .map { it.value.id },
-                            selection
-                                .filter { it is CheckboxState.State.None || it is CheckboxState.TriState.None }
-                                .map { it.value.id },
-                        )
+                        // KNS -->
+                        // A selected subcategory is stored together with its ancestors.
+                        val (included, excluded) = categorySelectionChange(selection)
+                        onConfirm(included, excluded)
+                        // KNS <--
                     },
                 ) {
                     Text(text = stringResource(MR.strings.action_ok))
@@ -285,7 +284,10 @@ fun ChangeCategoryDialog(
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                selection.forEach { checkbox ->
+                // KNS -->
+                // Tree order with indentation, so same-named subcategories are told apart by parent.
+                orderedCategorySelection(selection).forEach { (checkbox, depth) ->
+                    // KNS <--
                     val onChange: (CheckboxState<Category>) -> Unit = {
                         val index = selection.indexOf(it)
                         if (index != -1) {
@@ -297,6 +299,9 @@ fun ChangeCategoryDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            // KNS -->
+                            .padding(start = MaterialTheme.padding.medium * depth)
+                            // KNS <--
                             .clickable { onChange(checkbox) },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

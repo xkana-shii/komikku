@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.tachiyomi.ui.library.LibraryItem
+import eu.kanade.tachiyomi.ui.library.SubcategoryNavigation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tachiyomi.domain.category.model.Category
@@ -50,6 +51,10 @@ fun LibraryContent(
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
     getItemsForCategory: (Category) -> List<LibraryItem>,
+    // KNS -->
+    getSubcategoryNavigation: (Category) -> SubcategoryNavigation? = { null },
+    onSelectSubcategory: (rootId: Long, subcategoryId: Long?) -> Unit = { _, _ -> },
+    // KNS <--
 ) {
     Column(
         modifier = Modifier.padding(
@@ -92,6 +97,12 @@ fun LibraryContent(
                 },
             )
         }
+
+        // KNS -->
+        categories.getOrNull(pagerState.currentPage)?.let(getSubcategoryNavigation)?.let { navigation ->
+            LibrarySubcategoryChips(navigation = navigation, onSelect = onSelectSubcategory)
+        }
+        // KNS <--
 
         PullRefresh(
             refreshing = isRefreshing,

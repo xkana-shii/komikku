@@ -1,3 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- KNS -->
+    <plurals name="category_update_interval_days">
+        <item quantity="one">Every day</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
+    <plurals name="category_manager_delete_many">
+        <item quantity="one">Delete %d category? Its subcategories move up one level. This cannot be undone.</item>
+        <item quantity="other">Delete %d categories? Their subcategories move up one level. This cannot be undone.</item>
+    </plurals>
+    <!-- KNS <-->
 </resources>
