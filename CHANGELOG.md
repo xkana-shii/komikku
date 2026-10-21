@@ -92,6 +92,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Restore TachiyomiSY's EH/NHentai metadata search in the library. `artist:`, `group:`, `parody:`, `character:`, `uploader:`, `female:`, `male:`, `reclass:` and the short aliases `a:`, `c:`/`char:`, `f:`, `g:`/`creator:`/`circle:`, `l:`, `m:`, `p:`/`series:`, `r:` now match the stored EH metadata; they previously matched unrelated manga fields (`artist:`) or nothing. `language:`/`lang:` keep matching the source language. The other Mihon fields (`id:`, `src:`, wildcards, ...) are unchanged.
 - Fixed a crash when displaying the Storage Overview empty state.
 - Fixed a database migration crash caused by an obsolete chapter-history trigger referencing a removed table.
+- The Updates screen now shows each chapter's bookmark in its saved color (red, orange, yellow, green, blue or purple), the same way the manga's chapter list does; ordinary bookmarks keep the theme color. Changing a color refreshes the Updates list right away.
+- Databases created before bookmark colors reached the Updates list no longer break the Updates screen: database migration 58 recreates the Updates view with the color column. A view stores no data, so no user data is changed.
 
 ## [v0.20.0] - 2026-06-27
 ### Added

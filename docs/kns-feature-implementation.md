@@ -968,3 +968,25 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   now exposes bookmark color, so normal query invalidation immediately refreshes filter eligibility
   without per-row queries.
 - **Tests:** `BookmarkColorFilterTest` adds full palette and combined include/exclude coverage.
+
+### Batch 12 — colored bookmarks in Updates
+
+- **UI:** the Updates row tints its bookmark icon with `bookmarkColorOf(update.bookmarkColor) ?:
+  MaterialTheme.colorScheme.primary`, the same expression as the manga chapter list, so it reuses the
+  `BookmarkColor` palette (0 = theme color, 1–6 = red … purple). Unbookmarked chapters show no icon.
+- **Data:** `updatesView`, `UpdatesWithRelations` and `UpdatesRepositoryImpl` already carried the color
+  (batch 11). Batch 11 changed the view without a migration, so a database already at schema 58 kept
+  the old view and the Updates queries would fail on `bookmarkColor`. `58.sqm` drops and recreates
+  `updatesView` from its current definition (schema version 59). It touches no table data, and it is
+  independent of `OldForkDatabaseConverter`, which recreates views from the fresh schema anyway.
+- **Reactivity:** the view reads `chapter`, so a color change through `ChapterRepositoryImpl.update`
+  invalidates the subscribed Updates query; no per-row lookups.
+- **Tests:** `UpdatesBookmarkColorTest` (colors 0–6 and an unbookmarked chapter on the real view,
+  `bookmarked` filter and ordering unchanged, a color change re-emits the observed rows),
+  `UpdatesViewMigrationTest` (a schema-58 database with the old view gains `bookmarkColor` and keeps
+  its rows, colors and sync versions), `BookmarkColorTintTest` (0 → theme color, 1–6 → palette).
+- **Validation:** spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  assembleDebug, assembleRelease and `git diff --check` exit 0. The first testDebugUnitTest run failed on a
+  Windows file lock in Kotlin's incremental-compile backup (`:app:compileDebugKotlin`); the re-run exited
+  0 (app 244 with 1 skipped, data 93, domain 192; 0 failures).
+- **Not verified:** on a device — the Updates icon colors and an in-place upgrade from schema 58.
