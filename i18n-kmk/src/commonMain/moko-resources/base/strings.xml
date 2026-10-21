@@ -434,5 +434,7 @@
     <string name="scanlator_merge_disabled">Disabled</string>
     <string name="scanlator_merge_effective_enabled">Effective: enabled</string>
     <string name="scanlator_merge_effective_disabled">Effective: disabled</string>
+    <string name="autofill_no_eligible_tracker">None of this entry\'s trackers can fill in metadata. Log in to one that can.</string>
+    <string name="autofill_no_metadata">%1$s returned no metadata to fill in</string>
     <!-- KNS <-->
 </resources>

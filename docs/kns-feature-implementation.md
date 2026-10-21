@@ -1093,3 +1093,48 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Device checks pending:** dragging feel and the lack of auto-scroll while dragging in a long list,
   dialog height with many scanlators and ranges, small screens and large fonts, tooltips, and the
   header button next to the chapter count in phone and tablet layouts.
+
+### Batch 16 — metadata autofill: MangaBaka restored, tags and status for four trackers
+
+- **Cause:** `MangaBaka` did not override `getMangaMetadata`, so `BaseTracker`'s `NotImplementedError`
+  surfaced as a tracker error; `TrackMangaMetadata` had no tags/status and the editor applied neither.
+- **Model:** `TrackMangaMetadata.tags` / `status` (an `SManga` status; null keeps the editor's).
+  `track/model/MetadataAutofill.kt`: `autofillTags` (trim, drop blanks, case-insensitive dedup),
+  `mergeAutofillTags` (current tags kept as typed, fetched ones appended), `autofillStatusSelection`
+  (spinner position), `hasAutofillData`, and `autofillEligible`.
+- **Eligibility:** `Tracker.supportsMangaMetadata` (default false; true on AniList, Bangumi, Kitsu,
+  MangaBaka, MangaUpdates, MdList, MyAnimeList, Shikimori). The editor offers bindings whose tracker
+  has the capability and is logged in, replacing the `EnhancedTracker` type filter; a manga with
+  bindings but none eligible gets its own message.
+- **MangaBaka:** `MangaBakaApi.getMangaMetadata` reads `GET /v1/series/{id}` (not the library entry),
+  follows `merged_with` (at most 5 hops, cycles rejected) and errors for missing (404) and `deleted`
+  series. `MangaBakaItem` gains optional `genres`, `tags`, `state`, `merged_with`; `status`/`type` became
+  optional (search keeps empty strings). `toAutofillMetadata` follows the old `main`: genres made
+  readable (`slice_of_life` → `Slice of life`) then tags; releasing/ongoing, completed, cancelled,
+  hiatus mapped, others null. The cover is the 250px variant (the foundation's DTO has no raw cover).
+- **AniList:** the metadata query adds `genres`, `tags { name }`, `status`; `toAutofillMetadata` maps
+  RELEASING/FINISHED/CANCELLED/HIATUS and keeps NOT_YET_RELEASED as null.
+- **MyAnimeList:** the `fields` parameter adds `genres,status` (series status, never `my_list_status`);
+  currently_publishing/finished/discontinued/on_hiatus mapped, not_yet_published and unknown null.
+- **MangaUpdates:** `MURecord` (the `GET /v1/series/{id}` record, schema checked against the official
+  OpenAPI spec) gains `genres[].genre`, `categories[].category` with `votes_plus`/`votes_minus`, and the
+  free-text `status`. Tags: genres, then categories without more down- than up-votes. Status from the
+  text: hiatus, then ongoing, then cancelled/discontinued/dropped, then complete. `completed` is not
+  used (it means "completely scanlated"). The KUN author handling moved with its marker.
+- **Editor:** tags merge into the chips, the status spinner is set for known statuses, nothing is saved
+  until Save. Cancellation is rethrown instead of being shown as a tracker error; empty metadata shows
+  "returned no metadata to fill in". Saving uses the unchanged `updateMangaInfo` path (manga fields
+  only; no tracker, Smart Category, bookmark, blacklist or sync state is touched).
+- **Tests:** `MetadataAutofillTest` (35, realistic provider JSON through the real DTOs): MangaBaka status
+  table, genres/tags, missing values, the real `MangaBakaApi` fetch with a canned-response OkHttp
+  interceptor (merge followed, only GET `/v1/series` requests, missing/deleted/cyclic errors), the
+  four trackers declaring the override and capability; AniList genres/tags/status; MAL statuses (with
+  `my_list_status` present), genres, credits, missing fields; MangaUpdates genres/categories/votes,
+  status texts, `completed` ignored, empty record; tag merge, status selection, empty metadata,
+  eligibility with several trackers. `htmlDecode` (android `Html`) is stubbed with jsoup's entity
+  unescaping in this test only.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 295 with 1 skipped, data 93, domain 198; 0
+  failures), assembleDebug, assembleRelease, `git diff --check`.
+- **Not verified:** live requests against the four services, and the editor's Save/Cancel with
+  autofilled tags and status on a device (the editor is an Android view without UI tests).

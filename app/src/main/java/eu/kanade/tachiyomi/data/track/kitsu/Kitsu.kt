@@ -215,6 +215,10 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
         interceptor.newAuth(null)
     }
 
+    // KNS -->
+    override val supportsMangaMetadata = true
+    // KNS <--
+
     override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         return api.getMangaMetadata(track)
     }
