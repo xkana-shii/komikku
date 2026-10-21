@@ -70,6 +70,10 @@ class UiPreferences(
 
     val relatedMangasInOverflow = preferenceStore.getBoolean("related_mangas_in_overflow", false)
 
+    // KNS --> same key as the previous personal fork
+    val showSequelPrequel = preferenceStore.getBoolean("pref_sequel_prequel_enabled", false)
+    // KNS <--
+
     val showHomeOnRelatedMangas = preferenceStore.getBoolean("show_home_on_related_mangas", true)
 
     val readButtonPosition = preferenceStore.getString("reading_button_position", FabPosition.End.toString())

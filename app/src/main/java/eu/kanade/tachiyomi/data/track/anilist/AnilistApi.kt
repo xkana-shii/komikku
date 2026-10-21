@@ -31,6 +31,7 @@ import mihon.graphql.anilist.AniListDeleteMangaMutation
 import mihon.graphql.anilist.AniListGetCurrentUserQuery
 import mihon.graphql.anilist.AniListGetLibMangaQuery
 import mihon.graphql.anilist.AniListGetMangaDetailsQuery
+import mihon.graphql.anilist.AniListGetMangaRelationsQuery
 import mihon.graphql.anilist.AniListSearchMangaQuery
 import mihon.graphql.anilist.AniListUpdateMangaMutation
 import mihon.graphql.anilist.type.FuzzyDateInput
@@ -40,6 +41,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import tachiyomi.domain.track.model.Track as DomainTrack
@@ -235,6 +237,18 @@ class AnilistApi(
             }
             ?: throw Exception("Failed to get AniList user data")
     }
+
+    // KNS -->
+    suspend fun getRelatedEntries(mediaId: Long): List<SequelPrequelEntry> {
+        return graphQlClient
+            .query(AniListGetMangaRelationsQuery(manga_id = mediaId.toInt()))
+            .execute()
+            .dataOrElse(
+                errorLog = "AniList: Failed to get manga relations",
+                default = { emptyList() },
+            ) { it.toRelationEdges().toRelatedEntries(trackerId) }
+    }
+    // KNS <--
 
     suspend fun getMangaDetails(id: Int): TrackSearch? {
         return graphQlClient

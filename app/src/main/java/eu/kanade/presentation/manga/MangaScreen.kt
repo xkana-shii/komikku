@@ -81,6 +81,7 @@ import eu.kanade.presentation.manga.components.PagePreviewItems
 import eu.kanade.presentation.manga.components.PagePreviews
 import eu.kanade.presentation.manga.components.RelatedMangasRow
 import eu.kanade.presentation.manga.components.SearchMetadataChips
+import eu.kanade.presentation.manga.components.SequelPrequelRow
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
@@ -115,6 +116,7 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -185,6 +187,7 @@ fun MangaScreen(
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
     // KNS -->
     chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    onSequelPrequelClick: (SequelPrequelEntry) -> Unit = {},
     // KNS <--
 
     // For chapter swipe
@@ -263,6 +266,7 @@ fun MangaScreen(
             onMultiDeleteClicked = onMultiDeleteClicked,
             // KNS -->
             chapterVisibilityActions = chapterVisibilityActions,
+            onSequelPrequelClick = onSequelPrequelClick,
             // KNS <--
             onChapterSwipe = onChapterSwipe,
             onChapterSelected = onChapterSelected,
@@ -329,6 +333,7 @@ fun MangaScreen(
             onMultiDeleteClicked = onMultiDeleteClicked,
             // KNS -->
             chapterVisibilityActions = chapterVisibilityActions,
+            onSequelPrequelClick = onSequelPrequelClick,
             // KNS <--
             onChapterSwipe = onChapterSwipe,
             onChapterSelected = onChapterSelected,
@@ -407,6 +412,7 @@ private fun MangaScreenSmallImpl(
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
     // KNS -->
     chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    onSequelPrequelClick: (SequelPrequelEntry) -> Unit = {},
     // KNS <--
 
     // For chapter swipe
@@ -755,6 +761,17 @@ private fun MangaScreenSmallImpl(
                     }
                     // KMK <--
 
+                    // KNS -->
+                    if (state.sequelPrequel.isNotEmpty()) {
+                        item(key = "sequel-prequel", contentType = "sequel-prequel") {
+                            SequelPrequelRow(
+                                entries = state.sequelPrequel,
+                                onClick = onSequelPrequelClick,
+                            )
+                        }
+                    }
+                    // KNS <--
+
                     // SY -->
                     if (!state.showRecommendationsInOverflow || state.showMergeWithAnother) {
                         item(
@@ -870,6 +887,7 @@ private fun MangaScreenLargeImpl(
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
     // KNS -->
     chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    onSequelPrequelClick: (SequelPrequelEntry) -> Unit = {},
     // KNS <--
 
     // For swipe actions
@@ -1140,6 +1158,14 @@ private fun MangaScreenLargeImpl(
                             },
                             // SY <--
                         )
+                        // KNS -->
+                        if (state.sequelPrequel.isNotEmpty()) {
+                            SequelPrequelRow(
+                                entries = state.sequelPrequel,
+                                onClick = onSequelPrequelClick,
+                            )
+                        }
+                        // KNS <--
                         // SY -->
                         if (!state.showRecommendationsInOverflow || state.showMergeWithAnother) {
                             MangaInfoButtons(

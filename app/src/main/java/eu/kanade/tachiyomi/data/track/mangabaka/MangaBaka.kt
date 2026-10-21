@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.serialization.json.Json
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.injectLazy
 import tachiyomi.domain.track.model.Track as DomainTrack
@@ -18,6 +19,18 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
     private val interceptor by lazy { MangaBakaInterceptor(this) }
     private val api by lazy { MangaBakaApi(id, client, interceptor) }
+
+    // KNS -->
+    override suspend fun getRelatedEntries(remoteId: Long): List<SequelPrequelEntry> {
+        val series = api.getSeries(remoteId) ?: return emptyList()
+        return series.relationships.orEmpty()
+            .distinctBy { it.seriesId }
+            .take(MAX_RELATIONS)
+            .mapNotNull { relation ->
+                api.getSeries(relation.seriesId)?.toRelatedEntry(relation.relationType, id)
+            }
+    }
+    // KNS <--
 
     override val supportsReadingDates: Boolean = true
     override val supportsPrivateTracking: Boolean = true

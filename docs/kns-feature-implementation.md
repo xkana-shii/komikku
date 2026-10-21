@@ -60,8 +60,8 @@ row will be re-checked when its subsystem is touched.
 | 2b | Category manager UI, Set Categories dialog, library subcategory navigation/filters | done | see session log |
 | 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | `2af2c9215a` |
 | 4 | Library search/filters/sort/presentation + performance | partial (search fields, color filters); sort/presentation open | `5f901e1f43` |
-| 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | partial (progress safety, unified editor, preferred/priority); MangaBaka/AniList relations, batch actions open | see session log |
-| 6 | Manga details/relations, reader controls & automation | planned | — |
+| 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | partial (progress safety, unified editor, preferred/priority); batch actions open | `689b2339df` |
+| 6 | Manga details/relations, reader controls & automation | partial (tracker relations); reader controls/automation open | see session log |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
 | 8 | History, Updates, release prediction, category update schedules | planned | — |
 | 9 | Auto Reread, webhooks, Discord verification, storage, settings | planned | — |
@@ -153,12 +153,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 3.1-c | Avoid re-preparing rich description on recomposition | MISSING | | — | — |
 | 3.1-d | Metadata updates respect local customizations | PARTIAL | Komi-kun #60 clearable fields; verify | — | — |
 | 3.1-e | Cover presentation without repeated DB observation | PARTIAL | | — | — |
-| 3.1-f | Related-manga metadata from trackers | MISSING | Old `SequelPrequelEntry` | — | — |
-| 3.2-a | Related-title lookup via AniList/MangaBaka | MISSING | | — | — |
-| 3.2-b | Sequel/prequel rows on details | MISSING | | — | — |
-| 3.2-c | Cross-service fallback | MISSING | | — | — |
-| 3.2-d | Compact horizontal relation cards | MISSING | | — | — |
-| 3.2-e | Bounded relation-search concurrency | MISSING | | — | — |
+| 3.1-f | Related-manga metadata from trackers | DONE | Related series metadata (title, cover, relation) from AniList/MangaBaka bindings | `AnilistRelationsTest`, `MangaBakaRelationsTest` | batch 6 |
+| 3.2-a | Related-title lookup via AniList/MangaBaka | DONE | `Tracker.getRelatedEntries` (AniList GraphQL `AniListGetMangaRelations`, MangaBaka `relationships_v2`) | `AnilistRelationsTest`, `MangaBakaRelationsTest` | batch 6 |
+| 3.2-b | Sequel/prequel rows on details | DONE | `SequelPrequelRow` on the entry screen (phone + tablet layouts), behind `pref_sequel_prequel_enabled` (Settings → Browse) | manual pending | batch 6 |
+| 3.2-c | Cross-service fallback | DONE | Preferred tracker first, then the other linked trackers, then MangaDex relations for MangaDex entries | `GetSequelPrequelTest` | batch 6 |
+| 3.2-d | Compact horizontal relation cards | DONE | Compact 112 dp cards with relation label, cover, title and In library | manual pending | batch 6 |
+| 3.2-e | Bounded relation-search concurrency | DONE | MangaBaka related series fetched sequentially, at most 50; MangaDex at most 100; one lookup per manga at a time (mutex) and a 24 h in-memory cache | `GetSequelPrequelTest` | batch 6 |
 | 3.3-a | Bookmark-color controls in chapter UI | DONE | Selection bar Bookmark color action (bulk) + `BookmarkColorDialog`; colored bookmark icon in the chapter row | manual pending | batch 3 |
 | 3.3-b | Chapter filter controls display/reset | PARTIAL | | — | — |
 | 3.3-c | Reveal hidden (blacklisted) chapters | DONE | Blacklisted chapters dialog toggles reveal (`pref_hide_blacklisted_chapters_<id>`); revealed rows dimmed + block icon, selectable for un-blacklist | `ChapterSmartMergeTest` reveal case | batch 3 |
@@ -228,9 +228,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
 | 7.1-a | Fork MangaBaka integration (search, binding, progress, status/score/date) | PARTIAL | Mihon MangaBaka tracker on HEAD; diff old fork's service for fork-only behavior | — | — |
-| 7.1-b | MangaBaka metadata + related series | MISSING | | — | — |
+| 7.1-b | MangaBaka metadata + related series | PARTIAL | MangaBaka related series done; MangaBaka-driven metadata autofill not implemented | `MangaBakaRelationsTest` | batch 6 |
 | 7.1-c | MangaBaka date fidelity | PARTIAL | Verify conversions | — | — |
-| 7.2-a | AniList relation integration | MISSING | | — | — |
+| 7.2-a | AniList relation integration | DONE | AniList relations (novels filtered by format) | `AnilistRelationsTest` | batch 6 |
 | 7.2-b | MangaUpdates fork handling + unified binding | PARTIAL | | — | — |
 | 7.2-c | Remote error presentation in unified editor | DONE | Unified edits report each failing tracker (toast + `Last update failed` marker until it succeeds again) | `UpdateTracksTest`, `UnifiedTrackerEditsTest` | batch 5 |
 | 7.3-a | No progress rollback | DONE | `TrackChapter` sends max(refreshed remote, read chapter) | `TrackChapterProgressTest` | batch 5 |
@@ -273,7 +273,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 9.1-c | Title tap = back navigation parity | MISSING | Verify | — | — |
 | 9.1-d | Reader bookmark selection + colors | DONE | See 4.1-d | manual pending | batch 3 |
 | 9.1-e | Rounded bookmark touch feedback | DONE | See 4.1-h | manual pending | batch 3 |
-| 9.1-f | Reader chapter list updates on color change | MISSING | | — | — |
+| 9.1-f | Reader chapter list updates on color change | DONE-UNVERIFIED | Reader chapter list shows bookmark colors and resets them on toggle (see 4.1-g) | manual pending | batch 3 |
 | 9.1-g | Page-jump correctness | PARTIAL | Verify | — | — |
 | 9.2-a | Button-controlled auto-scroll (new system) | PARTIAL | SY auto-scroll exists on HEAD; fork system replaces old SY UI — reconcile without removing | — | — |
 | 9.2-b | Automatic page flip (paged) | PARTIAL | | — | — |
@@ -794,3 +794,21 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Open in batch 5:** MangaBaka fork-only behavior and metadata/relations (7.1), AniList relations (7.2-a, with
   3.2), MangaUpdates differences (7.2-b), multi-title batch actions (8.1-f), unified untrack UI, search resolver /
   autofill (8.3-a/b), reread counters (historical). No device test of the panel yet.
+
+### Batch 6 (part 1) — related titles from trackers
+
+- **Model:** `tachiyomi.domain.manga.model.SequelPrequelEntry` / `SequelPrequelRelation` (`KNS`, transient; the
+  old fork's names). `Tracker.getRelatedEntries(remoteId)` (default none); AniList via the new
+  `AniListGetMangaRelations.graphql` (Apollo) + `AnilistRelations.kt`; MangaBaka via `MangaBakaItem.relationships`
+  (`relationships_v2`), `MangaBakaApi.getSeries` and `MangaBakaRelations.kt`.
+- **Lookup:** `GetSequelPrequel` (Metro singleton): logged-in bindings, preferred tracker first, MangaDex relation
+  fallback, 24 h in-memory cache per manga + bindings + preference (empty/failed results not cached), local
+  matching by tracker binding → source URL → unique same-title favorite; `inLibrary` only for favorites.
+- **UI:** `UiPreferences.showSequelPrequel` (`pref_sequel_prequel_enabled`, off by default, Settings → Browse);
+  `MangaViewModel` loads relations into `State.Success.sequelPrequel` when bindings, logged-in trackers or the
+  preferred tracker change; `SequelPrequelRow` in both entry layouts; tapping opens the local entry or a dialog
+  with Global Search / open in browser. Relation strings ported to `KMR`.
+- **Tests:** `GetSequelPrequelTest` (5), `AnilistRelationsTest` (2), `MangaBakaRelationsTest` (2).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 216 with 1 skipped, data 89, domain 185; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Not verified:** the AniList relations query and MangaBaka `relationships_v2` field against the live services
+  (parsing is unit-tested; network calls are not). No device test of the row.

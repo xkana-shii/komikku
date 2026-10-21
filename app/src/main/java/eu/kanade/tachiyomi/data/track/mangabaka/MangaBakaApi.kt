@@ -217,6 +217,25 @@ class MangaBakaApi(
         }
     }
 
+    // KNS -->
+    /** The series [id] as MangaBaka returns it; null when it does not exist. */
+    suspend fun getSeries(id: Long): MangaBakaItem? {
+        return withContext(Dispatchers.IO) {
+            with(json) {
+                try {
+                    authClient.newCall(GET("$API_BASE_URL/v1/series/$id"))
+                        .awaitSuccess()
+                        .parseAs<MangaBakaItemResult>()
+                        .data
+                } catch (e: HttpException) {
+                    if (e.code == 404) return@with null
+                    throw e
+                }
+            }
+        }
+    }
+    // KNS <--
+
     suspend fun getMangaDetails(id: Int): TrackSearch? {
         return withContext(Dispatchers.IO) {
             val url = "$API_BASE_URL/v1/series".toUri().buildUpon()

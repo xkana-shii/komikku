@@ -27,6 +27,10 @@ data class MangaBakaItem(
     val type: String,
     val rating: Double?,
     val titles: List<MangaBakaItemTitle>?,
+    // KNS -->
+    @SerialName("relationships_v2")
+    val relationships: List<MangaBakaRelationship>? = null,
+    // KNS <--
 ) {
     fun chooseBestTitle(): String {
         // based on https://mangabaka.org/pages/announcements/15-titles-v2#finding-the-title-you-want
@@ -49,6 +53,16 @@ data class MangaBakaItem(
             ?: "ID: $id - Could not find name! (report on the MangaBaka Discord)"
     }
 }
+
+// KNS -->
+@Serializable
+data class MangaBakaRelationship(
+    @SerialName("to_series_id")
+    val seriesId: Long,
+    @SerialName("relation_type")
+    val relationType: String,
+)
+// KNS <--
 
 @Serializable
 data class MangaBakaCover(

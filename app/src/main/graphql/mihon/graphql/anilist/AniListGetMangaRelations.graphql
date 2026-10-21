@@ -1,0 +1,26 @@
+# KNS: the related titles of a manga for the manga screen's Related titles row
+query AniListGetMangaRelations(
+  $manga_id: Int!,
+) {
+  Media(id: $manga_id, type: MANGA) {
+    relations {
+      edges {
+        relationType(version: 2)
+        node {
+          id
+          type
+          format
+          title {
+            userPreferred
+            english
+            romaji
+          }
+          siteUrl
+          coverImage {
+            large
+          }
+        }
+      }
+    }
+  }
+}

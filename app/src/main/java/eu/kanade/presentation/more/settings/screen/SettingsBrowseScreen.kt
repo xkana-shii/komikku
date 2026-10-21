@@ -83,6 +83,13 @@ object SettingsBrowseScreen : SearchableSettings {
                         visible = sourcePreferences.relatedMangas.get(),
                     ),
                     // KMK <--
+                    // KNS -->
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = uiPreferences.showSequelPrequel,
+                        title = stringResource(KMR.strings.pref_sequel_prequel),
+                        subtitle = stringResource(KMR.strings.pref_sequel_prequel_summary),
+                    ),
+                    // KNS <--
                     run {
                         val count by sourcePreferences.sourcesTabCategories.collectAsState()
                         Preference.PreferenceItem.TextPreference(

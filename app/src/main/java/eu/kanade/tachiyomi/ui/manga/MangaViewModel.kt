@@ -37,6 +37,7 @@ import eu.kanade.domain.chapter.interactor.GetAvailableScanlators
 import eu.kanade.domain.chapter.interactor.SetReadStatus
 import eu.kanade.domain.manga.interactor.GetExcludedScanlators
 import eu.kanade.domain.manga.interactor.GetPagePreviews
+import eu.kanade.domain.manga.interactor.GetSequelPrequel
 import eu.kanade.domain.manga.interactor.SetExcludedScanlators
 import eu.kanade.domain.manga.interactor.SmartSearchMerge
 import eu.kanade.domain.manga.interactor.UpdateManga
@@ -111,6 +112,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
@@ -182,6 +184,7 @@ import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.manga.model.asMangaCover
 import tachiyomi.domain.source.model.StubSource
@@ -261,6 +264,7 @@ class MangaViewModel(
     private val deleteChaptersFromDb: DeleteChapters,
     // KNS -->
     private val getChaptersByMangaId: GetChaptersByMangaId,
+    private val getSequelPrequel: GetSequelPrequel,
     // KNS <--
 ) : ViewModel() {
 
@@ -562,17 +566,50 @@ class MangaViewModel(
         }
         .onStart { emit(0 to false) }
 
+    // KNS --> related titles from the trackers; refetched when the bindings or the preferred tracker change
+    private val sequelPrequel = uiPreferences.showSequelPrequel.changes()
+        .flatMapLatest { enabled ->
+            if (!enabled) return@flatMapLatest flowOf(emptyList())
+            combine(
+                flow { emit(getMangaAndChapters.awaitManga(mangaId)) },
+                getTracks.subscribe(mangaId).distinctUntilChanged { old, new ->
+                    old.map { it.trackerId to it.remoteId } == new.map { it.trackerId to it.remoteId }
+                },
+                trackPreferences.preferredTrackerForManga.changes(),
+                trackPreferences.priorityTrackerId.changes(),
+                trackerManager.loggedInTrackersFlow().map { trackers -> trackers.map { it.id } },
+            ) { manga, tracks, _, _, _ -> manga to tracks }
+                .mapLatest { (manga, tracks) ->
+                    try {
+                        getSequelPrequel.await(manga, tracks)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        logcat(LogPriority.WARN, e) { "Failed to load related titles" }
+                        emptyList()
+                    }
+                }
+        }
+        .catch { emit(emptyList()) }
+    // KNS <--
+
     private val uiExtras = combine(
         pagePreviewsState,
         relatedMangaCollection,
         isRelatedMangasFetched,
         seedColor,
-    ) { pagePreviewsState, relatedMangaCollection, isRelatedMangasFetched, seedColor ->
+        // KNS -->
+        sequelPrequel,
+        // KNS <--
+    ) { pagePreviewsState, relatedMangaCollection, isRelatedMangasFetched, seedColor, sequelPrequel ->
         UiExtras(
             pagePreviewsState = pagePreviewsState,
             relatedMangaCollection = relatedMangaCollection,
             isRelatedMangasFetched = isRelatedMangasFetched,
             seedColor = seedColor,
+            // KNS -->
+            sequelPrequel = sequelPrequel,
+            // KNS <--
         )
     }
 
@@ -631,6 +668,7 @@ class MangaViewModel(
             blacklistedChapterCount = mangaAndChapters.blacklistedCount,
             hideBlacklistedChapters = mangaAndChapters.hideBlacklistedChapters,
             bookmarkColorFilter = mangaAndChapters.bookmarkColorFilter,
+            sequelPrequel = extras.sequelPrequel,
             // KNS <--
         )
     }
@@ -2185,6 +2223,9 @@ class MangaViewModel(
         val relatedMangaCollection: List<RelatedManga>?,
         val isRelatedMangasFetched: Boolean?,
         val seedColor: Color?,
+        // KNS -->
+        val sequelPrequel: List<SequelPrequelEntry>,
+        // KNS <--
     )
 
     private data class DialogAndExtras(
@@ -2243,6 +2284,7 @@ class MangaViewModel(
 
             /** Only bookmarks of these colors are listed; empty = no color filter. */
             val bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
+            val sequelPrequel: List<SequelPrequelEntry> = emptyList(),
             // KNS <--
         ) : State {
             // KMK -->

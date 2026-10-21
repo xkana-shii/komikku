@@ -9,7 +9,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,6 +89,7 @@ import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.copyToClipboard
+import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
 import exh.pagepreview.PagePreviewScreen
@@ -118,12 +122,14 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
+import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
 
 class MangaScreen(
@@ -268,6 +274,9 @@ class MangaScreen(
             (successState.source.isEhBasedSource() && isHentaiEnabled)
         // KMK <--
 
+        // KNS -->
+        var relatedTitle by remember { mutableStateOf<SequelPrequelEntry?>(null) }
+        // KNS <--
         MangaScreen(
             state = successState,
             snackbarHostState = viewModel.snackbarHostState,
@@ -449,6 +458,11 @@ class MangaScreen(
             },
             onRelatedMangaClick = { navigator.push(MangaScreen(it.id, true)) },
             onRelatedMangaLongClick = { bulkFavoriteViewModel.addRemoveManga(it, haptic) },
+            // KNS -->
+            onSequelPrequelClick = { entry ->
+                entry.localMangaId?.let { navigator.push(MangaScreen(it)) } ?: run { relatedTitle = entry }
+            },
+            // KNS <--
             onSourceClick = {
                 if (successState.source !is StubSource) {
                     // KMK -->
@@ -705,6 +719,32 @@ class MangaScreen(
             }
             // KNS <--
         }
+
+        // KNS -->
+        relatedTitle?.let { entry ->
+            AlertDialog(
+                onDismissRequest = { relatedTitle = null },
+                title = { Text(entry.title) },
+                text = { Text(stringResource(KMR.strings.relation_find_source)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            relatedTitle = null
+                            navigator.push(GlobalSearchScreen(entry.title))
+                        },
+                    ) { Text(stringResource(MR.strings.action_search)) }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            relatedTitle = null
+                            context.openInBrowser(entry.url)
+                        },
+                    ) { Text(stringResource(MR.strings.action_open_in_browser)) }
+                },
+            )
+        }
+        // KNS <--
 
         if (showScanlatorsDialog) {
             ScanlatorFilterDialog(

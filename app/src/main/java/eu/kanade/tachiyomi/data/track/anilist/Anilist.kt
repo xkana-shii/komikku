@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import exh.log.xLogW
 import kotlinx.serialization.json.Json
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.i18n.MR
 import tachiyomi.domain.track.model.Track as DomainTrack
 
@@ -248,6 +249,11 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
     }
 
     // SY -->
+    // KNS -->
+    override suspend fun getRelatedEntries(remoteId: Long): List<SequelPrequelEntry> =
+        api.getRelatedEntries(remoteId)
+    // KNS <--
+
     override suspend fun searchById(id: String): TrackSearch? {
         return try {
             api.searchById(id)

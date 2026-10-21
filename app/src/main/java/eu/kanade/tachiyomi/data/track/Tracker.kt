@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import okhttp3.OkHttpClient
+import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.track.model.Track as DomainTrack
 
 interface Tracker {
@@ -99,6 +100,11 @@ interface Tracker {
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata
 
     suspend fun searchById(id: String): TrackSearch?
+
+    // KNS -->
+    /** Titles the service relates to the entry [remoteId] (sequels, prequels, ...); none by default. */
+    suspend fun getRelatedEntries(remoteId: Long): List<SequelPrequelEntry> = emptyList()
+    // KNS <--
     // SY <--
 
     // KMK -->
