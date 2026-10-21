@@ -257,9 +257,12 @@ columns) and keep SyncYomi's `version`/`is_syncing`/`last_modified_at` columns a
 4. `./gradlew :data:generateSqlDelightInterface :data:verifyDebugDatabaseMigration` and add a migration
    test in `data/src/test/java/tachiyomi/data/` (see `MigrationTest`, `FreshKomikkuInstallMigrationTest`).
 
-The schema version is the highest migration number + 1 (currently 56). The previous personal `main`
-used an unrelated migration lineage up to version 57; see `docs/komikun-foundation-progress.md` before
-shipping anything that could open such a database.
+The schema version is the highest migration number + 1 (currently 58; `57.sqm` holds the KNS
+columns). The previous personal `main` used an unrelated migration lineage up to version 57; such a
+database is converted on first open by `tachiyomi.data.compat.OldForkDatabaseConverter` (hooked in
+`mihon/app/di/OldForkDatabaseGate.kt`). Any new table or column needs no converter change unless an
+old-fork column maps to it under another name or meaning (`columnSources`); keep
+`OldForkDatabaseConverterTest` passing. See `docs/komikun-foundation-progress.md` before shipping.
 
 **Preferences** – `eu.kanade.domain.*.service.*Preferences` (getters are properties, e.g.
 `sourcePreferences.relatedMangas`). App preference migrations:

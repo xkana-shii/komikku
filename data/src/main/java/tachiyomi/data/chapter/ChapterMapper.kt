@@ -23,6 +23,9 @@ object ChapterMapper {
         version: Long,
         @Suppress("UNUSED_PARAMETER")
         isSyncing: Long,
+        // KNS -->
+        userBookmarkColor: Long,
+        // KNS <--
     ): Chapter = Chapter(
         id = id,
         mangaId = mangaId,
@@ -39,5 +42,8 @@ object ChapterMapper {
         lastModifiedAt = lastModifiedAt,
         version = version,
         memo = remoteMemo,
+        // KNS -->
+        bookmarkColor = userBookmarkColor.toInt(),
+        // KNS <--
     )
 }

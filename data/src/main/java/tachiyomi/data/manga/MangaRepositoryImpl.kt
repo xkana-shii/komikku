@@ -322,6 +322,13 @@ class MangaRepositoryImpl(
                         isSyncing = null,
                         // SY <--
                         notes = notes,
+                        // KNS -->
+                        blacklistedChapters = blacklistedChapters,
+                        scanlatorPriority = scanlatorPriority,
+                        scanlatorRangeRules = scanlatorRangeRules,
+                        smartMergeOverrideSet = isSet(MangaUpdate::smartMergeOverride),
+                        smartMergeOverride = smartMergeOverride,
+                        // KNS <--
                     )
                 }
             }

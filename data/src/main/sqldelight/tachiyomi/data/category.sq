@@ -13,9 +13,20 @@ CREATE TABLE category(
     version INTEGER NOT NULL DEFAULT 0,
     uid INTEGER NOT NULL DEFAULT 0,
     last_modified_at INTEGER NOT NULL DEFAULT 0,
-    is_syncing INTEGER NOT NULL DEFAULT 0
+    is_syncing INTEGER NOT NULL DEFAULT 0,
     -- SY <--
+    -- KNS -->
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    track_status INTEGER,
+    update_interval INTEGER,
+    date_added INTEGER NOT NULL DEFAULT 0,
+    date_modified INTEGER NOT NULL DEFAULT 0
+    -- KNS <--
 );
+
+-- KNS -->
+CREATE INDEX category_parent_id_index ON category(parent_id);
+-- KNS <--
 
 -- Insert system category
 INSERT OR IGNORE INTO category(id, name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing) VALUES (0, "", -1, 0, 0, 0, 0, 0, 0);
@@ -37,6 +48,11 @@ WHEN new.is_syncing = 0 AND (
     -- KUN -->
     OR new.hidden != old.hidden
     -- KUN <--
+    -- KNS -->
+    OR new.parent_id != old.parent_id
+    OR new.track_status IS NOT old.track_status
+    OR new.update_interval IS NOT old.update_interval
+    -- KNS <--
 )
 BEGIN
     UPDATE category
@@ -58,7 +74,10 @@ END;
 -- SY <--
 
 getCategory:
-SELECT id,name,`order`,flags,hidden,version,uid,last_modified_at
+SELECT id,name,`order`,flags,hidden,version,uid,last_modified_at,
+-- KNS -->
+parent_id, track_status, update_interval, date_added, date_modified
+-- KNS <--
 FROM category
 WHERE id = :id
 LIMIT 1;
@@ -74,7 +93,10 @@ hidden,
 -- KMK <--
 version,
 uid,
-last_modified_at
+last_modified_at,
+-- KNS -->
+parent_id, track_status, update_interval, date_added, date_modified
+-- KNS <--
 FROM category
 ORDER BY `order`;
 
@@ -89,7 +111,10 @@ C.hidden,
 -- KMK <--
 C.version,
 C.uid,
-C.last_modified_at
+C.last_modified_at,
+-- KNS -->
+C.parent_id, C.track_status, C.update_interval, C.date_added, C.date_modified
+-- KNS <--
 FROM category C
 JOIN manga_category MC
 ON C.id = MC.category_id
@@ -97,7 +122,10 @@ WHERE MC.manga_id = :mangaId
 ORDER BY C.`order`;
 
 getCategoriesByMangaIds:
-SELECT MC.manga_id, C.id, C.name, C.`order`, C.flags, C.hidden, C.version, C.uid, C.last_modified_at
+SELECT MC.manga_id, C.id, C.name, C.`order`, C.flags, C.hidden, C.version, C.uid, C.last_modified_at,
+-- KNS -->
+C.parent_id, C.track_status, C.update_interval, C.date_added, C.date_modified
+-- KNS <--
 FROM category C
 JOIN manga_category MC
 ON C.id = MC.category_id
@@ -107,16 +135,34 @@ ORDER BY MC.manga_id, C.`order`;
 -- KMK --> mihon b4a3ec0b32: the async driver only runs the first statement of a multi-statement
 -- query, so the trailing `SELECT last_insert_rowid()` never executes; use `RETURNING id` instead
 insert:
-INSERT INTO category(name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing)
-VALUES (:name, :order, :flags, :hidden, :version, :uid, :lastModifiedAt, :isSyncing)
+INSERT INTO category(
+    name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing,
+    -- KNS -->
+    parent_id, track_status, update_interval, date_added, date_modified
+    -- KNS <--
+)
+VALUES (
+    :name, :order, :flags, :hidden, :version, :uid, :lastModifiedAt, :isSyncing,
+    -- KNS -->
+    :parentId, :trackStatus, :updateInterval, :dateAdded, :dateModified
+    -- KNS <--
+)
 RETURNING id;
 
 insertWithNextOrder:
-INSERT INTO category(name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing)
+INSERT INTO category(
+    name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing,
+    -- KNS -->
+    parent_id, track_status, update_interval, date_added, date_modified
+    -- KNS <--
+)
 VALUES (
     :name,
     (SELECT coalesce(max(`order`), -1) + 1 FROM category),
-    :flags, :hidden, :version, :uid, :lastModifiedAt, :isSyncing
+    :flags, :hidden, :version, :uid, :lastModifiedAt, :isSyncing,
+    -- KNS -->
+    :parentId, :trackStatus, :updateInterval, :dateAdded, :dateModified
+    -- KNS <--
 )
 RETURNING id;
 -- KMK <--
@@ -136,10 +182,29 @@ SET name = coalesce(:name, name),
     version = coalesce(:version, version),
     uid = coalesce(:uid, uid),
     last_modified_at = coalesce(:lastModifiedAt, last_modified_at),
-    is_syncing = coalesce(:isSyncing, is_syncing)
+    is_syncing = coalesce(:isSyncing, is_syncing),
     -- SY <--
+    -- KNS -->
+    parent_id = coalesce(:parentId, parent_id),
+    date_modified = coalesce(:dateModified, date_modified)
+    -- KNS <--
 WHERE id = :categoryId;
 -- KMK <--
+
+-- KNS -->
+-- Nullable settings need explicit writes: coalesce() could never clear them back to NULL.
+updateTrackStatus:
+UPDATE category
+SET track_status = :trackStatus,
+    date_modified = :dateModified
+WHERE id = :categoryId;
+
+updateUpdateInterval:
+UPDATE category
+SET update_interval = :updateInterval,
+    date_modified = :dateModified
+WHERE id = :categoryId;
+-- KNS <--
 
 updateName:
 UPDATE category

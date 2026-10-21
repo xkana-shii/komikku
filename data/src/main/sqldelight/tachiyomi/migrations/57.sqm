@@ -1,0 +1,86 @@
+-- KNS -->
+-- Fork-owned state for xkana-shii/komikku. Column names match the previous personal fork's
+-- database lineage so an old-fork database converts into this schema without renaming them
+-- (see tachiyomi.data.compat.OldForkDatabaseConverter).
+
+-- Hierarchical categories: 0 = root. Smart-category tracker status binding and per-category
+-- update interval: NULL means an ordinary category (no tracker automation, global schedule).
+-- date_added/date_modified feed the category manager's date sort; 0 = unknown.
+ALTER TABLE category ADD COLUMN parent_id INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE category ADD COLUMN track_status INTEGER;
+ALTER TABLE category ADD COLUMN update_interval INTEGER;
+ALTER TABLE category ADD COLUMN date_added INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE category ADD COLUMN date_modified INTEGER NOT NULL DEFAULT 0;
+
+-- Colored bookmarks. 0 = ordinary bookmark color; existing bookmarks stay ordinary.
+ALTER TABLE chapter ADD COLUMN user_bookmark_color INTEGER NOT NULL DEFAULT 0;
+
+-- Per-manga chapter blacklist keys, scanlator priority, scanlator range rules and the Smart
+-- Scanlator Merge override (NULL = follow the global setting).
+ALTER TABLE manga ADD COLUMN user_blacklisted_chapters TEXT NOT NULL DEFAULT '';
+ALTER TABLE manga ADD COLUMN user_scanlator_priority TEXT NOT NULL DEFAULT '';
+ALTER TABLE manga ADD COLUMN user_scanlator_range_rules TEXT NOT NULL DEFAULT '';
+ALTER TABLE manga ADD COLUMN user_smart_merge_override INTEGER;
+
+-- Hierarchy lookups (children of a parent, smart categories of a branch).
+CREATE INDEX category_parent_id_index ON category(parent_id);
+
+-- The sync version triggers must also see the fork-owned state, or a change would never be
+-- uploaded. Recreated so an upgraded database matches the fresh schema in the .sq files.
+DROP TRIGGER IF EXISTS update_category_version;
+CREATE TRIGGER update_category_version AFTER UPDATE ON category
+WHEN new.is_syncing = 0 AND (
+    new.name != old.name OR
+    new.`order` != old.`order` OR
+    new.flags != old.flags
+    -- KUN -->
+    OR new.hidden != old.hidden
+    -- KUN <--
+    -- KNS -->
+    OR new.parent_id != old.parent_id
+    OR new.track_status IS NOT old.track_status
+    OR new.update_interval IS NOT old.update_interval
+    -- KNS <--
+)
+BEGIN
+    UPDATE category
+    SET version = version + 1,
+        last_modified_at = strftime('%s', 'now')
+    WHERE id = new.id;
+END;
+
+DROP TRIGGER IF EXISTS update_chapter_and_manga_version;
+CREATE TRIGGER update_chapter_and_manga_version AFTER UPDATE ON chapter
+WHEN new.is_syncing = 0 AND (
+    new.user_read != old.user_read OR
+    new.user_bookmark != old.user_bookmark OR
+    new.user_last_page_read != old.user_last_page_read
+    -- KNS -->
+    OR new.user_bookmark_color != old.user_bookmark_color
+    -- KNS <--
+)
+BEGIN
+    UPDATE chapter SET version = version + 1
+    WHERE id = new.id;
+END;
+
+DROP TRIGGER IF EXISTS update_manga_version;
+CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
+BEGIN
+    UPDATE manga SET version = version + 1
+    WHERE id = new.id AND new.is_syncing = 0 AND (
+        new.remote_url != old.remote_url OR
+        new.remote_description != old.remote_description OR
+        new.user_favorite_at IS NOT old.user_favorite_at OR
+        new.user_reader_flags != old.user_reader_flags OR
+        new.user_chapter_flags != old.user_chapter_flags OR
+        new.user_notes != old.user_notes
+        -- KNS -->
+        OR new.user_blacklisted_chapters != old.user_blacklisted_chapters
+        OR new.user_scanlator_priority != old.user_scanlator_priority
+        OR new.user_scanlator_range_rules != old.user_scanlator_range_rules
+        OR new.user_smart_merge_override IS NOT old.user_smart_merge_override
+        -- KNS <--
+    );
+END;
+-- KNS <--

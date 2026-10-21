@@ -43,6 +43,11 @@ object DatabaseBindings {
                 state_chapter_last_updateAdapter = InstantColumnAdapter,
                 state_chapter_next_updateAdapter = InstantColumnAdapter,
                 state_cover_last_modifiedAdapter = InstantColumnAdapter,
+                // KNS -->
+                user_blacklisted_chaptersAdapter = StringListColumnAdapter,
+                user_scanlator_priorityAdapter = StringListColumnAdapter,
+                user_scanlator_range_rulesAdapter = StringListColumnAdapter,
+                // KNS <--
             ),
             manga_trackAdapter = Manga_track.Adapter(
                 start_dateAdapter = InstantColumnAdapter,

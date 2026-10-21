@@ -53,8 +53,30 @@ class CategoryRepositoryImpl(
 
     override suspend fun getCategoriesByMangaIds(mangaIds: List<Long>): Map<Long, List<Category>> {
         return database.categoryQueries
-            .getCategoriesByMangaIds(mangaIds) { mangaId, id, name, order, flags, hidden, version, uid, lastModifiedAt ->
-                mangaId to CategoryMapper.mapCategory(id, name, order, flags, hidden, version, uid, lastModifiedAt)
+            .getCategoriesByMangaIds(mangaIds) {
+                    mangaId,
+                    id,
+                    name,
+                    order,
+                    flags,
+                    hidden,
+                    version,
+                    uid,
+                    lastModifiedAt,
+                    // KNS -->
+                    parentId,
+                    trackStatus,
+                    updateInterval,
+                    dateAdded,
+                    dateModified,
+                // KNS <--
+                ->
+                mangaId to CategoryMapper.mapCategory(
+                    id, name, order, flags, hidden, version, uid, lastModifiedAt,
+                    // KNS -->
+                    parentId, trackStatus, updateInterval, dateAdded, dateModified,
+                    // KNS <--
+                )
             }
             .awaitAsList()
             .groupBy({ it.first }, { it.second })
@@ -80,6 +102,13 @@ class CategoryRepositoryImpl(
                 lastModifiedAt = category.lastModifiedAt,
                 isSyncing = 0L,
                 // SY <--
+                // KNS -->
+                parentId = category.parentId,
+                trackStatus = category.trackStatus?.toLong(),
+                updateInterval = category.updateInterval?.toLong(),
+                dateAdded = category.dateAdded.takeIf { it > 0 } ?: System.currentTimeMillis(),
+                dateModified = category.dateModified.takeIf { it > 0 } ?: System.currentTimeMillis(),
+                // KNS <--
             ).awaitAsOneOrNull()
         }
     }
@@ -126,6 +155,10 @@ class CategoryRepositoryImpl(
                         uid = db.uid,
                         lastModifiedAt = db.lastModifiedAt,
                         isSyncing = 1L,
+                        // KNS -->
+                        parentId = null,
+                        dateModified = null,
+                        // KNS <--
                         categoryId = db.id,
                     )
                 }
@@ -176,6 +209,10 @@ class CategoryRepositoryImpl(
                             uid = canonicalUid,
                             lastModifiedAt = category.lastModifiedAt,
                             isSyncing = 1,
+                            // KNS -->
+                            parentId = null,
+                            dateModified = null,
+                            // KNS <--
                             categoryId = dbCategory.id,
                         )
                         return@map category.copy(id = dbCategory.id, order = order, uid = canonicalUid)
@@ -199,6 +236,13 @@ class CategoryRepositoryImpl(
                         // SY --> a sync restore must not stamp last_modified_at, or the next delta echoes it back
                         isSyncing = if (isSync) 1L else 0L,
                         // SY <--
+                        // KNS -->
+                        parentId = Category.UNCATEGORIZED_ID,
+                        trackStatus = category.trackStatus?.toLong(),
+                        updateInterval = category.updateInterval?.toLong(),
+                        dateAdded = category.dateAdded.takeIf { it > 0 } ?: System.currentTimeMillis(),
+                        dateModified = category.dateModified.takeIf { it > 0 } ?: System.currentTimeMillis(),
+                        // KNS <--
                     ).awaitAsOne()
                         .let { id -> category.copy(id = id, order = order) }
                 }
@@ -260,6 +304,10 @@ class CategoryRepositoryImpl(
             lastModifiedAt = update.lastModifiedAt,
             isSyncing = null,
             // SY <--
+            // KNS -->
+            parentId = update.parentId,
+            dateModified = update.dateModified,
+            // KNS <--
             categoryId = update.id,
         )
     }

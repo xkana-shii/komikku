@@ -34,6 +34,12 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // KNS -->
+        userBlacklistedChapters: List<String>,
+        userScanlatorPriority: List<String>,
+        userScanlatorRangeRules: List<String>,
+        userSmartMergeOverride: Boolean?,
+        // KNS <--
     ): Manga = Manga(
         id = id,
         source = sourceId,
@@ -62,6 +68,12 @@ object MangaMapper {
         version = version,
         notes = userNotes,
         memo = remoteMemo,
+        // KNS -->
+        blacklistedChapters = userBlacklistedChapters,
+        scanlatorPriority = userScanlatorPriority,
+        scanlatorRangeRules = userScanlatorRangeRules,
+        smartMergeOverride = userSmartMergeOverride,
+        // KNS <--
     )
 
     fun mapLibraryManga(
@@ -90,6 +102,12 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // KNS -->
+        userBlacklistedChapters: List<String>,
+        userScanlatorPriority: List<String>,
+        userScanlatorRangeRules: List<String>,
+        userSmartMergeOverride: Boolean?,
+        // KNS <--
         totalCount: Long,
         readCount: Double,
         latestUpload: Instant?,
@@ -127,6 +145,12 @@ object MangaMapper {
             version,
             isSyncing,
             favoriteModifiedAt,
+            // KNS -->
+            userBlacklistedChapters,
+            userScanlatorPriority,
+            userScanlatorRangeRules,
+            userSmartMergeOverride,
+            // KNS <--
         ),
         categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
@@ -167,6 +191,12 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // KNS -->
+        userBlacklistedChapters: List<String>,
+        userScanlatorPriority: List<String>,
+        userScanlatorRangeRules: List<String>,
+        userSmartMergeOverride: Boolean?,
+        // KNS <--
         totalCount: Long,
     ): MangaWithChapterCount = MangaWithChapterCount(
         manga = mapManga(
@@ -195,6 +225,12 @@ object MangaMapper {
             version,
             isSyncing,
             favoriteModifiedAt,
+            // KNS -->
+            userBlacklistedChapters,
+            userScanlatorPriority,
+            userScanlatorRangeRules,
+            userSmartMergeOverride,
+            // KNS <--
         ),
         chapterCount = totalCount,
     )

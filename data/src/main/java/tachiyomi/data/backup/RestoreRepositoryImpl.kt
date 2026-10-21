@@ -278,6 +278,15 @@ class RestoreRepositoryImpl(
             // the existing timestamp so it does not look like a fresh favorite change.
             favoriteModifiedAt = if (isSync) manga.favoriteModifiedAt else null,
             // KUN <--
+            // KNS -->
+            // Fork-owned per-manga state is reconciled by its own feature restore (blacklist,
+            // scanlator rules, Smart Merge override); this generic update keeps the stored values.
+            blacklistedChapters = null,
+            scanlatorPriority = null,
+            scanlatorRangeRules = null,
+            smartMergeOverrideSet = false,
+            smartMergeOverride = null,
+            // KNS <--
         )
         return manga
     }
@@ -321,6 +330,12 @@ class RestoreRepositoryImpl(
             // passes NULL so the insert trigger stamps `now`, matching `updateManga`.
             favoriteModifiedAt = if (isSync) manga.favoriteModifiedAt else null,
             // KUN <--
+            // KNS -->
+            userBlacklistedChapters = manga.blacklistedChapters,
+            userScanlatorPriority = manga.scanlatorPriority,
+            userScanlatorRangeRules = manga.scanlatorRangeRules,
+            userSmartMergeOverride = manga.smartMergeOverride,
+            // KNS <--
         )
             .awaitAsOne()
     }
@@ -506,6 +521,9 @@ class RestoreRepositoryImpl(
                     version = chapter.version,
                     isSyncing = syncingFlag,
                     // SY <--
+                    // KNS -->
+                    userBookmarkColor = chapter.bookmarkColor.toLong(),
+                    // KNS <--
                 ).awaitAsOneOrNull()
             }
         }
@@ -542,6 +560,10 @@ class RestoreRepositoryImpl(
                     isSyncing = syncingFlag,
                     // SY <--
                     memo = chapter.memo,
+                    // KNS -->
+                    // Reconciled by the bookmark-color restore; keep the stored color here.
+                    bookmarkColor = null,
+                    // KNS <--
                 )
             }
         }

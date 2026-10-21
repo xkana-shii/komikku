@@ -45,6 +45,16 @@ data class Manga(
     val version: Long,
     val notes: String,
     val memo: JsonObject,
+    // KNS -->
+    /** Chapter blacklist keys (see `tachiyomi.domain.chapter.service.ChapterBlacklist`). */
+    val blacklistedChapters: List<String> = emptyList(),
+    /** Preferred scanlators, most preferred first. */
+    val scanlatorPriority: List<String> = emptyList(),
+    /** Encoded `from:to:scanlator` range rules; they win over [scanlatorPriority]. */
+    val scanlatorRangeRules: List<String> = emptyList(),
+    /** Per-manga Smart Scanlator Merge override; null follows the global setting. */
+    val smartMergeOverride: Boolean? = null,
+    // KNS <--
 ) : JavaSerializable {
 
     // SY -->

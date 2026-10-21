@@ -14,6 +14,13 @@ object CategoryMapper {
         version: Long,
         uid: Long,
         lastModifiedAt: Long,
+        // KNS -->
+        parentId: Long,
+        trackStatus: Long?,
+        updateInterval: Long?,
+        dateAdded: Long,
+        dateModified: Long,
+        // KNS <--
     ): Category {
         return Category(
             id = id,
@@ -28,6 +35,13 @@ object CategoryMapper {
             uid = uid,
             lastModifiedAt = lastModifiedAt,
             // SY <--
+            // KNS -->
+            parentId = parentId,
+            trackStatus = trackStatus?.toInt(),
+            updateInterval = updateInterval?.toInt(),
+            dateAdded = dateAdded,
+            dateModified = dateModified,
+            // KNS <--
         )
     }
 }

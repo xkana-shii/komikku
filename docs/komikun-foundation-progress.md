@@ -166,7 +166,8 @@ Signing is unchanged in substance: Komi-kun's Gradle signing (`MIHON_GITHUB_RELE
 
 ## Database reconciliation
 
-- Schema version **56** (migrations `1.sqm`–`55.sqm`, contiguous). `data/` is identical to Komi-kun's
+- Schema version **56** (migrations `1.sqm`–`55.sqm`, contiguous) at the end of the integration;
+  Komi-kun #60 added `56.sqm` and KNS batch 1 added `57.sqm` (schema 58). `data/` is identical to Komi-kun's
   except the `49.sqm` fix and the new test.
 - **Komikku stable → foundation** (schema 47 → 56): supported. Komi-kun's chain assumed
   `mangas_categories.last_modified_at` exists, but Komikku's fresh-install schema never had it (only
@@ -192,6 +193,16 @@ query tables/columns that do not exist (crashes), and the version stamp would al
 from any future migration. **Installing a foundation build over the existing app is not safe**, and
 once a foundation release with versionCode > 172 is published, the old app's in-app updater would
 offer it.
+
+**Status (KNS batch 1, see `docs/kns-feature-implementation.md`):** the database part is implemented.
+`OldForkDatabaseConverter` detects the old lineage (`chapter.state_version`) and converts it into the
+current schema before the driver opens it (tables rebuilt with their rows, sync columns renamed,
+favorite/date-added semantics and the old chapter sort bits remapped, Fillermarks → blacklist keys,
+category uids assigned, `user_version` set). `OldForkDatabaseConverterTest` covers it against the old
+fork's schema (`data/src/test/resources/oldfork/old-fork-schema-57.sql`). Still open before an
+in-place upgrade can be called safe: a test with a real device database, the old fork's
+SharedPreferences (Smart Merge overrides, default chapter flags in the old bit layout, other feature
+settings) and its backups (old chapter-flag layout, #113). Until then the rules below still apply.
 
 Until an explicit old-lineage migration is implemented and tested:
 

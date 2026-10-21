@@ -63,6 +63,10 @@ object AppBindings {
         // KUN <--
         val isLowRam = (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true
 
+        // KNS -->
+        val oldForkGate = OldForkDatabaseGate(schema) { databaseRepository.isMigrating.value = it }
+        // KNS <--
+
         // SY -->
         if (securityPreferences.encryptDatabase.get()) {
             System.loadLibrary("sqlcipher")
@@ -83,6 +87,9 @@ object AppBindings {
                     override fun createConnection(name: String): SQLiteConnection {
                         return driver.open(name).apply {
                             execSQL("PRAGMA busy_timeout = 3000")
+                            // KNS -->
+                            oldForkGate.ensureConverted(this)
+                            // KNS <--
                         }
                     }
                 },
@@ -122,6 +129,9 @@ object AppBindings {
                 override fun createConnection(name: String): SQLiteConnection {
                     return driver.open(name).apply {
                         execSQL("PRAGMA busy_timeout = 3000")
+                        // KNS -->
+                        oldForkGate.ensureConverted(this)
+                        // KNS <--
                     }
                 }
             },

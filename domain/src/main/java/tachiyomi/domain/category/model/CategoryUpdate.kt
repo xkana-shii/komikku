@@ -13,4 +13,8 @@ data class CategoryUpdate(
     val uid: Long? = null,
     val lastModifiedAt: Long? = null,
     // SY <--
+    // KNS -->
+    val parentId: Long? = null,
+    val dateModified: Long? = null,
+    // KNS <--
 )

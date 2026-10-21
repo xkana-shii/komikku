@@ -54,6 +54,9 @@ class ChapterRepositoryImpl(
                         version = chapter.version,
                         isSyncing = 0L,
                         // SY <--
+                        // KNS -->
+                        userBookmarkColor = chapter.bookmarkColor.toLong(),
+                        // KNS <--
                     ).awaitAsOneOrNull() ?: return@mapNotNull null
                     // KUN <--
                     chapter.copy(id = lastInsertId)
@@ -140,6 +143,9 @@ class ChapterRepositoryImpl(
                         version = chapter.version,
                         isSyncing = 0L,
                         // SY <--
+                        // KNS -->
+                        userBookmarkColor = chapter.bookmarkColor.toLong(),
+                        // KNS <--
                     ).awaitAsOneOrNull() ?: return@mapNotNull null
                     // KUN <--
                     chapter.copy(id = lastInsertId)
@@ -175,6 +181,9 @@ class ChapterRepositoryImpl(
                     lastModifiedAt = null,
                     isSyncing = null,
                     // SY <--
+                    // KNS -->
+                    bookmarkColor = chapterUpdate.bookmarkColor?.toLong(),
+                    // KNS <--
                 )
             }
         }

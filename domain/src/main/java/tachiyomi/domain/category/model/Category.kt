@@ -15,12 +15,27 @@ data class Category(
     val uid: Long = 0,
     val lastModifiedAt: Long = 0,
     // SY <--
+    // KNS -->
+    /** Parent category id; [UNCATEGORIZED_ID] (0) for a root category. */
+    val parentId: Long = UNCATEGORIZED_ID,
+    /** Tracker status bound to this category (Smart Category); null for an ordinary category. */
+    val trackStatus: Int? = null,
+    /** Library update interval in days; null to follow the global schedule. */
+    val updateInterval: Int? = null,
+    /** Creation/modification time (epoch millis) for the category manager's date sort; 0 = unknown. */
+    val dateAdded: Long = DATE_UNKNOWN,
+    val dateModified: Long = DATE_UNKNOWN,
+    // KNS <--
 ) : Serializable {
 
     val isSystemCategory: Boolean = id == UNCATEGORIZED_ID
 
     companion object {
         const val UNCATEGORIZED_ID = 0L
+
+        // KNS -->
+        const val DATE_UNKNOWN = 0L
+        // KNS <--
 
         // KUN -->
         /**
@@ -39,5 +54,24 @@ data class Category(
             return if (positive == 0L) 1L else positive
         }
         // KUN <--
+
+        // KNS -->
+        /**
+         * Deterministic UID for a category below [parentUid]. Roots keep [nameToUid] so Komi-kun's
+         * cross-device convergence is unchanged, while `Shounen / Reading` and `Josei / Reading`
+         * get different identities instead of colliding on the shared name.
+         */
+        fun childUid(parentUid: Long, name: String): Long {
+            if (parentUid == 0L) return nameToUid(name)
+            val normalized = name.trim().lowercase()
+            if (normalized.isEmpty()) return 0L
+            var h = parentUid xor 0x2545F4914F6CDD1DL
+            for (ch in normalized) {
+                h = 31L * h + ch.code
+            }
+            val positive = h and Long.MAX_VALUE
+            return if (positive == 0L) 1L else positive
+        }
+        // KNS <--
     }
 }

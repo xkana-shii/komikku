@@ -10,6 +10,10 @@ class ChapterUpdate(val id: Long, block: ChapterUpdate.() -> Unit) : PartialUpda
     var dateFetch: Instant? by field(null)
     var version: Long? by field(null)
 
+    // KNS -->
+    var bookmarkColor: Int? by field(null)
+    // KNS <--
+
     init {
         block()
     }
@@ -22,5 +26,8 @@ fun Chapter.toChapterUpdate(): ChapterUpdate {
         lastPageRead = this@toChapterUpdate.lastPageRead
         dateFetch = this@toChapterUpdate.dateFetch
         version = this@toChapterUpdate.version
+        // KNS -->
+        bookmarkColor = this@toChapterUpdate.bookmarkColor
+        // KNS <--
     }
 }

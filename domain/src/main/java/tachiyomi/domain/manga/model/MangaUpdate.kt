@@ -19,6 +19,14 @@ class MangaUpdate(val id: Long, block: MangaUpdate.() -> Unit) : PartialUpdate()
     // SY -->
     var filteredScanlators: List<String>? by field(null)
     // SY <--
+    // KNS -->
+    var blacklistedChapters: List<String>? by field(null)
+    var scanlatorPriority: List<String>? by field(null)
+    var scanlatorRangeRules: List<String>? by field(null)
+
+    /** Nullable on purpose (null = global setting); written only when [isSet]. */
+    var smartMergeOverride: Boolean? by field(null)
+    // KNS <--
 
     init {
         block()

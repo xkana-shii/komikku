@@ -20,6 +20,10 @@ data class Chapter(
     val lastModifiedAt: Long,
     val version: Long,
     val memo: JsonObject,
+    // KNS -->
+    /** [BookmarkColor] id; [BookmarkColor.DEFAULT_ID] for an ordinary (or no) bookmark. */
+    val bookmarkColor: Int = BookmarkColor.DEFAULT_ID,
+    // KNS <--
 ) {
     val isRecognizedNumber: Boolean
         get() = chapterNumber >= 0f
