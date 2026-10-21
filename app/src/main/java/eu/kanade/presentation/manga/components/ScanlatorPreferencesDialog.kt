@@ -66,8 +66,9 @@ import tachiyomi.presentation.core.i18n.stringResource
 // KNS -->
 /**
  * Per-manga scanlator preferences and chapter blacklist in one dialog with two modes, switched with
- * the icon in the title. Both modes edit one [ScanlatorPreferencesDraft]; Save stores all of it,
- * Cancel none of it. Only [onHideBlacklistedChange] applies at once (a view preference, as before).
+ * the icon in the title. Both modes edit one [ScanlatorPreferencesDraft]; every edit is handed to
+ * [onChanges] as it happens (a drag once it is dropped), so there is no Save step and closing the
+ * dialog keeps everything.
  */
 @Composable
 fun ScanlatorPreferencesDialog(
@@ -75,10 +76,15 @@ fun ScanlatorPreferencesDialog(
     globalSmartMerge: Boolean,
     hideBlacklisted: Boolean,
     onHideBlacklistedChange: (Boolean) -> Unit,
-    onConfirm: (ScanlatorPreferencesDraft) -> Unit,
+    onChanges: (List<ScanlatorPreferencesDraft.Change>) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     var draft by remember(initial) { mutableStateOf(initial) }
+    val update: (ScanlatorPreferencesDraft) -> Unit = { next ->
+        val changes = next.changesFrom(draft)
+        draft = next
+        if (changes.isNotEmpty()) onChanges(changes)
+    }
     // One scroll position per mode, so switching back returns to where the user was.
     val scanlatorScroll = rememberScrollState()
     val blacklistScroll = rememberScrollState()
@@ -97,7 +103,7 @@ fun ScanlatorPreferencesDialog(
                 } else {
                     MaterialSymbols.Rounded.Group to stringResource(KMR.strings.scanlator_preferences)
                 }
-                TooltipIconButton(icon = switchIcon, label = switchLabel, onClick = { draft = draft.switchMode() })
+                TooltipIconButton(icon = switchIcon, label = switchLabel, onClick = { update(draft.switchMode()) })
             }
         },
         text = {
@@ -106,7 +112,7 @@ fun ScanlatorPreferencesDialog(
                     ScanlatorPreferencesContent(
                         draft = draft,
                         globalSmartMerge = globalSmartMerge,
-                        onDraftChange = { draft = it },
+                        onDraftChange = update,
                     )
                 }
                 Mode.Blacklist -> Column(modifier = Modifier.verticalScroll(blacklistScroll)) {
@@ -114,16 +120,14 @@ fun ScanlatorPreferencesDialog(
                         draft = draft,
                         hideBlacklisted = hideBlacklisted,
                         onHideBlacklistedChange = onHideBlacklistedChange,
-                        onDraftChange = { draft = it },
+                        onDraftChange = update,
                     )
                 }
             }
         },
+        // Changes are already stored: closing only dismisses.
         confirmButton = {
-            TextButton(onClick = { onConfirm(draft) }) { Text(stringResource(MR.strings.action_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_cancel)) }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_close)) }
         },
     )
 }

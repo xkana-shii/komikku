@@ -806,9 +806,6 @@ private fun MangaScreenSmallImpl(
                             chapterCount = chapters.size,
                             missingChapterCount = state.missingChapterCount,
                             onClick = onFilterClicked,
-                            // KNS -->
-                            onScanlatorPreferencesClick = chapterVisibilityActions.onOpenScanlatorPreferences,
-                            // KNS <--
                         )
                     }
 
@@ -1250,9 +1247,6 @@ private fun MangaScreenLargeImpl(
                                     chapterCount = chapters.size,
                                     missingChapterCount = state.missingChapterCount,
                                     onClick = onFilterButtonClicked,
-                                    // KNS -->
-                                    onScanlatorPreferencesClick = chapterVisibilityActions.onOpenScanlatorPreferences,
-                                    // KNS <--
                                 )
                             }
 

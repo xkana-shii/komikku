@@ -1138,3 +1138,33 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   failures), assembleDebug, assembleRelease, `git diff --check`.
 - **Not verified:** live requests against the four services, and the editor's Save/Cancel with
   autofilled tags and status on a device (the editor is an Android view without UI tests).
+
+### Batch 17 — scanlator dialog in Chapter filters, applied immediately
+
+- **Entry point:** the Chapter filters sheet's Scanlator row (`ScanlatorFilterItem`, which keeps its
+  exclusion indicator) now opens the combined dialog, stacked above the sheet through screen state
+  (`MangaViewModel.loadScanlatorPreferences`), like the old filter dialog was. Batch 15's chapter-header
+  button and `ChapterVisibilityActions.onOpenScanlatorPreferences` are removed; there is no overflow
+  entry. Mihon's `ScanlatorFilterDialog` and `MangaViewModel.setExcludedScanlators` lost their only
+  caller and are deleted; the eye icons write the same `excluded_scanlator` data.
+- **Immediate persistence:** `ScanlatorPreferencesDraft.changesFrom` turns each edit into the stored
+  settings it changed (`Change.Priority/Excluded/SmartMerge/RangeRules/RemoveBlacklistEntries`); mode
+  switches and range typing produce none, so nothing is written twice. A drag produces one change when
+  dropped (`onSettle`). `ScanlatorPreferenceChanges.apply` writes only the changed field through the
+  existing interactors; blacklist removal reads the stored blacklist first, so consecutive removals
+  do not resurrect each other. `SequentialWriter` runs the writes one at a time in submission order
+  on `viewModelScope`, so closing the dialog does not cancel them and an earlier slow write cannot
+  overwrite a newer one. The dialog has only Close; the hide toggle keeps its immediate preference.
+- **Tests:** `ScanlatorPreferencesDraftTest` (11) adds one-change-per-control, no-op edits and repeated
+  blacklist removal; `ScanlatorPreferencePersistenceTest` (6) runs real draft edits through the writer
+  and `ScanlatorPreferenceChanges` into mocked interactors backed by an in-memory manga: a drag
+  survives an immediate close, exclusions/Smart Merge/ranges show on reopening, rapid edits end on
+  the last value, consecutive blacklist removals stick, mode switches store nothing, and writes keep
+  order when earlier ones are slower. The entry point, the missing header button and the missing Save
+  action are UI facts without a Compose test setup; they were checked in code only.
+- **Validation:** spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  assembleDebug, assembleRelease and `git diff --check` exit 0. `:data/:domain/:app:testReleaseUnitTest`
+  do not exist in this build (AGP 9 only creates unit-test tasks for the tested build type; Gradle
+  lists only `testDebugUnitTest`), so `testDebugUnitTest` ran for the three modules instead: exit 0
+  (app 304 with 1 skipped, data 93, domain 198; 0 failures).
+- **Not verified:** on a device.

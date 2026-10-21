@@ -58,7 +58,6 @@ import eu.kanade.presentation.manga.MangaScreen
 import eu.kanade.presentation.manga.components.ClearMangaDialog
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
-import eu.kanade.presentation.manga.components.ScanlatorFilterDialog
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDialog
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
 import eu.kanade.presentation.manga.components.SetIntervalDialog
@@ -414,7 +413,6 @@ class MangaScreen(
                 onBlacklist = viewModel::blacklistChapters,
                 onUnblacklist = viewModel::unblacklistChapters,
                 onBookmarkColor = viewModel::setBookmarkColor,
-                onOpenScanlatorPreferences = viewModel::showScanlatorPreferencesDialog,
             ),
             // KNS <--
             onChapterSwipe = viewModel::chapterSwipe,
@@ -490,7 +488,9 @@ class MangaScreen(
             // KMK <--
         )
 
-        var showScanlatorsDialog by remember { mutableStateOf(false) }
+        // KNS --> the scanlator preferences / blacklist dialog, shown above the chapter filters
+        var scanlatorPreferences by remember { mutableStateOf<MangaViewModel.ScanlatorPreferencesData?>(null) }
+        // KNS <--
 
         val onDismissRequest = {
             viewModel.dismissDialog()
@@ -565,7 +565,9 @@ class MangaScreen(
                 onSetAsDefault = viewModel::setCurrentSettingsAsDefault,
                 onResetToDefault = viewModel::resetToDefaultSettings,
                 scanlatorFilterActive = successState.scanlatorFilterActive,
-                onScanlatorFilterClicked = { showScanlatorsDialog = true },
+                // KNS --> the Scanlator entry opens the combined scanlator preferences / blacklist dialog
+                onScanlatorFilterClicked = { scope.launch { scanlatorPreferences = viewModel.loadScanlatorPreferences() } },
+                // KNS <--
                 // KNS -->
                 bookmarkColorFilter = successState.bookmarkColorFilter,
                 bookmarkColorFilterExclude = successState.bookmarkColorFilterExclude,
@@ -685,35 +687,6 @@ class MangaScreen(
                 )
             }
             // KMK <--
-            // KNS -->
-            is MangaViewModel.Dialog.ScanlatorPreferences -> {
-                ScanlatorPreferencesDialog(
-                    initial = remember(dialog) {
-                        ScanlatorPreferencesDraft.create(
-                            scanlators = dialog.scanlators,
-                            priority = dialog.priority,
-                            excluded = dialog.excludedScanlators,
-                            smartMergeOverride = dialog.smartMergeOverride,
-                            rangeRules = dialog.rangeRules,
-                            blacklist = dialog.blacklist.map { ScanlatorPreferencesDraft.BlacklistItem(it.key, it.chapters) },
-                        )
-                    },
-                    globalSmartMerge = dialog.globalSmartMerge,
-                    hideBlacklisted = successState.hideBlacklistedChapters,
-                    onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
-                    onConfirm = { draft ->
-                        viewModel.setScanlatorPreferences(
-                            priority = draft.order,
-                            smartMergeOverride = draft.smartMergeOverride,
-                            rangeRules = draft.rangeRules,
-                            excludedScanlators = draft.excluded,
-                            removedBlacklistEntries = draft.removedBlacklistKeys,
-                        )
-                    },
-                    onDismissRequest = onDismissRequest,
-                )
-            }
-            // KNS <--
         }
 
         // KNS -->
@@ -742,14 +715,27 @@ class MangaScreen(
         }
         // KNS <--
 
-        if (showScanlatorsDialog) {
-            ScanlatorFilterDialog(
-                availableScanlators = successState.availableScanlators,
-                excludedScanlators = successState.excludedScanlators,
-                onDismissRequest = { showScanlatorsDialog = false },
-                onConfirm = viewModel::setExcludedScanlators,
+        // KNS -->
+        scanlatorPreferences?.let { data ->
+            ScanlatorPreferencesDialog(
+                initial = remember(data) {
+                    ScanlatorPreferencesDraft.create(
+                        scanlators = data.scanlators,
+                        priority = data.priority,
+                        excluded = data.excludedScanlators,
+                        smartMergeOverride = data.smartMergeOverride,
+                        rangeRules = data.rangeRules,
+                        blacklist = data.blacklist.map { ScanlatorPreferencesDraft.BlacklistItem(it.key, it.chapters) },
+                    )
+                },
+                globalSmartMerge = data.globalSmartMerge,
+                hideBlacklisted = successState.hideBlacklistedChapters,
+                onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
+                onChanges = viewModel::applyScanlatorPreferenceChanges,
+                onDismissRequest = { scanlatorPreferences = null },
             )
         }
+        // KNS <--
     }
 
     private fun continueReading(context: Context, unreadChapter: Chapter?) {

@@ -1,6 +1,7 @@
 package eu.kanade.presentation.manga.components
 
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft.BlacklistItem
+import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft.Change
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft.Mode
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -10,7 +11,7 @@ import tachiyomi.domain.chapter.model.applySmartScanlatorMerge
 import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
 
 // KNS -->
-/** The scanlator preferences dialog's draft: what each control changes and what Save stores. */
+/** The scanlator preferences dialog's draft: what each control changes and what it stores at once. */
 class ScanlatorPreferencesDraftTest {
 
     private val draft = ScanlatorPreferencesDraft.create(
@@ -56,7 +57,7 @@ class ScanlatorPreferencesDraftTest {
     }
 
     @Test
-    fun `switching modes keeps every unsaved change`() {
+    fun `switching modes keeps every change and the half-typed range`() {
         val edited = draft
             .move(3, 0)
             .toggleExcluded("Delta")
@@ -103,12 +104,44 @@ class ScanlatorPreferencesDraftTest {
     }
 
     @Test
-    fun `removing a blacklist entry is pending until saved, unavailable entries are listed`() {
+    fun `removing a blacklist entry hides it at once, unavailable entries are listed`() {
         draft.visibleBlacklist.map { it.key } shouldBe listOf("url:/1", "url:/gone")
         val removed = draft.removeBlacklistEntry("url:/gone")
         removed.visibleBlacklist.map { it.key } shouldBe listOf("url:/1")
-        removed.removedBlacklistKeys shouldBe setOf("url:/gone")
-        removed.blacklist shouldBe draft.blacklist
+        removed.changesFrom(draft) shouldBe listOf(Change.RemoveBlacklistEntries(setOf("url:/gone")))
+    }
+
+    @Test
+    fun `every control stores exactly its own setting at once`() {
+        draft.move(3, 0).changesFrom(draft) shouldBe listOf(Change.Priority(listOf("Group C", "Delta", "Group A", "group b")))
+        draft.toggleExcluded("Delta").changesFrom(draft) shouldBe
+            listOf(Change.Excluded(setOf("Group C", "Unavailable", "Delta")))
+        listOf(true, false).forEach { value ->
+            draft.copy(smartMergeOverride = value).changesFrom(draft) shouldBe listOf(Change.SmartMerge(value))
+        }
+        draft.copy(smartMergeOverride = true).let { it.copy(smartMergeOverride = null).changesFrom(it) } shouldBe
+            listOf(Change.SmartMerge(null))
+        val typed = draft.copy(rangeInput = ScanlatorPreferencesDraft.RangeInput("6", "9", "Delta"))
+        typed.addPendingRangeRule().changesFrom(typed) shouldBe
+            listOf(Change.RangeRules(listOf(ScanlatorRangeRule(1.0, 5.0, "Group A"), ScanlatorRangeRule(6.0, 9.0, "Delta"))))
+        draft.removeRangeRule(0).changesFrom(draft) shouldBe listOf(Change.RangeRules(emptyList()))
+    }
+
+    @Test
+    fun `switching modes, typing a range or an invalid add store nothing`() {
+        draft.switchMode().changesFrom(draft) shouldBe emptyList()
+        val typing = draft.copy(rangeInput = ScanlatorPreferencesDraft.RangeInput(from = "12", to = "3"))
+        typing.changesFrom(draft) shouldBe emptyList()
+        typing.addPendingRangeRule().changesFrom(typing) shouldBe emptyList()
+        draft.move(0, 0).changesFrom(draft) shouldBe emptyList()
+    }
+
+    @Test
+    fun `removing a second blacklist entry stores only the new removal`() {
+        val first = draft.removeBlacklistEntry("url:/1")
+        val second = first.removeBlacklistEntry("url:/gone")
+        second.changesFrom(first) shouldBe listOf(Change.RemoveBlacklistEntries(setOf("url:/gone")))
+        first.removeBlacklistEntry("url:/1").changesFrom(first) shouldBe emptyList()
     }
 }
 // KNS <--

@@ -6,24 +6,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.Group
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -36,9 +26,6 @@ fun ChapterHeader(
     missingChapterCount: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    // KNS -->
-    onScanlatorPreferencesClick: (() -> Unit)? = null,
-    // KNS <--
 ) {
     Row(
         // KMK <--
@@ -69,21 +56,6 @@ fun ChapterHeader(
 
             MissingChaptersWarning(missingChapterCount)
         }
-        // KNS -->
-        if (onScanlatorPreferencesClick != null) {
-            val label = stringResource(KMR.strings.scanlator_preferences)
-            TooltipBox(
-                positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(label) } },
-                state = rememberTooltipState(),
-                focusable = false,
-            ) {
-                IconButton(onClick = onScanlatorPreferencesClick, enabled = enabled) {
-                    Icon(imageVector = MaterialSymbols.Rounded.Group, contentDescription = label)
-                }
-            }
-        }
-        // KNS <--
     }
 }
 

@@ -5,9 +5,9 @@ import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 
 // KNS -->
 /**
- * The unsaved state of the scanlator preferences dialog. Both of its modes (scanlator preferences
- * and chapter blacklist) edit this one draft, so switching modes never loses a change; nothing is
- * stored until the dialog is saved.
+ * The state of the scanlator preferences dialog. Both of its modes (scanlator preferences and chapter
+ * blacklist) edit this one draft, so switching modes never loses input. Every edit is stored at once:
+ * [changesFrom] turns an edit into the [Change]s to persist, and the dialog has no Save step.
  */
 data class ScanlatorPreferencesDraft(
     val mode: Mode = Mode.Scanlators,
@@ -22,6 +22,28 @@ data class ScanlatorPreferencesDraft(
     val rangeInput: RangeInput = RangeInput(),
 ) {
     enum class Mode { Scanlators, Blacklist }
+
+    /** One stored setting an edit changed. */
+    sealed interface Change {
+        data class Priority(val order: List<String>) : Change
+        data class Excluded(val excluded: Set<String>) : Change
+        data class SmartMerge(val override: Boolean?) : Change
+        data class RangeRules(val rules: List<ScanlatorRangeRule>) : Change
+        data class RemoveBlacklistEntries(val keys: Set<String>) : Change
+    }
+
+    /**
+     * What to persist after editing [previous] into this draft: one change per stored setting that
+     * differs. Switching modes and typing in the range form change nothing stored.
+     */
+    fun changesFrom(previous: ScanlatorPreferencesDraft): List<Change> = buildList {
+        if (order != previous.order) add(Change.Priority(order))
+        if (excluded != previous.excluded) add(Change.Excluded(excluded))
+        if (smartMergeOverride != previous.smartMergeOverride) add(Change.SmartMerge(smartMergeOverride))
+        if (rangeRules != previous.rangeRules) add(Change.RangeRules(rangeRules))
+        val removed = removedBlacklistKeys - previous.removedBlacklistKeys
+        if (removed.isNotEmpty()) add(Change.RemoveBlacklistEntries(removed))
+    }
 
     /** A blacklist entry and the names of the chapters it currently hides (empty = unavailable). */
     data class BlacklistItem(val key: String, val chapters: List<String>)
