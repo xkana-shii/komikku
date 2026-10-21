@@ -398,7 +398,6 @@ dependencies {
     implementation(sylibs.xlog)
 
     // RatingBar (SY)
-    implementation(sylibs.ratingbar)
     implementation(sylibs.composeRatingbar)
 
     // Google drive

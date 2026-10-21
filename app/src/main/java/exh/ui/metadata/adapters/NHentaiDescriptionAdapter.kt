@@ -1,124 +1,71 @@
 package exh.ui.metadata.adapters
 
-import android.annotation.SuppressLint
-import android.view.LayoutInflater
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
-import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.databinding.DescriptionAdapterNhBinding
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
-import eu.kanade.tachiyomi.util.system.copyToClipboard
-import eu.kanade.tachiyomi.util.system.dpToPx
 import exh.metadata.MetadataUtil
 import exh.metadata.metadata.NHentaiSearchMetadata
-import exh.ui.metadata.adapters.MetadataUIUtil.bindDrawable
-import exh.util.SourceTagsUtil.genreTextColor
-import tachiyomi.core.common.i18n.pluralStringResource
-import tachiyomi.core.common.i18n.stringResource
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Bookmark
+import mihon.icons.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
-import java.time.Instant
+import tachiyomi.presentation.core.i18n.pluralStringResource
+import tachiyomi.presentation.core.i18n.stringResource
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import mihon.icons.materialsymbols.R as MaterialSymbolsR
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 @Composable
 fun NHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
+    val meta = state.meta as? NHentaiSearchMetadata ?: return
     val context = LocalContext.current
-    // KMK -->
-    val colorScheme = AndroidViewColorScheme(MaterialTheme.colorScheme)
-    val iconColor = colorScheme.iconColor
-    val textColor = LocalContentColor.current.toArgb()
-    // KMK <--
-    AndroidView(
-        modifier = Modifier.fillMaxWidth(),
-        factory = { factoryContext ->
-            DescriptionAdapterNhBinding.inflate(LayoutInflater.from(factoryContext)).root
-        },
-        update = {
-            val meta = state.meta
-            if (meta == null || meta !is NHentaiSearchMetadata) return@AndroidView
-            val binding = DescriptionAdapterNhBinding.bind(it)
 
-            binding.genre.text = meta.tags.filter {
-                it.namespace == NHentaiSearchMetadata.NHENTAI_CATEGORIES_NAMESPACE
-            }.let { tags ->
-                if (tags.isNotEmpty()) tags.joinToString(transform = { it.name }) else null
-            }.let { categoriesString ->
-                categoriesString?.let { genre -> MetadataUIUtil.getGenreAndColour(context, genre) }
-                    ?.let { (genre, name) ->
-                        binding.genre.setBackgroundColor(genre.color)
-                        // KMK -->
-                        binding.genre.setTextColor(genreTextColor(genre))
-                        // KMK <--
-                        name
-                    } ?: categoriesString ?: context.stringResource(MR.strings.unknown)
+    MetadataDescription {
+        MetadataRow(openMetadataViewer = openMetadataViewer) {
+            val categories = remember(meta.tags) {
+                meta.tags
+                    .filter { it.namespace == NHentaiSearchMetadata.NHENTAI_CATEGORIES_NAMESPACE }
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString(transform = { it.name })
             }
-
-            meta.favoritesCount?.let {
-                if (it == 0L) return@let
-                binding.favorites.text = it.toString()
-                // KMK -->
-                binding.favorites.bindDrawable(context, MaterialSymbolsR.drawable.rounded_book, iconColor)
-                binding.favorites.setTextColor(textColor)
-                // KMK <--
-            }
-
-            binding.whenPosted.text = MetadataUtil.EX_DATE_FORMAT
-                .format(
-                    ZonedDateTime
-                        .ofInstant(Instant.ofEpochSecond(meta.uploadDate ?: 0), ZoneId.systemDefault()),
-                )
-            // KMK -->
-            binding.whenPosted.setTextColor(textColor)
-            // KMK <--
-
-            binding.pages.text = context.pluralStringResource(
-                SYMR.plurals.num_pages,
-                meta.pageImagePreviewUrls.size,
-                meta.pageImagePreviewUrls.size,
+            val genre = remember(categories) { categories?.let { MetadataUIUtil.getGenreAndColour(context, it) } }
+            MetadataGenre(
+                text = genre?.second ?: categories ?: stringResource(MR.strings.unknown),
+                color = genre?.first,
             )
-            // KMK -->
-            binding.pages.bindDrawable(context, R.drawable.ic_baseline_menu_book_24, iconColor, 4.dpToPx)
-            binding.pages.setTextColor(textColor)
-            // KMK <--
+            MetadataChip(text = "#" + (meta.nhId ?: 0))
+        }
 
-            @SuppressLint("SetTextI18n")
-            binding.id.text = "#" + (meta.nhId ?: 0)
-            // KMK -->
-            binding.id.setTextColor(textColor)
-
-            binding.moreInfo.bindDrawable(context, MaterialSymbolsR.drawable.rounded_info, iconColor)
-            binding.moreInfo.text = context.stringResource(SYMR.strings.more_info)
-            binding.moreInfo.setTextColor(iconColor)
-            // KMK <--
-
-            listOf(
-                binding.favorites,
-                binding.genre,
-                binding.id,
-                binding.pages,
-                binding.whenPosted,
-            ).forEach { textView ->
-                textView.setOnLongClickListener {
-                    context.copyToClipboard(
-                        textView.text.toString(),
-                        textView.text.toString(),
+        MetadataFacts {
+            fact {
+                val pages = meta.pageImagePreviewUrls.size
+                MetadataText(
+                    text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
+                    icon = MaterialSymbols.RoundedFilled.MenuBook,
+                )
+            }
+            meta.favoritesCount?.takeIf { it != 0L }?.let {
+                fact {
+                    MetadataText(
+                        text = it.toString(),
+                        icon = MaterialSymbols.Rounded.Bookmark,
                     )
-                    true
                 }
             }
-
-            binding.moreInfo.setOnClickListener {
-                openMetadataViewer()
+            fact {
+                val whenPosted = remember(meta.uploadDate) {
+                    MetadataUtil.EX_DATE_FORMAT.format(
+                        ZonedDateTime.ofInstant(
+                            Instant.fromEpochSeconds(meta.uploadDate ?: 0).toJavaInstant(),
+                            ZoneId.systemDefault(),
+                        ),
+                    )
+                }
+                MetadataText(text = whenPosted)
             }
-        },
-    )
+        }
+    }
 }
