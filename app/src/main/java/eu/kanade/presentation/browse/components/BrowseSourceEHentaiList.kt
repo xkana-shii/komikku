@@ -30,8 +30,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastAny
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
-import com.gowtham.ratingbar.ComposeStars
-import com.gowtham.ratingbar.RatingBarStyle
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.library.components.CommonMangaItemDefaults
 import eu.kanade.presentation.library.components.GRID_SELECTED_COVER_ALPHA
@@ -41,9 +39,10 @@ import exh.debug.DebugToggles
 import exh.metadata.MetadataUtil
 import exh.metadata.metadata.EHentaiSearchMetadata
 import exh.metadata.metadata.RaisedSearchMetadata
+import exh.ui.metadata.adapters.MetadataStars
+import exh.util.SourceTagsUtil.genreTextColor
 import exh.util.SourceTagsUtil
 import exh.util.SourceTagsUtil.GenreColor
-import exh.util.SourceTagsUtil.genreTextColor
 import exh.util.floor
 import kotlinx.coroutines.flow.StateFlow
 import tachiyomi.core.common.i18n.pluralStringResource
@@ -267,15 +266,10 @@ fun BrowseSourceEHentaiListItem(
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
                     horizontalAlignment = Alignment.Start,
                 ) {
-                    ComposeStars(
-                        value = rating,
-                        numOfStars = 5,
+                    MetadataStars(
+                        rating = rating,
                         size = 18.dp,
                         spaceBetween = 2.dp,
-                        hideInactiveStars = false,
-                        style = RatingBarStyle.Fill(),
-                        painterEmpty = null,
-                        painterFilled = null,
                     )
                     val color = genre?.first?.color
                     // KMK -->
