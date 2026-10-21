@@ -1037,9 +1037,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   Compose overlay above every viewer, so pager, webtoon and both WebGPU viewers share it; no viewer
   code changed. `Dialog.BookmarkColorPicker` / `showBookmarkColorPicker` are gone. The check follows
   `state.bookmarkColor`, which is reset on every chapter change.
-- **Dialog:** `BookmarkColorDialog` rows use `BookmarkColorLabel`; the row is the `selectable`
-  target and the radio button has no own click target, so there is no extra gap. No screen opens
-  this dialog any more; the bookmark color filter dialogs are unchanged.
+- **Dialog:** `BookmarkColorDialog` was first restyled with `BookmarkColorLabel`, then removed in a
+  follow-up commit because no screen opens it any more. `KMR.strings.action_bookmark_color` stays as
+  the reader button's long-press accessibility label; the bookmark color filter dialogs are unchanged.
+  Follow-up validation: all exit 0 (spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest with the same counts, assembleDebug,
+  assembleRelease, `git diff --check`).
 - **Tests:** `ChapterBookmarksTest` (6): ordinary add/remove with color reset, all seven ids,
   multi-selection, replacing colors, bookmarking plain chapters, skipped no-op writes, the current
   color for single/mixed/unbookmarked selections, identical updates from a manga chapter and its

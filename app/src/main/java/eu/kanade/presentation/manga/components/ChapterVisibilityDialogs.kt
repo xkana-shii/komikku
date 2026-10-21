@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,45 +84,6 @@ fun BookmarkColor.label(): String = stringResource(
         BookmarkColor.PURPLE -> KMR.strings.bookmark_color_purple
     },
 )
-
-/** Picks a bookmark color; choosing one also bookmarks the chapters. */
-@Composable
-fun BookmarkColorDialog(
-    current: BookmarkColor?,
-    onSelect: (BookmarkColor) -> Unit,
-    onDismissRequest: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text(stringResource(KMR.strings.action_bookmark_color)) },
-        text = {
-            Column {
-                BookmarkColor.entries.forEach { color ->
-                    // The row is the touch target; the radio only shows the state, so it adds no
-                    // extra padding between it and the swatch/name pair of the bookmark color menu.
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = color == current,
-                                onClick = { onSelect(color) },
-                                role = Role.RadioButton,
-                            )
-                            .padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        RadioButton(selected = color == current, onClick = null)
-                        BookmarkColorLabel(color)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_cancel)) }
-        },
-    )
-}
 
 /**
  * Shared bookmark-color tri-state editor. Changes are kept locally until OK, so cancellation and
