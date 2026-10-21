@@ -75,6 +75,7 @@ import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.ReadingModeSelectDialog
 import eu.kanade.presentation.reader.appbars.ReaderAppBars
 import eu.kanade.presentation.reader.components.ChapterNavigatorType
+import eu.kanade.presentation.reader.components.ReaderAutomationControls
 import eu.kanade.presentation.reader.settings.ReaderSettingsDialog
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.R
@@ -90,6 +91,7 @@ import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel.SetAsCoverResult.AddToLibraryFirst
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel.SetAsCoverResult.Error
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel.SetAsCoverResult.Success
+import eu.kanade.tachiyomi.ui.reader.automation.ReaderAutomationController
 import eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -166,6 +168,12 @@ class ReaderActivity : BaseActivity() {
     }
 
     @Inject private lateinit var readerPreferences: ReaderPreferences
+
+    // KNS -->
+    private val automation by lazy {
+        ReaderAutomationController(this, readerPreferences) { viewModel.state.value }
+    }
+    // KNS <--
 
     @Inject private lateinit var preferences: BasePreferences
 
@@ -691,6 +699,14 @@ class ReaderActivity : BaseActivity() {
             // KNS -->
             bookmarkColor = state.bookmarkColor,
             onLongClickBookmark = viewModel::showBookmarkColorPicker,
+            automationControls = {
+                ReaderAutomationControls(
+                    viewer = state.viewer,
+                    preferences = readerPreferences,
+                    running = automation.running.collectAsState().value,
+                    onToggle = { automation.toggle(state.viewer) },
+                )
+            },
             // KNS <--
             onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
             onOpenInBrowser = ::openChapterInBrowser.takeIf { isHttpSource },
@@ -939,6 +955,9 @@ class ReaderActivity : BaseActivity() {
      * Sets the visibility of the menu according to [visible].
      */
     private fun setMenuVisibility(visible: Boolean) {
+        // KNS --> a tap that brings up the menu also stops reader automation
+        if (visible) automation.stop()
+        // KNS <--
         viewModel.showMenus(visible)
         if (visible) {
             windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
@@ -969,6 +988,9 @@ class ReaderActivity : BaseActivity() {
             setOrientation(viewModel.getMangaOrientation())
         }
 
+        // KNS -->
+        automation.stop()
+        // KNS <--
         // Destroy previous viewer if there was one
         if (prevViewer != null) {
             prevViewer.destroy()

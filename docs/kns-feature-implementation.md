@@ -61,7 +61,7 @@ row will be re-checked when its subsystem is touched.
 | 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | `2af2c9215a` |
 | 4 | Library search/filters/sort/presentation + performance | partial (search fields, color filters); sort/presentation open | `5f901e1f43` |
 | 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | partial (progress safety, unified editor, preferred/priority); batch actions open | `689b2339df` |
-| 6 | Manga details/relations, reader controls & automation | partial (tracker relations); reader controls/automation open | see session log |
+| 6 | Manga details/relations, reader controls & automation | partial (tracker relations `12a038e658`, reader automation); title/back parity open | see session log |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
 | 8 | History, Updates, release prediction, category update schedules | planned | — |
 | 9 | Auto Reread, webhooks, Discord verification, storage, settings | planned | — |
@@ -275,20 +275,20 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 9.1-e | Rounded bookmark touch feedback | DONE | See 4.1-h | manual pending | batch 3 |
 | 9.1-f | Reader chapter list updates on color change | DONE-UNVERIFIED | Reader chapter list shows bookmark colors and resets them on toggle (see 4.1-g) | manual pending | batch 3 |
 | 9.1-g | Page-jump correctness | PARTIAL | Verify | — | — |
-| 9.2-a | Button-controlled auto-scroll (new system) | PARTIAL | SY auto-scroll exists on HEAD; fork system replaces old SY UI — reconcile without removing | — | — |
-| 9.2-b | Automatic page flip (paged) | PARTIAL | | — | — |
-| 9.2-c | Webtoon automation | PARTIAL | | — | — |
-| 9.2-d | Speed selection with usable increments | MISSING | | — | — |
-| 9.2-e | Refresh-rate support | MISSING | | — | — |
-| 9.2-f | Duration limit | MISSING | | — | — |
-| 9.2-g | Stop at end | MISSING | | — | — |
-| 9.2-h | Stop on sleep/background | MISSING | | — | — |
-| 9.2-i | No background work when disabled | MISSING | | — | — |
-| 9.2-j | Keep screen awake while active | MISSING | | — | — |
-| 9.2-k | Saved automation settings | MISSING | | — | — |
-| 9.3-a | Webtoon pinch-zoom disable | PARTIAL | SY/Mihon pref present; verify fork origin | — | — |
-| 9.3-b | Webtoon scale-type controls | HISTORICAL | | — | — |
-| 9.3-c | Long-strip gap preference | HISTORICAL | | — | — |
+| 9.2-a | Button-controlled auto-scroll (new system) | DONE | `ReaderAutomationController` + `ReaderAutomationControls` (slower / start-stop / faster above the bottom bar); SY's EH auto-scroll kept as is | manual pending | batch 7 |
+| 9.2-b | Automatic page flip (paged) | DONE | Flip at `pref_auto_flip_interval` (1–30 s) in Pager and paged WebGPU | `ReaderAutomationTest` | batch 7 |
+| 9.2-c | Webtoon automation | DONE | Per-frame scroll for Webtoon (`automationScrollBy`, fractional carry) and continuous WebGPU (`state.scrollBy`) | `ReaderAutomationTest` | batch 7 |
+| 9.2-d | Speed selection with usable increments | DONE | Seconds per screen 1–10 / flip seconds 1–30 in steps of 1, shown as plurals | `ReaderAutomationTest` | batch 7 |
+| 9.2-e | Refresh-rate support | DONE | Refresh rate re-read every frame (`Display.refreshRate`) | `ReaderAutomationTest` | batch 7 |
+| 9.2-f | Duration limit | DONE | `pref_automation_max_minutes` (0 = off) and `pref_automation_max_chapters` (0 = off) | `ReaderAutomationTest` | batch 7 |
+| 9.2-g | Stop at end | DONE | Stops when the viewer stops moving (30 frames) or at the last page of the last chapter; shows the menu | `ReaderAutomationTest` | batch 7 |
+| 9.2-h | Stop on sleep/background | DONE | Stops on activity `onStop`, when not STARTED or the screen is not interactive | `ReaderAutomationTest` | batch 7 |
+| 9.2-i | No background work when disabled | DONE | Nothing runs until started; controls hidden when automation is off for the viewer | — | batch 7 |
+| 9.2-j | Keep screen awake while active | DONE | FLAG_KEEP_SCREEN_ON while running, restored unless the reader's keep-screen-on setting is on | manual pending | batch 7 |
+| 9.2-k | Saved automation settings | DONE | Old-fork preference keys kept (`pref_auto_scroll`, `pref_auto_scroll_speed`, `pref_auto_flip`, ...) | — | batch 7 |
+| 9.3-a | Webtoon pinch-zoom disable | PRESENT | Komikku `webtoonPinchToZoomEnabled` / `webtoonDisableZoomOut` in Settings → Reader | — | — |
+| 9.3-b | Webtoon scale-type controls | PRESENT | Komikku `webtoonScaleType` (Settings → Reader and the reader sheet) | — | — |
+| 9.3-c | Long-strip gap preference | PRESENT | Komikku `longStripGapSmartScale` + side padding | — | — |
 | 9.3-d | Responsive scaling on resize | HISTORICAL | | — | — |
 | 9.3-e | Lifecycle-safe listeners | HISTORICAL | | — | — |
 | 9.4-a | Download from reader | HISTORICAL | | — | — |
@@ -812,3 +812,18 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 216 with 1 skipped, data 89, domain 185; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Not verified:** the AniList relations query and MangaBaka `relationships_v2` field against the live services
   (parsing is unit-tested; network calls are not). No device test of the row.
+
+### Batch 7 — reader automation (auto-scroll / auto-flip)
+
+- **Origin:** the old fork's automation (contributed by Guzmazow, KMK-marked there) is rebuilt for the foundation's
+  viewers instead of copied: `ui/reader/automation/ReaderAutomation.kt` (pure: `AutomationSession` limits,
+  `StallDetector`, `AutomationSpeed`, `PixelAccumulator`) and `ReaderAutomationController` (Choreographer frames
+  for scrolling, delays for flipping, keep-screen-on, lifecycle/screen-off stop, limit toasts, end detection).
+  Targets: `PagerViewer.moveToNext`, `WebGpuViewer.moveToNext`, new `WebtoonViewer.automationScrollBy` and
+  `WebGpuViewerContinuous.automationScrollBy` (library `ImageViewerContinuousState.scrollBy`).
+- **UI:** `ReaderAutomationControls` in `ReaderAppBars` (new `automationControls` slot above the bottom bar);
+  opening the menu (a tap) stops a run, so does changing the viewer. Settings → Reader → Automation with the old
+  fork's keys; new `rounded/remove.svg` icon (Material Symbols). SY's E-Hentai auto-scroll (ExhUtils) untouched.
+- **Tests:** `ReaderAutomationTest` (7).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 223 with 1 skipped, data 89, domain 185; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Not verified:** on a device (speed feel, stop on tap/screen-off, WebGPU scrolling).

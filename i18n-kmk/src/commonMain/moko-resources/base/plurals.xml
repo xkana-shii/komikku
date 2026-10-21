@@ -9,5 +9,29 @@
         <item quantity="one">Delete %d category? Its subcategories move up one level. This cannot be undone.</item>
         <item quantity="other">Delete %d categories? Their subcategories move up one level. This cannot be undone.</item>
     </plurals>
+    <plurals name="pref_auto_scroll_speed_summary">
+        <item quantity="one">%1$d second per screen</item>
+        <item quantity="other">%1$d seconds per screen</item>
+    </plurals>
+    <plurals name="pref_auto_flip_interval_summary">
+        <item quantity="one">Every %1$d second</item>
+        <item quantity="other">Every %1$d seconds</item>
+    </plurals>
+    <plurals name="pref_reader_automation_max_minutes_summary">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="reader_automation_max_minutes_reached">
+        <item quantity="one">Automation stopped after %1$d minute</item>
+        <item quantity="other">Automation stopped after %1$d minutes</item>
+    </plurals>
+    <plurals name="pref_reader_automation_max_chapters_summary">
+        <item quantity="one">%1$d chapter</item>
+        <item quantity="other">%1$d chapters</item>
+    </plurals>
+    <plurals name="reader_automation_max_chapters_reached">
+        <item quantity="one">Automation stopped after %1$d chapter</item>
+        <item quantity="other">Automation stopped after %1$d chapters</item>
+    </plurals>
     <!-- KNS <-->
 </resources>

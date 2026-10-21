@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import eu.kanade.presentation.more.settings.Preference
+import eu.kanade.tachiyomi.ui.reader.automation.AutomationSpeed
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderBottomButton
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
@@ -95,8 +96,73 @@ object SettingsReaderScreen : SearchableSettings {
             getPageDownloadingGroup(readerPreferences = readerPref),
             getForkSettingsGroup(readerPreferences = readerPref),
             // SY <--
+            // KNS -->
+            getAutomationGroup(readerPreferences = readerPref),
+            // KNS <--
         )
     }
+
+    // KNS -->
+    @Composable
+    private fun getAutomationGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
+        val autoScroll by readerPreferences.autoScroll.collectAsState()
+        val autoFlip by readerPreferences.autoFlip.collectAsState()
+        return Preference.PreferenceGroup(
+            title = stringResource(KMR.strings.pref_reader_automation),
+            preferenceItems = listOf(
+                Preference.PreferenceItem.InfoPreference(stringResource(KMR.strings.pref_reader_automation_summary)),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.autoScroll,
+                    title = stringResource(KMR.strings.pref_auto_scroll),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    preference = readerPreferences.autoScrollSpeed,
+                    valueRange = AutomationSpeed.MIN_SECONDS_PER_SCREEN..AutomationSpeed.MAX_SECONDS_PER_SCREEN,
+                    title = stringResource(KMR.strings.pref_auto_scroll_speed),
+                    valueText = { pluralStringResource(KMR.plurals.pref_auto_scroll_speed_summary, it, it) },
+                    visible = autoScroll,
+                ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = readerPreferences.autoFlip,
+                    title = stringResource(KMR.strings.pref_auto_flip),
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    preference = readerPreferences.autoFlipInterval,
+                    valueRange = AutomationSpeed.MIN_FLIP_SECONDS..AutomationSpeed.MAX_FLIP_SECONDS,
+                    title = stringResource(KMR.strings.pref_auto_flip_interval),
+                    valueText = { pluralStringResource(KMR.plurals.pref_auto_flip_interval_summary, it, it) },
+                    visible = autoFlip,
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    preference = readerPreferences.automationMaxMinutes,
+                    valueRange = 0..60,
+                    title = stringResource(KMR.strings.pref_reader_automation_max_minutes),
+                    valueText = {
+                        if (it == 0) {
+                            stringResource(MR.strings.disabled)
+                        } else {
+                            pluralStringResource(KMR.plurals.pref_reader_automation_max_minutes_summary, it, it)
+                        }
+                    },
+                    visible = autoScroll || autoFlip,
+                ),
+                Preference.PreferenceItem.SliderPreference(
+                    preference = readerPreferences.automationMaxChapters,
+                    valueRange = 0..10,
+                    title = stringResource(KMR.strings.pref_reader_automation_max_chapters),
+                    valueText = {
+                        if (it == 0) {
+                            stringResource(MR.strings.disabled)
+                        } else {
+                            pluralStringResource(KMR.plurals.pref_reader_automation_max_chapters_summary, it, it)
+                        }
+                    },
+                    visible = autoScroll || autoFlip,
+                ),
+            ),
+        )
+    }
+    // KNS <--
 
     @Composable
     private fun getDisplayGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {

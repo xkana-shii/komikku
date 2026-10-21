@@ -380,6 +380,16 @@ class WebtoonViewer(
         scrollDownBy()
     }
 
+    // KNS -->
+    /** Scrolls by [pixels] without animation for reader automation; false when it could not move. */
+    fun automationScrollBy(pixels: Int): Boolean {
+        if (pixels <= 0) return recycler.canScrollVertically(1)
+        val before = recycler.computeVerticalScrollOffset()
+        recycler.scrollBy(0, pixels)
+        return recycler.computeVerticalScrollOffset() != before
+    }
+    // KNS <--
+
     private fun scrollDownBy() {
         // SY <--
         if (config.usePageTransitions) {

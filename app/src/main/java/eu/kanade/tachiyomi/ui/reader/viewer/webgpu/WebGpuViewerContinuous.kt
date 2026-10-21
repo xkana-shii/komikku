@@ -86,6 +86,15 @@ class WebGpuViewerContinuous(activity: ReaderActivity, val useGap: Boolean = fal
 
     override fun moveRight() = scrollByHalfPage(1)
 
+    // KNS -->
+    /** Scrolls by [pixels] without animation for reader automation; false when it could not move. */
+    fun automationScrollBy(pixels: Float): Boolean {
+        val before = state.scrollY
+        state.scrollBy(pixels)
+        return state.scrollY != before
+    }
+    // KNS <--
+
     override fun moveLeft() = scrollByHalfPage(-1)
 
     override fun moveToPage(page: ReaderPage) {

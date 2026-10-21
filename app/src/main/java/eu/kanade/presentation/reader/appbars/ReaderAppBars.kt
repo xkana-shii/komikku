@@ -55,6 +55,7 @@ fun ReaderAppBars(
     // KNS -->
     bookmarkColor: Int,
     onLongClickBookmark: () -> Unit,
+    automationControls: (@Composable () -> Unit)? = null,
     // KNS <--
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
@@ -207,6 +208,9 @@ fun ReaderAppBars(
             exit = slideOutVertically(readerBarsSlideAnimationSpec) { it } + fadeOut(readerBarsFadeAnimationSpec),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small)) {
+                // KNS -->
+                automationControls?.invoke()
+                // KNS <--
                 if (chapterNavigatorType.isHorizontal()) {
                     ChapterNavigator(
                         type = chapterNavigatorType,

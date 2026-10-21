@@ -72,6 +72,24 @@ class ReaderPreferences(
 
     val keepScreenOn = preferenceStore.getBoolean("pref_keep_screen_on_key", false)
 
+    // KNS --> reader automation (same keys as the previous personal fork)
+    val autoScroll = preferenceStore.getBoolean("pref_auto_scroll", false)
+
+    /** Seconds one screen height takes to scroll by. */
+    val autoScrollSpeed = preferenceStore.getInt("pref_auto_scroll_speed", 5)
+
+    val autoFlip = preferenceStore.getBoolean("pref_auto_flip", false)
+
+    /** Seconds between automatic page flips. */
+    val autoFlipInterval = preferenceStore.getInt("pref_auto_flip_interval", 5)
+
+    /** 0 = no limit. */
+    val automationMaxChapters = preferenceStore.getInt("pref_automation_max_chapters", 5)
+
+    /** 0 = no limit. */
+    val automationMaxMinutes = preferenceStore.getInt("pref_automation_max_minutes", 15)
+    // KNS <--
+
     val defaultReadingMode = preferenceStore.getInt(
         "pref_default_reading_mode_key",
         ReadingMode.RIGHT_TO_LEFT.flagValue,
