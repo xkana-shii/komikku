@@ -59,8 +59,8 @@ row will be re-checked when its subsystem is touched.
 | 2a | Category hierarchy + Smart Categories: domain, data, backup/restore, sync, tracker hook | done | see session log |
 | 2b | Category manager UI, Set Categories dialog, library subcategory navigation/filters | done | see session log |
 | 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | `2af2c9215a` |
-| 4 | Library search/filters/sort/presentation + performance | partial (search fields, color filters); sort/presentation open | see session log |
-| 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | planned | — |
+| 4 | Library search/filters/sort/presentation + performance | partial (search fields, color filters); sort/presentation open | `5f901e1f43` |
+| 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | partial (progress safety, unified editor, preferred/priority); MangaBaka/AniList relations, batch actions open | see session log |
 | 6 | Manga details/relations, reader controls & automation | planned | — |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
 | 8 | History, Updates, release prediction, category update schedules | planned | — |
@@ -232,10 +232,10 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 7.1-c | MangaBaka date fidelity | PARTIAL | Verify conversions | — | — |
 | 7.2-a | AniList relation integration | MISSING | | — | — |
 | 7.2-b | MangaUpdates fork handling + unified binding | PARTIAL | | — | — |
-| 7.2-c | Remote error presentation in unified editor | MISSING | Batch 5 | — | — |
-| 7.3-a | No progress rollback | PARTIAL | Mihon `TrackChapter` only raises; verify every path | — | — |
-| 7.3-b | Reject nonfinite/negative chapter numbers | MISSING | Old `TrackerProgressSync` | — | — |
-| 7.3-c | Refresh before advancing when needed | PARTIAL | | — | — |
+| 7.2-c | Remote error presentation in unified editor | DONE | Unified edits report each failing tracker (toast + `Last update failed` marker until it succeeds again) | `UpdateTracksTest`, `UnifiedTrackerEditsTest` | batch 5 |
+| 7.3-a | No progress rollback | DONE | `TrackChapter` sends max(refreshed remote, read chapter) | `TrackChapterProgressTest` | batch 5 |
+| 7.3-b | Reject nonfinite/negative chapter numbers | DONE | `TrackChapter` ignores NaN/infinite/negative numbers; `TrackerProgressSync` ignores them | `TrackChapterProgressTest`, `TrackerProgressSyncTest` | batch 5 |
+| 7.3-c | Refresh before advancing when needed | DONE | Automatic and unified writes refresh first and save the record the service returns (`TrackChapter`, `SyncChapterProgressWithTrack`, `AddTracks.bind`, `UpdateTracks`) | `TrackChapterProgressTest`, `UpdateTracksTest` | batch 5 |
 | 7.3-d | Start-tracking status correctness | PARTIAL | | — | — |
 | 7.3-e | Automatic progress propagation | PRESENT | Mihon auto-update track on read | — | — |
 | 7.3-f | Smart Categories after persisted tracker state | DONE | See 1.4-j | `UpsertTrackTest` | batch 2a |
@@ -245,23 +245,23 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 8.1-a | Unified view of all linked trackers | MISSING | Old `UnifiedTrack*` | — | — |
-| 8.1-b | Edit statuses together with per-service translation | MISSING | | — | — |
-| 8.1-c | Edit scores with scale conversion | MISSING | | — | — |
-| 8.1-d | Edit start/finish dates | MISSING | | — | — |
-| 8.1-e | Track/untrack incl. remote removal | PARTIAL | Individual track sheet supports it | — | — |
-| 8.1-f | Multi-title batch actions | MISSING | | — | — |
-| 8.1-g | Operation queue | MISSING | | — | — |
-| 8.1-h | Partial-failure resilience | MISSING | | — | — |
-| 8.2-a | Preferred tracker per manga | MISSING | Old `PreferredTrackerMap` | — | — |
-| 8.2-b | Global tracker priority | MISSING | | — | — |
-| 8.2-c | Persist preferences (backup/sync) | MISSING | | — | — |
-| 8.2-d | Unified/individual editing consistency | MISSING | | — | — |
+| 8.1-a | Unified view of all linked trackers | DONE | All trackers panel in the tracking sheet (2+ linked trackers) | manual pending | batch 5 |
+| 8.1-b | Edit statuses together with per-service translation | DONE | Status translated per service (MangaUpdates list names mapped), skipped without an equivalent; completion fills progress | `UpdateTracksTest` | batch 5 |
+| 8.1-c | Edit scores with scale conversion | DONE | Score via the ten-point scale to the closest score of each service; services without scores skipped | `UpdateTracksTest` | batch 5 |
+| 8.1-d | Edit start/finish dates | DONE | Start/finish dates with removal; order validated per service; services without dates skipped | `UpdateTracksTest` | batch 5 |
+| 8.1-e | Track/untrack incl. remote removal | PARTIAL | Individual sheet keeps track/untrack; `UpdateTracks.remove` (local + remote, per-service failures) exists but has no unified UI yet | `UpdateTracksTest` | batch 5 |
+| 8.1-f | Multi-title batch actions | MISSING | Multi-title batch tracker actions not implemented | — | — |
+| 8.1-g | Operation queue | DONE | `UnifiedTrackerEdits` serializes unified edits app-wide (services within one edit run concurrently) | `UnifiedTrackerEditsTest` | batch 5 |
+| 8.1-h | Partial-failure resilience | DONE | `trackerBatch` (supervisor scope; per-service and per-save failures) | `UpdateTracksTest` | batch 5 |
+| 8.2-a | Preferred tracker per manga | DONE | `pref_preferred_tracker_for_manga` (`PreferredTrackerMap`, bounded JSON), chosen in the panel | `TrackerProgressSyncTest` | batch 5 |
+| 8.2-b | Global tracker priority | DONE | `pref_priority_tracker_id` in Settings → Tracking; used when the manga has no applicable preference | — | batch 5 |
+| 8.2-c | Persist preferences (backup/sync) | PARTIAL | Kept across sheet reopenings; device-only (app-state key like the old fork, manga ids are not portable), so not in backups/sync | — | batch 5 |
+| 8.2-d | Unified/individual editing consistency | DONE | Unified edits start from the preferred binding and go through each service's own conversions; individual edits are unchanged | `UpdateTracksTest` | batch 5 |
 | 8.3-a | Tracker search resolver | PARTIAL | | — | — |
 | 8.3-b | Tracker metadata autofill | MISSING | | — | — |
 | 8.3-c | Distinct linked-service identities | PARTIAL | | — | — |
-| 8.3-d | Tracker error indicator | MISSING | | — | — |
-| 8.3-e | Unified sheet in destination visual language | MISSING | | — | — |
+| 8.3-d | Tracker error indicator | DONE | Per-tracker error marker in the sheet (see 7.2-c) | `UnifiedTrackerEditsTest` | batch 5 |
+| 8.3-e | Unified sheet in destination visual language | DONE | Panel built from M3 chips/menus and the existing selectors | manual pending | batch 5 |
 | 8.3-f | No unexpected dialog reopen | MISSING | See 3.3-f | — | — |
 
 ### 9. Reader and automation
@@ -771,3 +771,26 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 194 with 1 skipped, data 89, domain 181; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Still open in batch 4:** source grouping/language (2.3), sort/cover/presentation items (2.4), list-item
   stability (2.4-e), All-category subcategory exclusion (2.2-c, historical), merged downloaded filter (2.2-g).
+
+### Batch 5 (part 1) — tracker progress safety, unified tracker editor, preferred/priority tracker
+
+- **Progress correctness:** `TrackChapter` ignores non-finite/negative chapter numbers, sends
+  max(refreshed remote progress, read chapter) and saves the record the service returns;
+  `SyncChapterProgressWithTrack` saves the returned record and rethrows cancellation; `AddTracks.bind` saves
+  what `bind` returned. `UpsertTrack.awaitOrThrow` (`KNS`) lets callers report a failed save.
+- **Unified editor:** `UpdateTracks` (status translated per service incl. MangaUpdates list names, score via the
+  ten-point scale, dates with order checks, progress; unsupported services skipped) on `trackerBatch`
+  (concurrent services, sequential saves, per-service failures). `UnifiedTrackerEdits` (app singleton) queues
+  edits and keeps the last failure per tracker until it succeeds. UI: `UnifiedTrackerPanel` at the top of the
+  tracking sheet when 2+ trackers are linked, `UnifiedTrackEditorScreen` reusing the existing selectors, a
+  failure marker and a "Preferred tracker" label on tracker rows.
+- **Preferred/priority:** `TrackerProgressSync` + `PreferredTrackerMap` ported (`KNS`);
+  `TrackPreferences.preferredTrackerForManga` (app-state key, device-only like the old fork),
+  `priorityTrackerId` (Settings → Tracking), `resolvePreferredTracker`. The panel offers "Set all to N" when
+  progress differs.
+- **Tests:** `TrackerProgressSyncTest` (4), `UpdateTracksTest` (8), `TrackChapterProgressTest` (3),
+  `UnifiedTrackerEditsTest` (2).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 207 with 1 skipped, data 89, domain 185; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Open in batch 5:** MangaBaka fork-only behavior and metadata/relations (7.1), AniList relations (7.2-a, with
+  3.2), MangaUpdates differences (7.2-b), multi-title batch actions (8.1-f), unified untrack UI, search resolver /
+  autofill (8.3-a/b), reread counters (historical). No device test of the panel yet.

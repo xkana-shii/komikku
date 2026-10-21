@@ -151,6 +151,16 @@ object SettingsTrackingScreen : SearchableSettings {
                 title = stringResource(KMR.strings.pref_auto_sync_progress_from_trackers),
             ),
             // KMK <--
+            // KNS -->
+            Preference.PreferenceItem.ListPreference(
+                preference = trackPreferences.priorityTrackerId,
+                entries = buildMap {
+                    put(0L, stringResource(KMR.strings.tracker_preferred_none))
+                    trackerManager.trackers.forEach { put(it.id, it.name) }
+                },
+                title = stringResource(KMR.strings.pref_priority_tracker),
+            ),
+            // KNS <--
             // SY -->
             Preference.PreferenceItem.SwitchPreference(
                 preference = trackPreferences.resolveUsingSourceMetadata,

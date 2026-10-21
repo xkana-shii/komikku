@@ -48,6 +48,8 @@ import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
 import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
 import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.domain.track.interactor.RefreshTracks
+import eu.kanade.domain.track.interactor.UnifiedTrackerEdits
+import eu.kanade.domain.track.interactor.UpdateTracks
 import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
@@ -57,6 +59,7 @@ import eu.kanade.presentation.track.TrackInfoDialogHome
 import eu.kanade.presentation.track.TrackScoreSelector
 import eu.kanade.presentation.track.TrackStatusSelector
 import eu.kanade.presentation.track.TrackerSearch
+import eu.kanade.presentation.track.UnifiedTrackerPanel
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
@@ -79,6 +82,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -105,6 +109,7 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.DeleteTrack
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.model.Track
+import tachiyomi.domain.track.service.TrackerProgressSync
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.AlertDialogContent
@@ -220,6 +225,34 @@ data class TrackInfoDialogHomeScreen(
                     },
                     onCopyLink = { context.copyTrackerLink(it) },
                     onTogglePrivate = viewModel::togglePrivate,
+                    // KNS -->
+                    preferredTrackerId = state.preferredTrackerId,
+                    failures = state.failures,
+                    header = {
+                        val bound = state.trackItems.filter { it.track != null }
+                        if (bound.size > 1) {
+                            UnifiedTrackerPanel(
+                                trackers = bound.map { it.tracker },
+                                preferredTrackerId = state.preferredTrackerId,
+                                onPreferredChange = viewModel::setPreferredTracker,
+                                progressMismatch = state.progressMismatch,
+                                syncTarget = state.syncTarget.toInt().toString(),
+                                onSyncProgress = viewModel::syncProgress,
+                                onEdit = { field ->
+                                    val source = viewModel.editSource(bound) ?: return@UnifiedTrackerPanel
+                                    navigator.push(
+                                        UnifiedTrackEditorScreen(
+                                            mangaId = mangaId,
+                                            track = source.track!!,
+                                            trackerId = source.tracker.id,
+                                            field = field,
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    },
+                    // KNS <--
                 )
             }
         }
@@ -260,6 +293,9 @@ data class TrackInfoDialogHomeScreen(
         private val getMergedReferencesById: GetMergedReferencesById,
         // KMK <--
         private val refreshTracks: RefreshTracks,
+        // KNS -->
+        private val unifiedTrackerEdits: UnifiedTrackerEdits,
+        // KNS <--
     ) : ViewModel() {
 
         val state: StateFlow<Model.State>
@@ -282,9 +318,67 @@ data class TrackInfoDialogHomeScreen(
                     .catch { logcat(LogPriority.ERROR, it) }
                     .distinctUntilChanged()
                     .map { it.mapToTrackItem() }
-                    .collectLatest { trackItems -> state.update { it.copy(trackItems = trackItems) } }
+                    // KNS -->
+                    .combine(
+                        combine(
+                            trackPreferences.preferredTrackerForManga.changes(),
+                            trackPreferences.priorityTrackerId.changes(),
+                        ) { _, _ -> },
+                    ) { trackItems, _ -> trackItems }
+                    // KNS <--
+                    .collectLatest { trackItems ->
+                        state.update {
+                            it.copy(
+                                trackItems = trackItems,
+                                // KNS -->
+                                preferredTrackerId = resolvePreferredTracker(trackItems),
+                                // KNS <--
+                            )
+                        }
+                    }
+            }
+            // KNS -->
+            viewModelScope.launch {
+                unifiedTrackerEdits.failures(mangaId).collectLatest { failures ->
+                    state.update { it.copy(failures = failures) }
+                }
+            }
+            // KNS <--
+        }
+
+        // KNS -->
+        private fun resolvePreferredTracker(trackItems: List<TrackItem>): Long? =
+            trackPreferences.resolvePreferredTracker(
+                mangaId,
+                trackItems.filter { it.track != null }.mapTo(mutableSetOf()) { it.tracker.id },
+            )
+
+        fun setPreferredTracker(trackerId: Long?) {
+            trackPreferences.setPreferredTrackerForManga(mangaId, trackerId)
+        }
+
+        /** The binding unified edits start from: the preferred tracker, else the one furthest ahead. */
+        fun editSource(bound: List<TrackItem>): TrackItem? {
+            val preferred = TrackerProgressSync.resolvePreferredTrack(
+                bound.mapNotNull { it.track },
+                state.value.preferredTrackerId,
+            )
+            return bound.find { it.track == preferred }
+        }
+
+        /** Brings every linked tracker to the preferred (or furthest) progress. */
+        fun syncProgress() {
+            val target = state.value.syncTarget.toInt()
+            appScope.launch {
+                val result = unifiedTrackerEdits.apply(mangaId, UpdateTracks.Change.Progress(target))
+                withContext(Dispatchers.Main) {
+                    result.failures.forEach { (tracker, error) ->
+                        context.toast(context.stringResource(MR.strings.track_error, tracker.name, error.message ?: ""))
+                    }
+                }
             }
         }
+        // KNS <--
 
         // KMK -->
         private suspend fun getMangaForTracking(item: TrackItem): Manga? {
@@ -437,7 +531,20 @@ data class TrackInfoDialogHomeScreen(
             // SY -->
             val isLoading: Boolean = false,
             // SY <--
-        )
+            // KNS -->
+            val preferredTrackerId: Long? = null,
+            /** Tracker id → message of its last failed unified edit. */
+            val failures: Map<Long, String> = emptyMap(),
+        ) {
+            private val boundTracks get() = trackItems.mapNotNull { it.track }
+
+            val progressMismatch: Boolean
+                get() = TrackerProgressSync.hasMismatch(boundTracks, preferredTrackerId)
+
+            val syncTarget: Double
+                get() = TrackerProgressSync.progress(boundTracks, preferredTrackerId)
+        }
+        // KNS <--
     }
 }
 

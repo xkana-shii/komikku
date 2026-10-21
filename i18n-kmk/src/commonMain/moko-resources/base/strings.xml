@@ -311,6 +311,15 @@
     <string name="bookmark_color_purple">Purple</string>
     <string name="bookmark_color_filter">Bookmark colors</string>
     <string name="bookmark_color_filter_summary">Only show bookmarks of the selected colors</string>
+    <string name="tracker_all_trackers">All trackers</string>
+    <string name="tracker_all_trackers_summary">Changes apply to every linked tracker in its own scale</string>
+    <string name="tracker_preferred">Preferred tracker</string>
+    <string name="tracker_preferred_none">Furthest progress</string>
+    <string name="tracker_progress_mismatch">Trackers disagree on reading progress</string>
+    <string name="tracker_sync_progress">Set all to %1$s</string>
+    <string name="tracker_last_update_failed">Last update failed: %1$s</string>
+    <string name="tracker_updated_count">Trackers updated: %1$d</string>
+    <string name="pref_priority_tracker">Priority tracker</string>
     <string name="pref_smart_scanlator_merge">Smart scanlator merge</string>
     <string name="pref_smart_scanlator_merge_summary">Show one release per chapter number, picked by each manga's scanlator priority. Other releases stay in the database and can be shown again.</string>
     <string name="scanlator_preferences">Scanlator preferences</string>

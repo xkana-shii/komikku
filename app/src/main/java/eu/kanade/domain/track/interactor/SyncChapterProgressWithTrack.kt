@@ -2,8 +2,10 @@ package eu.kanade.domain.track.interactor
 
 import dev.zacsweers.metro.Inject
 import eu.kanade.domain.track.model.toDbTrack
+import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
+import kotlinx.coroutines.CancellationException
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -82,9 +84,11 @@ class SyncChapterProgressWithTrack(
         try {
             // Update Tracker to localLastRead if needed
             if (lastRead > remoteTrack.lastChapterRead) {
-                tracker.update(updatedTrack.toDbTrack())
+                // KNS --> save the record the service returned (it may adjust status or dates)
+                val saved = tracker.update(updatedTrack.toDbTrack()).toDomainTrack() ?: updatedTrack
                 // update Track in database
-                upsertTrack.await(updatedTrack)
+                upsertTrack.await(saved)
+                // KNS <--
             }
             // KMK -->
             // Always update local chapters following Tracker even past chapters
@@ -95,6 +99,10 @@ class SyncChapterProgressWithTrack(
                 return lastRead.toInt()
             }
             // KMK <--
+            // KNS -->
+        } catch (e: CancellationException) {
+            throw e
+            // KNS <--
         } catch (e: Throwable) {
             logcat(LogPriority.WARN, e)
         }

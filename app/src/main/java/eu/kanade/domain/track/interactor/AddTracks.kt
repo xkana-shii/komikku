@@ -37,9 +37,11 @@ class AddTracks(
     suspend fun bind(tracker: Tracker, item: Track, mangaId: Long) = withContext(Dispatchers.IO) {
         val allChapters = getChaptersByMangaId.await(mangaId)
         val hasReadChapters = allChapters.any { it.read }
-        tracker.bind(item, hasReadChapters)
+        // KNS --> keep the record the service returned from binding
+        val bound = tracker.bind(item, hasReadChapters)
 
-        var track = item.toDomainTrack(idRequired = false) ?: return@withContext
+        var track = bound.toDomainTrack(idRequired = false) ?: return@withContext
+        // KNS <--
 
         upsertTrack.await(track)
 

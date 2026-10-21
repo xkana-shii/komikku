@@ -34,6 +34,9 @@ class TrackChapter(
         coroutineScope {
             val tracks = getTracks.await(mangaId)
             if (tracks.isEmpty()) return@coroutineScope
+            // KNS --> never send an invalid chapter number to a service
+            if (!chapterNumber.isFinite() || chapterNumber < 0) return@coroutineScope
+            // KNS <--
 
             tracks.mapNotNull { track ->
                 val service = trackerManager.get(track.trackerId)
@@ -49,11 +52,16 @@ class TrackChapter(
                 async {
                     runCatching {
                         try {
-                            val updatedTrack = service.refresh(track.toDbTrack())
+                            // KNS --> a service that is already further ahead (read elsewhere) is not
+                            // moved back, and the record the service returns is the one saved
+                            val refreshed = service.refresh(track.toDbTrack())
                                 .toDomainTrack(idRequired = true)!!
-                                .copy(lastChapterRead = chapterNumber)
-                            service.update(updatedTrack.toDbTrack(), true)
-                            upsertTrack.await(updatedTrack)
+                            val updatedTrack = refreshed
+                                .copy(lastChapterRead = maxOf(refreshed.lastChapterRead, chapterNumber))
+                            val saved = service.update(updatedTrack.toDbTrack(), true)
+                                .toDomainTrack(idRequired = true) ?: updatedTrack
+                            upsertTrack.await(saved)
+                            // KNS <--
                             delayedTrackingStore.remove(track.id)
                         } catch (e: Exception) {
                             delayedTrackingStore.add(track.id, chapterNumber)

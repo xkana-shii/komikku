@@ -59,8 +59,10 @@ import eu.kanade.tachiyomi.util.system.copyToClipboard
 import kotlinx.datetime.toJavaLocalDate
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.MoreVert
+import mihon.icons.materialsymbols.roundedfilled.Error
 import mihon.icons.materialsymbols.roundedfilled.VisibilityOff
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
 import java.time.format.DateTimeFormatter
 
@@ -78,6 +80,11 @@ fun TrackInfoDialogHome(
     onRemoved: (TrackItem) -> Unit,
     onCopyLink: (TrackItem) -> Unit,
     onTogglePrivate: (TrackItem) -> Unit,
+    // KNS -->
+    preferredTrackerId: Long? = null,
+    failures: Map<Long, String> = emptyMap(),
+    header: @Composable () -> Unit = {},
+    // KNS <--
 ) {
     Column(
         modifier = Modifier
@@ -88,6 +95,9 @@ fun TrackInfoDialogHome(
             .windowInsetsPadding(WindowInsets.systemBars),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        // KNS -->
+        header()
+        // KNS <--
         trackItems.forEach { item ->
             if (item.track != null) {
                 val supportsScoring = item.tracker.getScoreList().isNotEmpty()
@@ -129,6 +139,10 @@ fun TrackInfoDialogHome(
                     private = item.track.private,
                     onTogglePrivate = { onTogglePrivate(item) }
                         .takeIf { supportsPrivate },
+                    // KNS -->
+                    preferred = item.tracker.id == preferredTrackerId,
+                    error = failures[item.tracker.id],
+                    // KNS <--
                 )
             } else {
                 TrackInfoItemEmpty(
@@ -160,6 +174,10 @@ private fun TrackInfoItem(
     onCopyLink: () -> Unit,
     private: Boolean,
     onTogglePrivate: (() -> Unit)?,
+    // KNS -->
+    preferred: Boolean = false,
+    error: String? = null,
+    // KNS <--
 ) {
     val context = LocalContext.current
     Column {
@@ -202,13 +220,26 @@ private fun TrackInfoItem(
                     .padding(start = 16.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(
-                    text = title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                // KNS -->
+                Column {
+                    // KNS <--
+                    Text(
+                        text = title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    // KNS -->
+                    if (preferred) {
+                        Text(
+                            text = stringResource(KMR.strings.tracker_preferred),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                // KNS <--
             }
             VerticalDivider()
             TrackInfoItemMenu(
@@ -272,6 +303,29 @@ private fun TrackInfoItem(
                 }
             }
         }
+        // KNS --> the last unified edit failed on this tracker
+        if (error != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Icon(
+                    imageVector = MaterialSymbols.RoundedFilled.Error,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = stringResource(KMR.strings.tracker_last_update_failed, error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+        // KNS <--
     }
 }
 

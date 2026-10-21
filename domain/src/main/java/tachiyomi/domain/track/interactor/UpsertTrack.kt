@@ -44,6 +44,12 @@ class UpsertTrack(
     }
 
     // KNS -->
+    /** Like [await], but a failed save is thrown so the caller can report it for that tracker. */
+    suspend fun awaitOrThrow(track: Track) {
+        trackRepository.upsert(track)
+        notifyPersisted(setOf(track.mangaId))
+    }
+
     /** Automation must never make the tracker write itself look failed. */
     private suspend fun notifyPersisted(mangaIds: Set<Long>) {
         if (mangaIds.isEmpty()) return

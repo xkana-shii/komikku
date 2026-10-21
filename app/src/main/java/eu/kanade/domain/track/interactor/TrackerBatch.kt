@@ -1,0 +1,76 @@
+package eu.kanade.domain.track.interactor
+
+import eu.kanade.domain.track.model.toDbTrack
+import eu.kanade.domain.track.model.toDomainTrack
+import eu.kanade.tachiyomi.data.track.Tracker
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.supervisorScope
+import tachiyomi.domain.track.model.Track
+
+// KNS -->
+/** One tracker of a [trackerBatch]: its binding, and the record the service returned last. */
+internal class TrackerBatchItem(val service: Tracker, val binding: Track) {
+    var returned: Track? = null
+        private set
+    var skipped = false
+        private set
+
+    fun skip() {
+        skipped = true
+    }
+
+    suspend fun refresh(): Track =
+        service.refresh(binding.toDbTrack()).toDomainTrack()!!.also { returned = it }
+
+    suspend fun update(track: Track, didReadChapter: Boolean = false): Track =
+        service.update(track.toDbTrack(), didReadChapter).toDomainTrack()!!.also { returned = it }
+}
+
+internal data class TrackerBatchResult(
+    val service: Tracker,
+    val track: Track?,
+    val error: Throwable?,
+    val persistenceError: Throwable? = null,
+    val skipped: Boolean = false,
+) {
+    val failures get() = listOfNotNull(error, persistenceError)
+}
+
+/**
+ * Runs [operation] for every tracker concurrently; one failing service never cancels the others. Every
+ * record a service returned is then saved one after another, so a tracker that was refreshed but then
+ * failed to update still keeps its refreshed state, and a failed save is reported for that tracker.
+ */
+internal suspend fun trackerBatch(
+    entries: List<Pair<Tracker, Track>>,
+    persist: suspend (Track) -> Unit,
+    operation: suspend TrackerBatchItem.() -> Unit,
+): List<TrackerBatchResult> = supervisorScope {
+    val results = entries.distinctBy { it.first.id }.map { (service, binding) ->
+        async {
+            val item = TrackerBatchItem(service, binding)
+            val error = try {
+                item.operation()
+                null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e
+            }
+            TrackerBatchResult(service, item.returned, error, skipped = item.skipped)
+        }
+    }.awaitAll()
+    results.map { result ->
+        try {
+            result.track?.let { persist(it) }
+            result
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (result.error == null) result.copy(error = e) else result.copy(persistenceError = e)
+        }
+    }
+}
+// KNS <--
