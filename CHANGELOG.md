@@ -40,6 +40,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - History date headers show how many different manga were read that day.
 - Auto Reread: finishing a chapter of an entry that is completed on its trackers can start a reread (Settings → Tracking: ask, always or never; asks by default). Starting it marks chapters unread (all of them, or the ones after the current chapter) and moves every linked tracker that has a rereading status (MyAnimeList, AniList, MangaBaka, Shikimori, Hikka, MangaDex) to rereading with the matching progress. Trackers without a rereading status are left alone, and it never happens in incognito mode.
 - Webhooks (Settings → Connections → Webhooks): send chosen events to a Discord webhook and/or a generic JSON endpoint — chapter started or read, new manga started, caught up, finished, added to or removed from the library, library update finished, downloads finished, backup created or restored — with a test button. Delivery runs in the background through a bounded queue and never blocks the app; incognito sources, privately tracked entries and excluded categories never send manga events, Discord mentions are disabled, and the URLs are private settings that are not backed up.
+- Storage overview (Settings → Data and storage): lists how much space each library entry's downloads (or its local folder) use, largest first, with the total as a chart, a category picker (a parent category includes its subcategories) and per-entry deletion that can also remove the entry from the library (off by default). Merged entries count and delete only their members' downloads, never local files. Shows its progress while sizes are calculated.
 - [Hikka](https://hikka.io/) tracker support ([@Lorg0n](https://github.com/Lorg0n)) ([#1386](https://github.com/mihonapp/mihon/pull/1386))
   - Fix Hikka not defaulting to "Plan to Read" for unread titles ([@MajorTanya](https://github.com/MajorTanya)) ([#3534](https://github.com/mihonapp/mihon/pull/3534))
   - Fix Hikka search throwing error due to unclosed response ([@MajorTanya](https://github.com/MajorTanya)) ([#3548](https://github.com/mihonapp/mihon/pull/3548))
@@ -53,6 +54,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ### Changed
 - The library's include/exclude category filters now cover subcategories: excluding a parent also excludes manga filed only in its subcategories, and same-named subcategories under other parents are never matched.
 - Refreshing a category tab also updates the manga filed only in its subcategories.
+- History's unfinished-manga filter now counts only the chapters the chapter list shows, so a manga whose remaining chapters are all blacklisted or hidden duplicates counts as finished.
 - Manga with blacklisted chapters or Smart Scanlator Merge show chapter, unread and bookmark counts and continue-reading targets for the chapters actually listed. Manga without these rules are counted exactly as before and cost nothing extra.
 - Don't use GMS to detect if GMS is available ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3525](https://github.com/mihonapp/mihon/pull/3525))
 

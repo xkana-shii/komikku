@@ -323,6 +323,12 @@
     <string name="pref_reader_automation">Automation</string>
     <string name="pref_auto_reread">Start a reread</string>
     <string name="webhooks">Webhooks</string>
+    <string name="storage_overview">Storage overview</string>
+    <string name="storage_overview_summary">Space used by each entry's downloads, by category</string>
+    <string name="storage_overview_calculating">Calculating storage usage… (%1$s)</string>
+    <string name="storage_overview_no_items">No entries for the selected category</string>
+    <string name="storage_delete_local_manga">Delete local entry?</string>
+    <string name="storage_delete_confirm">Delete the stored chapters of \"%1$s\"?</string>
     <string name="webhooks_summary">Send reading, library, download and backup events to Discord or another endpoint</string>
     <string name="webhooks_privacy">Selected events are sent to your endpoints. Incognito sources, private tracking entries and excluded categories never send manga events. Delivery is best effort and never blocks the app.</string>
     <string name="webhook_connection">Endpoints</string>

@@ -260,6 +260,10 @@ class DownloadManager(
      *
      * @param manga the manga to check.
      */
+    // KNS -->
+    fun getDownloadSize(manga: Manga): Long = cache.getDownloadSize(manga)
+    // KNS <--
+
     fun getDownloadCount(manga: Manga): Int {
         return cache.getDownloadCount(manga)
     }

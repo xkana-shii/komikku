@@ -68,6 +68,9 @@ class HistoryViewModel(
     private val getCategories: GetCategories,
     private val getDuplicateLibraryManga: GetDuplicateLibraryManga,
     private val getHistory: GetHistory,
+    // KNS -->
+    private val historyVisibleCounts: HistoryVisibleCounts,
+    // KNS <--
     private val getManga: GetManga,
     private val getNextChapters: GetNextChapters,
     private val libraryPreferences: LibraryPreferences,
@@ -111,11 +114,21 @@ class HistoryViewModel(
             getHistory.subscribe(
                 query ?: "",
                 // KMK -->
-                unfinishedManga = pref.filterUnfinishedManga.toBooleanOrNull(),
+                // KNS --> filtered below on counts that follow the chapter visibility rule
+                unfinishedManga = null,
+                // KNS <--
                 unfinishedChapter = pref.filterUnfinishedChapter.toBooleanOrNull(),
                 nonLibraryEntries = pref.filterNonLibraryManga.toBooleanOrNull(),
                 // KMK <--
             )
+                // KNS -->
+                .map { history ->
+                    HistoryVisibleCounts.filterUnfinished(
+                        historyVisibleCounts.apply(history),
+                        pref.filterUnfinishedManga.toBooleanOrNull(),
+                    )
+                }
+                // KNS <--
                 .distinctUntilChanged()
                 .catch { error ->
                     logcat(LogPriority.ERROR, error)

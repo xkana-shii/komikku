@@ -64,6 +64,7 @@ import eu.kanade.tachiyomi.data.export.LibraryExporter.ExportOptions
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.sync.SyncManager
 import eu.kanade.tachiyomi.data.sync.service.GoogleDriveSyncService
+import eu.kanade.tachiyomi.ui.storage.StorageScreen
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.workManager
@@ -354,6 +355,9 @@ object SettingsDataScreen : SearchableSettings {
         val pagePreviewReadableSize = remember(pagePreviewReadableSizeSema) { pagePreviewCache.readableSize }
         // SY <--
 
+        // KNS -->
+        val storageNavigator = LocalNavigator.currentOrThrow
+        // KNS <--
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_storage_usage),
             preferenceItems = listOf(
@@ -369,6 +373,13 @@ object SettingsDataScreen : SearchableSettings {
                     )
                 },
 
+                // KNS -->
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(KMR.strings.storage_overview),
+                    subtitle = stringResource(KMR.strings.storage_overview_summary),
+                    onClick = { storageNavigator.push(StorageScreen()) },
+                ),
+                // KNS <--
                 Preference.PreferenceItem.TextPreference(
                     title = stringResource(MR.strings.pref_clear_chapter_cache),
                     subtitle = stringResource(MR.strings.used_cache, cacheReadableSize),

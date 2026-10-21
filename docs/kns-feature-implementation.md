@@ -64,8 +64,8 @@ row will be re-checked when its subsystem is touched.
 | 6 | Manga details/relations, reader controls & automation | partial (tracker relations `12a038e658`, reader automation `65e92a8e98`); title/back parity open | see session log |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
 | 8 | History, Updates, release prediction, category update schedules | partial (category schedules, refresh scope, History day counts `0f759e47aa`); release prediction open | see session log |
-| 9 | Auto Reread, webhooks, Discord verification, storage, settings | partial (Auto Reread, webhooks); storage screen open | see session log |
-| 10 | Final audit, acceptance matrix, full validation | planned | — |
+| 9 | Auto Reread, webhooks, Discord verification, storage, settings | partial (Auto Reread, webhooks `d042b5196f`; storage overview — batch 10) | see session log |
+| 10 | Remaining items (storage, History filters, …), final audit | in progress | see session log |
 
 ## Requirements
 
@@ -363,7 +363,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 13.1-a | Daily distinct-manga count | DONE | `HistoryUiModel.Header.mangaCount` (distinct manga per day) | `HistoryDayCountTest` | batch 8 |
 | 13.1-b | Date-grouped history with count | DONE | Date headers keep grouping and add the count | `HistoryDayCountTest` | batch 8 |
 | 13.1-c | Initial loading vs empty | PRESENT | KMK `State.isLoading` shows a loading screen before the empty screen | — | — |
-| 13.1-d | Visibility-aware history filters | MISSING | History filters not yet visibility-aware — batch 8 | — | — |
+| 13.1-d | Visibility-aware history filters | DONE | `HistoryVisibleCounts` recomputes counts for manga with rules; the unfinished filter runs on them | `HistoryVisibleCountsTest` | batch 10 |
 | 13.2-a | Continue to next readable chapter | PARTIAL | Mihon `GetNextChapters` | — | — |
 | 13.2-b | Skip blacklisted | DONE | See 5.2-c | `GetNextChaptersVisibilityTest` | batch 3 |
 | 13.2-c | Resolve Smart Merge duplicates | DONE | See 5.2-c | `GetNextChaptersVisibilityTest` | batch 3 |
@@ -457,12 +457,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 19.1-a | Dedicated storage screen | MISSING | | — | — |
-| 19.1-b | Storage categorization | MISSING | | — | — |
-| 19.1-c | Cumulative totals | MISSING | | — | — |
-| 19.1-d | Category-based selection | MISSING | | — | — |
-| 19.1-e | Cleanup controls with accurate reclaimed space | MISSING | | — | — |
-| 19.1-f | Merged-manga folder safety | PARTIAL | | — | — |
+| 19.1-a | Dedicated storage screen | DONE | `StorageScreen` + `StorageViewModel` from Settings → Data and storage | manual pending | batch 10 |
+| 19.1-b | Storage categorization | DONE | Per-entry downloads or local folder, with chapter counts | `StorageOverviewTest` | batch 10 |
+| 19.1-c | Cumulative totals | DONE | Total with a half-ring chart split by entry | `StorageOverviewTest` | batch 10 |
+| 19.1-d | Category-based selection | DONE | Category picker; parents include subcategory entries (`CategoryTree.withAncestors`) | `StorageOverviewTest` | batch 10 |
+| 19.1-e | Cleanup controls with accurate reclaimed space | DONE | Delete downloads / local folder, optional remove from library; list updates immediately and sizes are recomputed on download-cache changes | manual pending | batch 10 |
+| 19.1-f | Merged-manga folder safety | DONE | Merged entries size and delete only non-local members' downloads | `StorageOverviewTest` | batch 10 |
 | 19.2-a | Download queue state | PRESENT | | — | — |
 | 19.2-b | Fork source throttling | HISTORICAL | | — | — |
 | 19.2-c | Temporary-file cleanup without false errors | MISSING | | — | — |
@@ -480,7 +480,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 20.2-a | Expanded settings screens | MISSING | Added per batch | — | — |
 | 20.2-b | Adaptive sheets | PARTIAL | | — | — |
 | 20.2-c | Generic selection controls | PARTIAL | | — | — |
-| 20.2-d | Loading indicators with progress | PARTIAL | | — | — |
+| 20.2-d | Loading indicators with progress | DONE | `LoadingScreen(percentage, message)` (presentation-core, `KNS`) used by the storage overview | — | batch 10 |
 | 20.2-e | Correct pluralization | PARTIAL | New count strings use plurals (`category_update_interval_days`, `category_manager_delete_many`) | — | batch 2a + 2b |
 | 20.2-f | Clear notifications/errors | PARTIAL | | — | — |
 | 20.2-g | Navigation/back-stack corrections | PARTIAL | | — | — |
@@ -872,3 +872,20 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   UI (6.2-b); multi-title tracker batch actions (8.1-f); old-fork SharedPreferences/backup conversion (15.3-a);
   reader title/back parity (9.1-c); Discord RPC verification (18.2, historical); release-interval prediction (14.2,
   historical — confirm the old algorithm first); final audit and device checks (acceptance #28).
+
+### Batch 10 (part 1) — storage overview and visibility-aware History filter
+
+- **Storage overview:** rebuilt from the old fork's `ui/storage` + `presentation/more/storage` as a Metro
+  `StorageViewModel` with pure logic in `StorageOverview` (entries, category filter with subcategories, sizes,
+  formatting). New `DownloadCache.getDownloadSize` / `DownloadManager.getDownloadSize` (`KNS`), and a
+  `LoadingScreen(percentage, message)` overload in presentation-core. Merged entries size and delete their
+  non-local members' downloads only. The delete dialog's "remove from library" now starts unchecked (the old fork
+  checked it). Strings moved from the old fork's `MR` additions to `KMR`.
+- **History:** `HistoryVisibleCounts` recomputes total/read counts for manga with a blacklist or Smart Merge
+  (respecting the bookmark chapter filter) and the unfinished-manga filter runs in Kotlin on those counts; the SQL
+  filter is no longer used for it.
+- **Tests:** `StorageOverviewTest` (4), `HistoryVisibleCountsTest` (2).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 237 with 1 skipped
+, data 89
+, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Not verified:** on a device (sizes against the system's storage settings, deletion).

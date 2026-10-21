@@ -10,6 +10,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.ui.storage.StorageOverview
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -225,6 +226,18 @@ class DownloadCache(
         }
         return 0
     }
+
+    // KNS -->
+    /** The size in bytes of a manga's download folder (0 when nothing is downloaded). */
+    fun getDownloadSize(manga: Manga): Long {
+        renewCache()
+
+        val mangaDir = rootDownloadsDir.sourceDirs[manga.source]
+            ?.mangaDirs
+            ?.get(provider.getMangaDirName(/* SY --> */ manga.ogTitle /* SY <-- */))
+        return StorageOverview.sizeOf(mangaDir?.dir)
+    }
+    // KNS <--
 
     /**
      * Returns the amount of downloaded chapters for each of the given manga, keyed by manga id.
