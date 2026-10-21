@@ -193,6 +193,10 @@ class LibraryPreferences(
 
     /** Library filter: manga with at least one bookmark of these colors ([BookmarkColor] names). */
     val filterBookmarkColors = preferenceStore.getStringSet("pref_filter_library_bookmark_colors", emptySet())
+
+    /** Chapter list filter of one manga: only bookmarks of these colors ([BookmarkColor] names). */
+    fun bookmarkColorFilter(mangaId: Long) =
+        preferenceStore.getStringSet("manga_bookmark_color_filter_$mangaId", emptySet())
     // KNS <--
 
     val categorizedDisplaySettings = preferenceStore.getBoolean("categorized_display", false)

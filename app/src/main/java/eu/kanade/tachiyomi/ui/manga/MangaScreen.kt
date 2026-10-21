@@ -555,6 +555,10 @@ class MangaScreen(
                 onResetToDefault = viewModel::resetToDefaultSettings,
                 scanlatorFilterActive = successState.scanlatorFilterActive,
                 onScanlatorFilterClicked = { showScanlatorsDialog = true },
+                // KNS -->
+                bookmarkColorFilter = successState.bookmarkColorFilter,
+                onBookmarkColorFilterChanged = viewModel::setBookmarkColorFilter,
+                // KNS <--
             )
             MangaViewModel.Dialog.TrackSheet -> {
                 NavigatorAdaptiveSheet(

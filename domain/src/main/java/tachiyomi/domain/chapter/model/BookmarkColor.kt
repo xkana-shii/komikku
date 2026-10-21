@@ -20,6 +20,17 @@ enum class BookmarkColor(val value: Int) {
         const val DEFAULT_ID = 0
 
         fun fromValue(value: Int): BookmarkColor = entries.firstOrNull { it.value == value } ?: NONE
+
+        /** Colors stored by name in a filter preference; unknown names are ignored. */
+        fun fromNames(names: Collection<String>): Set<BookmarkColor> =
+            entries.filterTo(mutableSetOf()) { it.name in names }
+
+        /**
+         * Whether a manga or chapter with bookmarks of [colors] (stored values) passes [filter]. An
+         * empty filter passes everything.
+         */
+        fun matchesFilter(colors: Collection<Int>, filter: Set<BookmarkColor>): Boolean =
+            filter.isEmpty() || colors.any { fromValue(it) in filter }
     }
 }
 // KNS <--

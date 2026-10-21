@@ -309,6 +309,8 @@
     <string name="bookmark_color_green">Green</string>
     <string name="bookmark_color_blue">Blue</string>
     <string name="bookmark_color_purple">Purple</string>
+    <string name="bookmark_color_filter">Bookmark colors</string>
+    <string name="bookmark_color_filter_summary">Only show bookmarks of the selected colors</string>
     <string name="pref_smart_scanlator_merge">Smart scanlator merge</string>
     <string name="pref_smart_scanlator_merge_summary">Show one release per chapter number, picked by each manga's scanlator priority. Other releases stay in the database and can be shown again.</string>
     <string name="scanlator_preferences">Scanlator preferences</string>

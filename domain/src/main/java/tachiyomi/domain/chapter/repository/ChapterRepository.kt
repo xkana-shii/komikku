@@ -36,6 +36,11 @@ interface ChapterRepository {
 
     fun getScanlatorsByMangaIdAsFlow(mangaId: Long): Flow<List<String>>
 
+    // KNS -->
+    /** Bookmark color values of each manga's bookmarked chapters (merged entries include their members'). */
+    fun getBookmarkColorsByMangaAsFlow(): Flow<Map<Long, Set<Int>>>
+    // KNS <--
+
     suspend fun getBookmarkedChaptersByMangaId(mangaId: Long): List<Chapter>
 
     suspend fun getChapterById(id: Long): Chapter?

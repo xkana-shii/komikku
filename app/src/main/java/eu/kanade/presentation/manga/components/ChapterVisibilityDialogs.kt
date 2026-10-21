@@ -17,6 +17,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -37,11 +38,13 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Delete
 import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
 import mihon.icons.materialsymbols.rounded.KeyboardArrowUp
+import mihon.icons.materialsymbols.rounded.Palette
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.service.chapterBlacklistKeyMetadata
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.theme.active
 
 // KNS -->
 /** The fixed bookmark palette (same colors as the previous personal fork); null for an ordinary bookmark. */
@@ -108,6 +111,93 @@ fun BookmarkColorDialog(
             TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_cancel)) }
         },
     )
+}
+
+/** Chooses bookmark colors to filter by; an empty choice turns the filter off. */
+@Composable
+fun BookmarkColorFilterDialog(
+    selected: Set<BookmarkColor>,
+    onChanged: (Set<BookmarkColor>) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(KMR.strings.bookmark_color_filter)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(KMR.strings.bookmark_color_filter_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                BookmarkColor.entries.forEach { color ->
+                    val checked = color in selected
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onChanged(if (checked) selected - color else selected + color) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = { onChanged(if (checked) selected - color else selected + color) },
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(color.composeColor() ?: MaterialTheme.colorScheme.primary),
+                        )
+                        Text(color.label())
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) { Text(stringResource(MR.strings.action_ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = { onChanged(emptySet()) }) { Text(stringResource(MR.strings.action_reset)) }
+        },
+    )
+}
+
+/** A filter row that opens [BookmarkColorFilterDialog]; shows the chosen colors and is highlighted while active. */
+@Composable
+fun BookmarkColorFilterItem(
+    selected: Set<BookmarkColor>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        Icon(
+            imageVector = MaterialSymbols.Rounded.Palette,
+            contentDescription = null,
+            tint = if (selected.isNotEmpty()) MaterialTheme.colorScheme.active else LocalContentColor.current,
+        )
+        Text(
+            text = stringResource(KMR.strings.bookmark_color_filter),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        BookmarkColor.entries.filter { it in selected }.forEach { color ->
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(color.composeColor() ?: MaterialTheme.colorScheme.primary),
+            )
+        }
+    }
 }
 
 /**

@@ -29,10 +29,13 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.domain.manga.model.downloadedFilter
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
+import eu.kanade.presentation.manga.components.BookmarkColorFilterDialog
+import eu.kanade.presentation.manga.components.BookmarkColorFilterItem
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Group
 import tachiyomi.core.common.preference.TriState
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
@@ -55,6 +58,10 @@ fun ChapterSettingsDialog(
     onDisplayModeChanged: (Long) -> Unit,
     onSetAsDefault: (applyToExistingManga: Boolean) -> Unit,
     onResetToDefault: () -> Unit,
+    // KNS -->
+    bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
+    onBookmarkColorFilterChanged: ((Set<BookmarkColor>) -> Unit)? = null,
+    // KNS <--
 ) {
     var showSetAsDefaultDialog by rememberSaveable { mutableStateOf(false) }
     if (showSetAsDefaultDialog) {
@@ -109,6 +116,19 @@ fun ChapterSettingsDialog(
                         scanlatorFilterActive = scanlatorFilterActive,
                         onScanlatorFilterClicked = onScanlatorFilterClicked,
                     )
+                    // KNS -->
+                    if (onBookmarkColorFilterChanged != null) {
+                        var showColorFilter by rememberSaveable { mutableStateOf(false) }
+                        BookmarkColorFilterItem(selected = bookmarkColorFilter, onClick = { showColorFilter = true })
+                        if (showColorFilter) {
+                            BookmarkColorFilterDialog(
+                                selected = bookmarkColorFilter,
+                                onChanged = onBookmarkColorFilterChanged,
+                                onDismissRequest = { showColorFilter = false },
+                            )
+                        }
+                    }
+                    // KNS <--
                 }
                 1 -> {
                     SortPage(

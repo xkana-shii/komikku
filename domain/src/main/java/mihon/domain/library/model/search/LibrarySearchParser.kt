@@ -81,9 +81,15 @@ class LibrarySearchParser(private val tokens: List<LibrarySearchLexer.Token>) {
                 } else {
                     null
                 }
+                // KNS -->
+                val libraryField = LibraryField.fromString(nextToken.field)
+                // KNS <--
                 when {
                     metadataNamespace != null ->
                         MetadataQueryNode(metadataNamespace, nextToken.value, negated)
+                    // KNS -->
+                    libraryField != null -> LibraryFieldQueryNode(libraryField, nextToken.value, negated)
+                    // KNS <--
                     numericSource -> FieldQueryNode(MangaField.SOURCE_ID, nextToken.value, negated)
                     field != null -> FieldQueryNode(field, nextToken.value, negated)
                     comparisonField != null ->

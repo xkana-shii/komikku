@@ -8,6 +8,7 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.core.common.util.system.logcat
@@ -230,6 +231,15 @@ class ChapterRepositoryImpl(
             .getScanlatorsByMangaId(mangaId) { it.orEmpty() }
             .subscribeToList()
     }
+
+    // KNS -->
+    override fun getBookmarkColorsByMangaAsFlow(): Flow<Map<Long, Set<Int>>> {
+        return database.chapterQueries
+            .getBookmarkColorsByManga { mangaId, color -> mangaId to color.toInt() }
+            .subscribeToList()
+            .map { rows -> rows.groupBy({ it.first }, { it.second }).mapValues { it.value.toSet() } }
+    }
+    // KNS <--
 
     override suspend fun getBookmarkedChaptersByMangaId(mangaId: Long): List<Chapter> {
         return database.chapterQueries

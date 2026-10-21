@@ -32,6 +32,8 @@ import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
+import eu.kanade.presentation.manga.components.BookmarkColorFilterDialog
+import eu.kanade.presentation.manga.components.BookmarkColorFilterItem
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.library.LibrarySettingsViewModel
@@ -42,6 +44,7 @@ import mihon.icons.materialsymbols.rounded.Refresh
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
 import tachiyomi.domain.library.model.LibrarySort
@@ -154,6 +157,21 @@ private fun ColumnScope.FilterPage(
         state = filterBookmarked,
         onClick = { viewModel.toggleFilter(LibraryPreferences::filterBookmarked) },
     )
+    // KNS -->
+    val filterBookmarkColors by viewModel.libraryPreferences.filterBookmarkColors.collectAsState()
+    val selectedBookmarkColors = remember(filterBookmarkColors) { BookmarkColor.fromNames(filterBookmarkColors) }
+    var showBookmarkColorFilter by rememberSaveable { mutableStateOf(false) }
+    BookmarkColorFilterItem(selected = selectedBookmarkColors, onClick = { showBookmarkColorFilter = true })
+    if (showBookmarkColorFilter) {
+        BookmarkColorFilterDialog(
+            selected = selectedBookmarkColors,
+            onChanged = { colors ->
+                viewModel.libraryPreferences.filterBookmarkColors.set(colors.mapTo(mutableSetOf()) { it.name })
+            },
+            onDismissRequest = { showBookmarkColorFilter = false },
+        )
+    }
+    // KNS <--
     val filterCompleted by viewModel.libraryPreferences.filterCompleted.collectAsState()
     TriStateItem(
         label = stringResource(MR.strings.completed),

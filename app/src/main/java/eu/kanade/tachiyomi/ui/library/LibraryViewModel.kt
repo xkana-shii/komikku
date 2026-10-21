@@ -86,6 +86,7 @@ import mihon.domain.library.model.search.ComparisonQueryNode
 import mihon.domain.library.model.search.EmptyQueryNode
 import mihon.domain.library.model.search.FieldQueryNode
 import mihon.domain.library.model.search.GeneralQueryNode
+import mihon.domain.library.model.search.LibraryFieldQueryNode
 import mihon.domain.library.model.search.MetadataQueryNode
 import mihon.domain.library.model.search.NotNode
 import mihon.domain.library.model.search.OrNode
@@ -108,7 +109,9 @@ import tachiyomi.domain.category.model.Category.Companion.UNCATEGORIZED_ID
 import tachiyomi.domain.category.service.CategoryTree
 import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetLibraryBookmarkColors
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.service.ChapterVisibility
 import tachiyomi.domain.history.interactor.GetNextChapters
@@ -182,6 +185,7 @@ class LibraryViewModel(
     // KNS -->
     private val chapterVisibility: ChapterVisibility,
     private val libraryVisibleCounts: LibraryVisibleCounts,
+    private val getLibraryBookmarkColors: GetLibraryBookmarkColors,
     // KNS <--
 ) : ViewModel() {
 
@@ -288,6 +292,13 @@ class LibraryViewModel(
         .distinctUntilChanged()
         .flatMapLatest { needsTracks -> if (needsTracks) getTracksPerManga.subscribe() else flowOf(emptyMap()) }
 
+    // KNS --> chapter colors are only read while the bookmark-color filter is in use
+    private val bookmarkColors = libraryPreferences.filterBookmarkColors.changes()
+        .map { it.isNotEmpty() }
+        .distinctUntilChanged()
+        .flatMapLatest { needed -> if (needed) getLibraryBookmarkColors.subscribe() else flowOf(emptyMap()) }
+    // KNS <--
+
     private val hasActiveFilters = combine(
         getLibraryItemPreferencesFlow(),
         getTrackingFiltersFlow(),
@@ -306,8 +317,11 @@ class LibraryViewModel(
         )
             .fastAny { it != TriState.DISABLED } ||
             // KMK -->
-            prefs.filterCategories
-        // KMK <--
+            prefs.filterCategories ||
+            // KMK <--
+            // KNS -->
+            prefs.filterBookmarkColors.isNotEmpty()
+        // KNS <--
     }
         .distinctUntilChanged()
 
@@ -318,12 +332,14 @@ class LibraryViewModel(
             getFavoritesFlow(),
             ::Triple,
         ),
-        combine(tracks, getTrackingFiltersFlow(), ::Pair),
+        // KNS -->
+        combine(tracks, getTrackingFiltersFlow(), bookmarkColors, ::Triple),
+        // KNS <--
         // KMK -->
         combine(includedCategories, excludedCategories, ::Pair),
         // KMK <--
         getLibraryItemPreferencesFlow(),
-    ) { (searchQuery, categories, favorites), (tracksMap, trackingFilters), (includedCategories, excludedCategories), itemPreferences ->
+    ) { (searchQuery, categories, favorites), (tracksMap, trackingFilters, bookmarkColors), (includedCategories, excludedCategories), itemPreferences ->
         val filteredFavorites = favorites
             .applyFilters(
                 tracksMap,
@@ -335,6 +351,7 @@ class LibraryViewModel(
                 // KMK <--
                 // KNS -->
                 categories,
+                bookmarkColors,
                 // KNS <--
             )
             .let {
@@ -343,7 +360,14 @@ class LibraryViewModel(
                     it
                 } else {
                     // Filter query
-                    filterLibrary(it, searchQuery, trackingFilters)
+                    filterLibrary(
+                        it,
+                        searchQuery,
+                        trackingFilters,
+                        // KNS -->
+                        categories,
+                        // KNS <--
+                    )
                 }
             }
 
@@ -505,6 +529,7 @@ class LibraryViewModel(
         // KMK <--
         // KNS -->
         categories: List<Category>,
+        bookmarkColors: Map<Long, Set<Int>>,
         // KNS <--
     ): List<LibraryItem> {
         val downloadedOnly = preferences.globalFilterDownloaded
@@ -545,6 +570,13 @@ class LibraryViewModel(
         val filterFnBookmarked: (LibraryItem) -> Boolean = {
             applyFilter(filterBookmarked) { it.libraryManga.hasBookmarks }
         }
+
+        // KNS -->
+        val filterBookmarkColors = preferences.filterBookmarkColors
+        val filterFnBookmarkColors: (LibraryItem) -> Boolean = {
+            BookmarkColor.matchesFilter(bookmarkColors[it.id].orEmpty(), filterBookmarkColors)
+        }
+        // KNS <--
 
         val filterFnCompleted: (LibraryItem) -> Boolean = {
             applyFilter(filterCompleted) { it.libraryManga.manga.status.toInt() == SManga.COMPLETED }
@@ -611,6 +643,9 @@ class LibraryViewModel(
                 filterFnUnread(it) &&
                 filterFnStarted(it) &&
                 filterFnBookmarked(it) &&
+                // KNS -->
+                filterFnBookmarkColors(it) &&
+                // KNS <--
                 filterFnCompleted(it) &&
                 filterFnIntervalCustom(it) &&
                 filterFnTracking(it) &&
@@ -838,6 +873,9 @@ class LibraryViewModel(
             libraryPreferences.useLangIcon.changes(),
             libraryPreferences.filterCategories.changes(),
             // KMK <--
+            // KNS -->
+            libraryPreferences.filterBookmarkColors.changes(),
+            // KNS <--
         ) {
             ItemPreferences(
                 downloadBadge = it[0] as Boolean,
@@ -860,6 +898,9 @@ class LibraryViewModel(
                 useLangIcon = it[14] as Boolean,
                 filterCategories = it[15] as Boolean,
                 // KMK <--
+                // KNS -->
+                filterBookmarkColors = BookmarkColor.fromNames((it[16] as Set<*>).filterIsInstance<String>()),
+                // KNS <--
             )
         }
     }
@@ -1324,6 +1365,9 @@ class LibraryViewModel(
         unfiltered: List<LibraryItem>,
         query: String?,
         loggedInTrackServices: Map<Long, TriState>,
+        // KNS -->
+        categories: List<Category>,
+        // KNS <--
     ): List<LibraryItem> {
         if (unfiltered.isEmpty() || query.isNullOrBlank()) return unfiltered
 
@@ -1374,12 +1418,30 @@ class LibraryViewModel(
             emptyMap()
         }
 
+        // KNS -->
+        val fields = LibrarySearchFields(
+            categories = categories,
+            defaultCategoryName = context.stringResource(MR.strings.label_default),
+            statusName = { status -> statusMap[status]?.first?.let { context.stringResource(it) } },
+            trackerValues = { track ->
+                val tracker = trackerManager.get(track.trackerId)
+                listOfNotNull(
+                    tracker?.name,
+                    tracker?.getStatus(track.status)?.let { context.stringResource(it) },
+                )
+            },
+        )
+        // KNS <--
+
         return unfiltered.fastFilter { item ->
             queryNode.matchesWithSupplements(
                 item = item,
                 tracks = tracks[item.libraryManga.manga.id].orEmpty(),
                 context = context,
                 metadata = if (hasMetadataQuery) metadataById[item.libraryManga.manga.id] else null,
+                // KNS -->
+                fields = fields,
+                // KNS <--
             )
         }
     }
@@ -1404,10 +1466,13 @@ class LibraryViewModel(
         tracks: List<Track>,
         context: Context,
         metadata: LibrarySearchMetadata?,
+        // KNS -->
+        fields: LibrarySearchFields,
+        // KNS <--
     ): Boolean = when (this) {
-        is AndNode -> children.all { it.matchesWithSupplements(item, tracks, context, metadata) }
-        is OrNode -> children.any { it.matchesWithSupplements(item, tracks, context, metadata) }
-        is NotNode -> !child.matchesWithSupplements(item, tracks, context, metadata)
+        is AndNode -> children.all { it.matchesWithSupplements(item, tracks, context, metadata, fields) }
+        is OrNode -> children.any { it.matchesWithSupplements(item, tracks, context, metadata, fields) }
+        is NotNode -> !child.matchesWithSupplements(item, tracks, context, metadata, fields)
         is EmptyQueryNode -> true
         is GeneralQueryNode -> {
             val trackerMatch = tracks.isNotEmpty() && filterTracks(value, tracks, context)
@@ -1415,6 +1480,9 @@ class LibraryViewModel(
         }
         is FieldQueryNode, is ComparisonQueryNode -> matches(item)
         is MetadataQueryNode -> matches(item, metadata)
+        // KNS -->
+        is LibraryFieldQueryNode -> fields.matches(this, item, tracks)
+        // KNS <--
     }
     // KUN <--
 
@@ -1794,6 +1862,9 @@ class LibraryViewModel(
         // KMK -->
         val filterCategories: Boolean,
         // KMK <--
+        // KNS -->
+        val filterBookmarkColors: Set<BookmarkColor> = emptySet(),
+        // KNS <--
     )
 
     @Immutable

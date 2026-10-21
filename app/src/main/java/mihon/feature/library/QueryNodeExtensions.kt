@@ -11,6 +11,7 @@ import mihon.domain.library.model.search.ComparisonQueryNode
 import mihon.domain.library.model.search.EmptyQueryNode
 import mihon.domain.library.model.search.FieldQueryNode
 import mihon.domain.library.model.search.GeneralQueryNode
+import mihon.domain.library.model.search.LibraryFieldQueryNode
 import mihon.domain.library.model.search.MangaField
 import mihon.domain.library.model.search.MetadataQueryNode
 import mihon.domain.library.model.search.NotNode
@@ -40,6 +41,9 @@ fun QueryNode.containsMetadataQuery(): Boolean = when (this) {
     is NotNode -> child.containsMetadataQuery()
     is MetadataQueryNode -> true
     is EmptyQueryNode, is GeneralQueryNode, is FieldQueryNode, is ComparisonQueryNode -> false
+    // KNS -->
+    is LibraryFieldQueryNode -> false
+    // KNS <--
 }
 
 /**
@@ -75,6 +79,9 @@ fun QueryNode.matches(item: LibraryItem, metadata: LibrarySearchMetadata? = null
         // KUN -->
         is MetadataQueryNode -> matchesMetadata(metadata)
         // KUN <--
+        // KNS --> resolved by the library, which has the categories and tracks; without them nothing matches
+        is LibraryFieldQueryNode -> matches(emptyList(), emptyList())
+        // KNS <--
     }
 }
 

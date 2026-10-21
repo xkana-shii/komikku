@@ -58,8 +58,8 @@ row will be re-checked when its subsystem is touched.
 | 1 | Persistence: KNS columns (migration 57), domain fields, mappers, old-fork database conversion | done | see session log |
 | 2a | Category hierarchy + Smart Categories: domain, data, backup/restore, sync, tracker hook | done | see session log |
 | 2b | Category manager UI, Set Categories dialog, library subcategory navigation/filters | done | see session log |
-| 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | see session log |
-| 4 | Library search/filters/sort/presentation + performance | planned | — |
+| 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | `2af2c9215a` |
+| 4 | Library search/filters/sort/presentation + performance | partial (search fields, color filters); sort/presentation open | see session log |
 | 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | planned | — |
 | 6 | Manga details/relations, reader controls & automation | planned | — |
 | 7 | Browse / Global Search / feeds / extensions | planned | — |
@@ -121,23 +121,23 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 2.1-a | Parsed search expressions | PARTIAL | HEAD has SY/Komikku query filtering; old fork `LibrarySearchParser`/`LibrarySearchToken` | — | — |
-| 2.1-b | Field-specific terms (fork parser's operators only) | PARTIAL | Inspect old parser before porting | — | — |
-| 2.1-c | Negative/exclusion terms | PARTIAL | SY supports `-` exclusion; verify | — | — |
+| 2.1-a | Parsed search expressions | DONE | Mihon/Komi-kun AST parser (fields, `-`, `||`, parentheses, comparisons, SY metadata) kept; the old fork's parser is superseded, its extra fields added as `LibraryFieldQueryNode` | `LibrarySearchParserTest`, `LibraryFieldQueryTest` | batch 4 |
+| 2.1-b | Field-specific terms (fork parser's operators only) | DONE | Old-fork-only fields restored: `category:`/`cat:`, `tracker:`, `status:` (`LibrarySearchFields`); the old `$` exact prefix is not restored (the AST has its own quoting) | `LibraryFieldQueryTest`, `LibrarySearchFieldsTest` | batch 4 |
+| 2.1-c | Negative/exclusion terms | DONE | `-term`, `-field:value`, NOT via the AST; library fields honor negation | `LibraryFieldQueryTest` | batch 4 |
 | 2.1-d | Search respects selected parent/child view and filters | PARTIAL | Search runs over the tab's subtree and the selected chip branch; structured parser pending (batch 4) | `LibraryCategoryTreeTest` (4) | batch 2a + 2b |
-| 2.1-e | Responsive live search | PARTIAL | Verify debounce on HEAD | — | — |
+| 2.1-e | Responsive live search | PRESENT | Search input debounced 250 ms before filtering (`searchQuery.debounce`); filtering runs off the main thread (`flowOn(IO)`) | — | — |
 | 2.1-f | Empty-result correctness | PARTIAL | | — | — |
 | 2.2-a | Include categories (tree semantics) | DONE-UNVERIFIED | See 1.3-e | — | batch 2a + 2b |
 | 2.2-b | Exclude categories/descendants | DONE-UNVERIFIED | See 1.3-e | — | batch 2a + 2b |
 | 2.2-c | All-category subcategory exclusion | HISTORICAL | | — | — |
 | 2.2-d | Tracker filters without per-title queries | PARTIAL | Mihon tracker filters exist | — | — |
-| 2.2-e | Bookmark-color filter | MISSING | Preference `pref_filter_library_bookmark_colors` exists; filter UI + query in batch 4 | — | — |
-| 2.2-f | Built-in filters account for blacklist/Smart Merge | PARTIAL | Library counts and continue-reading use the visibility rule (`LibraryVisibleCounts`); the unread/bookmarked/downloaded filter predicates still use stored counts — batch 4 | `LibraryVisibleCountsTest` | batch 3 |
+| 2.2-e | Bookmark-color filter | DONE | `pref_filter_library_bookmark_colors` + filter sheet row/dialog; colors read with one query (`getBookmarkColorsByManga`, merged members included) only while the filter is set | `BookmarkColorsByMangaTest`, `BookmarkColorFilterTest` | batch 4 |
+| 2.2-f | Built-in filters account for blacklist/Smart Merge | DONE | Unread/started/bookmarked filters read the counts `LibraryVisibleCounts` rewrote for entries with rules; the downloaded filter still counts downloaded hidden chapters; the color filter uses stored colors, including hidden chapters' | `LibraryVisibleCountsTest` | batch 3 + 4 |
 | 2.2-g | Merged-entry downloaded/unread correctness | PARTIAL | Continue-reading of merged entries fixed (merged check compared the manga id); downloaded/unread filters for merged entries batch 4 | — | batch 3 |
-| 2.3-a | Group by source without expensive regrouping | PARTIAL | Komikku group-by exists; check caching | — | — |
-| 2.3-b | Source language in source grouping (+ flag option) | PARTIAL | | — | — |
+| 2.3-a | Group by source without expensive regrouping | PRESENT | Komikku/Komi-kun group by source (non-blocking source-name snapshot); nothing fork-specific to add | — | — |
+| 2.3-b | Source language in source grouping (+ flag option) | HISTORICAL | The old fork's language suffix on source groups was commented out (`TODO`), so it never shipped; covers already show language badges/flags (KMK `useLangIcon`) | — | — |
 | 2.3-c | Search source name and language | HISTORICAL | | — | — |
-| 2.3-d | Source/language badges on covers | PARTIAL | Komikku language badge exists | — | — |
+| 2.3-d | Source/language badges on covers | PRESENT | KMK source and language badges (`LibraryBadges`, flag option) | — | — |
 | 2.4-a | Extended sort/display choices | PARTIAL | Identify fork-only sort modes in old `LibrarySort` | — | — |
 | 2.4-b | Correct sort behavior after updates | PARTIAL | | — | — |
 | 2.4-c | Custom cover ratios/styles/badge colors | PARTIAL | Komikku cover ratio exists | — | — |
@@ -175,7 +175,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 4.1-c | Color picker in chapter list (incl. bulk) | DONE | Selection bar → `BookmarkColorDialog`; choosing a color bookmarks; plain (un)bookmark resets to default | manual pending | batch 3 |
 | 4.1-d | Color picker in reader | DONE | Long-press the reader bookmark button → `BookmarkColorDialog` (`ReaderViewModel.setChapterBookmarkColor`) | manual pending | batch 3 |
 | 4.1-e | Reactive display of saved color | DONE-UNVERIFIED | Manga list observes chapters; reader top bar state carries `bookmarkColor` | manual pending | batch 3 |
-| 4.1-f | Filter by color | MISSING | Per-manga `manga_bookmark_color_filter_<id>` / library color filter — batch 4 | — | — |
+| 4.1-f | Filter by color | DONE | Library filter (2.2-e) and per-manga chapter filter `manga_bookmark_color_filter_<id>` in the chapter filter sheet; the manga's filter icon shows it as active | `BookmarkColorFilterTest` | batch 4 |
 | 4.1-g | Reader chapter-list sync on color change | DONE-UNVERIFIED | Reader chapter list shows the color; toggling there resets it and updates the top bar for the current chapter | manual pending | batch 3 |
 | 4.1-h | Rounded reader bookmark ripple | DONE | Long-press bookmark button clipped to a circle (round ripple) | manual pending | batch 3 |
 | 4.1-i | Color survives source refresh | DONE | `SyncChaptersWithSource` carries a removed chapter's color to its re-upload | `SyncChaptersBookmarkColorTest` | batch 3 |
@@ -499,7 +499,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 21.1-h | Efficient tracker filters | PARTIAL | | — | — |
 | 21.1-i | Efficient category filters | MISSING | | — | — |
 | 21.1-j | Throttled invalidations | PARTIAL | | — | — |
-| 21.1-k | Aggregate only relevant manga | PARTIAL | | — | — |
+| 21.1-k | Aggregate only relevant manga | PARTIAL | Bookmark colors and visible counts are only computed when needed (filter set / entries with rules) | — | batch 3 + 4 |
 | 21.2-a | No side effects in state reduction | PARTIAL | | — | — |
 | 21.2-b | Debounced search | PARTIAL | | — | — |
 | 21.3-a | Share network resources (fork-owned) | PARTIAL | | — | — |
@@ -746,3 +746,28 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Deferred:** range-rule editor UI; bookmark-color filters (library + per manga) and library unread/
   bookmarked filter predicates under the visibility rule (batch 4); History filters (batch 8); page previews
   ignore the blacklist; backup #619 (reveal toggle) is not restored. No device test of the new UI yet.
+
+### Batch 4 (part 1) — library search fields and bookmark-color filters
+
+- **Search:** HEAD's Mihon/Komi-kun AST search already covers parsed expressions, field terms, negation,
+  `||`/parentheses, comparisons and the SY metadata namespaces, so the old fork's `LibrarySearchParser` is not
+  ported. Its fields that HEAD lacked are added as `LibraryField` / `LibraryFieldQueryNode` (`KNS`, in
+  `LibrarySearchAst.kt` + one parser branch): `category:`/`cat:` (categories + ancestors by name or id, default
+  category for uncategorized), `tracker:` (tracker name or tracking status), `status:` (publishing status name or
+  code). Resolved in `LibraryViewModel.filterLibrary` through `LibrarySearchFields`. Not restored: the old `$`
+  exact prefix.
+- **Bookmark-color filters:** `chapter.sq` `getBookmarkColorsByManga` (bookmarked chapters' colors per manga,
+  merged entries include their members') → `ChapterRepository.getBookmarkColorsByMangaAsFlow` →
+  `GetLibraryBookmarkColors`, subscribed only while `pref_filter_library_bookmark_colors` is non-empty; library
+  filter sheet row + `BookmarkColorFilterDialog`; counts as an active filter. Per manga:
+  `manga_bookmark_color_filter_<id>` in the chapter filter sheet, applied in `State.Success.applyFilters`, part
+  of `filterActive`. `BookmarkColor.fromNames` / `matchesFilter` hold the shared rule.
+- **Visibility and built-in filters:** unread/started/bookmarked library filters already read the counts
+  `LibraryVisibleCounts` rewrites (batch 3), so they follow the blacklist and Smart Merge. Known gaps: the
+  downloaded filter/badge counts downloaded hidden chapters; the color filter uses stored colors, including
+  those of hidden chapters.
+- **Tests:** `LibraryFieldQueryTest` (3), `LibrarySearchFieldsTest` (3), `BookmarkColorFilterTest` (3),
+  `BookmarkColorsByMangaTest` (1).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 194 with 1 skipped, data 89, domain 181; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Still open in batch 4:** source grouping/language (2.3), sort/cover/presentation items (2.4), list-item
+  stability (2.4-e), All-category subcategory exclusion (2.2-c, historical), merged downloaded filter (2.2-g).

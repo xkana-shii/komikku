@@ -110,6 +110,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
@@ -440,7 +441,8 @@ class MangaViewModel(
     private val visibilitySettings = combine(
         libraryPreferences.smartScanlatorMerge.changes(),
         libraryPreferences.hideBlacklistedChapters(mangaId).changes(),
-        ::Pair,
+        libraryPreferences.bookmarkColorFilter(mangaId).changes().map(BookmarkColor::fromNames),
+        ::Triple,
     ).distinctUntilChanged()
     // KNS <--
 
@@ -457,7 +459,7 @@ class MangaViewModel(
         // KNS -->
         visibilitySettings,
         // KNS <--
-    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted) ->
+    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted, colorFilter) ->
         val effectiveManga = override ?: manga
         // KNS -->
         // The same visibility rule as the reader, History, downloads and library counts; revealed
@@ -483,6 +485,7 @@ class MangaViewModel(
             // KNS -->
             blacklistedCount = visibility.blacklistedChapterIds.size,
             hideBlacklistedChapters = hideBlacklisted,
+            bookmarkColorFilter = colorFilter,
             // KNS <--
         )
     }
@@ -627,6 +630,7 @@ class MangaViewModel(
             // KNS -->
             blacklistedChapterCount = mangaAndChapters.blacklistedCount,
             hideBlacklistedChapters = mangaAndChapters.hideBlacklistedChapters,
+            bookmarkColorFilter = mangaAndChapters.bookmarkColorFilter,
             // KNS <--
         )
     }
@@ -1678,6 +1682,10 @@ class MangaViewModel(
         libraryPreferences.hideBlacklistedChapters(mangaId).set(hide)
     }
 
+    fun setBookmarkColorFilter(colors: Set<BookmarkColor>) {
+        libraryPreferences.bookmarkColorFilter(mangaId).set(colors.mapTo(mutableSetOf()) { it.name })
+    }
+
     fun showBlacklistDialog() {
         val manga = successState?.manga ?: return
         viewModelScope.launch {
@@ -2167,6 +2175,7 @@ class MangaViewModel(
         // KNS -->
         val blacklistedCount: Int,
         val hideBlacklistedChapters: Boolean,
+        val bookmarkColorFilter: Set<BookmarkColor>,
         // KNS <--
     )
 
@@ -2231,6 +2240,9 @@ class MangaViewModel(
             /** Blacklisted chapters of this manga that resolve to a current chapter. */
             val blacklistedChapterCount: Int = 0,
             val hideBlacklistedChapters: Boolean = true,
+
+            /** Only bookmarks of these colors are listed; empty = no color filter. */
+            val bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
             // KNS <--
         ) : State {
             // KMK -->
@@ -2310,7 +2322,10 @@ class MangaViewModel(
                 get() = excludedScanlators.intersect(availableScanlators).isNotEmpty()
 
             val filterActive: Boolean
-                get() = scanlatorFilterActive || manga.chaptersFiltered()
+                get() = scanlatorFilterActive || manga.chaptersFiltered() ||
+                    // KNS -->
+                    bookmarkColorFilter.isNotEmpty()
+            // KNS <--
 
             /**
              * Applies the view filters to the list of chapters obtained from the database.
@@ -2325,6 +2340,12 @@ class MangaViewModel(
                 return asSequence()
                     .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
+                    // KNS -->
+                    .filter { (chapter) ->
+                        bookmarkColorFilter.isEmpty() ||
+                            (chapter.bookmark && BookmarkColor.matchesFilter(listOf(chapter.bookmarkColor), bookmarkColorFilter))
+                    }
+                    // KNS <--
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
                     .sortedWith { (chapter1), (chapter2) -> chapterSort(chapter1, chapter2) }
             }

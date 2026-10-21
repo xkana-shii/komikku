@@ -142,3 +142,42 @@ object MetadataNamespace {
     fun canonical(value: String): String? = aliases[value.lowercase()]
 }
 // KUN <--
+
+// KNS -->
+/**
+ * The fork's library search fields that are resolved against data outside the manga row: the
+ * entry's categories (with their parents), its trackers and its publishing status. Same names and
+ * aliases as the previous personal fork's parser.
+ */
+enum class LibraryField(vararg val aliases: String) {
+    CATEGORY("category", "cat"),
+    TRACKER("tracker"),
+    STATUS("status"),
+    ;
+
+    companion object {
+        private val lookup = entries.flatMap { field ->
+            field.aliases.map { it.lowercase() to field }
+        }.toMap()
+
+        fun fromString(value: String): LibraryField? = lookup[value.lowercase()]
+    }
+}
+
+/** A [LibraryField] term; the library supplies the values it is matched against. */
+data class LibraryFieldQueryNode(
+    val field: LibraryField,
+    val value: String,
+    val negated: Boolean,
+) : QueryNode {
+    /**
+     * A number matches one of [ids] exactly (category id, status code); otherwise the term matches a
+     * [names] entry that contains it, ignoring case.
+     */
+    fun matches(ids: Collection<Long>, names: Collection<String>): Boolean {
+        val id = value.toLongOrNull()
+        val match = (id != null && id in ids) || names.any { it.contains(value, ignoreCase = true) }
+        return if (negated) !match else match
+    }
+}
+// KNS <--
