@@ -23,6 +23,7 @@ DROP TRIGGER IF EXISTS update_last_modified_at_mangas_categories;
 DROP TRIGGER IF EXISTS insert_manga_category_update_version;
 DROP TRIGGER IF EXISTS delete_manga_category_update_version;
 DROP TRIGGER IF EXISTS update_last_favorited_at_mangas;
+DROP TRIGGER IF EXISTS manga_chapter_stats_insert_history;
 -- SY <--
 
 DROP INDEX library_favorite_index;
