@@ -147,7 +147,6 @@ import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.model.ScanlatorRangeRule
 import tachiyomi.domain.chapter.model.chapterListVisibility
@@ -1699,17 +1698,6 @@ class MangaViewModel(
         toggleAllSelection(false)
     }
 
-    fun removeBlacklistEntries(entries: Collection<String>) {
-        val manga = successState?.manga ?: return
-        if (entries.isEmpty()) return
-        viewModelScope.launch {
-            updateManga.await(
-                MangaUpdate(manga.id) { blacklistedChapters = manga.blacklistedChapters.filterNot(entries::contains) },
-            )
-            showBlacklistDialog()
-        }
-    }
-
     fun setHideBlacklistedChapters(hide: Boolean) {
         libraryPreferences.hideBlacklistedChapters(mangaId).set(hide)
     }
@@ -1722,43 +1710,56 @@ class MangaViewModel(
         }
     }
 
-    fun showBlacklistDialog() {
-        val manga = successState?.manga ?: return
+    /**
+     * Opens the scanlator preferences dialog, whose second mode is the chapter blacklist: each entry
+     * with the chapters it currently hides (resolved against all chapters, hidden ones included).
+     */
+    fun showScanlatorPreferencesDialog() {
+        val state = successState ?: return
         viewModelScope.launch {
-            val all = getChaptersForBlacklist(manga)
-            dialog.value = Dialog.BlacklistedChapters(
-                manga.blacklistedChapters.map { key ->
+            val all = getChaptersForBlacklist(state.manga)
+            dialog.value = Dialog.ScanlatorPreferences(
+                scanlators = state.availableScanlators.toList(),
+                priority = state.manga.scanlatorPriority,
+                excludedScanlators = state.excludedScanlators,
+                smartMergeOverride = state.manga.smartMergeOverride,
+                globalSmartMerge = libraryPreferences.smartScanlatorMerge.get(),
+                rangeRules = state.manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
+                blacklist = state.manga.blacklistedChapters.map { key ->
                     BlacklistEntry(key = key, chapters = resolveChapterBlacklistMatches(key, all).map { it.name })
                 },
             )
         }
     }
 
-    fun showScanlatorPreferencesDialog() {
-        val state = successState ?: return
-        dialog.value = Dialog.ScanlatorPreferences(
-            scanlators = state.availableScanlators.toList(),
-            priority = state.manga.scanlatorPriority,
-            smartMergeOverride = state.manga.smartMergeOverride,
-            globalSmartMerge = libraryPreferences.smartScanlatorMerge.get(),
-            rangeRules = state.manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
-        )
-    }
-
+    /**
+     * Saves the scanlator preferences dialog: priority, Smart Merge override and range rules on the
+     * manga, removed blacklist entries (from the manga's current blacklist, so entries added meanwhile
+     * stay) and, when they changed, the excluded scanlators.
+     */
     fun setScanlatorPreferences(
         priority: List<String>,
         smartMergeOverride: Boolean?,
         rangeRules: List<ScanlatorRangeRule>,
+        excludedScanlators: Set<String>,
+        removedBlacklistEntries: Set<String>,
     ) {
-        val manga = successState?.manga ?: return
+        val state = successState ?: return
+        val manga = state.manga
         viewModelScope.launch {
             updateManga.await(
                 MangaUpdate(manga.id) {
                     scanlatorPriority = priority
                     this.smartMergeOverride = smartMergeOverride
                     scanlatorRangeRules = rangeRules.map(::encodeScanlatorRangeRule)
+                    if (removedBlacklistEntries.isNotEmpty()) {
+                        blacklistedChapters = manga.blacklistedChapters.filterNot(removedBlacklistEntries::contains)
+                    }
                 },
             )
+            if (excludedScanlators != state.excludedScanlators) {
+                setExcludedScanlators.await(mangaId, excludedScanlators)
+            }
         }
         dismissDialog()
     }
@@ -2136,13 +2137,14 @@ class MangaViewModel(
         data object FullCover : Dialog
 
         // KNS -->
-        data class BlacklistedChapters(val entries: List<BlacklistEntry>) : Dialog
         data class ScanlatorPreferences(
             val scanlators: List<String>,
             val priority: List<String>,
+            val excludedScanlators: Set<String>,
             val smartMergeOverride: Boolean?,
             val globalSmartMerge: Boolean,
             val rangeRules: List<ScanlatorRangeRule>,
+            val blacklist: List<BlacklistEntry>,
         ) : Dialog
         // KNS <--
     }

@@ -60,7 +60,6 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.BookmarkColor
-import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.service.ChapterBookmarks
 import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.library.service.LibraryPreferences

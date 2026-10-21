@@ -501,10 +501,6 @@ private fun MangaScreenSmallImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
-                // KNS -->
-                onClickBlacklist = chapterVisibilityActions.onOpenBlacklist,
-                onClickScanlatorPreferences = chapterVisibilityActions.onOpenScanlatorPreferences,
-                // KNS <--
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
                 // KMK -->
@@ -810,6 +806,9 @@ private fun MangaScreenSmallImpl(
                             chapterCount = chapters.size,
                             missingChapterCount = state.missingChapterCount,
                             onClick = onFilterClicked,
+                            // KNS -->
+                            onScanlatorPreferencesClick = chapterVisibilityActions.onOpenScanlatorPreferences,
+                            // KNS <--
                         )
                     }
 
@@ -967,10 +966,6 @@ private fun MangaScreenLargeImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
-                // KNS -->
-                onClickBlacklist = chapterVisibilityActions.onOpenBlacklist,
-                onClickScanlatorPreferences = chapterVisibilityActions.onOpenScanlatorPreferences,
-                // KNS <--
                 onCancelActionMode = { onAllChapterSelected(false) },
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
@@ -1255,6 +1250,9 @@ private fun MangaScreenLargeImpl(
                                     chapterCount = chapters.size,
                                     missingChapterCount = state.missingChapterCount,
                                     onClick = onFilterButtonClicked,
+                                    // KNS -->
+                                    onScanlatorPreferencesClick = chapterVisibilityActions.onOpenScanlatorPreferences,
+                                    // KNS <--
                                 )
                             }
 

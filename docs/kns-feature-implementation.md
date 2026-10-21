@@ -1055,3 +1055,41 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   anchoring in the manga (phone and tablet) and Updates bars; the reader in pager, webtoon and WebGPU
   paged/continuous modes, both orientations and RTL, without page turns; the reader check following
   chapter changes; the remaining bottom-bar long-press hints.
+
+### Batch 15 — combined scanlator preferences and blacklist dialog
+
+- **Entry point:** `ChapterHeader` has an optional scanlator button (`Group` icon with a tooltip, disabled
+  in selection mode) that opens `MangaViewModel.showScanlatorPreferencesDialog`, in both manga layouts.
+  The two overflow entries (Blacklisted chapters, Scanlator preferences) and their `MangaToolbar` /
+  `ChapterVisibilityActions` parameters are removed.
+- **Dialog:** `ScanlatorPreferencesDialog` (new file) is one `AlertDialog` whose title holds the mode
+  switch (`Block` → blacklist, `Group` → scanlators) and whose body is `ScanlatorPreferencesContent`
+  or `BlacklistContent`, each with its own scroll state. Both edit one `ScanlatorPreferencesDraft`
+  held above the modes, including the half-typed range form, so switching never loses edits. Save
+  calls `setScanlatorPreferences(priority, override, rangeRules, excludedScanlators,
+  removedBlacklistEntries)`; Cancel stores nothing.
+- **Scanlators (Mihon PR #2828 as visual reference only):** `ReorderableColumn` rows with a drag handle,
+  the name (dimmed to `DISABLED_ALPHA` when excluded) and a `Visibility`/`VisibilityOff` toggle.
+  Excluded scanlators stay draggable so their priority is kept; exclusions are saved through the
+  existing `SetExcludedScanlators` only when they changed, and exclusions of scanlators that are not
+  available now are kept. The Smart Merge override is three tooltip icon buttons (`Public`,
+  `CheckCircle`, `Cancel`; primary when selected) with the effective-state line. Range rules keep
+  their parsing, order and "last match wins" semantics, now as a separate section below the list.
+  None of Mihon's data model, queries or new-scanlator ordering was imported.
+- **Blacklist:** the entries with their resolved chapters (or "unavailable"), removal staged until
+  Save (applied to the manga's current blacklist), and the hide toggle as an `IconToggleButton`
+  (`CheckBox` / `CheckBoxOutlineBlank`, state in its content description) on the unchanged per-manga
+  preference, applied immediately as before. `Dialog.BlacklistedChapters`, `showBlacklistDialog` and
+  `removeBlacklistEntries` are gone; `Dialog.ScanlatorPreferences` carries the blacklist and exclusions.
+- **Unchanged:** no schema, backup, sync or visibility logic changed; `ChapterSmartMergeTest` and the
+  visibility tests still pass. Also removed three imports orphaned by Batch 14.
+- **Tests:** `ScanlatorPreferencesDraftTest` (8): initial order, drag moves, exclusion toggles (also
+  for moved excluded rows), the three override states, mode switches keeping every edit, range form
+  validation and append order, saved ranges still overriding priority via `applySmartScanlatorMerge`,
+  staged blacklist removal with unavailable entries. No Compose UI test setup exists.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 260 with 1 skipped, data 93, domain 198; 0
+  failures), assembleDebug, assembleRelease, `git diff --check`.
+- **Device checks pending:** dragging feel and the lack of auto-scroll while dragging in a long list,
+  dialog height with many scanlators and ranges, small screens and large fonts, tooltips, and the
+  header button next to the chapter count in phone and tablet layouts.

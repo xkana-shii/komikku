@@ -299,6 +299,8 @@
     <string name="blacklist_empty">No blacklisted chapters</string>
     <string name="hide_blacklisted_chapters">Hide blacklisted chapters</string>
     <string name="blacklist_chapter_unavailable">Unavailable chapter</string>
+    <string name="blacklist_hiding_enabled">Blacklisted chapters are hidden</string>
+    <string name="blacklist_hiding_disabled">Blacklisted chapters are shown</string>
     <string name="action_blacklist_chapter">Blacklist</string>
     <string name="action_unblacklist_chapter">Remove from blacklist</string>
     <string name="action_bookmark_color">Bookmark color</string>
@@ -422,6 +424,8 @@
     <string name="scanlator_preferences">Scanlator preferences</string>
     <string name="scanlator_priority">Priority</string>
     <string name="scanlator_priority_summary">The first scanlator in this list is preferred when several release the same chapter.</string>
+    <string name="scanlator_hide">Hide %1$s</string>
+    <string name="scanlator_show">Show %1$s</string>
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
     <string name="action_smart_scanlator_merge">Smart scanlator merge</string>

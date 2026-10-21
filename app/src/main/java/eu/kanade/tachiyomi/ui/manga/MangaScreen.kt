@@ -55,12 +55,12 @@ import eu.kanade.presentation.manga.ChapterVisibilityActions
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.manga.EditCoverAction
 import eu.kanade.presentation.manga.MangaScreen
-import eu.kanade.presentation.manga.components.BlacklistedChaptersDialog
 import eu.kanade.presentation.manga.components.ClearMangaDialog
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
 import eu.kanade.presentation.manga.components.ScanlatorFilterDialog
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDialog
+import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
 import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.more.settings.screen.SettingsEhScreen
 import eu.kanade.presentation.theme.TachiyomiTheme
@@ -118,7 +118,6 @@ import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.SequelPrequelEntry
@@ -415,7 +414,6 @@ class MangaScreen(
                 onBlacklist = viewModel::blacklistChapters,
                 onUnblacklist = viewModel::unblacklistChapters,
                 onBookmarkColor = viewModel::setBookmarkColor,
-                onOpenBlacklist = viewModel::showBlacklistDialog,
                 onOpenScanlatorPreferences = viewModel::showScanlatorPreferencesDialog,
             ),
             // KNS <--
@@ -688,23 +686,30 @@ class MangaScreen(
             }
             // KMK <--
             // KNS -->
-            is MangaViewModel.Dialog.BlacklistedChapters -> {
-                BlacklistedChaptersDialog(
-                    entries = dialog.entries.map { it.key to it.chapters },
-                    hideBlacklisted = successState.hideBlacklistedChapters,
-                    onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
-                    onRemove = viewModel::removeBlacklistEntries,
-                    onDismissRequest = onDismissRequest,
-                )
-            }
             is MangaViewModel.Dialog.ScanlatorPreferences -> {
                 ScanlatorPreferencesDialog(
-                    scanlators = dialog.scanlators,
-                    priority = dialog.priority,
-                    smartMergeOverride = dialog.smartMergeOverride,
+                    initial = remember(dialog) {
+                        ScanlatorPreferencesDraft.create(
+                            scanlators = dialog.scanlators,
+                            priority = dialog.priority,
+                            excluded = dialog.excludedScanlators,
+                            smartMergeOverride = dialog.smartMergeOverride,
+                            rangeRules = dialog.rangeRules,
+                            blacklist = dialog.blacklist.map { ScanlatorPreferencesDraft.BlacklistItem(it.key, it.chapters) },
+                        )
+                    },
                     globalSmartMerge = dialog.globalSmartMerge,
-                    rangeRules = dialog.rangeRules,
-                    onConfirm = viewModel::setScanlatorPreferences,
+                    hideBlacklisted = successState.hideBlacklistedChapters,
+                    onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
+                    onConfirm = { draft ->
+                        viewModel.setScanlatorPreferences(
+                            priority = draft.order,
+                            smartMergeOverride = draft.smartMergeOverride,
+                            rangeRules = draft.rangeRules,
+                            excludedScanlators = draft.excluded,
+                            removedBlacklistEntries = draft.removedBlacklistKeys,
+                        )
+                    },
                     onDismissRequest = onDismissRequest,
                 )
             }
