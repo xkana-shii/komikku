@@ -139,6 +139,9 @@ fun ChapterListDialog(
                     onChapterSwipe = {
                         onBookmark(chapterItem.chapter)
                     },
+                    // KNS -->
+                    bookmarkColor = chapterItem.chapter.bookmarkColor,
+                    // KNS <--
                 )
             }
         }

@@ -183,6 +183,9 @@ fun MangaScreen(
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    // KNS -->
+    chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    // KNS <--
 
     // For chapter swipe
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
@@ -258,6 +261,9 @@ fun MangaScreen(
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
             onMultiDeleteClicked = onMultiDeleteClicked,
+            // KNS -->
+            chapterVisibilityActions = chapterVisibilityActions,
+            // KNS <--
             onChapterSwipe = onChapterSwipe,
             onChapterSelected = onChapterSelected,
             onAllChapterSelected = onAllChapterSelected,
@@ -321,6 +327,9 @@ fun MangaScreen(
             onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
             onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
             onMultiDeleteClicked = onMultiDeleteClicked,
+            // KNS -->
+            chapterVisibilityActions = chapterVisibilityActions,
+            // KNS <--
             onChapterSwipe = onChapterSwipe,
             onChapterSelected = onChapterSelected,
             onAllChapterSelected = onAllChapterSelected,
@@ -396,6 +405,9 @@ private fun MangaScreenSmallImpl(
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    // KNS -->
+    chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    // KNS <--
 
     // For chapter swipe
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
@@ -481,6 +493,10 @@ private fun MangaScreenSmallImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
+                // KNS -->
+                onClickBlacklist = chapterVisibilityActions.onOpenBlacklist,
+                onClickScanlatorPreferences = chapterVisibilityActions.onOpenScanlatorPreferences,
+                // KNS <--
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
                 // KMK -->
@@ -516,6 +532,9 @@ private fun MangaScreenSmallImpl(
                 onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
                 onDownloadChapter = onDownloadChapter,
                 onMultiDeleteClicked = onMultiDeleteClicked,
+                // KNS -->
+                chapterVisibilityActions = chapterVisibilityActions,
+                // KNS <--
                 fillFraction = 1f,
             )
         },
@@ -849,6 +868,9 @@ private fun MangaScreenLargeImpl(
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    // KNS -->
+    chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    // KNS <--
 
     // For swipe actions
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
@@ -925,6 +947,10 @@ private fun MangaScreenLargeImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
+                // KNS -->
+                onClickBlacklist = chapterVisibilityActions.onOpenBlacklist,
+                onClickScanlatorPreferences = chapterVisibilityActions.onOpenScanlatorPreferences,
+                // KNS <--
                 onCancelActionMode = { onAllChapterSelected(false) },
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
@@ -962,6 +988,9 @@ private fun MangaScreenLargeImpl(
                 onMarkPreviousAsReadClicked = onMarkPreviousAsReadClicked,
                 onDownloadChapter = onDownloadChapter,
                 onMultiDeleteClicked = onMultiDeleteClicked,
+                // KNS -->
+                chapterVisibilityActions = chapterVisibilityActions,
+                // KNS <--
                 fillFraction = 0.5f,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1233,6 +1262,9 @@ private fun SharedMangaBottomActionMenu(
     onMarkPreviousAsReadClicked: (Chapter) -> Unit,
     onDownloadChapter: ((List<ChapterList.Item>, ChapterDownloadAction) -> Unit)?,
     onMultiDeleteClicked: (List<Chapter>) -> Unit,
+    // KNS -->
+    chapterVisibilityActions: ChapterVisibilityActions = ChapterVisibilityActions.None,
+    // KNS <--
     fillFraction: Float,
     modifier: Modifier = Modifier,
 ) {
@@ -1264,6 +1296,15 @@ private fun SharedMangaBottomActionMenu(
         }.takeIf {
             selected.fastAny { it.downloadState == Download.State.DOWNLOADED }
         },
+        // KNS -->
+        onBookmarkColorClicked = { chapterVisibilityActions.onBookmarkColor(selected.fastMap { it.chapter }) },
+        onBlacklistClicked = {
+            chapterVisibilityActions.onBlacklist(selected.fastMap { it.chapter })
+        }.takeIf { selected.fastAny { !it.blacklisted } },
+        onUnblacklistClicked = {
+            chapterVisibilityActions.onUnblacklist(selected.fastMap { it.chapter })
+        }.takeIf { selected.fastAny { it.blacklisted } },
+        // KNS <--
     )
 }
 
@@ -1345,6 +1386,10 @@ private fun LazyListScope.sharedChapterItems(
                     // SY <--
                     read = item.chapter.read,
                     bookmark = item.chapter.bookmark,
+                    // KNS -->
+                    bookmarkColor = item.chapter.bookmarkColor,
+                    blacklisted = item.blacklisted,
+                    // KNS <--
                     selected = item.selected,
                     downloadIndicatorEnabled =
                     !isAnyChapterSelected && !(mergedData?.manga?.get(item.chapter.mangaId) ?: manga).isLocal(),

@@ -138,15 +138,24 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.DeleteChapters
+import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
+import tachiyomi.domain.chapter.model.chapterListVisibility
+import tachiyomi.domain.chapter.model.smartScanlatorMergeEnabled
 import tachiyomi.domain.chapter.service.calculateChapterGap
+import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.getChapterSort
+import tachiyomi.domain.chapter.service.hybridChapterBlacklistKey
+import tachiyomi.domain.chapter.service.isChapterBlacklisted
 import tachiyomi.domain.chapter.service.missingChaptersCount
+import tachiyomi.domain.chapter.service.resolveChapterBlacklistKey
+import tachiyomi.domain.chapter.service.resolveChapterBlacklistMatches
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.libraryUpdateError.interactor.DeleteLibraryUpdateErrors
 import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
@@ -168,6 +177,7 @@ import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.manga.model.MangaRemoteUpdate
+import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
@@ -248,6 +258,9 @@ class MangaViewModel(
     private val insertLibraryUpdateErrors: InsertLibraryUpdateErrors,
     private val insertLibraryUpdateErrorMessages: InsertLibraryUpdateErrorMessages,
     private val deleteChaptersFromDb: DeleteChapters,
+    // KNS -->
+    private val getChaptersByMangaId: GetChaptersByMangaId,
+    // KNS <--
 ) : ViewModel() {
 
     private val subscriberGate = SubscriberGate()
@@ -423,6 +436,14 @@ class MangaViewModel(
         }
     // EXH <--
 
+    // KNS -->
+    private val visibilitySettings = combine(
+        libraryPreferences.smartScanlatorMerge.changes(),
+        libraryPreferences.hideBlacklistedChapters(mangaId).changes(),
+        ::Pair,
+    ).distinctUntilChanged()
+    // KNS <--
+
     private val mangaAndChapters = combine(
         baseMangaAndChapters,
         getFlatMetadata.subscribe(mangaId)
@@ -433,14 +454,36 @@ class MangaViewModel(
             downloadManager.queueState.pausedWhileUnsubscribed(),
             customMangaInfoOverride,
         ) { _, _, override -> override },
-    ) { (manga, chapters), flatMetadata, mergedData, override ->
+        // KNS -->
+        visibilitySettings,
+        // KNS <--
+    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted) ->
         val effectiveManga = override ?: manga
+        // KNS -->
+        // The same visibility rule as the reader, History, downloads and library counts; revealed
+        // blacklisted chapters are listed but flagged.
+        val visibility = chapters.chapterListVisibility(
+            manga = effectiveManga,
+            smartScanlatorMergeEnabled = effectiveManga.smartScanlatorMergeEnabled(globalSmartMerge),
+            hideBlacklistedChapters = hideBlacklisted,
+        )
+        // KNS <--
         MangaAndChapters(
             manga = effectiveManga,
             source = sourceManager.getOrStub(effectiveManga.source),
-            chapters = chapters.toChapterListItems(effectiveManga, mergedData),
+            chapters = visibility.chapters.toChapterListItems(
+                effectiveManga,
+                mergedData,
+                // KNS -->
+                visibility.blacklistedChapterIds,
+                // KNS <--
+            ),
             flatMetadata = flatMetadata,
             mergedData = mergedData,
+            // KNS -->
+            blacklistedCount = visibility.blacklistedChapterIds.size,
+            hideBlacklistedChapters = hideBlacklisted,
+            // KNS <--
         )
     }
 
@@ -581,6 +624,10 @@ class MangaViewModel(
             relatedMangaCollection = extras.relatedMangaCollection,
             seedColor = extras.seedColor ?: mangaAndChapters.manga.asMangaCover().vibrantCoverColor?.let { Color(it) },
             // KMK <--
+            // KNS -->
+            blacklistedChapterCount = mangaAndChapters.blacklistedCount,
+            hideBlacklistedChapters = mangaAndChapters.hideBlacklistedChapters,
+            // KNS <--
         )
     }
         // Composition would otherwise build these on first read, on the main thread, for every new state
@@ -1164,6 +1211,9 @@ class MangaViewModel(
         // SY -->
         mergedData: MergedMangaData?,
         // SY <--
+        // KNS -->
+        blacklistedIds: Set<Long> = emptySet(),
+        // KNS <--
     ): List<ChapterList.Item> {
         val isLocal = manga.isLocal()
         // SY -->
@@ -1208,6 +1258,9 @@ class MangaViewModel(
                 sourceName = source?.getNameForMangaInfo(),
                 showScanlator = !isExhManga,
                 // SY <--
+                // KNS -->
+                blacklisted = chapter.id in blacklistedIds,
+                // KNS <--
             )
         }
     }
@@ -1545,11 +1598,135 @@ class MangaViewModel(
         viewModelScope.launch {
             chapters
                 .filterNot { it.bookmark == bookmarked }
-                .map { ChapterUpdate(it.id) { bookmark = bookmarked } }
+                .map {
+                    ChapterUpdate(it.id) {
+                        bookmark = bookmarked
+                        // KNS --> (re-)bookmarking is ordinary until a color is chosen
+                        bookmarkColor = BookmarkColor.DEFAULT_ID
+                        // KNS <--
+                    }
+                }
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
     }
+
+    // KNS -->
+    /** Bookmarks [chapters] with [color] ([BookmarkColor.NONE] = an ordinary bookmark). */
+    fun setBookmarkColor(chapters: List<Chapter>, color: BookmarkColor) {
+        viewModelScope.launch {
+            chapters
+                .filterNot { it.bookmark && it.bookmarkColor == color.value }
+                .map {
+                    ChapterUpdate(it.id) {
+                        bookmark = true
+                        bookmarkColor = color.value
+                    }
+                }
+                .let { updateChapter.awaitAll(it) }
+        }
+        toggleAllSelection(false)
+        dismissDialog()
+    }
+
+    /**
+     * Hides [chapters] from the chapter list, the reader, History, downloads and counts. Each entry
+     * identifies exactly the selected source chapter (URL first, then its number, scanlator and name),
+     * so an extra named like a chapter number never hides that numbered chapter.
+     */
+    fun blacklistChapters(chapters: List<Chapter>) {
+        val manga = successState?.manga ?: return
+        val keys = chapters.map(::hybridChapterBlacklistKey)
+        if (keys.isEmpty()) return
+        viewModelScope.launch {
+            updateManga.await(
+                MangaUpdate(manga.id) { blacklistedChapters = (manga.blacklistedChapters + keys).distinct() },
+            )
+        }
+        toggleAllSelection(false)
+    }
+
+    /** Removes every blacklist entry that resolves to one of [chapters]. */
+    fun unblacklistChapters(chapters: List<Chapter>) {
+        val manga = successState?.manga ?: return
+        val urls = chapters.mapTo(HashSet()) { chapterUrlBlacklistKey(it.url) }
+        viewModelScope.launch {
+            val all = getChaptersForBlacklist(manga)
+            val remaining = manga.blacklistedChapters.filterNot { key ->
+                resolveChapterBlacklistKey(key, all).any(urls::contains) ||
+                    chapters.any { isChapterBlacklisted(it, listOf(key)) }
+            }
+            if (remaining != manga.blacklistedChapters) {
+                updateManga.await(MangaUpdate(manga.id) { blacklistedChapters = remaining })
+            }
+        }
+        toggleAllSelection(false)
+    }
+
+    fun removeBlacklistEntries(entries: Collection<String>) {
+        val manga = successState?.manga ?: return
+        if (entries.isEmpty()) return
+        viewModelScope.launch {
+            updateManga.await(
+                MangaUpdate(manga.id) { blacklistedChapters = manga.blacklistedChapters.filterNot(entries::contains) },
+            )
+            showBlacklistDialog()
+        }
+    }
+
+    fun setHideBlacklistedChapters(hide: Boolean) {
+        libraryPreferences.hideBlacklistedChapters(mangaId).set(hide)
+    }
+
+    fun showBlacklistDialog() {
+        val manga = successState?.manga ?: return
+        viewModelScope.launch {
+            val all = getChaptersForBlacklist(manga)
+            dialog.value = Dialog.BlacklistedChapters(
+                manga.blacklistedChapters.map { key ->
+                    BlacklistEntry(key = key, chapters = resolveChapterBlacklistMatches(key, all).map { it.name })
+                },
+            )
+        }
+    }
+
+    fun showBookmarkColorDialog(chapters: List<Chapter>) {
+        if (chapters.isEmpty()) return
+        dialog.value = Dialog.BookmarkColor(chapters)
+    }
+
+    fun showScanlatorPreferencesDialog() {
+        val state = successState ?: return
+        dialog.value = Dialog.ScanlatorPreferences(
+            scanlators = state.availableScanlators.toList(),
+            priority = state.manga.scanlatorPriority,
+            smartMergeOverride = state.manga.smartMergeOverride,
+            globalSmartMerge = libraryPreferences.smartScanlatorMerge.get(),
+        )
+    }
+
+    fun setScanlatorPreferences(priority: List<String>, smartMergeOverride: Boolean?) {
+        val manga = successState?.manga ?: return
+        viewModelScope.launch {
+            updateManga.await(
+                MangaUpdate(manga.id) {
+                    scanlatorPriority = priority
+                    this.smartMergeOverride = smartMergeOverride
+                },
+            )
+        }
+        dismissDialog()
+    }
+
+    /** All chapters of the manga (hidden and excluded ones too), to resolve blacklist entries. */
+    private suspend fun getChaptersForBlacklist(manga: Manga): List<Chapter> {
+        return if (manga.source == MERGED_SOURCE_ID) {
+            getMergedChaptersByMangaId.await(manga.id, applyFilter = false)
+        } else {
+            getChaptersByMangaId.await(manga.id, applyFilter = false)
+        }
+    }
+    // KNS <--
 
     /**
      * Deletes the given list of chapter.
@@ -1912,7 +2089,23 @@ class MangaViewModel(
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
         data object FullCover : Dialog
+
+        // KNS -->
+        data class BlacklistedChapters(val entries: List<BlacklistEntry>) : Dialog
+        data class BookmarkColor(val chapters: List<Chapter>) : Dialog
+        data class ScanlatorPreferences(
+            val scanlators: List<String>,
+            val priority: List<String>,
+            val smartMergeOverride: Boolean?,
+            val globalSmartMerge: Boolean,
+        ) : Dialog
+        // KNS <--
     }
+
+    // KNS -->
+    /** A blacklist entry and the current chapters it resolves to (none: the chapter is unavailable). */
+    data class BlacklistEntry(val key: String, val chapters: List<String>)
+    // KNS <--
 
     fun dismissDialog() {
         dialog.value = null
@@ -1971,6 +2164,10 @@ class MangaViewModel(
         val flatMetadata: FlatMetadata?,
         val mergedData: MergedMangaData?,
         // SY <--
+        // KNS -->
+        val blacklistedCount: Int,
+        val hideBlacklistedChapters: Boolean,
+        // KNS <--
     )
 
     // KMK/SY -->
@@ -2030,6 +2227,11 @@ class MangaViewModel(
             val relatedMangaCollection: List<RelatedManga>? = null,
             val seedColor: Color? = manga.asMangaCover().vibrantCoverColor?.let { Color(it) },
             // KMK <--
+            // KNS -->
+            /** Blacklisted chapters of this manga that resolve to a current chapter. */
+            val blacklistedChapterCount: Int = 0,
+            val hideBlacklistedChapters: Boolean = true,
+            // KNS <--
         ) : State {
             // KMK -->
             /**
@@ -2155,6 +2357,10 @@ sealed class ChapterList {
         val sourceName: String?,
         val showScanlator: Boolean,
         // SY <--
+        // KNS -->
+        /** A blacklisted chapter that is shown because the manga's blacklist is revealed. */
+        val blacklisted: Boolean = false,
+        // KNS <--
     ) : ChapterList() {
         val id = chapter.id
         val isDownloaded = downloadState == Download.State.DOWNLOADED

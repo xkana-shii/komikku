@@ -6,6 +6,7 @@ import exh.source.isEhBasedManga
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.ChapterVisibility
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.interactor.GetManga
@@ -19,6 +20,9 @@ class GetNextChapters(
     // SY <--
     private val getManga: GetManga,
     private val historyRepository: HistoryRepository,
+    // KNS -->
+    private val chapterVisibility: ChapterVisibility,
+    // KNS <--
 ) {
 
     suspend fun await(onlyUnread: Boolean = true): List<Chapter> {
@@ -33,6 +37,9 @@ class GetNextChapters(
         if (manga.source == MERGED_SOURCE_ID) {
             val chapters = getMergedChaptersByMangaId.await(mangaId, applyFilter = true)
                 .sortedWith(getChapterSort(manga, sortDescending = false))
+                // KNS -->
+                .let { chapterVisibility.visibleChapters(manga, it) }
+            // KNS <--
 
             return if (onlyUnread) {
                 chapters.filterNot { it.read }
@@ -54,6 +61,17 @@ class GetNextChapters(
 
         val chapters = getChaptersByMangaId.await(mangaId, applyFilter = true)
             .sortedWith(getChapterSort(manga, sortDescending = false))
+            // KNS -->
+            .let { filtered ->
+                // Blacklist entries whose URL changed resolve against the complete chapter list.
+                val all = if (manga.blacklistedChapters.isNotEmpty()) {
+                    getChaptersByMangaId.await(mangaId, applyFilter = false)
+                } else {
+                    filtered
+                }
+                chapterVisibility.visibleChapters(manga, filtered, all)
+            }
+        // KNS <--
 
         return if (onlyUnread) {
             chapters.filterNot { it.read }
@@ -67,8 +85,35 @@ class GetNextChapters(
         fromChapterId: Long,
         onlyUnread: Boolean = true,
     ): List<Chapter> {
+        // KNS -->
+        // History can point at a chapter that is now hidden (blacklisted, or a Smart Merge duplicate).
+        // It is not in the visible list, and indexOfFirst's -1 used to restart from the first chapter.
+        // Resolve where it sits in the complete list instead; the history record itself is untouched.
+        val manga = getManga.await(mangaId) ?: return emptyList()
+        var startId = fromChapterId
+        if (chapterVisibility.hasRules(manga)) {
+            val visible = await(mangaId, onlyUnread = false)
+            val ordered = if (manga.source == MERGED_SOURCE_ID) {
+                getMergedChaptersByMangaId.await(mangaId, applyFilter = false)
+            } else {
+                getChaptersByMangaId.await(mangaId, applyFilter = false)
+            }.sortedWith(getChapterSort(manga, sortDescending = false))
+            when (val start = chapterVisibility.startFor(manga, fromChapterId, ordered, visible)) {
+                is ChapterVisibility.Start.Representative -> startId = start.chapterId
+                is ChapterVisibility.Start.After -> {
+                    // The hidden chapter counts as passed: continue with the next visible one.
+                    val next = visible.dropWhile { it.id != start.chapterId }
+                    return if (onlyUnread) next.filterNot { it.read } else next
+                }
+                ChapterVisibility.Start.End -> return emptyList()
+                else -> {}
+            }
+        }
+        // KNS <--
         val chapters = await(mangaId, onlyUnread)
-        val currChapterIndex = chapters.indexOfFirst { it.id == fromChapterId }
+        val currChapterIndex = chapters.indexOfFirst {
+            it.id == /* KNS --> */ startId /* KNS <-- */
+        }
         val nextChapters = chapters.subList(max(0, currChapterIndex), chapters.size)
 
         if (onlyUnread) {

@@ -48,13 +48,17 @@ import eu.kanade.presentation.browse.components.RemoveMangaDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.NavigatorAdaptiveSheet
 import eu.kanade.presentation.manga.ChapterSettingsDialog
+import eu.kanade.presentation.manga.ChapterVisibilityActions
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.manga.EditCoverAction
 import eu.kanade.presentation.manga.MangaScreen
+import eu.kanade.presentation.manga.components.BlacklistedChaptersDialog
+import eu.kanade.presentation.manga.components.BookmarkColorDialog
 import eu.kanade.presentation.manga.components.ClearMangaDialog
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
 import eu.kanade.presentation.manga.components.ScanlatorFilterDialog
+import eu.kanade.presentation.manga.components.ScanlatorPreferencesDialog
 import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.more.settings.screen.SettingsEhScreen
 import eu.kanade.presentation.theme.TachiyomiTheme
@@ -111,6 +115,7 @@ import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.interactor.GetRemoteManga
@@ -397,6 +402,15 @@ class MangaScreen(
             onMultiMarkAsReadClicked = viewModel::markChaptersRead,
             onMarkPreviousAsReadClicked = viewModel::markPreviousChapterRead,
             onMultiDeleteClicked = viewModel::showDeleteChapterDialog,
+            // KNS -->
+            chapterVisibilityActions = ChapterVisibilityActions(
+                onBlacklist = viewModel::blacklistChapters,
+                onUnblacklist = viewModel::unblacklistChapters,
+                onBookmarkColor = viewModel::showBookmarkColorDialog,
+                onOpenBlacklist = viewModel::showBlacklistDialog,
+                onOpenScanlatorPreferences = viewModel::showScanlatorPreferencesDialog,
+            ),
+            // KNS <--
             onChapterSwipe = viewModel::chapterSwipe,
             onChapterSelected = viewModel::toggleSelection,
             onAllChapterSelected = viewModel::toggleAllSelection,
@@ -655,6 +669,37 @@ class MangaScreen(
                 )
             }
             // KMK <--
+            // KNS -->
+            is MangaViewModel.Dialog.BlacklistedChapters -> {
+                BlacklistedChaptersDialog(
+                    entries = dialog.entries.map { it.key to it.chapters },
+                    hideBlacklisted = successState.hideBlacklistedChapters,
+                    onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
+                    onRemove = viewModel::removeBlacklistEntries,
+                    onDismissRequest = onDismissRequest,
+                )
+            }
+            is MangaViewModel.Dialog.BookmarkColor -> {
+                BookmarkColorDialog(
+                    current = dialog.chapters
+                        .map { if (it.bookmark) BookmarkColor.fromValue(it.bookmarkColor) else null }
+                        .distinct()
+                        .singleOrNull(),
+                    onSelect = { viewModel.setBookmarkColor(dialog.chapters, it) },
+                    onDismissRequest = onDismissRequest,
+                )
+            }
+            is MangaViewModel.Dialog.ScanlatorPreferences -> {
+                ScanlatorPreferencesDialog(
+                    scanlators = dialog.scanlators,
+                    priority = dialog.priority,
+                    smartMergeOverride = dialog.smartMergeOverride,
+                    globalSmartMerge = dialog.globalSmartMerge,
+                    onConfirm = viewModel::setScanlatorPreferences,
+                    onDismissRequest = onDismissRequest,
+                )
+            }
+            // KNS <--
         }
 
         if (showScanlatorsDialog) {

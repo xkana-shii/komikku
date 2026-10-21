@@ -90,6 +90,9 @@ class UpdatesViewModel(
     // SY -->
     readerPreferences: ReaderPreferences,
     // SY <--
+    // KNS -->
+    private val updatesVisibilityFilter: UpdatesVisibilityFilter,
+    // KNS <--
 ) : ViewModel() {
 
     private val subscriberGate = SubscriberGate()
@@ -202,6 +205,9 @@ class UpdatesViewModel(
         },
     ) { updates, _, _, itemPreferences ->
         updates
+            // KNS -->
+            .let { updatesVisibilityFilter.filter(it) }
+            // KNS <--
             .toUpdateItems()
             .applyFilters(itemPreferences)
             // KMK -->

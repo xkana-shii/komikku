@@ -110,6 +110,7 @@ import tachiyomi.domain.chapter.interactor.GetBookmarkedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.ChapterVisibility
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryGroup
@@ -178,6 +179,10 @@ class LibraryViewModel(
     // KUN <--
     private val getIdsOfFavoriteMangaWithMetadata: GetIdsOfFavoriteMangaWithMetadata,
     // KMK <--
+    // KNS -->
+    private val chapterVisibility: ChapterVisibility,
+    private val libraryVisibleCounts: LibraryVisibleCounts,
+    // KNS <--
 ) : ViewModel() {
 
     // SY -->
@@ -871,7 +876,13 @@ class LibraryViewModel(
             // suspends, so a slow or failing extension scan can't leave the library stuck on its spinner.
             sourceManager.sources,
             // KUN <--
-        ) { libraryManga, preferences, _, loadedSources ->
+            // KNS -->
+            libraryPreferences.smartScanlatorMerge.changes(),
+            // KNS <--
+        ) { rawLibraryManga, preferences, _, loadedSources, globalSmartMerge ->
+            // KNS -->
+            val libraryManga = libraryVisibleCounts.apply(rawLibraryManga, globalSmartMerge)
+            // KNS <--
             // KUN -->
             val loadedSourcesById = loadedSources.associateBy { it.id }
             val sources = libraryManga
@@ -986,11 +997,17 @@ class LibraryViewModel(
     suspend fun getNextUnreadChapter(manga: Manga): Chapter? {
         // SY -->
         val mergedManga = getMergedMangaById.await(manga.id).associateBy { it.id }
-        return if (manga.id == MERGED_SOURCE_ID) {
+        // KNS --> merged entries are identified by their source, not their id
+        return if (manga.source == MERGED_SOURCE_ID) {
+            // KNS <--
             getMergedChaptersByMangaId.await(manga.id, applyFilter = true)
         } else {
             getChaptersByMangaId.await(manga.id, applyFilter = true)
-        }.getNextUnread(manga, downloadManager, mergedManga)
+        }
+            // KNS -->
+            .let { visibleChapters(manga, it) }
+            // KNS <--
+            .getNextUnread(manga, downloadManager, mergedManga)
         // SY <--
     }
 
@@ -1058,6 +1075,9 @@ class LibraryViewModel(
                     val mergedMangas = getMergedMangaById.await(manga.id)
                         .associateBy { it.id }
                     getBookmarkedChaptersByMangaId.await(manga.id)
+                        // KNS -->
+                        .let { visibleChapters(manga, it) }
+                        // KNS <--
                         .groupBy { it.mangaId }
                         .forEach ab@{ (mangaId, chapters) ->
                             val mergedManga = mergedMangas[mangaId] ?: return@ab
@@ -1080,11 +1100,28 @@ class LibraryViewModel(
                 // SY <--
 
                 val chapters = getBookmarkedChaptersByMangaId.await(manga.id)
+                    // KNS -->
+                    .let { visibleChapters(manga, it) }
+                    // KNS <--
                     .filterNotQueuedOrDownloaded(manga)
                 downloadManager.downloadChapters(manga, chapters)
             }
         }
     }
+
+    // KNS -->
+    /** [chapters] (any subset) narrowed to the app-wide visible set of [manga]. */
+    private suspend fun visibleChapters(manga: Manga, chapters: List<Chapter>): List<Chapter> {
+        if (chapters.isEmpty() || !chapterVisibility.hasRules(manga)) return chapters
+        val all = if (manga.source == MERGED_SOURCE_ID) {
+            getMergedChaptersByMangaId.await(manga.id, applyFilter = false)
+        } else {
+            getChaptersByMangaId.await(manga.id, applyFilter = false)
+        }
+        val visibleIds = chapterVisibility.visibleChapters(manga, all).mapTo(HashSet(), Chapter::id)
+        return chapters.filter { it.id in visibleIds }
+    }
+    // KNS <--
 
     // SY -->
     fun cleanTitles() {

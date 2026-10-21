@@ -19,6 +19,7 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import tachiyomi.data.chapter.ChapterSanitizer
 import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
@@ -195,6 +196,13 @@ class SyncChaptersWithSource(
             deletedChapterNumbers.add(chapter.chapterNumber)
         }
 
+        // KNS -->
+        // A re-uploaded chapter takes over the bookmark color along with the bookmark.
+        val deletedBookmarkColors = removedChapters
+            .filter { it.bookmark && it.bookmarkColor != BookmarkColor.DEFAULT_ID }
+            .associate { it.chapterNumber to it.bookmarkColor }
+        // KNS <--
+
         val deletedChapterNumberDateFetchMap = removedChapters.sortedByDescending { it.dateFetch }
             .associate { it.chapterNumber to it.dateFetch }
 
@@ -217,6 +225,9 @@ class SyncChaptersWithSource(
             chapter = chapter.copy(
                 read = chapter.chapterNumber in deletedReadChapterNumbers,
                 bookmark = chapter.chapterNumber in deletedBookmarkedChapterNumbers,
+                // KNS -->
+                bookmarkColor = deletedBookmarkColors[chapter.chapterNumber] ?: BookmarkColor.DEFAULT_ID,
+                // KNS <--
             )
 
             // Try to use the fetch date of the original entry to not pollute 'Updates' tab

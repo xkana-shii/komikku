@@ -22,7 +22,24 @@ data class RestoredManga(
     val flatMetadata: FlatMetadata? = null,
     val customMangaInfo: CustomMangaInfo? = null,
     // KMK/SY <--
+    // KNS -->
+    /** The fork-owned per-manga state of the payload; null when it carries none of it. */
+    val forkState: RestoredForkState? = null,
+    // KNS <--
 )
+
+// KNS -->
+data class RestoredForkState(
+    /** Whether the payload states the scanlator settings and blacklist (an empty list then means "none"). */
+    val scanlatorSettingsPresent: Boolean,
+    val blacklistedChapters: List<String>,
+    val scanlatorPriority: List<String>,
+    val scanlatorRangeRules: List<String>,
+    /** Whether the payload states the Smart Merge override; [smartMergeOverride] null then means "global". */
+    val smartMergeOverridePresent: Boolean,
+    val smartMergeOverride: Boolean?,
+)
+// KNS <--
 
 data class RestoredHistory(
     val chapterUrl: String,

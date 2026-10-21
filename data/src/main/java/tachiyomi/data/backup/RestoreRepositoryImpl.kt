@@ -16,9 +16,11 @@ import tachiyomi.data.Database
 import tachiyomi.data.history.HistoryMapper
 import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
+import tachiyomi.domain.backup.model.RestoredForkState
 import tachiyomi.domain.backup.model.RestoredHistory
 import tachiyomi.domain.backup.model.RestoredManga
 import tachiyomi.domain.backup.repository.RestoreRepository
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.model.History
@@ -169,6 +171,9 @@ class RestoreRepositoryImpl(
             incomingIsStrictlyNewer,
         )
         // KUN <--
+        // KNS -->
+        entry.forkState?.let { restoreForkState(manga, it, isSync, incomingIsNewerOrEqual, incomingIsStrictlyNewer) }
+        // KNS <--
         // SY -->
         restoreMergedMangaReferencesForManga(manga.id, entry.mergedMangaReferences)
         entry.flatMetadata?.let { restoreFlatMetadata(manga.id, it) }
@@ -459,6 +464,19 @@ class RestoreRepositoryImpl(
             base.copy(
                 sourceOrder = if (incomingIsNewer) chapter.sourceOrder else dbChapter.sourceOrder,
                 dateUpload = listOfNotNull(chapter.dateUpload, dbChapter.dateUpload).minOrNull(),
+                // KNS -->
+                bookmarkColor = when {
+                    // The newer writer owns the color too (a removed bookmark has no color); an
+                    // unknown color keeps the local one.
+                    incomingIsNewer -> when {
+                        !base.bookmark -> BookmarkColor.DEFAULT_ID
+                        chapter.bookmarkColor == Chapter.BOOKMARK_COLOR_UNKNOWN -> dbChapter.bookmarkColor
+                        else -> chapter.bookmarkColor
+                    }
+                    localIsNewer -> dbChapter.bookmarkColor
+                    else -> chapter.bookmarkColor.takeIf { it > BookmarkColor.DEFAULT_ID } ?: dbChapter.bookmarkColor
+                },
+                // KNS <--
             )
             // KUN <--
         } else {
@@ -473,6 +491,11 @@ class RestoreRepositoryImpl(
                     // backwards: an older backup would otherwise leave a newer stored timestamp next
                     // to an old version, and the next sync would treat that stale version as newer.
                     version = max(chapter.version, dbChapter.version),
+                    // KNS -->
+                    // A backup only brings a color in; it never resets a local color.
+                    bookmarkColor = chapter.bookmarkColor.takeIf { it > BookmarkColor.DEFAULT_ID }
+                        ?: dbChapter.bookmarkColor,
+                    // KNS <--
                 )
                 // KUN <--
                 .let {
@@ -522,7 +545,7 @@ class RestoreRepositoryImpl(
                     isSyncing = syncingFlag,
                     // SY <--
                     // KNS -->
-                    userBookmarkColor = chapter.bookmarkColor.toLong(),
+                    userBookmarkColor = chapter.bookmarkColor.coerceAtLeast(BookmarkColor.DEFAULT_ID).toLong(),
                     // KNS <--
                 ).awaitAsOneOrNull()
             }
@@ -561,8 +584,7 @@ class RestoreRepositoryImpl(
                     // SY <--
                     memo = chapter.memo,
                     // KNS -->
-                    // Reconciled by the bookmark-color restore; keep the stored color here.
-                    bookmarkColor = null,
+                    bookmarkColor = chapter.bookmarkColor.takeIf { it >= 0 }?.toLong(),
                     // KNS <--
                 )
             }
@@ -751,6 +773,53 @@ class RestoreRepositoryImpl(
         }
     }
     // KUN <--
+
+    // KNS -->
+    /**
+     * The chapter blacklist, scanlator priority / range rules and Smart Merge override follow the same
+     * rules as the excluded scanlators above. A sync payload that wins the version comparison is
+     * authoritative (it may also clear values; an empty one only when strictly newer); a losing one
+     * cannot remove local entries, so its blacklist is only added. An ordinary backup only adds
+     * blacklist entries and replaces the scanlator rules it explicitly carries.
+     */
+    private suspend fun restoreForkState(
+        manga: Manga,
+        state: RestoredForkState,
+        isSync: Boolean,
+        incomingIsNewerOrEqual: Boolean,
+        incomingIsStrictlyNewer: Boolean,
+    ) {
+        val local = mangaRepository.getMangaById(manga.id)
+        val incomingEmpty = state.blacklistedChapters.isEmpty() && state.scanlatorPriority.isEmpty() &&
+            state.scanlatorRangeRules.isEmpty()
+        val authoritative = isSync && state.scanlatorSettingsPresent &&
+            (if (incomingEmpty) incomingIsStrictlyNewer else incomingIsNewerOrEqual)
+
+        val blacklist = when {
+            authoritative -> state.blacklistedChapters
+            else -> (local.blacklistedChapters + state.blacklistedChapters).distinct()
+        }
+        val replaceRules = authoritative || (!isSync && state.scanlatorSettingsPresent)
+        val priority = if (replaceRules) state.scanlatorPriority else local.scanlatorPriority
+        val rangeRules = if (replaceRules) state.scanlatorRangeRules else local.scanlatorRangeRules
+        val writeOverride = state.smartMergeOverridePresent && (!isSync || incomingIsNewerOrEqual)
+
+        if (blacklist == local.blacklistedChapters && priority == local.scanlatorPriority &&
+            rangeRules == local.scanlatorRangeRules &&
+            (!writeOverride || state.smartMergeOverride == local.smartMergeOverride)
+        ) {
+            return
+        }
+        database.mangaQueries.updateForkState(
+            blacklistedChapters = blacklist,
+            scanlatorPriority = priority,
+            scanlatorRangeRules = rangeRules,
+            smartMergeOverrideSet = writeOverride,
+            smartMergeOverride = state.smartMergeOverride,
+            mangaId = manga.id,
+        )
+    }
+    // KNS <--
 
     private suspend fun restoreExcludedScanlators(
         manga: Manga,

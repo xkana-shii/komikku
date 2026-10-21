@@ -132,6 +132,9 @@ class MangaRestorer(
                 flatMetadata = backupManga.flatMetadata?.getFlatMetadata(mangaId = 0L),
                 customMangaInfo = backupManga.getCustomMangaInfo(),
                 // SY <--
+                // KNS -->
+                forkState = backupManga.getForkState(),
+                // KNS <--
             )
         }
 

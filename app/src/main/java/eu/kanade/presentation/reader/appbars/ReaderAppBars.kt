@@ -52,6 +52,10 @@ fun ReaderAppBars(
     onClickTopAppBar: () -> Unit,
     bookmarked: Boolean,
     onToggleBookmarked: () -> Unit,
+    // KNS -->
+    bookmarkColor: Int,
+    onLongClickBookmark: () -> Unit,
+    // KNS <--
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -119,6 +123,10 @@ fun ReaderAppBars(
                     navigateUp = navigateUp,
                     bookmarked = bookmarked,
                     onToggleBookmarked = onToggleBookmarked,
+                    // KNS -->
+                    bookmarkColor = bookmarkColor,
+                    onLongClickBookmark = onLongClickBookmark,
+                    // KNS <--
                     // SY -->
                     onOpenInWebView = null, // onOpenInWebView,
                     onOpenInBrowser = null, // onOpenInBrowser,

@@ -502,6 +502,20 @@ WHERE id = :mangaId
 AND is_syncing = 0;
 -- KUN <--
 
+-- KNS -->
+-- Explicit values (not coalesce): a restore decides the complete fork-owned state.
+updateForkState:
+UPDATE manga SET
+    user_blacklisted_chapters = :blacklistedChapters,
+    user_scanlator_priority = :scanlatorPriority,
+    user_scanlator_range_rules = :scanlatorRangeRules,
+    user_smart_merge_override = CASE
+        WHEN :smartMergeOverrideSet THEN :smartMergeOverride
+        ELSE user_smart_merge_override
+    END
+WHERE id = :mangaId;
+-- KNS <--
+
 updateRemote:
 UPDATE manga SET
     remote_artist = coalesce(:artist, remote_artist),

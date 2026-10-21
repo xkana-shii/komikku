@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.data.download.model.Download
 import me.saket.swipe.SwipeableActionsBox
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Block
 import mihon.icons.materialsymbols.rounded.BookmarkAdd
 import mihon.icons.materialsymbols.rounded.BookmarkRemove
 import mihon.icons.materialsymbols.rounded.Check
@@ -39,8 +40,10 @@ import mihon.icons.materialsymbols.rounded.FileDownloadOff
 import mihon.icons.materialsymbols.rounded.RemoveDone
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.Circle
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
 import tachiyomi.presentation.core.i18n.stringResource
@@ -68,6 +71,11 @@ fun MangaChapterListItem(
     onDownloadClick: ((ChapterDownloadAction) -> Unit)?,
     onChapterSwipe: (LibraryPreferences.ChapterSwipeAction) -> Unit,
     modifier: Modifier = Modifier,
+    // KNS -->
+    bookmarkColor: Int = BookmarkColor.DEFAULT_ID,
+    /** A blacklisted chapter shown because the blacklist is revealed: dimmed and marked. */
+    blacklisted: Boolean = false,
+    // KNS <--
 ) {
     // KMK -->
     val swipeBackground = MaterialTheme.colorScheme.primaryContainer
@@ -130,13 +138,26 @@ fun MangaChapterListItem(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
+                    // KNS -->
+                    if (blacklisted) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Block,
+                            contentDescription = stringResource(KMR.strings.blacklisted_chapters),
+                            modifier = Modifier
+                                .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    // KNS <--
                     if (bookmark) {
                         Icon(
                             imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                             contentDescription = stringResource(MR.strings.action_filter_bookmarked),
                             modifier = Modifier
                                 .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
-                            tint = MaterialTheme.colorScheme.primary,
+                            // KNS -->
+                            tint = bookmarkColorOf(bookmarkColor) ?: MaterialTheme.colorScheme.primary,
+                            // KNS <--
                         )
                     }
                     Text(
@@ -145,7 +166,9 @@ fun MangaChapterListItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         onTextLayout = { textHeight = it.size.height },
-                        color = LocalContentColor.current.copy(alpha = if (read) DISABLED_ALPHA else 1f),
+                        color = LocalContentColor.current.copy(
+                            alpha = if (read /* KNS --> */ || blacklisted /* KNS <-- */) DISABLED_ALPHA else 1f,
+                        ),
                     )
                 }
 

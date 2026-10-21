@@ -46,6 +46,10 @@ fun MangaToolbar(
     onClickRefresh: () -> Unit,
     onClickMigrate: (() -> Unit)?,
     onClickEditNotes: () -> Unit,
+    // KNS -->
+    onClickBlacklist: () -> Unit = {},
+    onClickScanlatorPreferences: () -> Unit = {},
+    // KNS <--
     // SY -->
     onClickEditInfo: (() -> Unit)?,
     // KMK -->
@@ -188,6 +192,20 @@ fun MangaToolbar(
                             onClick = onClickEditNotes,
                         ),
                     )
+                    // KNS -->
+                    add(
+                        AppBar.OverflowAction(
+                            title = stringResource(KMR.strings.blacklisted_chapters),
+                            onClick = onClickBlacklist,
+                        ),
+                    )
+                    add(
+                        AppBar.OverflowAction(
+                            title = stringResource(KMR.strings.scanlator_preferences),
+                            onClick = onClickScanlatorPreferences,
+                        ),
+                    )
+                    // KNS <--
                     // SY -->
                     if (onClickMerge != null) {
                         add(

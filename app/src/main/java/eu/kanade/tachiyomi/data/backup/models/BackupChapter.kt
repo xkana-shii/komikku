@@ -31,6 +31,13 @@ class BackupChapter(
     @ProtoNumber(11) var lastModifiedAt: Long = 0,
     @ProtoNumber(12) var version: Long = 0,
     @ProtoNumber(13) var memo: ByteArray = JsonObjectEmptyBytes,
+    // KNS -->
+    // 14/15 keep the previous personal fork's numbers. The color is written for every bookmarked
+    // chapter (0 = ordinary included), so a missing value means "unknown", never "ordinary".
+    @ProtoNumber(14) var bookmarkColor: Int? = null,
+    /** Legacy Fillermark of old-fork backups; only read, converted into a blacklist entry. */
+    @ProtoNumber(15) var fillermark: Boolean = false,
+    // KNS <--
 ) {
     fun toChapterImpl(): Chapter {
         return Chapter.create().copy(
@@ -48,6 +55,9 @@ class BackupChapter(
             lastModifiedAt = this@BackupChapter.lastModifiedAt,
             version = this@BackupChapter.version,
             memo = this@BackupChapter.memo.toJsonObject(),
+            // KNS -->
+            bookmarkColor = this@BackupChapter.bookmarkColor ?: Chapter.BOOKMARK_COLOR_UNKNOWN,
+            // KNS <--
         )
     }
 }
@@ -66,4 +76,7 @@ fun Chapter.toBackupChapter() = BackupChapter(
     lastModifiedAt = lastModifiedAt,
     version = version,
     memo = memo.toByteArray(),
+    // KNS -->
+    bookmarkColor = bookmarkColor.takeIf { bookmark },
+    // KNS <--
 )

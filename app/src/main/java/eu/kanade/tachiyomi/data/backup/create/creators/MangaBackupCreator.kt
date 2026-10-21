@@ -106,6 +106,18 @@ class MangaBackupCreator(
 
             mangaObject.excludedScanlators = excludedScanlatorsByMangaId[manga.id].orEmpty()
 
+            // KNS -->
+            mangaObject.scanlatorPriority = manga.scanlatorPriority
+            mangaObject.blacklistedChapters = manga.blacklistedChapters
+            mangaObject.scanlatorRangeRules = manga.scanlatorRangeRules
+            mangaObject.scanlatorSettingsPresent = true
+            mangaObject.smartScanlatorMergeOverride = when (manga.smartMergeOverride) {
+                true -> "enabled"
+                false -> "disabled"
+                null -> "global"
+            }
+            // KNS <--
+
             if (options.chapters) {
                 // Backup all the chapters
                 mangaObject.chapters = chapters.map { it.toBackupChapter() }

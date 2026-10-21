@@ -57,15 +57,18 @@ import mihon.icons.custommaterialsymbols.CustomMaterialSymbols
 import mihon.icons.custommaterialsymbols.rounded.DonePrevious
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Label
+import mihon.icons.materialsymbols.rounded.Block
 import mihon.icons.materialsymbols.rounded.BookmarkAdd
 import mihon.icons.materialsymbols.rounded.BookmarkRemove
 import mihon.icons.materialsymbols.rounded.Delete
 import mihon.icons.materialsymbols.rounded.DoneAll
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.MoreVert
+import mihon.icons.materialsymbols.rounded.Palette
 import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.RemoveDone
 import mihon.icons.materialsymbols.rounded.SwapCalls
+import mihon.icons.materialsymbols.roundedfilled.Visibility
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -83,6 +86,11 @@ fun MangaBottomActionMenu(
     onMarkPreviousAsReadClicked: (() -> Unit)? = null,
     onDownloadClicked: (() -> Unit)? = null,
     onDeleteClicked: (() -> Unit)? = null,
+    // KNS -->
+    onBookmarkColorClicked: (() -> Unit)? = null,
+    onBlacklistClicked: (() -> Unit)? = null,
+    onUnblacklistClicked: (() -> Unit)? = null,
+    // KNS <--
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -96,7 +104,11 @@ fun MangaBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false) }
+            // KNS --> three more slots for the bookmark color and blacklist actions
+            val confirm = remember {
+                mutableStateListOf(false, false, false, false, false, false, false, false, false, false)
+            }
+            // KNS <--
             var resetJob by remember { mutableStateOf<Job?>(null) }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -179,6 +191,35 @@ fun MangaBottomActionMenu(
                         onClick = onDeleteClicked,
                     )
                 }
+                // KNS -->
+                if (onBookmarkColorClicked != null) {
+                    Button(
+                        title = stringResource(KMR.strings.action_bookmark_color),
+                        icon = MaterialSymbols.Rounded.Palette,
+                        toConfirm = confirm[7],
+                        onLongClick = { onLongClickItem(7) },
+                        onClick = onBookmarkColorClicked,
+                    )
+                }
+                if (onBlacklistClicked != null) {
+                    Button(
+                        title = stringResource(KMR.strings.action_blacklist_chapter),
+                        icon = MaterialSymbols.Rounded.Block,
+                        toConfirm = confirm[8],
+                        onLongClick = { onLongClickItem(8) },
+                        onClick = onBlacklistClicked,
+                    )
+                }
+                if (onUnblacklistClicked != null) {
+                    Button(
+                        title = stringResource(KMR.strings.action_unblacklist_chapter),
+                        icon = MaterialSymbols.RoundedFilled.Visibility,
+                        toConfirm = confirm[9],
+                        onLongClick = { onLongClickItem(9) },
+                        onClick = onUnblacklistClicked,
+                    )
+                }
+                // KNS <--
             }
         }
     }

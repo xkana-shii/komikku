@@ -301,6 +301,13 @@ object SettingsLibraryScreen : SearchableSettings {
                     subtitle = stringResource(KMR.strings.pref_fetch_manga_chapters_on_add_description),
                 ),
                 // KMK <--
+                // KNS -->
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.smartScanlatorMerge,
+                    title = stringResource(KMR.strings.pref_smart_scanlator_merge),
+                    subtitle = stringResource(KMR.strings.pref_smart_scanlator_merge_summary),
+                ),
+                // KNS <--
             ),
         )
     }

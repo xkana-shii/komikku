@@ -182,6 +182,19 @@ class LibraryPreferences(
     val categoryManagerCollapsedIds = preferenceStore.getStringSet("category_manager_collapsed_ids", emptySet())
     // KNS <--
 
+    // KNS -->
+    // Chapter visibility; same keys as the previous personal fork. The per-manga Smart Merge override
+    // is stored on the manga (`Manga.smartMergeOverride`), not here.
+    val smartScanlatorMerge = preferenceStore.getBoolean("pref_smart_scanlator_merge", false)
+
+    /** Whether a manga's chapter list hides its blacklisted chapters (they can be revealed per manga). */
+    fun hideBlacklistedChapters(mangaId: Long) =
+        preferenceStore.getBoolean("pref_hide_blacklisted_chapters_$mangaId", true)
+
+    /** Library filter: manga with at least one bookmark of these colors ([BookmarkColor] names). */
+    val filterBookmarkColors = preferenceStore.getStringSet("pref_filter_library_bookmark_colors", emptySet())
+    // KNS <--
+
     val categorizedDisplaySettings = preferenceStore.getBoolean("categorized_display", false)
 
     // KMK -->

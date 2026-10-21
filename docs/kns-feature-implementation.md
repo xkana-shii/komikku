@@ -58,7 +58,7 @@ row will be re-checked when its subsystem is touched.
 | 1 | Persistence: KNS columns (migration 57), domain fields, mappers, old-fork database conversion | done | see session log |
 | 2a | Category hierarchy + Smart Categories: domain, data, backup/restore, sync, tracker hook | done | see session log |
 | 2b | Category manager UI, Set Categories dialog, library subcategory navigation/filters | done | see session log |
-| 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | planned | — |
+| 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | done | see session log |
 | 4 | Library search/filters/sort/presentation + performance | planned | — |
 | 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | planned | — |
 | 6 | Manga details/relations, reader controls & automation | planned | — |
@@ -131,9 +131,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 2.2-b | Exclude categories/descendants | DONE-UNVERIFIED | See 1.3-e | — | batch 2a + 2b |
 | 2.2-c | All-category subcategory exclusion | HISTORICAL | | — | — |
 | 2.2-d | Tracker filters without per-title queries | PARTIAL | Mihon tracker filters exist | — | — |
-| 2.2-e | Bookmark-color filter | MISSING | Batch 3 | — | — |
-| 2.2-f | Built-in filters account for blacklist/Smart Merge | MISSING | Batch 3/4 | — | — |
-| 2.2-g | Merged-entry downloaded/unread correctness | PARTIAL | | — | — |
+| 2.2-e | Bookmark-color filter | MISSING | Preference `pref_filter_library_bookmark_colors` exists; filter UI + query in batch 4 | — | — |
+| 2.2-f | Built-in filters account for blacklist/Smart Merge | PARTIAL | Library counts and continue-reading use the visibility rule (`LibraryVisibleCounts`); the unread/bookmarked/downloaded filter predicates still use stored counts — batch 4 | `LibraryVisibleCountsTest` | batch 3 |
+| 2.2-g | Merged-entry downloaded/unread correctness | PARTIAL | Continue-reading of merged entries fixed (merged check compared the manga id); downloaded/unread filters for merged entries batch 4 | — | batch 3 |
 | 2.3-a | Group by source without expensive regrouping | PARTIAL | Komikku group-by exists; check caching | — | — |
 | 2.3-b | Source language in source grouping (+ flag option) | PARTIAL | | — | — |
 | 2.3-c | Search source name and language | HISTORICAL | | — | — |
@@ -159,9 +159,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 3.2-c | Cross-service fallback | MISSING | | — | — |
 | 3.2-d | Compact horizontal relation cards | MISSING | | — | — |
 | 3.2-e | Bounded relation-search concurrency | MISSING | | — | — |
-| 3.3-a | Bookmark-color controls in chapter UI | MISSING | Batch 3 | — | — |
+| 3.3-a | Bookmark-color controls in chapter UI | DONE | Selection bar Bookmark color action (bulk) + `BookmarkColorDialog`; colored bookmark icon in the chapter row | manual pending | batch 3 |
 | 3.3-b | Chapter filter controls display/reset | PARTIAL | | — | — |
-| 3.3-c | Reveal hidden (blacklisted) chapters | MISSING | Batch 3 | — | — |
+| 3.3-c | Reveal hidden (blacklisted) chapters | DONE | Blacklisted chapters dialog toggles reveal (`pref_hide_blacklisted_chapters_<id>`); revealed rows dimmed + block icon, selectable for un-blacklist | `ChapterSmartMergeTest` reveal case | batch 3 |
 | 3.3-d | Chapter sort choices stable after sync | PARTIAL | | — | — |
 | 3.3-e | Multi-select actions refresh indicators | PARTIAL | | — | — |
 | 3.3-f | No tracking popup after dismissal for non-favorites | MISSING | Verify current behavior | — | — |
@@ -170,58 +170,58 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 4.1-a | Bookmark color as chapter state (fixed palette) | MISSING | Old `chapter.user_bookmark_color`, `BookmarkColor` | — | — |
+| 4.1-a | Bookmark color as chapter state (fixed palette) | DONE | `chapter.user_bookmark_color` (migration 57) + `BookmarkColor` 0–6 | `KnsColumnsMigrationTest` | batch 1 + 3 |
 | 4.1-b | Normal bookmark behavior unchanged | PRESENT | Keep | — | — |
-| 4.1-c | Color picker in chapter list (incl. bulk) | MISSING | | — | — |
-| 4.1-d | Color picker in reader | MISSING | | — | — |
-| 4.1-e | Reactive display of saved color | MISSING | | — | — |
-| 4.1-f | Filter by color | MISSING | | — | — |
-| 4.1-g | Reader chapter-list sync on color change | MISSING | | — | — |
-| 4.1-h | Rounded reader bookmark ripple | MISSING | | — | — |
-| 4.1-i | Color survives source refresh | MISSING | `SyncChaptersWithSource` copies user state | — | — |
-| 4.1-j | Color in backup + sync | MISSING | Backup chapter #14; SyncYomi payload | — | — |
-| 4.2-a | Fillermark → blacklist/color migration | PARTIAL | Database part done (converter); backup #15 pending | `OldForkDatabaseConverterTest` | batch 1 |
-| 4.2-b | Uncolored legacy bookmarks stay default | MISSING | | — | — |
-| 4.2-c | Identity-aware conversion | PARTIAL | Exact URL keys only (no number/name matching) | `CategoryUidTest` (key format), converter test | batch 1 |
+| 4.1-c | Color picker in chapter list (incl. bulk) | DONE | Selection bar → `BookmarkColorDialog`; choosing a color bookmarks; plain (un)bookmark resets to default | manual pending | batch 3 |
+| 4.1-d | Color picker in reader | DONE | Long-press the reader bookmark button → `BookmarkColorDialog` (`ReaderViewModel.setChapterBookmarkColor`) | manual pending | batch 3 |
+| 4.1-e | Reactive display of saved color | DONE-UNVERIFIED | Manga list observes chapters; reader top bar state carries `bookmarkColor` | manual pending | batch 3 |
+| 4.1-f | Filter by color | MISSING | Per-manga `manga_bookmark_color_filter_<id>` / library color filter — batch 4 | — | — |
+| 4.1-g | Reader chapter-list sync on color change | DONE-UNVERIFIED | Reader chapter list shows the color; toggling there resets it and updates the top bar for the current chapter | manual pending | batch 3 |
+| 4.1-h | Rounded reader bookmark ripple | DONE | Long-press bookmark button clipped to a circle (round ripple) | manual pending | batch 3 |
+| 4.1-i | Color survives source refresh | DONE | `SyncChaptersWithSource` carries a removed chapter's color to its re-upload | `SyncChaptersBookmarkColorTest` | batch 3 |
+| 4.1-j | Color in backup + sync | DONE | `BackupChapter` #14 (nullable → unknown, never stored); sync: newer side owns the color, ordinary restore never resets | `RestoreRepositoryForkStateTest`, `BackupForkStateTest` | batch 3 |
+| 4.2-a | Fillermark → blacklist/color migration | DONE | Database: converter; backup: #15 fillermark → exact URL blacklist entries | `OldForkDatabaseConverterTest`, `BackupForkStateTest` | batch 1 + 3 |
+| 4.2-b | Uncolored legacy bookmarks stay default | DONE | Missing color decodes as unknown and leaves the stored value (default 0) alone | `BackupForkStateTest` | batch 3 |
+| 4.2-c | Identity-aware conversion | DONE | Fillermarks become `url:` keys (exact); new selections use hybrid keys | `ChapterBlacklistTest`, `BackupForkStateTest` | batch 1 + 3 |
 | 4.2-d | No standalone Fillermark UI | SUPERSEDED | Migration only | — | — |
 
 ### 5. Chapter blacklist and visibility
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 5.1-a | Blacklist individual chapters (no deletion) | MISSING | Old `manga.user_blacklisted_chapters`, `ChapterBlacklist` | — | — |
-| 5.1-b | Per-manga blacklist management UI | MISSING | | — | — |
-| 5.1-c | Reveal blacklisted chapters | MISSING | | — | — |
-| 5.1-d | Exact identity (URL) first, controlled fallback | MISSING | | — | — |
-| 5.1-e | No number/name collisions (extras vs ch.1/6) | MISSING | | — | — |
-| 5.1-f | Disambiguate by URL/scanlator | MISSING | | — | — |
-| 5.1-g | Survive source refresh | MISSING | | — | — |
-| 5.1-h | Keep history/bookmarks of hidden chapters | MISSING | | — | — |
-| 5.2-a | Chapter list hides blacklisted unless revealed | MISSING | | — | — |
-| 5.2-b | Reader next/prev skip hidden | MISSING | | — | — |
-| 5.2-c | History continuation skips hidden | MISSING | | — | — |
-| 5.2-d | Library unread/total exclude hidden | MISSING | | — | — |
-| 5.2-e | Downloads / next-chapter follow visibility | MISSING | | — | — |
-| 5.2-f | Deep link / notification / history fallback to visible equivalent | MISSING | | — | — |
+| 5.1-a | Blacklist individual chapters (no deletion) | DONE | `manga.user_blacklisted_chapters`; hiding never deletes chapter rows | `ChapterBlacklistTest` | batch 3 |
+| 5.1-b | Per-manga blacklist management UI | DONE | Overflow → Blacklisted chapters: entries with resolved chapter names, unavailable marker, remove | manual pending | batch 3 |
+| 5.1-c | Reveal blacklisted chapters | DONE | See 3.3-c | `ChapterSmartMergeTest` | batch 3 |
+| 5.1-d | Exact identity (URL) first, controlled fallback | DONE | Hybrid keys: URL first, unique metadata fallback, ambiguous → visible | `ChapterBlacklistTest` | batch 3 |
+| 5.1-e | No number/name collisions (extras vs ch.1/6) | DONE | Extras named like numbers never hide numbered chapters (Mangago cases) | `ChapterBlacklistTest` | batch 3 |
+| 5.1-f | Disambiguate by URL/scanlator | DONE | URL + scanlator + name discriminator | `ChapterBlacklistTest` | batch 3 |
+| 5.1-g | Survive source refresh | DONE | Keys resolve against the full refreshed snapshot | `ChapterBlacklistTest` | batch 3 |
+| 5.1-h | Keep history/bookmarks of hidden chapters | DONE | Rows (history, bookmarks, read state) untouched; only display filtered | `ChapterBlacklistTest` | batch 3 |
+| 5.2-a | Chapter list hides blacklisted unless revealed | DONE | `chapterListVisibility` in `MangaViewModel` | `ChapterSmartMergeTest` | batch 3 |
+| 5.2-b | Reader next/prev skip hidden | DONE | `ReaderViewModel` loads `ChapterVisibility.visibleChapters` (prev/next + chapter list) | `ChapterSmartMergeTest` | batch 3 |
+| 5.2-c | History continuation skips hidden | DONE | `GetNextChapters` resolves a hidden start (after / representative / end) | `GetNextChaptersVisibilityTest` | batch 3 |
+| 5.2-d | Library unread/total exclude hidden | DONE | `LibraryVisibleCounts` (total/read/unread/bookmark) for entries with rules | `LibraryVisibleCountsTest` | batch 3 |
+| 5.2-e | Downloads / next-chapter follow visibility | DONE | `FilterChaptersForDownload`, library + manga continue-reading, Updates feed (`UpdatesVisibilityFilter`) | `UpdatesVisibilityFilterTest` | batch 3 |
+| 5.2-f | Deep link / notification / history fallback to visible equivalent | DONE-UNVERIFIED | Reader reassigns a hidden duplicate to its representative; an explicitly opened blacklisted chapter still opens | `ChapterSmartMergeTest` | batch 3 |
 
 ### 6. Scanlator preferences and Smart Scanlator Merge
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
 | 6.1-a | Exclude scanlators per manga | PRESENT | `excluded_scanlator` table + Komi-kun #60 sync; keep, do not duplicate | Komi-kun tests | — |
-| 6.1-b | Prioritize scanlators | MISSING | Old `manga.user_scanlator_priority` | — | — |
-| 6.1-c | Manga-specific settings | MISSING | | — | — |
-| 6.1-d | No deletion of hidden chapter records | MISSING | | — | — |
-| 6.2-a | Group duplicates, show representative | MISSING | Old `applySmartScanlatorMerge` | — | — |
-| 6.2-b | Priority-based representative | MISSING | Range rules + priority | — | — |
-| 6.2-c | Per-manga override | MISSING | Preference `smartScanlatorMergeOverride(id)`, backup #618 | — | — |
-| 6.2-d | Incremental override updates | MISSING | | — | — |
-| 6.2-e | Counts reflect representatives | MISSING | | — | — |
-| 6.2-f | Reader navigates representatives | MISSING | | — | — |
-| 6.2-g | History/deep links resolve to representative | MISSING | | — | — |
-| 6.2-h | Merged manga read state | MISSING | | — | — |
-| 6.2-i | Consistent with blacklist | MISSING | | — | — |
-| 6.2-j | Predictable toggles, no orphaned cache | MISSING | | — | — |
+| 6.1-b | Prioritize scanlators | DONE | `manga.user_scanlator_priority`; Scanlator preferences dialog reorders | `ChapterSmartMergeTest` | batch 3 |
+| 6.1-c | Manga-specific settings | DONE | Per-manga priority + override on the manga row | `RestoreRepositoryForkStateTest` | batch 3 |
+| 6.1-d | No deletion of hidden chapter records | DONE | Display-only filtering | `ChapterSmartMergeTest` | batch 3 |
+| 6.2-a | Group duplicates, show representative | DONE | `applySmartScanlatorMerge` | `ChapterSmartMergeTest` | batch 3 |
+| 6.2-b | Priority-based representative | DONE | Range rules over priority, last matching rule wins (rules stored/backed up; no editor UI yet) | `ChapterSmartMergeTest` | batch 3 |
+| 6.2-c | Per-manga override | DONE | `manga.user_smart_merge_override` (null = global); old prefs migrated by `SmartMergeOverrideMigration`; backup #618 | `SmartMergeOverrideMigrationTest`, `BackupForkStateTest` | batch 3 |
+| 6.2-d | Incremental override updates | DONE | Library counts cached per entry, keyed by counts + rules | `LibraryVisibleCountsTest` | batch 3 |
+| 6.2-e | Counts reflect representatives | DONE | See 5.2-d | `LibraryVisibleCountsTest` | batch 3 |
+| 6.2-f | Reader navigates representatives | DONE | See 5.2-b | `ChapterSmartMergeTest` | batch 3 |
+| 6.2-g | History/deep links resolve to representative | DONE | See 5.2-c / 5.2-f | `GetNextChaptersVisibilityTest` | batch 3 |
+| 6.2-h | Merged manga read state | DONE-UNVERIFIED | Merged entries use `GetMergedChaptersByMangaId` in counts, reader and next-chapter | — | batch 3 |
+| 6.2-i | Consistent with blacklist | DONE | One rule: `filterChapterVisibility` / `ChapterVisibility` | `ChapterSmartMergeTest` | batch 3 |
+| 6.2-j | Predictable toggles, no orphaned cache | DONE | Cache drops entries without rules | `LibraryVisibleCountsTest` | batch 3 |
 
 ### 7. Tracking services
 
@@ -269,10 +269,10 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
 | 9.1-a | Paged and vertical compatibility | PRESENT | Keep Komi-kun WebGPU/SSIV | — | — |
-| 9.1-b | Chapter navigation honors Smart Merge/blacklist | MISSING | Batch 3 | — | — |
+| 9.1-b | Chapter navigation honors Smart Merge/blacklist | DONE | See 5.2-b | `ChapterSmartMergeTest` | batch 3 |
 | 9.1-c | Title tap = back navigation parity | MISSING | Verify | — | — |
-| 9.1-d | Reader bookmark selection + colors | MISSING | | — | — |
-| 9.1-e | Rounded bookmark touch feedback | MISSING | | — | — |
+| 9.1-d | Reader bookmark selection + colors | DONE | See 4.1-d | manual pending | batch 3 |
+| 9.1-e | Rounded bookmark touch feedback | DONE | See 4.1-h | manual pending | batch 3 |
 | 9.1-f | Reader chapter list updates on color change | MISSING | | — | — |
 | 9.1-g | Page-jump correctness | PARTIAL | Verify | — | — |
 | 9.2-a | Button-controlled auto-scroll (new system) | PARTIAL | SY auto-scroll exists on HEAD; fork system replaces old SY UI — reconcile without removing | — | — |
@@ -363,15 +363,15 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 13.1-a | Daily distinct-manga count | MISSING | Verify HistoryScreen header | — | — |
 | 13.1-b | Date-grouped history with count | PARTIAL | | — | — |
 | 13.1-c | Initial loading vs empty | PARTIAL | | — | — |
-| 13.1-d | Visibility-aware history filters | MISSING | Batch 3 | — | — |
+| 13.1-d | Visibility-aware history filters | MISSING | History filters not yet visibility-aware — batch 8 | — | — |
 | 13.2-a | Continue to next readable chapter | PARTIAL | Mihon `GetNextChapters` | — | — |
-| 13.2-b | Skip blacklisted | MISSING | | — | — |
-| 13.2-c | Resolve Smart Merge duplicates | MISSING | | — | — |
-| 13.2-d | Preserve history identity | MISSING | | — | — |
+| 13.2-b | Skip blacklisted | DONE | See 5.2-c | `GetNextChaptersVisibilityTest` | batch 3 |
+| 13.2-c | Resolve Smart Merge duplicates | DONE | See 5.2-c | `GetNextChaptersVisibilityTest` | batch 3 |
+| 13.2-d | Preserve history identity | DONE | History rows are not rewritten | `GetNextChaptersVisibilityTest` | batch 3 |
 | 13.2-e | Merged-title handling | PARTIAL | | — | — |
 | 13.3-a | Mark-read without duplicates | PRESENT | | — | — |
-| 13.3-b | Next-chapter consistency across surfaces | MISSING | | — | — |
-| 13.3-c | Source update keeps user flags | PARTIAL | Read/bookmark kept; add color/visibility | — | — |
+| 13.3-b | Next-chapter consistency across surfaces | DONE-UNVERIFIED | Library, manga screen, History and downloads share `ChapterVisibility` | `GetNextChaptersVisibilityTest`, `LibraryVisibleCountsTest` | batch 3 |
+| 13.3-c | Source update keeps user flags | DONE | Color carried over with read/bookmark; blacklist keys are per manga | `SyncChaptersBookmarkColorTest` | batch 3 |
 
 ### 14. Updates and release prediction
 
@@ -396,9 +396,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 |----|-------------|--------|-------|-------|--------|
 | 15.1-a | Category hierarchy in backup | DONE | `BackupCategory` #901 parentId (backup id), #904 parentUid, #907 hierarchyKnown; restored parents-first | `BackupCategoryHierarchyTest`, `CategoryHierarchyTest` | batch 2a |
 | 15.1-b | Update schedules + status policies in backup | DONE | #902 trackStatus, #903 updateInterval (old-fork numbers), #905/#906 dates; a payload without the fields never clears them | `CategoryHierarchyTest` | batch 2a |
-| 15.1-c | Bookmark colors in backup | MISSING | `BackupChapter` #14 | — | — |
-| 15.1-d | Blacklist in backup | MISSING | `BackupManga` #615 | — | — |
-| 15.1-e | Scanlator prefs + Smart Merge overrides | MISSING | #614, #616, #618 | — | — |
+| 15.1-c | Bookmark colors in backup | DONE | `BackupChapter` #14 | `BackupForkStateTest` | batch 3 |
+| 15.1-d | Blacklist in backup | DONE | `BackupManga` #615 (+ #620 presence flag) | `BackupForkStateTest`, `RestoreRepositoryForkStateTest` | batch 3 |
+| 15.1-e | Scanlator prefs + Smart Merge overrides | DONE | #614 priority, #616 range rules, #618 override; #619 per-manga reveal toggle is not restored (device preference) | `BackupForkStateTest`, `RestoreRepositoryForkStateTest` | batch 3 |
 | 15.1-f | Custom metadata | PRESENT | SY | — | — |
 | 15.1-g | Tracking state | PRESENT | | — | — |
 | 15.1-h | Source preferences | PARTIAL | Verify | — | — |
@@ -410,7 +410,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 15.2-d | Cancellation safety | PARTIAL | | — | — |
 | 15.2-e | Worker lifecycle | PARTIAL | | — | — |
 | 15.3-a | Migration safety for fork data | DONE-UNVERIFIED | `57.sqm` + `OldForkDatabaseConverter` (old lineage → current schema, all rows, fork columns kept). Device test with a real old-fork DB pending; old-fork SharedPreferences and backups not converted yet | `KnsColumnsMigrationTest`, `OldForkDatabaseConverterTest` | batch 1 |
-| 15.3-b | Fillermark migration | PARTIAL | Database Fillermarks → `url:` blacklist keys in the converter; backup `#15 fillermark` pending (batch 3) | `OldForkDatabaseConverterTest` | batch 1 |
+| 15.3-b | Fillermark migration | DONE | Database converter + backup #15 | `OldForkDatabaseConverterTest`, `BackupForkStateTest` | batch 1 + 3 |
 | 15.3-c | Local/merged manga folder safety | PARTIAL | | — | — |
 | 15.3-d | Visibility separate from source migration matching | MISSING | | — | — |
 
@@ -491,10 +491,10 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 |----|-------------|--------|-------|-------|--------|
 | 21.1-a | Cached category grouping | PARTIAL | | — | — |
 | 21.1-b | Item reuse | PARTIAL | | — | — |
-| 21.1-c | Cached chapter visibility | MISSING | Old `manga_chapter_stats` / visibility revision | — | — |
-| 21.1-d | Selective invalidation | MISSING | | — | — |
-| 21.1-e | One preference subscription | MISSING | Smart Merge override per manga must not fan out | — | — |
-| 21.1-f | Batched visible-chapter queries | MISSING | Old `GetVisibleChaptersByMangaIds` | — | — |
+| 21.1-c | Cached chapter visibility | DONE | `LibraryVisibleCounts` caches visible stats per entry (in memory), keyed by stored counts + rules | `LibraryVisibleCountsTest` | batch 3 |
+| 21.1-d | Selective invalidation | PARTIAL | Visible counts: only changed entries recompute; other caches batch 4 | `LibraryVisibleCountsTest` | batch 3 |
+| 21.1-e | One preference subscription | DONE | Per-manga override is a manga column; one global preference subscription | `LibraryVisibleCountsTest` | batch 3 |
+| 21.1-f | Batched visible-chapter queries | DONE | One `getChaptersByMangaIds` query for all entries with rules | `LibraryVisibleCountsTest` | batch 3 |
 | 21.1-g | Avoid unnecessary recomposition | PARTIAL | | — | — |
 | 21.1-h | Efficient tracker filters | PARTIAL | | — | — |
 | 21.1-i | Efficient category filters | MISSING | | — | — |
@@ -598,11 +598,11 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 5 | Two children named Reading; assign/rename/move/filter/delete/merge one leaves the other | Identity isolation | `CategoryHierarchyTest` + filters by id (`CategoryTree.withAncestors`) | PASS (unit, data + logic) | batch 2a + 2b | Device check of the manager/library pending |
 | 6 | Rapid reorder persists hierarchy/order | Stable order | `CategoryHierarchyTest` rapid reorder + `CategoryManagerRowsTest` drop index | PASS (unit) | batch 2a + 2b | Device check of drag-and-drop pending |
 | 7 | Backup/restore nested categories, smart policy, update intervals | Round trip | `CategoryHierarchyTest` restore + `BackupCategoryHierarchyTest` proto round trip | PASS (unit) | batch 2a | Full backup file round trip on device pending |
-| 8 | Blacklist extras with 1/6; chapters 1 and 6 visible | No false positives | Unit test | not run | — | — |
-| 9 | Priority/override change; list, reader, counts, History agree | One representative | Unit tests | not run | — | — |
-| 10 | Continue from hidden chapter in History; history record unchanged | Next visible opens | Unit test | not run | — | — |
-| 11 | Source refresh keeps colors, blacklist, read flags, merge decisions | Preserved | Unit test | not run | — | — |
-| 12 | Bookmark color changes propagate (manga + reader navigator) | Immediate | Manual (device) | not run | — | — |
+| 8 | Blacklist extras with 1/6; chapters 1 and 6 visible | No false positives | `ChapterBlacklistTest` Mangago extras cases | PASS (unit) | batch 3 | Device check pending |
+| 9 | Priority/override change; list, reader, counts, History agree | One representative | `ChapterSmartMergeTest` shared-rule case, `LibraryVisibleCountsTest`, `GetNextChaptersVisibilityTest` | PASS (unit) | batch 3 | Device check pending |
+| 10 | Continue from hidden chapter in History; history record unchanged | Next visible opens | `GetNextChaptersVisibilityTest` | PASS (unit) | batch 3 | Device check pending |
+| 11 | Source refresh keeps colors, blacklist, read flags, merge decisions | Preserved | `SyncChaptersBookmarkColorTest`, `ChapterBlacklistTest` refresh cases | PASS (unit) | batch 3 | Read flags: upstream behavior, not re-tested |
+| 12 | Bookmark color changes propagate (manga + reader navigator) | Immediate | Manual (device) | not run | batch 3 | Implemented; needs a device check |
 | 13 | Multi-service status/score/date edit with partial failure | Successful writes kept | Unit test | not run | — | — |
 | 14 | Reading older chapter does not lower progress | No rollback | Unit test | not run | — | — |
 | 15 | MangaBaka metadata/dates/search/relations/bindings survive restart/backup | Preserved | Unit + manual | not run | — | — |
@@ -614,9 +614,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 21 | Source-category Global Search only eligible sources; disabled sources idle | Scoped | Unit test | not run | — | — |
 | 22 | Browse search input usable during long request | Responsive | Manual (device) | not run | — | — |
 | 23 | Backup/restore feeds + saved searches with identity | Round trip | Unit test | not run | — | — |
-| 24 | Backup/restore custom metadata, hierarchy, colors, blacklist, scanlator rules; no same-title mixing | Round trip | Unit test | not run | — | — |
-| 25 | SyncYomi preserves fork fields | Preserved | Unit test | not run | — | — |
-| 26 | One override/blacklist change does not recompute unrelated results | Targeted | Unit test | not run | — | — |
+| 24 | Backup/restore custom metadata, hierarchy, colors, blacklist, scanlator rules; no same-title mixing | Round trip | `BackupForkStateTest`, `RestoreRepositoryForkStateTest` (colors, blacklist, scanlator rules); hierarchy see #7 | PASS (unit, partial) | batch 2a + 3 | Custom metadata round trip not re-tested; full backup file on device pending |
+| 25 | SyncYomi preserves fork fields | Preserved | `RestoreRepositoryForkStateTest` sync-winner cases | PASS (unit, partial) | batch 3 | SyncYomi server round trip not tested |
+| 26 | One override/blacklist change does not recompute unrelated results | Targeted | `LibraryVisibleCountsTest` cache case | PASS (unit) | batch 3 | — |
 | 27 | Release prediction + category update policies | Correct selection | Unit test | not run | — | — |
 | 28 | Unit tests, migrations, debug/release builds, device checks | All pass | Gradle + manual | not run | — | — |
 
@@ -709,3 +709,40 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   testDebugUnitTest (app 179, data 81, domain 143; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Changelog:** Added (category manager, library tabs/chips, Set categories tree), Changed (filters cover
   subcategories); the 2a entries no longer say the UI is pending.
+
+### Batch 3 — chapter blacklist, bookmark colors, Smart Scanlator Merge, unified visibility
+
+- **Domain (`KNS`):** `chapter/service/ChapterBlacklist.kt` (url / hybrid v1+v2 / legacy keys, resolved
+  against the full chapter snapshot; `ChapterBlacklistKeys.kt` folded in), `chapter/model/ChapterSmartMerge.kt`
+  (range rules, priority, `filterChapterVisibility`, `chapterListVisibility`, `resolveVisibleChapter`, stats,
+  coverage, `Manga.smartScanlatorMergeEnabled`), and `chapter/service/ChapterVisibility` — the single rule used
+  by every surface. `Chapter.BOOKMARK_COLOR_UNKNOWN` (-1) marks a restored chapter without a color; it is never
+  stored.
+- **Preferences:** `pref_smart_scanlator_merge` (global, default off, Settings → Library),
+  `pref_hide_blacklisted_chapters_<mangaId>` (reveal toggle), `pref_filter_library_bookmark_colors` (no UI yet).
+  `SmartMergeOverrideMigration` moves the old fork's `pref_smart_scanlator_merge_override_<mangaId>` into
+  `manga.user_smart_merge_override` and deletes the old keys.
+- **Visibility everywhere:** manga chapter list (+ reveal), reader chapter loading/navigation and chapter list
+  (a hidden duplicate opened by id is reassigned to its representative), `GetNextChapters` (History / next
+  chapter; a hidden start resolves to after / representative / end instead of `indexOfFirst == -1`),
+  `FilterChaptersForDownload`, library continue-reading (also fixed SY's merged check `manga.id ==
+  MERGED_SOURCE_ID`) and counts (`LibraryVisibleCounts`, cached per entry), Updates feed
+  (`UpdatesVisibilityFilter`).
+- **UI:** manga overflow → Blacklisted chapters (`BlacklistedChaptersDialog`) and Scanlator preferences
+  (`ScanlatorPreferencesDialog`: override global/on/off with the effective value, priority order); selection bar
+  → Bookmark color / Blacklist / Un-blacklist; chapter rows show the color and a blacklisted marker; reader
+  bookmark button long press → color picker (round ripple), colored icon, colored reader chapter list.
+- **Backup / sync:** `BackupManga` #614/#615/#616/#618/#620, `BackupChapter` #14 (write) / #15 (read-only
+  Fillermarks → `url:` keys). `RestoreRepositoryImpl.restoreForkState` follows the excluded-scanlator rules: a
+  winning sync side replaces (empty only when strictly newer), a stale sync side only unions the blacklist, an
+  ordinary restore unions the blacklist and applies the rules it carries, a payload without the fields changes
+  nothing. Chapter colors: the newer sync side owns them; an ordinary restore brings colors in but never resets.
+  Source refresh carries a removed chapter's color to its re-upload.
+- **Tests:** `ChapterBlacklistTest` (13), `ChapterSmartMergeTest` (12), `ScanlatorCoverageTest` (3),
+  `GetNextChaptersVisibilityTest` (4), `RestoreRepositoryForkStateTest` (7), `BackupForkStateTest` (5),
+  `SmartMergeOverrideMigrationTest` (2), `SyncChaptersBookmarkColorTest` (1), `LibraryVisibleCountsTest` (3),
+  `UpdatesVisibilityFilterTest` (1).
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 191 with 1 skipped, data 88, domain 175; 0 failures), assembleDebug, assembleRelease; diff check clean after the tracker rewrite.
+- **Deferred:** range-rule editor UI; bookmark-color filters (library + per manga) and library unread/
+  bookmarked filter predicates under the visibility rule (batch 4); History filters (batch 8); page previews
+  ignore the blacklist; backup #619 (reveal toggle) is not restored. No device test of the new UI yet.

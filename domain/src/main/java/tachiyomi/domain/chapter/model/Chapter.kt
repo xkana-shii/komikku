@@ -39,6 +39,14 @@ data class Chapter(
     }
 
     companion object {
+        // KNS -->
+        /**
+         * A restored chapter whose payload did not say its bookmark color (older backups, or a sync
+         * server that dropped the field). Never stored: restore keeps the local color instead.
+         */
+        const val BOOKMARK_COLOR_UNKNOWN = -1
+        // KNS <--
+
         fun create() = Chapter(
             id = -1,
             mangaId = -1,

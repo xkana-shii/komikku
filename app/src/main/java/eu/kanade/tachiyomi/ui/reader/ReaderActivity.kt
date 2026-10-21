@@ -65,6 +65,7 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.manga.components.BookmarkColorDialog
 import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
@@ -135,6 +136,7 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.UrlUtils
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.manga.model.asMangaCover
 import tachiyomi.i18n.MR
@@ -457,7 +459,14 @@ class ReaderActivity : BaseActivity() {
                             viewModel.toggleBookmark(chapter.id, !chapter.bookmark)
                             chapters = chapters.map {
                                 if (it.chapter.id == chapter.id) {
-                                    it.copy(chapter = chapter.copy(bookmark = !chapter.bookmark))
+                                    // KNS -->
+                                    it.copy(
+                                        chapter = chapter.copy(
+                                            bookmark = !chapter.bookmark,
+                                            bookmarkColor = BookmarkColor.DEFAULT_ID,
+                                        ),
+                                    )
+                                    // KNS <--
                                 } else {
                                     it
                                 }
@@ -471,6 +480,14 @@ class ReaderActivity : BaseActivity() {
                         // KMK <--
                     )
                 }
+
+                // KNS -->
+                ReaderViewModel.Dialog.BookmarkColorPicker -> BookmarkColorDialog(
+                    current = BookmarkColor.fromValue(state.bookmarkColor).takeIf { state.bookmarked },
+                    onSelect = viewModel::setChapterBookmarkColor,
+                    onDismissRequest = onDismissRequest,
+                )
+                // KNS <--
 
                 ReaderViewModel.Dialog.AutoScrollHelp -> AlertDialog(
                     onDismissRequest = onDismissRequest,
@@ -671,6 +688,10 @@ class ReaderActivity : BaseActivity() {
             onClickTopAppBar = ::openMangaScreen,
             bookmarked = state.bookmarked,
             onToggleBookmarked = viewModel::toggleChapterBookmark,
+            // KNS -->
+            bookmarkColor = state.bookmarkColor,
+            onLongClickBookmark = viewModel::showBookmarkColorPicker,
+            // KNS <--
             onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
             onOpenInBrowser = ::openChapterInBrowser.takeIf { isHttpSource },
             onShare = ::shareChapter.takeIf { isHttpSource },

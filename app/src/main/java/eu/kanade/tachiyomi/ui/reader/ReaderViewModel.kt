@@ -112,8 +112,12 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.model.resolveVisibleChapter
+import tachiyomi.domain.chapter.service.ChapterVisibility
+import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.interactor.GetNextChapters
@@ -173,6 +177,9 @@ class ReaderViewModel(
     private val coverCache: CoverCache,
     private val chapterCache: ChapterCache,
     private val downloadCache: DownloadCache,
+    // KNS -->
+    private val chapterVisibility: ChapterVisibility,
+    // KNS <--
 ) : ViewModel() {
 
     @AssistedFactory
@@ -333,7 +340,7 @@ class ReaderViewModel(
     private suspend fun loadChapterList(): List<ReaderChapter> {
         val manga = manga!!
         // SY -->
-        val (chapters, mangaMap) = runBlocking {
+        val (filteredChapters, mangaMap) = runBlocking {
             if (manga.source == MERGED_SOURCE_ID) {
                 // KMK -->
                 // Prime the unfiltered (undeduped) list here, off the main thread; it also backs the
@@ -364,6 +371,23 @@ class ReaderViewModel(
             )
         }
         // SY <--
+
+        // KNS -->
+        // Navigation follows the app-wide visibility rule (chapter blacklist, Smart Scanlator Merge).
+        // A requested Smart Merge duplicate opens as its visible release; a requested blacklisted
+        // chapter still opens (it was asked for explicitly) and is re-added below like an excluded one.
+        val chapters = chapterVisibility.visibleChapters(manga, filteredChapters, unfilteredChapterList)
+        if (chapters.none { it.id == chapterId }) {
+            val requested = unfilteredChapterList.firstOrNull { it.id == chapterId }
+            val blacklisted = requested != null &&
+                filterBlacklistedChapters(listOf(requested), manga.blacklistedChapters, unfilteredChapterList).isEmpty()
+            if (requested != null && !blacklisted) {
+                unfilteredChapterList
+                    .resolveVisibleChapter(manga, chapterVisibility.smartMergeEnabled(manga), chapterId, chapters)
+                    ?.let { chapterId = it.id }
+            }
+        }
+        // KNS <--
 
         // KUN -->
         // A chapter requested directly (deep link, notification, continue reading) whose scanlator
@@ -639,6 +663,9 @@ class ReaderViewModel(
                 it.copy(
                     viewerChapters = newChapters,
                     bookmarked = newChapters.currChapter.chapter.bookmark,
+                    // KNS -->
+                    bookmarkColor = newChapters.currChapter.chapter.bookmarkColor,
+                    // KNS <--
                 )
             }
         }
@@ -1130,13 +1157,18 @@ class ReaderViewModel(
     fun toggleChapterBookmark() {
         val readerChapter = getCurrentChapter() ?: return
         val bookmarked = !readerChapter.chapter.bookmark
-        readerChapter.update { it.copy(bookmark = bookmarked) }
+        // KNS --> toggling always gives an ordinary bookmark; a long press picks a color
+        readerChapter.update { it.copy(bookmark = bookmarked, bookmarkColor = BookmarkColor.DEFAULT_ID) }
+        // KNS <--
 
         // On Main so quick toggles are saved in order
         viewModelScope.launch {
             updateChapter.await(
                 ChapterUpdate(readerChapter.chapter.id) {
                     bookmark = bookmarked
+                    // KNS -->
+                    bookmarkColor = BookmarkColor.DEFAULT_ID
+                    // KNS <--
                 },
             )
         }
@@ -1144,21 +1176,56 @@ class ReaderViewModel(
         mutableState.update {
             it.copy(
                 bookmarked = bookmarked,
+                // KNS -->
+                bookmarkColor = BookmarkColor.DEFAULT_ID,
+                // KNS <--
             )
         }
     }
 
+    // KNS -->
+    fun showBookmarkColorPicker() {
+        if (getCurrentChapter() == null) return
+        mutableState.update { it.copy(dialog = Dialog.BookmarkColorPicker) }
+    }
+
+    /** Bookmarks the current chapter with [color] ([BookmarkColor.NONE] = an ordinary bookmark). */
+    fun setChapterBookmarkColor(color: BookmarkColor) {
+        val readerChapter = getCurrentChapter() ?: return
+        readerChapter.update { it.copy(bookmark = true, bookmarkColor = color.value) }
+        viewModelScope.launch {
+            updateChapter.await(
+                ChapterUpdate(readerChapter.chapter.id) {
+                    bookmark = true
+                    bookmarkColor = color.value
+                },
+            )
+        }
+        mutableState.update { it.copy(bookmarked = true, bookmarkColor = color.value, dialog = null) }
+    }
+    // KNS <--
+
     // SY -->
     fun toggleBookmark(chapterId: Long, bookmarked: Boolean) {
         val readerChapter = chapterList.find { it.chapter.id == chapterId } ?: return
-        readerChapter.update { it.copy(bookmark = bookmarked) }
+        // KNS -->
+        readerChapter.update { it.copy(bookmark = bookmarked, bookmarkColor = BookmarkColor.DEFAULT_ID) }
+        // KNS <--
         viewModelScope.launchNonCancellable {
             updateChapter.await(
                 ChapterUpdate(chapterId) {
                     bookmark = bookmarked
+                    // KNS -->
+                    bookmarkColor = BookmarkColor.DEFAULT_ID
+                    // KNS <--
                 },
             )
         }
+        // KNS -->
+        if (chapterId == getCurrentChapter()?.chapter?.id) {
+            mutableState.update { it.copy(bookmarked = bookmarked, bookmarkColor = BookmarkColor.DEFAULT_ID) }
+        }
+        // KNS <--
     }
     // SY <--
 
@@ -1660,6 +1727,9 @@ class ReaderViewModel(
         val initError: Throwable? = null,
         val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
+        // KNS -->
+        val bookmarkColor: Int = BookmarkColor.DEFAULT_ID,
+        // KNS <--
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
 
@@ -1703,6 +1773,10 @@ class ReaderViewModel(
         // SY -->
         data object ChapterList : Dialog
         // SY <--
+
+        // KNS -->
+        data object BookmarkColorPicker : Dialog
+        // KNS <--
 
         data class PageActions(
             val page: ReaderPage,

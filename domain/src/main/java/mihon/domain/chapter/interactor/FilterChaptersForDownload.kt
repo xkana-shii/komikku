@@ -6,6 +6,7 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.ChapterVisibility
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.manga.model.Manga
 
@@ -22,6 +23,9 @@ class FilterChaptersForDownload(
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
     private val downloadPreferences: DownloadPreferences,
     private val getCategories: GetCategories,
+    // KNS -->
+    private val chapterVisibility: ChapterVisibility,
+    // KNS <--
 ) {
 
     /**
@@ -41,7 +45,23 @@ class FilterChaptersForDownload(
             return emptyList()
         }
 
-        if (!downloadPreferences.downloadNewUnreadChaptersOnly.get()) return newChapters
+        // KNS -->
+        // Never download chapters the user hid (blacklist) or duplicates Smart Merge does not show.
+        val allowedChapters = if (chapterVisibility.hasRules(manga)) {
+            val all = if (manga.source == MERGED_SOURCE_ID) {
+                getMergedChaptersByMangaId.await(manga.id, applyFilter = false)
+            } else {
+                getChaptersByMangaId.await(manga.id, applyFilter = false)
+            }
+            val visibleIds = chapterVisibility.visibleChapters(manga, all).mapTo(HashSet(), Chapter::id)
+            newChapters.filter { it.id in visibleIds }
+        } else {
+            newChapters
+        }
+        if (allowedChapters.isEmpty()) return emptyList()
+        // KNS <--
+
+        if (!downloadPreferences.downloadNewUnreadChaptersOnly.get()) return /* KNS --> */ allowedChapters /* KNS <-- */
 
         // SY -->
         val existingChapters = if (manga.source == MERGED_SOURCE_ID) {
@@ -57,7 +77,7 @@ class FilterChaptersForDownload(
             .map { it.chapterNumber }
             .toSet()
 
-        return newChapters.filterNot { it.chapterNumber in readChapterNumbers }
+        return /* KNS --> */ allowedChapters /* KNS <-- */.filterNot { it.chapterNumber in readChapterNumbers }
     }
 
     /**

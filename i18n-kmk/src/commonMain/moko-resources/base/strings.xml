@@ -295,5 +295,32 @@
     <string name="category_manager_merge_title">Merge into category</string>
     <string name="category_manager_merge_summary">The other selected categories are deleted; their manga and subcategories move into the one you pick.</string>
     <string name="category_manager_delete_many_title">Delete selected</string>
+    <string name="blacklisted_chapters">Blacklisted chapters</string>
+    <string name="blacklist_empty">No blacklisted chapters</string>
+    <string name="hide_blacklisted_chapters">Hide blacklisted chapters</string>
+    <string name="blacklist_chapter_unavailable">Unavailable chapter</string>
+    <string name="action_blacklist_chapter">Blacklist</string>
+    <string name="action_unblacklist_chapter">Remove from blacklist</string>
+    <string name="action_bookmark_color">Bookmark color</string>
+    <string name="bookmark_color_default">Default</string>
+    <string name="bookmark_color_red">Red</string>
+    <string name="bookmark_color_orange">Orange</string>
+    <string name="bookmark_color_yellow">Yellow</string>
+    <string name="bookmark_color_green">Green</string>
+    <string name="bookmark_color_blue">Blue</string>
+    <string name="bookmark_color_purple">Purple</string>
+    <string name="pref_smart_scanlator_merge">Smart scanlator merge</string>
+    <string name="pref_smart_scanlator_merge_summary">Show one release per chapter number, picked by each manga's scanlator priority. Other releases stay in the database and can be shown again.</string>
+    <string name="scanlator_preferences">Scanlator preferences</string>
+    <string name="scanlator_priority">Priority</string>
+    <string name="scanlator_priority_summary">The first scanlator in this list is preferred when several release the same chapter.</string>
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
+    <string name="action_smart_scanlator_merge">Smart scanlator merge</string>
+    <string name="scanlator_merge_global">Global default</string>
+    <string name="scanlator_merge_enabled">Enabled</string>
+    <string name="scanlator_merge_disabled">Disabled</string>
+    <string name="scanlator_merge_effective_enabled">Effective: enabled</string>
+    <string name="scanlator_merge_effective_disabled">Effective: disabled</string>
     <!-- KNS <-->
 </resources>
