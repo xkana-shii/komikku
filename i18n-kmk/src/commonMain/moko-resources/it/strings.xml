@@ -218,4 +218,6 @@
     <string name="discord_status_messing">Messaggiare con</string>
     <string name="pref_fetch_manga_metadata_on_add_description">Recupera automaticamente i metadati di un nuovo manga quando lo aggiungi alla libreria</string>
     <string name="pref_fetch_manga_chapters_on_add_description">Recupera automaticamente l'elenco dei capitoli di un nuovo manga quando lo aggiungi alla libreria</string>
+    <string name="pref_sync_pinned_sources">Sincronizza le fonti fissate</string>
+    <string name="pref_sync_pinned_sources_summary">Disattivato: le fonti fissate restano su questo dispositivo. Attivato: vengono sincronizzate e l\'insieme unito sostituisce le fonti fissate su tutti i dispositivi.</string>
 </resources>

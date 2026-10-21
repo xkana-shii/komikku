@@ -123,6 +123,8 @@
     <!-- Sync section -->
     <string name="pref_show_restoring_progress_banner">Show restoring progress banner</string>
     <string name="pref_show_syncing_progress_banner">Show syncing progress banner</string>
+    <string name="pref_sync_pinned_sources">Sync pinned sources</string>
+    <string name="pref_sync_pinned_sources_summary">Off keeps pinned sources on this device. On syncs them, and the merged set replaces the local pins on every device.</string>
     <string name="web_dav">WebDAV</string>
     <string name="pref_webdav_url">WebDAV Server URL</string>
     <string name="pref_webdav_url_summ">Enter the WebDAV server address</string>

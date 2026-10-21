@@ -173,4 +173,6 @@
     <string name="pref_category_connections">연결</string>
     <string name="action_manual_install">명령어로 설치하기</string>
     <string name="pref_discord_show_progress">진행 상황 표시</string>
+    <string name="pref_sync_pinned_sources">고정된 소스 동기화</string>
+    <string name="pref_sync_pinned_sources_summary">꺼져 있으면 고정된 소스가 이 기기에만 유지됩니다. 켜져 있으면 동기화되며, 병합된 집합이 모든 기기에서 고정된 소스를 바꿉니다.</string>
 </resources>

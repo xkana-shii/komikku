@@ -2,12 +2,15 @@ package eu.kanade.tachiyomi.data.sync
 
 import android.content.Context
 import android.net.Uri
+import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.domain.sync.models.SyncSettings
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreWorker
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
@@ -240,14 +243,10 @@ class SyncManager(
             // KUN -->
             // Exclude derived flags, unmapped category IDs, device-specific hardware/layout settings,
             // and credentials to prevent cross-device ping-pong and corruption.
-            backupPreferences = backupCreator.backupAppPreferences(backupOptions)
-                .filterNot {
-                    it.key in NON_SYNCABLE_PREFERENCE_KEYS ||
-                        it.key.startsWith("connection_webdav_") ||
-                        it.key.startsWith("pref_connections_password_") ||
-                        it.key in LibraryPreferences.categoryPreferenceKeys ||
-                        it.key in DownloadPreferences.categoryPreferenceKeys
-                },
+            backupPreferences = filterSyncableAppPreferences(
+                backupCreator.backupAppPreferences(backupOptions),
+                syncOptions.syncPinnedSources,
+            ),
             // KUN <--
             // SY <--
             backupSourcePreferences = backupCreator.backupSourcePreferences(backupOptions),
@@ -441,7 +440,14 @@ class SyncManager(
             // a v2 delta only carries changed sources
             backupSources = remoteBackup.backupSources.ifEmpty { backup.backupSources },
             // SY <--
-            backupPreferences = remoteBackup.backupPreferences,
+            // KUN -->
+            // The server may still carry the device-local pinned-source key from when it was
+            // synced; drop it when the set is not synced so the comparison below converges.
+            backupPreferences = withoutDeviceLocalPinnedSources(
+                remoteBackup.backupPreferences,
+                syncOptions.syncPinnedSources,
+            ),
+            // KUN <--
             backupSourcePreferences = remoteBackup.backupSourcePreferences,
             backupExtensionStores = remoteBackup.backupExtensionStores,
 
@@ -481,8 +487,15 @@ class SyncManager(
         // KUN <--
         // a v2 delta leaves out the sections nothing changed in; an absent section is not a change
         val hasSourceChanges = newSyncData.backupSources != backup.backupSources
-        val hasPreferenceChanges = remoteBackup.backupPreferences.isNotEmpty() &&
-            remoteBackup.backupPreferences != backup.backupPreferences
+        // KUN -->
+        // Compare the same filtered view the upload used, or a server that still carries the
+        // device-local pinned key would look changed on every sync and force the restore path.
+        val hasPreferenceChanges = hasSyncPreferenceChanges(
+            remotePreferences = remoteBackup.backupPreferences,
+            uploadedPreferences = backup.backupPreferences,
+            syncPinnedSources = syncOptions.syncPinnedSources,
+        )
+        // KUN <--
         val hasSourcePreferenceChanges = remoteBackup.backupSourcePreferences.isNotEmpty() &&
             remoteBackup.backupSourcePreferences != backup.backupSourcePreferences
         val hasExtensionRepoChanges = remoteBackup.backupExtensionStores.isNotEmpty() &&
@@ -553,22 +566,10 @@ class SyncManager(
                 sync = true,
                 // KUN -->
                 // Honour the user's "choose what to sync" flags instead of forcing everything on.
+                // Pinned sources are only replaced when the server merged the upload for us
+                // (SyncYomi v2); see [syncRestoreOptions].
                 // KUN <--
-                options = RestoreOptions(
-                    appSettings = syncOptions.appSettings,
-                    sourceSettings = syncOptions.sourceSettings,
-                    libraryEntries = syncOptions.libraryEntries,
-                    categories = syncOptions.categories,
-                    extensionStores = syncOptions.extensionStores,
-                    // KMK -->
-                    savedSearchesFeeds = syncOptions.savedSearchesFeeds,
-                    // KMK <--
-                    // KUN -->
-                    tracking = syncOptions.tracking,
-                    history = syncOptions.history,
-                    customInfo = syncOptions.customInfo,
-                    // KUN <--
-                ),
+                options = syncRestoreOptions(syncOptions, result.protocolV2),
                 // KUN -->
                 // Drop local chapters that the v2 server no longer returns (tombstoned there).
                 // Chapters added after this snapshot survive; the restorer also skips everything
@@ -932,6 +933,75 @@ class SyncManager(
             "connection_sync_client_host",
             "connection_sync_client_api_key",
         )
+
+        /**
+         * Restore options for a sync run.
+         *
+         * Pinned sources are only replaced when the server merged the upload for us (SyncYomi
+         * protocol v2): Google Drive, WebDAV and SyncYomi v1 merge preferences locally with the
+         * remote value winning whenever both sides carry the key, so a local pin or un-pin is
+         * discarded there and the server's set is the only one the restore sees. Replacing in that
+         * case would delete local pins the server does not know about; the restorer therefore
+         * unions instead, which never removes a local pin.
+         */
+        internal fun syncRestoreOptions(syncOptions: SyncSettings, protocolV2: Boolean): RestoreOptions {
+            return RestoreOptions(
+                appSettings = syncOptions.appSettings,
+                sourceSettings = syncOptions.sourceSettings,
+                libraryEntries = syncOptions.libraryEntries,
+                categories = syncOptions.categories,
+                extensionStores = syncOptions.extensionStores,
+                savedSearchesFeeds = syncOptions.savedSearchesFeeds,
+                tracking = syncOptions.tracking,
+                history = syncOptions.history,
+                customInfo = syncOptions.customInfo,
+                skipPinnedSources = !syncOptions.syncPinnedSources,
+                replacePinnedSources = syncOptions.syncPinnedSources && protocolV2,
+            )
+        }
+
+        /**
+         * App preferences that are safe to upload in a sync. Pinned sources are device-local unless
+         * the user enabled [SyncSettings.syncPinnedSources]; manual/file backups do not use this
+         * filter and still contain them.
+         */
+        internal fun filterSyncableAppPreferences(
+            preferences: List<BackupPreference>,
+            syncPinnedSources: Boolean,
+        ): List<BackupPreference> {
+            return preferences.filterNot {
+                it.key in NON_SYNCABLE_PREFERENCE_KEYS ||
+                    it.key.startsWith("connection_webdav_") ||
+                    it.key.startsWith("pref_connections_password_") ||
+                    it.key in LibraryPreferences.categoryPreferenceKeys ||
+                    it.key in DownloadPreferences.categoryPreferenceKeys ||
+                    (!syncPinnedSources && it.key == SourcePreferences.PINNED_SOURCES_PREF_KEY)
+            }
+        }
+
+        /**
+         * Drops the pinned-source preference from a server preference list when this device does
+         * not sync it. Applying the same filter to the uploaded list and to the server payload
+         * makes the change comparison converge after one sync instead of reporting the stale remote
+         * key as a difference forever.
+         */
+        internal fun withoutDeviceLocalPinnedSources(
+            preferences: List<BackupPreference>,
+            syncPinnedSources: Boolean,
+        ): List<BackupPreference> {
+            if (syncPinnedSources) return preferences
+            return preferences.filterNot { it.key == SourcePreferences.PINNED_SOURCES_PREF_KEY }
+        }
+
+        /** Whether the server's app preferences differ from what this device uploaded. */
+        internal fun hasSyncPreferenceChanges(
+            remotePreferences: List<BackupPreference>,
+            uploadedPreferences: List<BackupPreference>,
+            syncPinnedSources: Boolean,
+        ): Boolean {
+            val remote = withoutDeviceLocalPinnedSources(remotePreferences, syncPinnedSources)
+            return remote.isNotEmpty() && remote != uploadedPreferences
+        }
     }
     // KUN <--
 }

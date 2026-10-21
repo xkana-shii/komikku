@@ -99,10 +99,18 @@ internal class SyncSettingsSelectorModel(
         field = MutableStateFlow<SyncSettingsSelectorModel.State>(
             State(syncOptionsToBackupOptions(syncPreferences.getSyncSettings())),
         )
+
     fun toggle(setter: (BackupOptions, Boolean) -> BackupOptions, enabled: Boolean) {
         state.update {
             val updatedOptions = setter(it.options, enabled)
-            syncPreferences.setSyncSettings(backupOptionsToSyncOptions(updatedOptions))
+            // KUN -->
+            // BackupOptions has no pinned-source flag; keep the current value when the other
+            // checkboxes rebuild the SyncSettings.
+            syncPreferences.setSyncSettings(
+                backupOptionsToSyncOptions(updatedOptions)
+                    .copy(syncPinnedSources = syncPreferences.syncPinnedSources.get()),
+            )
+            // KUN <--
             it.copy(options = updatedOptions)
         }
     }

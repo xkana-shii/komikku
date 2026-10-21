@@ -195,4 +195,6 @@
     <string name="pref_discord_show_download_button">Mostrar botón de descarga</string>
     <string name="pref_discord_show_download_button_summary">Muestra un botón para descargar la aplicación</string>
     <string name="pref_discord_show_discord_button">Mostrar botón de Discord</string>
+    <string name="pref_sync_pinned_sources">Sincronizar fuentes fijadas</string>
+    <string name="pref_sync_pinned_sources_summary">Desactivado: las fuentes fijadas permanecen en este dispositivo. Activado: se sincronizan y el conjunto combinado sustituye a las fuentes fijadas en todos los dispositivos.</string>
 </resources>

@@ -210,4 +210,6 @@
     <string name="pref_fetch_manga_metadata_on_add_description">ライブラリに新しい漫画を追加する際に、追加する漫画のメタデータを自動的に取得します</string>
     <string name="pref_fetch_manga_chapters_on_add">ライブラリに追加する際に章を取得</string>
     <string name="pref_fetch_manga_chapters_on_add_description">ライブラリに新しい漫画を追加する際に、追加する漫画の章リストを自動的に取得します</string>
+    <string name="pref_sync_pinned_sources">ピン留めしたソースを同期</string>
+    <string name="pref_sync_pinned_sources_summary">オフの場合、ピン留めしたソースはこのデバイスにのみ保存されます。オンの場合、同期され、マージされたセットがすべてのデバイスでピン留めしたソースを置き換えます。</string>
 </resources>
