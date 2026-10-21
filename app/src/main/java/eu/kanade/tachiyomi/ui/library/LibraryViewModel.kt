@@ -294,8 +294,11 @@ class LibraryViewModel(
         .flatMapLatest { needsTracks -> if (needsTracks) getTracksPerManga.subscribe() else flowOf(emptyMap()) }
 
     // KNS --> chapter colors are only read while the bookmark-color filter is in use
-    private val bookmarkColors = libraryPreferences.filterBookmarkColors.changes()
-        .map { it.isNotEmpty() }
+    private val bookmarkColors = combine(
+        libraryPreferences.filterBookmarked.changes(),
+        libraryPreferences.filterBookmarkColors.changes(),
+        libraryPreferences.filterBookmarkColorsExclude.changes(),
+    ) { bookmarked, included, excluded -> bookmarked == TriState.ENABLED_IS && (included.isNotEmpty() || excluded.isNotEmpty()) }
         .distinctUntilChanged()
         .flatMapLatest { needed -> if (needed) getLibraryBookmarkColors.subscribe() else flowOf(emptyMap()) }
     // KNS <--
@@ -321,7 +324,7 @@ class LibraryViewModel(
             prefs.filterCategories ||
             // KMK <--
             // KNS -->
-            prefs.filterBookmarkColors.isNotEmpty()
+            prefs.filterBookmarkColors.isNotEmpty() || prefs.filterBookmarkColorsExclude.isNotEmpty()
         // KNS <--
     }
         .distinctUntilChanged()
@@ -574,8 +577,10 @@ class LibraryViewModel(
 
         // KNS -->
         val filterBookmarkColors = preferences.filterBookmarkColors
+        val filterBookmarkColorsExclude = preferences.filterBookmarkColorsExclude
         val filterFnBookmarkColors: (LibraryItem) -> Boolean = {
-            BookmarkColor.matchesFilter(bookmarkColors[it.id].orEmpty(), filterBookmarkColors)
+            filterBookmarked != TriState.ENABLED_IS ||
+                BookmarkColor.matchesFilter(bookmarkColors[it.id].orEmpty(), filterBookmarkColors, filterBookmarkColorsExclude)
         }
         // KNS <--
 
@@ -876,6 +881,7 @@ class LibraryViewModel(
             // KMK <--
             // KNS -->
             libraryPreferences.filterBookmarkColors.changes(),
+            libraryPreferences.filterBookmarkColorsExclude.changes(),
             // KNS <--
         ) {
             ItemPreferences(
@@ -901,6 +907,7 @@ class LibraryViewModel(
                 // KMK <--
                 // KNS -->
                 filterBookmarkColors = BookmarkColor.fromNames((it[16] as Set<*>).filterIsInstance<String>()),
+                filterBookmarkColorsExclude = BookmarkColor.fromNames((it[17] as Set<*>).filterIsInstance<String>()),
                 // KNS <--
             )
         }
@@ -1884,6 +1891,7 @@ class LibraryViewModel(
         // KMK <--
         // KNS -->
         val filterBookmarkColors: Set<BookmarkColor> = emptySet(),
+        val filterBookmarkColorsExclude: Set<BookmarkColor> = emptySet(),
         // KNS <--
     )
 

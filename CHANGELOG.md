@@ -11,6 +11,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Changed
+- Bookmark-color filters now use the same Bookmarked row and Edit-button tri-state editor as category filters in Library, Updates and each manga's chapter settings. Colors can be included, excluded or ignored independently; existing saved Library and per-manga selections are retained as included colors. Color filtering only refines the Bookmarked state, so disabled and Not bookmarked filters keep their prior behavior.
+
 ### Other
 - Rebuilt the fork's foundation on official Komikku `master` (`1656575e8f`) with Komi-kun's architecture (`2c6743696d`): Metro DI, AndroidX ViewModels, async SQLDelight on the AndroidX bundled driver with the Mihon schema rework, SyncYomi v2, the WebGPU reader and the Mihon/TachiyomiSY backlog Komi-kun ported. Keeps the `app.komikku.kns` identity, signing and release workflows. Personal features from the previous `main` are re-implemented separately (`features.md`); see `docs/komikun-foundation-progress.md`.
 - Fixed the database upgrade of fresh-installed Komikku databases through migration 49 (`mangas_categories.last_modified_at` missing).
@@ -90,6 +93,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fixed a crash when displaying the Storage Overview empty state.
 - Fixed a database migration crash caused by an obsolete chapter-history trigger referencing a removed table.
 - Library category tabs now count what they show: when a subcategory is selected, the parent tab's badge shows that subcategory's count (including its own subcategories) instead of the whole parent's total, and choosing All restores the full count. Each tab keeps its own selection and count while another tab is open. With category tabs hidden, the toolbar count follows the same rule. A selection whose subcategory was deleted or moved elsewhere now shows the whole tab, and grouping by source, status or tracker ignores subcategory selections.
+- The Updates screen now shows each chapter's bookmark in its saved color (red, orange, yellow, green, blue or purple), the same way the manga's chapter list does; ordinary bookmarks keep the theme color. Changing a color refreshes the Updates list right away.
+- Databases created before bookmark colors reached the Updates list no longer break the Updates screen: database migration 58 recreates the Updates view with the color column. A view stores no data, so no user data is changed.
 
 ## [v0.20.0] - 2026-06-27
 ### Added

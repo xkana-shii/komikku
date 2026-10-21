@@ -953,8 +953,45 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
   device checks for acceptance #28 (Rich Presence included).
+### Batch 11 — tri-state bookmark-color filters
 
-### Batch 12 — subcategory-aware Library badge counts
+- **Shared UI:** Library, Updates and manga chapter settings now place an independent Edit action beside
+  the existing Bookmarked tri-state control. `BookmarkColorFilterDialog` reuses the category dialog's
+  save/cancel tri-state interaction for the ordinary bookmark plus all six palette colors, with color
+  swatches. Closing or cancelling leaves stored preferences unchanged.
+- **Filtering:** included colors require a match; excluded colors reject a matching bookmarked chapter.
+  For Library, a mixed-color manga passes only when it has an included color and no excluded bookmark
+  color. The existing aggregate query remains the only Library color data source. Saved color choices
+  refine Bookmarked only; disabled and Not bookmarked states preserve their existing semantics.
+- **Persistence and Updates:** old Library/per-manga color keys remain the included side of the new
+  pair, making migration non-destructive and idempotent. Updates has its own keys and `updatesView`
+  now exposes bookmark color, so normal query invalidation immediately refreshes filter eligibility
+  without per-row queries.
+- **Tests:** `BookmarkColorFilterTest` adds full palette and combined include/exclude coverage.
+
+### Batch 12 — colored bookmarks in Updates
+
+- **UI:** the Updates row tints its bookmark icon with `bookmarkColorOf(update.bookmarkColor) ?:
+  MaterialTheme.colorScheme.primary`, the same expression as the manga chapter list, so it reuses the
+  `BookmarkColor` palette (0 = theme color, 1–6 = red … purple). Unbookmarked chapters show no icon.
+- **Data:** `updatesView`, `UpdatesWithRelations` and `UpdatesRepositoryImpl` already carried the color
+  (batch 11). Batch 11 changed the view without a migration, so a database already at schema 58 kept
+  the old view and the Updates queries would fail on `bookmarkColor`. `58.sqm` drops and recreates
+  `updatesView` from its current definition (schema version 59). It touches no table data, and it is
+  independent of `OldForkDatabaseConverter`, which recreates views from the fresh schema anyway.
+- **Reactivity:** the view reads `chapter`, so a color change through `ChapterRepositoryImpl.update`
+  invalidates the subscribed Updates query; no per-row lookups.
+- **Tests:** `UpdatesBookmarkColorTest` (colors 0–6 and an unbookmarked chapter on the real view,
+  `bookmarked` filter and ordering unchanged, a color change re-emits the observed rows),
+  `UpdatesViewMigrationTest` (a schema-58 database with the old view gains `bookmarkColor` and keeps
+  its rows, colors and sync versions), `BookmarkColorTintTest` (0 → theme color, 1–6 → palette).
+- **Validation:** spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  assembleDebug, assembleRelease and `git diff --check` exit 0. The first testDebugUnitTest run failed on a
+  Windows file lock in Kotlin's incremental-compile backup (`:app:compileDebugKotlin`); the re-run exited
+  0 (app 244 with 1 skipped, data 93, domain 192; 0 failures).
+- **Not verified:** on a device — the Updates icon colors and an in-place upgrade from schema 58.
+
+### Batch 13 — subcategory-aware Library badge counts
 
 - **Cause:** `LibraryViewModel.State.getItemCountForCategory` returned the size of the tab's whole
   group, while `getItemsForCategory` already filtered by that tab's entry in `subcategorySelection`.

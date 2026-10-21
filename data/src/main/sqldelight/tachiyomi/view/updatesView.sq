@@ -11,6 +11,7 @@ SELECT
     chapter.remote_url AS chapterUrl,
     chapter.user_read AS read,
     chapter.user_bookmark AS bookmark,
+    chapter.user_bookmark_color AS bookmarkColor,
     chapter.user_last_page_read AS lastPageRead,
     manga.source_id AS sourceId,
     manga.user_favorite_at IS NOT NULL AS favorite,
@@ -36,6 +37,7 @@ SELECT
     chapter.remote_url AS chapterUrl,
     chapter.user_read AS read,
     chapter.user_bookmark AS bookmark,
+    chapter.user_bookmark_color AS bookmarkColor,
     chapter.user_last_page_read AS lastPageRead,
     manga.source_id AS sourceId,
     manga.user_favorite_at IS NOT NULL AS favorite,
@@ -107,7 +109,7 @@ LIMIT :limit;
 
 getReadUpdates:
 SELECT
-    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
+    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark, bookmarkColor,
     lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified, dateUpload, dateFetch,
     excludedScanlator
 FROM updatesView
@@ -118,7 +120,7 @@ LIMIT :limit;
 
 getUnreadUpdates:
 SELECT
-    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark,
+    mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark, bookmarkColor,
     lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified, dateUpload, dateFetch,
     excludedScanlator
 FROM updatesView
