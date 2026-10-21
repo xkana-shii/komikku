@@ -4,6 +4,7 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryTree
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 
@@ -22,6 +23,28 @@ class DeleteCategory(
             // SY -->
             val uid = categoryRepository.get(categoryId)?.uid
             // SY <--
+            // KNS -->
+            // Child categories (and their manga) move up one level instead of being orphaned;
+            // the deleted category's own memberships go with it (foreign key cascade).
+            val categories = categoryRepository.getAll()
+            val parentId = categories.firstOrNull { it.id == categoryId }?.parentId ?: Category.UNCATEGORIZED_ID
+            val children = CategoryTree.childrenOf(categoryId, categories)
+            if (children.isNotEmpty()) {
+                val childIds = children.mapTo(mutableSetOf(), Category::id)
+                val destinationNames = CategoryTree.childrenOf(parentId, categories)
+                    .filterNot { it.id == categoryId || it.id in childIds }
+                    .map { CategoryTree.normalizeName(it.name) }
+                val childNames = children.map { CategoryTree.normalizeName(it.name) }
+                if (childNames.size != childNames.distinct().size || childNames.any { it in destinationNames }) {
+                    return Result.DuplicateName
+                }
+                categoryRepository.updateHierarchy(
+                    CategoryTree.flattened(
+                        categories.map { if (it.id in childIds) it.copy(parentId = parentId) else it },
+                    ),
+                )
+            }
+            // KNS <--
             categoryRepository.delete(categoryId)
             // SY -->
             if (uid != null) onCategoryDeleted(uid)
@@ -70,5 +93,10 @@ class DeleteCategory(
     sealed interface Result {
         data object Success : Result
         data class InternalError(val error: Throwable) : Result
+
+        // KNS -->
+        /** Moving the children up would put two same-named categories under one parent. */
+        data object DuplicateName : Result
+        // KNS <--
     }
 }

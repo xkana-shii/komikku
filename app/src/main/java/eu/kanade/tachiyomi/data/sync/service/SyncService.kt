@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
+import eu.kanade.tachiyomi.data.sync.siblingNameKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import logcat.LogPriority
@@ -419,7 +420,9 @@ abstract class SyncService(
         val processedLocals = mutableSetOf<BackupCategory>()
 
         val localMapByUid = localCategoriesList.filter { it.uid != 0L }.associateBy { it.uid }
-        val localMapByName = localCategoriesList.associateBy { it.name }
+        // KNS --> same names are allowed under different parents
+        val localMapByName = localCategoriesList.associateBy { it.siblingNameKey() }
+        // KNS <--
 
         val lastSyncTime = syncPreferences.lastSyncTimestamp.get()
 
@@ -433,7 +436,9 @@ abstract class SyncService(
 
             // 2. Try match by Name (fallback)
             if (localMatch == null) {
-                localMatch = localMapByName[remote.name]
+                // KNS -->
+                localMatch = localMapByName[remote.siblingNameKey()]
+                // KNS <--
             }
 
             if (localMatch != null) {

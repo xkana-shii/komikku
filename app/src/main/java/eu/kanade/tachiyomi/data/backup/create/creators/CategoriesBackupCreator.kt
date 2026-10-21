@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.data.backup.create.creators
 
 import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
-import eu.kanade.tachiyomi.data.backup.models.backupCategoryMapper
+import eu.kanade.tachiyomi.data.backup.models.backupCategoryOf
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 
@@ -12,8 +12,10 @@ class CategoriesBackupCreator(
 ) {
 
     suspend operator fun invoke(): List<BackupCategory> {
-        return getCategories.await()
-            .filterNot(Category::isSystemCategory)
-            .map(backupCategoryMapper)
+        // KNS -->
+        val categories = getCategories.await().filterNot(Category::isSystemCategory)
+        val byId = categories.associateBy(Category::id)
+        return categories.map { backupCategoryOf(it, byId) }
+        // KNS <--
     }
 }

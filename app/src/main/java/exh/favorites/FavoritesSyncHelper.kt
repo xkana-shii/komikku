@@ -205,6 +205,9 @@ class FavoritesSyncHelper(
                 when (val createCategoryWithNameResult = createCategoryWithName.await(remote)) {
                     is CreateCategoryWithName.Result.InternalError -> throw createCategoryWithNameResult.error
                     is CreateCategoryWithName.Result.Success -> createCategoryWithNameResult.category
+                    // KNS -->
+                    is CreateCategoryWithName.Result.DuplicateName -> createCategoryWithNameResult.existing
+                    // KNS <--
                 }
             }
 

@@ -3,6 +3,7 @@ package tachiyomi.domain.category.repository
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.CategoryUpdate
+import tachiyomi.domain.category.model.RestoredCategoryHierarchy
 
 interface CategoryRepository {
 
@@ -25,7 +26,13 @@ interface CategoryRepository {
      * Restores [categories] from a backup or sync delta, matching existing entries by uid (or name),
      * updating them in place and inserting the rest. Returns the categories as they now stand.
      */
-    suspend fun restoreCategories(categories: List<Category>, isSync: Boolean): List<Category>
+    suspend fun restoreCategories(
+        categories: List<Category>,
+        isSync: Boolean,
+        // KNS -->
+        hierarchy: RestoredCategoryHierarchy = RestoredCategoryHierarchy(),
+        // KNS <--
+    ): List<Category>
     // SY <--
 
     suspend fun updateName(categoryId: Long, name: String)
@@ -50,4 +57,20 @@ interface CategoryRepository {
      */
     suspend fun delete(categoryIds: List<Long>)
     // KUN <--
+
+    // KNS -->
+    /**
+     * Writes the whole hierarchy in one transaction: each category's parent and the depth-first
+     * global order given by the list position. Observers see one list update, and a burst of
+     * drag-and-drop reorders costs one write instead of one per step.
+     */
+    suspend fun updateHierarchy(ordered: List<Category>)
+
+    suspend fun updateTrackStatus(categoryId: Long, trackStatus: Int?)
+
+    suspend fun updateUpdateInterval(categoryId: Long, updateInterval: Int?)
+
+    /** Adds every manga of [sourceIds] to [targetId], keeping their other memberships. */
+    suspend fun copyMemberships(sourceIds: List<Long>, targetId: Long)
+    // KNS <--
 }

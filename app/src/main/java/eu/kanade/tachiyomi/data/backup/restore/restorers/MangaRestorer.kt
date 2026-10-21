@@ -11,6 +11,7 @@ import tachiyomi.domain.backup.model.RestoredHistory
 import tachiyomi.domain.backup.model.RestoredManga
 import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.service.CategoryTree
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
@@ -66,6 +67,15 @@ class MangaRestorer(
         val dbCategoriesByOrder = dbCategories.associateBy { it.order }
         val dbCategoriesById = dbCategories.associateBy { it.id }
         // KUN <--
+        // KNS -->
+        // A backup category resolves by its effective uid (stored, or derived from its parent and
+        // name like CategoriesRestorer does), then by its full name path. A bare name would match a
+        // same-named category under another parent.
+        val backupHierarchy = BackupCategoryHierarchy(backupCategories)
+        val dbCategoriesByPath = dbCategories.filterNot { it.isSystemCategory }.associateBy { category ->
+            CategoryTree.path(category, dbCategoriesById).joinToString("\u0000") { CategoryTree.normalizeName(it) }
+        }
+        // KNS <--
         val backupCategoriesByOrder = backupCategories.associateBy { it.order }
         // KUN -->
         val backupCategoriesList = backupCategories.sortedBy { it.order }
@@ -85,9 +95,14 @@ class MangaRestorer(
                         val backupCat = backupCategoriesByOrder[backupCategoryOrder]
                             ?: backupCategoriesList.getOrNull(backupCategoryOrder.toInt())
                         if (backupCat != null) {
-                            (if (backupCat.uid != 0L) dbCategoriesByUid[backupCat.uid]?.id else null)
-                                ?: dbCategoriesByName[backupCat.name.trim().lowercase()]?.id
+                            // KNS -->
+                            val node = backupHierarchy.nodeByOrder(backupCat.order)
+                            (node?.let { dbCategoriesByUid[it.uid]?.id })
+                                ?: node?.let { dbCategoriesByPath[it.pathKey]?.id }
+                                ?: dbCategoriesByName[backupCat.name.trim().lowercase()]
+                                    ?.takeIf { node == null || node.depth == 0 }?.id
                                 ?: dbCategoriesByOrder[backupCat.order]?.id
+                            // KNS <--
                         } else {
                             dbCategoriesByOrder[backupCategoryOrder]?.id
                                 ?: dbCategoriesById[backupCategoryOrder]?.id

@@ -46,6 +46,15 @@ INSERT INTO manga_category(manga_id, category_id)
 VALUES (:mangaId, :categoryId)
 ON CONFLICT(manga_id, category_id) DO NOTHING;
 
+-- KNS -->
+copyMemberships:
+INSERT INTO manga_category(manga_id, category_id)
+SELECT DISTINCT manga_id, :targetId
+FROM manga_category
+WHERE category_id IN :sourceIds
+ON CONFLICT(manga_id, category_id) DO NOTHING;
+-- KNS <--
+
 deleteMangaCategoryByMangaId:
 DELETE FROM manga_category
 WHERE manga_id = :mangaId;

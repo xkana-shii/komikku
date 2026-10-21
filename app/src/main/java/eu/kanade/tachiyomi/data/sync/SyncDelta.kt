@@ -206,6 +206,11 @@ internal fun isPermanentForcePushFailure(status: Int?, permanent: Boolean): Bool
     permanent || (status != null && status in 400..499 && status != 408 && status != 429)
 // KUN <--
 
+// KNS -->
+/** A category's name among its siblings; 0 = root (or a payload that does not carry the parent). */
+internal fun BackupCategory.siblingNameKey(): String = "$parentUid\u0000${name.trim().lowercase()}"
+// KNS <--
+
 /**
  * Merges local and remote categories for a sync restore.
  *
@@ -224,20 +229,25 @@ internal fun mergeSyncCategories(
             local
         } else {
             val remoteByUid = remote.filter { it.uid != 0L }.associateBy { it.uid }
-            val remoteByName = remote.associateBy { it.name.trim().lowercase() }
+            // KNS -->
+            // Names are only unique among siblings: `Shounen / Reading` and `Josei / Reading` must not
+            // collapse into one category, so the name fallback (which also converges same-named roots
+            // created on two devices) is scoped to the parent.
+            val remoteByName = remote.associateBy { it.siblingNameKey() }
             val updated = local.map { loc ->
                 (if (loc.uid != 0L) remoteByUid[loc.uid] else null)
-                    ?: remoteByName[loc.name.trim().lowercase()]
+                    ?: remoteByName[loc.siblingNameKey()]
                     ?: loc
             }
             val existingUids = updated.map { it.uid }.toSet()
-            val existingNames = updated.map { it.name.trim().lowercase() }.toSet()
+            val existingNames = updated.map { it.siblingNameKey() }.toSet()
             val brandNew = remote.filter {
-                (it.uid == 0L || it.uid !in existingUids) && it.name.trim().lowercase() !in existingNames
+                (it.uid == 0L || it.uid !in existingUids) && it.siblingNameKey() !in existingNames
             }
             (updated + brandNew)
-                .distinctBy { it.name.trim().lowercase() }
+                .distinctBy { it.siblingNameKey() }
                 .sortedBy { it.order }
+            // KNS <--
         }
     } else {
         remote.ifEmpty { local }

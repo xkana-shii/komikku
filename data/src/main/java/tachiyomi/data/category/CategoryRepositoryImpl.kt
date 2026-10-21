@@ -12,7 +12,9 @@ import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.CategoryUpdate
+import tachiyomi.domain.category.model.RestoredCategoryHierarchy
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryTree
 
 @Inject
 @SingleIn(AppScope::class)
@@ -113,7 +115,13 @@ class CategoryRepositoryImpl(
         }
     }
 
-    override suspend fun restoreCategories(categories: List<Category>, isSync: Boolean): List<Category> {
+    override suspend fun restoreCategories(
+        categories: List<Category>,
+        isSync: Boolean,
+        // KNS -->
+        hierarchy: RestoredCategoryHierarchy,
+        // KNS <--
+    ): List<Category> {
         // KUN -->
         // One transaction for the whole restore: `getCategories` observers (the library's category
         // tabs) then see a single committed list instead of the sentinel orders of the reorder
@@ -122,23 +130,50 @@ class CategoryRepositoryImpl(
             val dbCategories = database.categoryQueries
                 .getCategories(CategoryMapper::mapCategory)
                 .awaitAsList()
-            val dbCategoriesByName = dbCategories.associateBy { it.name.trim().lowercase() }
             val dbCategoriesByUid = dbCategories.filter { it.uid != 0L }.associateBy { it.uid } // Map by UID
+            // KNS -->
+            // Names are only unique among siblings, so a name match is scoped to the parent the
+            // incoming category resolves to; with an unknown parent it has to be unambiguous.
+            val restoredUidToId = mutableMapOf<Long, Long>()
+            fun localIdOfUid(uid: Long): Long? = restoredUidToId[uid] ?: dbCategoriesByUid[uid]?.id
 
-            // Deduplicate incoming categories by normalized name and ensure deterministic UIDs
+            // null = unknown parent, 0 = root.
+            fun resolvedParent(category: Category): Long? {
+                val parentUid = hierarchy.parentUids[category.uid] ?: return null
+                if (parentUid == 0L) return Category.UNCATEGORIZED_ID
+                return localIdOfUid(parentUid)
+            }
+
+            fun matchExisting(category: Category): Category? {
+                if (category.uid != 0L) dbCategoriesByUid[category.uid]?.let { return it }
+                val name = CategoryTree.normalizeName(category.name)
+                val sameName = dbCategories.filter {
+                    !it.isSystemCategory && CategoryTree.normalizeName(it.name) == name
+                }
+                return when (val parent = resolvedParent(category)) {
+                    null -> sameName.singleOrNull()
+                        ?: sameName.firstOrNull { it.parentId == Category.UNCATEGORIZED_ID }
+                    else -> sameName.firstOrNull { it.parentId == parent }
+                }
+            }
+
+            // Deduplicate incoming categories by (parent, normalized name) and ensure deterministic
+            // UIDs. Parents are processed first, so a child resolves a parent restored in this pass.
             val deduplicatedCategories = categories
                 .map { cat ->
                     val uid = if (cat.uid != 0L) cat.uid else Category.nameToUid(cat.name)
                     cat.copy(uid = uid)
                 }
-                .distinctBy { it.name.trim().lowercase() }
+                .distinctBy { (hierarchy.parentUids[it.uid] ?: -1L) to CategoryTree.normalizeName(it.name) }
+            // KNS <--
 
             // `order` is UNIQUE, so a reorder would trip it mid-swap. Free the positions of every
             // category we are about to reorder first, then assign the server's positions.
             val reordered = if (isSync) {
                 deduplicatedCategories.mapNotNull { category ->
-                    (if (category.uid != 0L) dbCategoriesByUid[category.uid] else null)
-                        ?: dbCategoriesByName[category.name.trim().lowercase()]
+                    // KNS -->
+                    matchExisting(category)
+                    // KNS <--
                 }.distinctBy { it.id }
             } else {
                 emptyList()
@@ -174,20 +209,19 @@ class CategoryRepositoryImpl(
             }
 
             val restored = deduplicatedCategories
-                .sortedBy { it.order }
+                // KNS -->
+                .sortedWith(compareBy<Category> { depthOf(it.uid, hierarchy.parentUids) }.thenBy { it.order })
+                // KNS <--
                 .map { category ->
-                    val normalizedName = category.name.trim().lowercase()
-                    var dbCategory = if (category.uid != 0L) {
-                        dbCategoriesByUid[category.uid]
-                    } else {
-                        null
-                    }
-
-                    if (dbCategory == null) {
-                        dbCategory = dbCategoriesByName[normalizedName]
-                    }
+                    // KNS -->
+                    val dbCategory = matchExisting(category)
+                    val parentId = resolvedParent(category)
+                    // KNS <--
 
                     if (dbCategory != null) {
+                        // KNS -->
+                        restoredUidToId[category.uid] = dbCategory.id
+                        // KNS <--
                         // A user-initiated (non-sync) restore only inserts new categories and leaves
                         // existing ones untouched, matching master's CategoriesRestorer; updating them
                         // would rewrite order, flags and the sync counters (`version`/`last_modified_at`).
@@ -196,6 +230,13 @@ class CategoryRepositoryImpl(
                         val order = if (category.order !in usedOrders) category.order else freeOrder()
                         usedOrders.add(order)
                         val canonicalUid = if (category.uid != 0L) category.uid else dbCategory.uid
+                        // KNS -->
+                        // An unknown parent keeps the local one; never below itself or a descendant.
+                        val safeParent = parentId?.takeIf {
+                            it == Category.UNCATEGORIZED_ID ||
+                                (it != dbCategory.id && it !in CategoryTree.descendantIds(dbCategory.id, dbCategories))
+                        }
+                        // KNS <--
                         database.categoryQueries.update(
                             name = category.name,
                             order = order,
@@ -210,12 +251,33 @@ class CategoryRepositoryImpl(
                             lastModifiedAt = category.lastModifiedAt,
                             isSyncing = 1,
                             // KNS -->
-                            parentId = null,
+                            parentId = safeParent,
                             dateModified = null,
                             // KNS <--
                             categoryId = dbCategory.id,
                         )
-                        return@map category.copy(id = dbCategory.id, order = order, uid = canonicalUid)
+                        // KNS -->
+                        // Only payloads that carry the fork fields may change them; a stripped
+                        // payload must not clear a Smart Category binding or an update interval.
+                        if (category.uid in hierarchy.carriesForkFields) {
+                            database.categoryQueries.updateTrackStatus(
+                                trackStatus = category.trackStatus?.toLong(),
+                                dateModified = dbCategory.dateModified,
+                                categoryId = dbCategory.id,
+                            )
+                            database.categoryQueries.updateUpdateInterval(
+                                updateInterval = category.updateInterval?.toLong(),
+                                dateModified = dbCategory.dateModified,
+                                categoryId = dbCategory.id,
+                            )
+                        }
+                        return@map category.copy(
+                            id = dbCategory.id,
+                            order = order,
+                            uid = canonicalUid,
+                            parentId = safeParent ?: dbCategory.parentId,
+                        )
+                        // KNS <--
                     }
 
                     // A sync delta is a converging replica, not an import: new
@@ -237,22 +299,61 @@ class CategoryRepositoryImpl(
                         isSyncing = if (isSync) 1L else 0L,
                         // SY <--
                         // KNS -->
-                        parentId = Category.UNCATEGORIZED_ID,
+                        parentId = parentId ?: Category.UNCATEGORIZED_ID,
                         trackStatus = category.trackStatus?.toLong(),
                         updateInterval = category.updateInterval?.toLong(),
                         dateAdded = category.dateAdded.takeIf { it > 0 } ?: System.currentTimeMillis(),
                         dateModified = category.dateModified.takeIf { it > 0 } ?: System.currentTimeMillis(),
                         // KNS <--
                     ).awaitAsOne()
-                        .let { id -> category.copy(id = id, order = order) }
+                        .let { id ->
+                            // KNS -->
+                            restoredUidToId[category.uid] = id
+                            category.copy(id = id, order = order, parentId = parentId ?: Category.UNCATEGORIZED_ID)
+                            // KNS <--
+                        }
                 }
+
+            // KNS -->
+            // The global order must stay depth-first (every parent followed by its subtree). Rows
+            // touched above are still flagged is_syncing, so fixing their order does not bump their
+            // sync version; untouched rows only move if the tree really was out of order.
+            val afterRestore = database.categoryQueries.getCategories(CategoryMapper::mapCategory).awaitAsList()
+            val depthFirst = CategoryTree.flattened(afterRestore)
+            val current = afterRestore.filterNot(Category::isSystemCategory)
+            if (depthFirst.map(Category::id) != current.map(Category::id)) {
+                depthFirst.forEachIndexed { index, category ->
+                    database.categoryQueries.updateOrder(order = -index - 2L, categoryId = category.id)
+                }
+                depthFirst.forEachIndexed { index, category ->
+                    database.categoryQueries.updateOrder(order = index.toLong(), categoryId = category.id)
+                }
+            }
+            val finalOrder = database.categoryQueries.getCategories(CategoryMapper::mapCategory).awaitAsList()
+                .associateBy(Category::id)
+            // KNS <--
 
             database.categoryQueries.resetIsSyncing()
 
-            restored
+            // KNS -->
+            restored.map { category -> finalOrder[category.id]?.let { category.copy(order = it.order) } ?: category }
+            // KNS <--
         }
         // KUN <--
     }
+
+    // KNS -->
+    private fun depthOf(uid: Long, parentUids: Map<Long, Long>): Int {
+        var depth = 0
+        var current = parentUids[uid]
+        val seen = mutableSetOf(uid)
+        while (current != null && current != 0L && seen.add(current)) {
+            depth++
+            current = parentUids[current]
+        }
+        return depth
+    }
+    // KNS <--
     // SY <--
 
     override suspend fun updateName(categoryId: Long, name: String) {
@@ -324,4 +425,66 @@ class CategoryRepositoryImpl(
         }
     }
     // KUN <--
+
+    // KNS -->
+    override suspend fun updateHierarchy(ordered: List<Category>) {
+        val user = ordered.filterNot(Category::isSystemCategory)
+        if (user.isEmpty()) return
+        val now = System.currentTimeMillis()
+        database.transaction {
+            val current = database.categoryQueries
+                .getCategories(CategoryMapper::mapCategory)
+                .awaitAsList()
+                .associateBy(Category::id)
+            user.forEach { category ->
+                val stored = current[category.id] ?: return@forEach
+                if (stored.parentId != category.parentId) {
+                    database.categoryQueries.update(
+                        name = null,
+                        order = null,
+                        flags = null,
+                        hidden = null,
+                        version = null,
+                        uid = null,
+                        lastModifiedAt = null,
+                        isSyncing = null,
+                        parentId = category.parentId,
+                        dateModified = now,
+                        categoryId = category.id,
+                    )
+                }
+            }
+            // `order` is UNIQUE: park every row on a negative slot first, as updateAllOrders does.
+            val ids = user.map(Category::id).filter { it in current } +
+                current.keys.filter { it > 0 && user.none { c -> c.id == it } }
+            ids.forEachIndexed { index, categoryId ->
+                database.categoryQueries.updateOrder(order = -index - 2L, categoryId = categoryId)
+            }
+            ids.forEachIndexed { index, categoryId ->
+                database.categoryQueries.updateOrder(order = index.toLong(), categoryId = categoryId)
+            }
+        }
+    }
+
+    override suspend fun updateTrackStatus(categoryId: Long, trackStatus: Int?) {
+        database.categoryQueries.updateTrackStatus(
+            trackStatus = trackStatus?.toLong(),
+            dateModified = System.currentTimeMillis(),
+            categoryId = categoryId,
+        )
+    }
+
+    override suspend fun updateUpdateInterval(categoryId: Long, updateInterval: Int?) {
+        database.categoryQueries.updateUpdateInterval(
+            updateInterval = updateInterval?.toLong(),
+            dateModified = System.currentTimeMillis(),
+            categoryId = categoryId,
+        )
+    }
+
+    override suspend fun copyMemberships(sourceIds: List<Long>, targetId: Long) {
+        if (sourceIds.isEmpty()) return
+        database.manga_categoryQueries.copyMemberships(targetId = targetId, sourceIds = sourceIds)
+    }
+    // KNS <--
 }

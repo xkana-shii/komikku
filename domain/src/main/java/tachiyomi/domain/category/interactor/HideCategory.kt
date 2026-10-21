@@ -28,6 +28,23 @@ class HideCategory(
         }
     }
 
+    // KNS -->
+    /** Hides or shows several categories at once; memberships are untouched. */
+    suspend fun await(categories: List<Category>, hidden: Boolean) = withNonCancellableContext {
+        try {
+            categoryRepository.updatePartial(
+                categories.filterNot(Category::isSystemCategory)
+                    .filter { it.hidden != hidden }
+                    .map { CategoryUpdate(id = it.id, hidden = hidden) },
+            )
+            Result.Success
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            Result.InternalError(e)
+        }
+    }
+    // KNS <--
+
     sealed class Result {
         data object Success : Result()
         data class InternalError(val error: Throwable) : Result()

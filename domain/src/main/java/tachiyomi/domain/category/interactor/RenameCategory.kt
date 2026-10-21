@@ -5,6 +5,7 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryTree
 
 @Inject
 class RenameCategory(
@@ -12,6 +13,13 @@ class RenameCategory(
 ) {
 
     suspend fun await(categoryId: Long, name: String): Result {
+        // KNS -->
+        val categories = categoryRepository.getAll()
+        val parentId = categories.firstOrNull { it.id == categoryId }?.parentId ?: Category.UNCATEGORIZED_ID
+        if (CategoryTree.hasSiblingName(name, parentId, categories, excludingId = categoryId)) {
+            return Result.DuplicateName
+        }
+        // KNS <--
         return try {
             categoryRepository.updateName(categoryId = categoryId, name = name)
             Result.Success
@@ -26,5 +34,9 @@ class RenameCategory(
     sealed interface Result {
         data object Success : Result
         data class InternalError(val error: Throwable) : Result
+
+        // KNS -->
+        data object DuplicateName : Result
+        // KNS <--
     }
 }

@@ -56,7 +56,8 @@ row will be re-checked when its subsystem is touched.
 | # | Batch | State | Commits |
 |---|-------|-------|---------|
 | 1 | Persistence: KNS columns (migration 57), domain fields, mappers, old-fork database conversion | done | see session log |
-| 2 | Hierarchical categories (domain + manager + assignment) and Smart Categories | planned | — |
+| 2a | Category hierarchy + Smart Categories: domain, data, backup/restore, sync, tracker hook | done | see session log |
+| 2b | Category manager UI, Set Categories dialog, library subcategory navigation/filters | planned | — |
 | 3 | Chapter blacklist, bookmark colors, Fillermark migration, Smart Scanlator Merge, unified visibility | planned | — |
 | 4 | Library search/filters/sort/presentation + performance | planned | — |
 | 5 | Tracking: progress correctness, MangaBaka, unified editor, preferred/priority | planned | — |
@@ -75,9 +76,9 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 1.1-a | Hierarchical categories (parent/child) across organization, browsing, dialogs, persistence | MISSING | No `parent_id` on HEAD. Old: `category.parent_id` (0 = root), `CategoryTreeHandler`. Needs column, model, mapper, backup #901, sync | — | — |
-| 1.1-b | Same names under different parents stay distinct (identity = id + parent) | MISSING | Komi-kun category sync matches by `uid`; keep that. Name lookups (`CreateCategoryWithName`, restore) must become parent-aware | — | — |
-| 1.1-c | Parent-child membership consistency (child assignment implies ancestry; no orphan/unrelated memberships) | MISSING | | — | — |
+| 1.1-a | Hierarchical categories (parent/child) across organization, browsing, dialogs, persistence | PARTIAL | Storage, domain (`CategoryTree`, interactors), restore/backup/sync done; manager UI, assignment dialog and library navigation pending (batch 2b) | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
+| 1.1-b | Same names under different parents stay distinct (identity = id + parent) | DONE | Identity = id/uid; names unique per parent (`CategoryTree.hasSiblingName`); child uids `Category.childUid(parentUid, name)`; restore, manga category references and SyncYomi merges scoped by parent | `CategoryTreeTest`, `CategoryHierarchyTest`, `BackupCategoryHierarchyTest`, `SyncCategoryHierarchyTest`, `CategoryUidTest` | batch 2a |
+| 1.1-c | Parent-child membership consistency (child assignment implies ancestry; no orphan/unrelated memberships) | PARTIAL | Branch membership is derived from ancestry (child-only membership reaches its parents, Smart Categories keep the parent when they remove the last status category); library parent views pending (2b) | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
 | 1.1-d | Library navigation for nested categories (subcategory chips); parent view honors include-descendants | MISSING | Keep Komi-kun #55 tab selection fix | — | — |
 | 1.1-e | Parent-inclusive counts with duplicate handling | MISSING | | — | — |
 | 1.1-f | Parent/child display mode option (verify historical toggles) | HISTORICAL | Check old `LibraryPreferences` | — | — |
@@ -85,33 +86,33 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 1.2-a | Tree-based category manager | MISSING | Current `CategoryScreen` is flat (Mihon/Komikku) | — | — |
 | 1.2-b | Expand/collapse branches + expand-all/collapse-all | MISSING | | — | — |
 | 1.2-c | Category search with hierarchy context | MISSING | | — | — |
-| 1.2-d | Create child category (choose parent) | MISSING | | — | — |
-| 1.2-e | Rename without changing parent / conflating siblings | PARTIAL | Rename exists; duplicate-name check is global, must be per-parent | — | — |
-| 1.2-f | Move/reparent with cycle prevention | MISSING | Old `MoveCategory` | — | — |
-| 1.2-g | Merge categories (hierarchy rules) | MISSING | Old `MergeCategories` | — | — |
-| 1.2-h | Sort and manual reorder, stable hierarchy | PARTIAL | Reorder exists (flat); sort-by exists? verify | — | — |
-| 1.2-i | Batched/debounced reorder writes | MISSING | | — | — |
+| 1.2-d | Create child category (choose parent) | PARTIAL | `CreateCategoryWithName.await(name, parentId)` (+ DuplicateName); UI pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
+| 1.2-e | Rename without changing parent / conflating siblings | PARTIAL | `RenameCategory` rejects a sibling's name only; UI pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
+| 1.2-f | Move/reparent with cycle prevention | PARTIAL | `MoveCategory` (subtree moves, cycles rejected, sibling-name check); UI pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
+| 1.2-g | Merge categories (hierarchy rules) | PARTIAL | `MergeCategories` by id: memberships copied, children moved below target, target lifted out of a source subtree, duplicate sibling names rejected; UI pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
+| 1.2-h | Sort and manual reorder, stable hierarchy | PARTIAL | `ReorderCategory` moves among siblings; global order kept depth-first (`CategoryRepository.updateHierarchy`); date sort fields stored; UI pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
+| 1.2-i | Batched/debounced reorder writes | PARTIAL | Every hierarchy change is one transaction (`updateHierarchy`); UI debounce pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
 | 1.2-j | Bulk selection | MISSING | | — | — |
-| 1.2-k | Bulk hide/show (keeps membership) | PARTIAL | Single hide exists (Komikku `hidden`) | — | — |
-| 1.2-l | Bulk move/merge/delete respecting descendants | MISSING | | — | — |
+| 1.2-k | Bulk hide/show (keeps membership) | PARTIAL | `HideCategory.await(categories, hidden)` bulk; UI pending | — | batch 2a |
+| 1.2-l | Bulk move/merge/delete respecting descendants | PARTIAL | Bulk delete (`CategoryRepository.delete(list)`, Komi-kun), bulk merge (`MergeCategories`), move per category; UI pending | `CategoryTreeTest`, `CategoryHierarchyTest` | batch 2a |
 | 1.2-m | Counts, hierarchy/selection indicators, list state kept | MISSING | | — | — |
 | 1.3-a | Hierarchy-aware Set Categories dialog | MISSING | | — | — |
 | 1.3-b | Correct bulk assignment (keep unrelated memberships) | PARTIAL | Mihon tri-state bulk dialog exists; needs hierarchy | — | — |
 | 1.3-c | Tabs/chips/counts/filters react to category edits | PARTIAL | Reactive flows exist; verify with hierarchy ops | — | — |
 | 1.3-d | Search/filter does not jump to invalid tab | PARTIAL | Komi-kun #55 resolves selection from rendered list | — | — |
 | 1.3-e | Include/exclude category filters correct with tree changes and same-name children | MISSING | | — | — |
-| 1.4-a | Tracker-status-driven categories | MISSING | Old `category.track_status`, `SyncCategoriesWithTrackStatus` | — | — |
-| 1.4-b | (Rationale) no cross-branch assignment by status alone | MISSING | Covered by 1.4-c..h tests | — | — |
-| 1.4-c | Subcategory binding eligible only if parent is a member or ancestor of a member | MISSING | | — | — |
-| 1.4-d | Reachability walk (transitive ancestry) | MISSING | | — | — |
-| 1.4-e | Out-of-scope branches completely untouched | MISSING | | — | — |
-| 1.4-f | Multiple relevant parents update independently | MISSING | | — | — |
-| 1.4-g | Top-level status categories stay global | MISSING | | — | — |
-| 1.4-h | Deeper nesting | MISSING | | — | — |
-| 1.4-i | Hierarchy-safe status changes (start/complete/reset) | MISSING | | — | — |
-| 1.4-j | Category update only after persisted tracker state | MISSING | Hook after `InsertTrack`/tracker update persistence | — | — |
+| 1.4-a | Tracker-status-driven categories | DONE-UNVERIFIED | `Category.trackStatus` + `SyncCategoriesWithTrackStatus` + `SyncCategoryTrackStatus` (app, unified `TrackStatus`); binding UI pending (1.4-k) | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-b | (Rationale) no cross-branch assignment by status alone | DONE | Covered by 1.4-c..h | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-c | Subcategory binding eligible only if parent is a member or ancestor of a member | DONE | Subcategory binding in scope iff its parent is a member or an ancestor of a member | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-d | Reachability walk (transitive ancestry) | DONE | `CategoryTree.withAncestors` (transitive) | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-e | Out-of-scope branches completely untouched | DONE | Only in-scope bound categories are added/removed; everything else untouched | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-f | Multiple relevant parents update independently | DONE | Each reachable branch evaluated independently | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-g | Top-level status categories stay global | DONE | `parentId == 0` bindings always in scope | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-h | Deeper nesting | DONE | Three-level test (Shounen / Ongoing / Reading) | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-i | Hierarchy-safe status changes (start/complete/reset) | DONE | Status changes move between status categories inside each branch; the branch parent is kept as anchor | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
+| 1.4-j | Category update only after persisted tracker state | DONE | Triggered by `UpsertTrack` only after a successful write (`TrackPersistenceListener`); no usable persisted status = no change | `UpsertTrackTest` (3) | batch 2a |
 | 1.4-k | Category status policy configuration UI | MISSING | | — | — |
-| 1.5-a | Per-category update intervals | MISSING | Old `category.update_interval`, `GetCategoryUpdateInterval` | — | — |
+| 1.5-a | Per-category update intervals | PARTIAL | `category.update_interval` + `SetCategoryUpdateInterval`; scheduler and UI pending (batch 8) | — | batch 2a |
 | 1.5-b | Subcategory update scope | MISSING | Old `SubcategoryUpdateScope` | — | — |
 | 1.5-c | Category-specific picker + persisted settings | MISSING | Backup #903 | — | — |
 | 1.5-d | Updater respects policy, no duplicate work for multi-category manga | MISSING | `LibraryUpdateWorker` | — | — |
@@ -237,7 +238,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 7.3-c | Refresh before advancing when needed | PARTIAL | | — | — |
 | 7.3-d | Start-tracking status correctness | PARTIAL | | — | — |
 | 7.3-e | Automatic progress propagation | PRESENT | Mihon auto-update track on read | — | — |
-| 7.3-f | Smart Categories after persisted tracker state | MISSING | See 1.4-j | — | — |
+| 7.3-f | Smart Categories after persisted tracker state | DONE | See 1.4-j | `UpsertTrackTest` | batch 2a |
 | 7.3-g | Reread counters where supported | HISTORICAL | | — | — |
 
 ### 8. Unified tracker editor
@@ -393,8 +394,8 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | ID | Requirement | Status | Notes | Tests | Commit |
 |----|-------------|--------|-------|-------|--------|
-| 15.1-a | Category hierarchy in backup | MISSING | `BackupCategory` #901 `parentId` | — | — |
-| 15.1-b | Update schedules + status policies in backup | MISSING | #902 `trackStatus`, #903 `updateInterval` | — | — |
+| 15.1-a | Category hierarchy in backup | DONE | `BackupCategory` #901 parentId (backup id), #904 parentUid, #907 hierarchyKnown; restored parents-first | `BackupCategoryHierarchyTest`, `CategoryHierarchyTest` | batch 2a |
+| 15.1-b | Update schedules + status policies in backup | DONE | #902 trackStatus, #903 updateInterval (old-fork numbers), #905/#906 dates; a payload without the fields never clears them | `CategoryHierarchyTest` | batch 2a |
 | 15.1-c | Bookmark colors in backup | MISSING | `BackupChapter` #14 | — | — |
 | 15.1-d | Blacklist in backup | MISSING | `BackupManga` #615 | — | — |
 | 15.1-e | Scanlator prefs + Smart Merge overrides | MISSING | #614, #616, #618 | — | — |
@@ -405,7 +406,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 15.1-j | Synced identity data | PRESENT | Komi-kun | — | — |
 | 15.2-a | Old backups with missing fields | PARTIAL | Proto defaults; old-fork #113 meaning differs (documented) | — | — |
 | 15.2-b | Identity-safe restore (source+url) | PRESENT | Mihon restore by source+url; verify | — | — |
-| 15.2-c | Dependency-aware restore order | PARTIAL | Parents before children needed | — | — |
+| 15.2-c | Dependency-aware restore order | PARTIAL | Categories: parents before children (depth order) in `restoreCategories`; saved searches before feeds is Komi-kun #59 | `CategoryHierarchyTest` | batch 2a |
 | 15.2-d | Cancellation safety | PARTIAL | | — | — |
 | 15.2-e | Worker lifecycle | PARTIAL | | — | — |
 | 15.3-a | Migration safety for fork data | DONE-UNVERIFIED | `57.sqm` + `OldForkDatabaseConverter` (old lineage → current schema, all rows, fork columns kept). Device test with a real old-fork DB pending; old-fork SharedPreferences and backups not converted yet | `KnsColumnsMigrationTest`, `OldForkDatabaseConverterTest` | batch 1 |
@@ -431,7 +432,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 17.1-e | Tracker coordination (status/progress/reread count) | MISSING | | — | — |
 | 17.1-f | Saved settings | MISSING | | — | — |
 | 17.2-a | Automatic tracker progress on reading | PRESENT | Mihon | — | — |
-| 17.2-b | Category movement by tracker status | MISSING | 1.4 | — | — |
+| 17.2-b | Category movement by tracker status | DONE-UNVERIFIED | See 1.4; device check pending | `SyncCategoriesWithTrackStatusTest` (11) | batch 2a |
 | 17.2-c | No duplicate automation operations | MISSING | | — | — |
 
 ### 18. Webhooks and Discord
@@ -590,13 +591,13 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 
 | # | Scenario | Expected | Verification | Result | Commit | Limitations |
 |---|----------|----------|--------------|--------|--------|-------------|
-| 1 | Shounen/Reading vs Josei/Reading; manga only in Shounen; status change must not add Josei | No Josei change | Unit test | not run | — | — |
-| 2 | Manga only in Shounen/Reading; Completed reaches Shounen/Completed via ancestor; Josei untouched | Ancestor reachability | Unit test | not run | — | — |
-| 3 | Manga in both branches; each scoped rule updates its branch | Independent updates | Unit test | not run | — | — |
-| 4 | Top-level status category works globally | Global binding | Unit test | not run | — | — |
-| 5 | Two children named Reading; assign/rename/move/filter/delete/merge one leaves the other | Identity isolation | Unit tests | not run | — | — |
-| 6 | Rapid reorder persists hierarchy/order | Stable order | Unit test + manual | not run | — | — |
-| 7 | Backup/restore nested categories, smart policy, update intervals | Round trip | Unit test | not run | — | — |
+| 1 | Shounen/Reading vs Josei/Reading; manga only in Shounen; status change must not add Josei | No Josei change | `SyncCategoriesWithTrackStatusTest` scenario 1 | PASS (unit) | batch 2a | Device check pending |
+| 2 | Manga only in Shounen/Reading; Completed reaches Shounen/Completed via ancestor; Josei untouched | Ancestor reachability | `SyncCategoriesWithTrackStatusTest` scenario 2 (+ branch anchor) | PASS (unit) | batch 2a | Device check pending |
+| 3 | Manga in both branches; each scoped rule updates its branch | Independent updates | `SyncCategoriesWithTrackStatusTest` scenario 3 | PASS (unit) | batch 2a | Device check pending |
+| 4 | Top-level status category works globally | Global binding | `SyncCategoriesWithTrackStatusTest` scenario 4 | PASS (unit) | batch 2a | Device check pending |
+| 5 | Two children named Reading; assign/rename/move/filter/delete/merge one leaves the other | Identity isolation | `CategoryHierarchyTest` (create, rename, move, delete, merge) | PARTIAL: data layer PASS | batch 2a | Library filtering of same-named children pending (2b) |
+| 6 | Rapid reorder persists hierarchy/order | Stable order | `CategoryHierarchyTest` rapid reorder | PARTIAL: logic PASS | batch 2a | Manager UI pending (2b) |
+| 7 | Backup/restore nested categories, smart policy, update intervals | Round trip | `CategoryHierarchyTest` restore + `BackupCategoryHierarchyTest` proto round trip | PASS (unit) | batch 2a | Full backup file round trip on device pending |
 | 8 | Blacklist extras with 1/6; chapters 1 and 6 visible | No false positives | Unit test | not run | — | — |
 | 9 | Priority/override change; list, reader, counts, History agree | One representative | Unit tests | not run | — | — |
 | 10 | Continue from hidden chapter in History; history record unchanged | Next visible opens | Unit test | not run | — | — |
@@ -605,7 +606,7 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 13 | Multi-service status/score/date edit with partial failure | Successful writes kept | Unit test | not run | — | — |
 | 14 | Reading older chapter does not lower progress | No rollback | Unit test | not run | — | — |
 | 15 | MangaBaka metadata/dates/search/relations/bindings survive restart/backup | Preserved | Unit + manual | not run | — | — |
-| 16 | Category movement only after persisted status change | Ordering | Unit test | not run | — | — |
+| 16 | Category movement only after persisted status change | Ordering | `UpsertTrackTest` | PASS (unit) | batch 2a | `SyncCategoryTrackStatus` with real trackers not unit-tested |
 | 17 | Auto-scroll/auto-flip speed, duration, sleep/background, end | Stops correctly | Manual (device) | not run | — | — |
 | 18 | Reader title/back destination; bookmark icon color + rounded feedback | Correct | Manual (device) | not run | — | — |
 | 19 | Confirmed Webtoon fit/gap controls | Where they exist | Manual (device) | not run | — | — |
@@ -658,3 +659,30 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   (app 163, data 71, domain 124; 0 failures; 1 pre-existing `@Disabled`), `assembleDebug`,
   `assembleRelease`, `git diff --check`.
 - **Changelog:** Unreleased → Other: migration 57; old-fork database conversion.
+
+### Batch 2a — category hierarchy and Smart Categories (logic, persistence, backup, sync)
+
+- **Domain:** `CategoryTree` (N-level: sibling names, ancestry/descendants, cycle-safe moves, depth-first
+  order), `SyncCategoriesWithTrackStatus` (branch-scoped rule, see features.md § 1.4), new interactors
+  `MoveCategory`, `MergeCategories`, `SetCategoryTrackStatus`, `SetCategoryUpdateInterval`; extended
+  `CreateCategoryWithName` (parent, `DuplicateName`), `RenameCategory` (`DuplicateName`), `DeleteCategory`
+  (children move up, `DuplicateName`), `HideCategory` (bulk), `ReorderCategory` (siblings).
+  The old fork's tree was two levels deep; this one supports any depth as the spec requires.
+- **Data:** `CategoryRepository.updateHierarchy` (parents + depth-first order in one transaction),
+  `updateTrackStatus`, `updateUpdateInterval`, `copyMemberships`; `restoreCategories` now takes a
+  `RestoredCategoryHierarchy` and matches/deduplicates by (parent, name) after uid, processes parents
+  first, keeps the local parent/policies when the payload lacks them, and keeps the order depth-first.
+- **Tracker hook:** `UpsertTrack` → `TrackPersistenceListener` (domain) → `SyncCategoryTrackStatus` (app,
+  unified `TrackStatus`, deterministic tracker order; preferred tracker comes with batch 5).
+- **Backup:** `BackupCategory` #901 parentId, #902 trackStatus, #903 updateInterval (old-fork numbers),
+  #904 parentUid, #905/#906 dates, #907 hierarchyKnown; `BackupCategoryHierarchy` shared by
+  `CategoriesRestorer` and `MangaRestorer` (effective uid, parent, path).
+- **Sync:** Komi-kun's `mergeSyncCategories` (v2) and `SyncService.mergeCategoriesLists` (v1) deduplicated
+  and matched by bare name, which would merge `Shounen / Reading` with `Josei / Reading` (and the v1 prune
+  could then delete one). Both now use `siblingNameKey()` (parent uid + name); root behaviour, including
+  Komi-kun's cross-device convergence of same-named roots, is unchanged (`SyncDeltaTest` 29/29).
+- **Tests:** `CategoryTreeTest` (5), `SyncCategoriesWithTrackStatusTest` (11), `UpsertTrackTest` (3),
+  `CategoryHierarchyTest` (10), `BackupCategoryHierarchyTest` (3), `SyncCategoryHierarchyTest` (2);
+  Komi-kun's `CategoryRepositoryRestoreTest`, `MangaRestorerTest`, `SyncDeltaTest`, `SyncFullSyncTest` pass.
+- **Changelog:** Added (nested categories logic, Smart Categories), Fixed (category backups/restore,
+  SyncYomi same-named categories).

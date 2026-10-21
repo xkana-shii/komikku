@@ -7,6 +7,7 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryTree
 
 @Inject
 class ReorderCategory(
@@ -14,6 +15,9 @@ class ReorderCategory(
 ) {
     private val mutex = Mutex()
 
+    // KNS -->
+    /** Moves [category] to [newIndex] among its siblings (same parent); its subtree moves with it. */
+    // KNS <--
     suspend fun await(category: Category, newIndex: Int) = mutex.withLock {
         val categories = categoryRepository.getAll()
             .filterNot(Category::isSystemCategory)
@@ -25,9 +29,12 @@ class ReorderCategory(
         }
 
         try {
-            categories.add(newIndex, categories.removeAt(currentIndex))
-
-            categoryRepository.updateAllOrders(orderedIds = categories.map { it.id })
+            // KNS -->
+            val parentId = categories[currentIndex].parentId
+            val reordered = CategoryTree.moved(category.id, parentId, newIndex, categories)
+                ?: return@withLock Result.Unchanged
+            categoryRepository.updateHierarchy(reordered)
+            // KNS <--
             Result.Success
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
