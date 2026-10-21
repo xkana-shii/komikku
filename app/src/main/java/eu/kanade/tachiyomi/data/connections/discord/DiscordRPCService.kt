@@ -59,7 +59,9 @@ class DiscordRPCService : Service() {
         }
 
         // Show notification and enter foreground as early as possible
-        notification(this)
+        // KNS --> the system can refuse (e.g. started from the background); then stop instead of crashing
+        if (!notification(this)) return
+        // KNS <--
         // KMK <--
 
         val status = when (connectionsPreferences.discordRPCStatus.get()) {
@@ -142,7 +144,8 @@ class DiscordRPCService : Service() {
         }
     }
 
-    private fun notification(context: Context) {
+    /** Enters the foreground with the Rich Presence notification; false (and stops) when not allowed. */
+    private fun notification(context: Context): Boolean {
         // KMK -->
         val stopIntent = NotificationReceiver.stopDiscordRPCService(context)
         // KMK <--
@@ -161,7 +164,18 @@ class DiscordRPCService : Service() {
             setUsesChronometer(true)
         }
 
-        startForeground(Notifications.ID_DISCORD_RPC, builder.build())
+        // KNS -->
+        return try {
+            startForeground(Notifications.ID_DISCORD_RPC, builder.build())
+            true
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Discord RPC could not enter the foreground: ${e.message}")
+            rpc?.closeRPC()
+            rpc = null
+            stopSelf()
+            false
+        }
+        // KNS <--
     }
 
     companion object {

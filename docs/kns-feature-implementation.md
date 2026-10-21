@@ -445,12 +445,12 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 18.1-d | Asynchronous bounded queue | DONE | `Channel(64)` drained by one app-scoped coroutine; extra events dropped | `WebhookNotifierTest` | batch 9 |
 | 18.1-e | Private endpoint storage | DONE | URLs are private preferences; failures logged without the URL | `WebhookNotifierTest` | batch 9 |
 | 18.1-f | Failure handling | DONE | Delivery errors caught per endpoint; the originating action never waits | `WebhookNotifierTest` | batch 9 |
-| 18.2-a | Presence integration | PARTIAL | Komikku Discord RPC present on HEAD; compare old fork | — | — |
-| 18.2-b | Account/login management | HISTORICAL | | — | — |
-| 18.2-c | Restart/stop controls | HISTORICAL | | — | — |
-| 18.2-d | Foreground-service compatibility | HISTORICAL | | — | — |
-| 18.2-e | Cover/chapter formatting | HISTORICAL | | — | — |
-| 18.2-f | Auth/API resilience | HISTORICAL | | — | — |
+| 18.2-a | Presence integration | PRESENT | Komikku Rich Presence (screen-based status, reading activity); the old fork changed only images and a crash guard (both ported) | — | — |
+| 18.2-b | Account/login management | PRESENT | Komikku Discord login + multi-account screen; avatar fallback present | — | — |
+| 18.2-c | Restart/stop controls | PRESENT | Restart (`DiscordRPCService.restart`) and stop (notification action) in Komikku | — | — |
+| 18.2-d | Foreground-service compatibility | DONE | Komikku enters the foreground early; KNS guard stops the service when `startForeground` is refused (old-fork fix) | manual pending | batch 10 |
+| 18.2-e | Cover/chapter formatting | DONE | Komikku formatting; the old fork's own status images ported | manual pending | batch 10 |
+| 18.2-f | Auth/API resilience | PRESENT | Token checks on start/restart, 429 handling in `RPCExternalAsset`, avatar fallback (Komikku) | — | — |
 | 18.2-g | Tokens not exported as normal prefs | DONE | `discord_accounts` (contains tokens) and connection passwords use private keys; `PrivateConnectionsMigration` moves existing values and removes public copies on every start | `PrivateConnectionsMigrationTest` | batch 10 |
 
 ### 19. Storage and downloads
@@ -939,3 +939,17 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
   Discord Rich Presence behavior review (18.2-a–f, historical); acceptance #28 device checks.
+
+### Batch 10 (part 5) — Discord Rich Presence review (18.2)
+
+- **Method:** `git diff 1656575e8f 0ff967c77f` over the Discord/connections code. The old fork's net changes were:
+  the Webhooks entry (done in batch 9), R-class import churn (not applicable), its own status images ("Update
+  images to my liking"), and a `startForeground` try/catch. The token guards, early foreground notification,
+  429 handling and avatar fallback it had merged from Komikku branches are already in HEAD.
+- **Ported (`KNS`):** the status image URLs in `DiscordRPCModels`; `DiscordRPCService.notification` returns false and
+  stops the service when `startForeground` throws, and `onCreate` returns without creating the RPC client.
+- **Validation:** all exit 0 — spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration, testDebugUnitTest (app 242 with 1 skipped
+, data 89
+, domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
+- **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
+  device checks for acceptance #28 (Rich Presence included).

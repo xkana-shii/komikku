@@ -44,6 +44,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Chapter ranges in Scanlator preferences: a scanlator can be preferred for a range of chapter numbers (for example chapters 1–50 from one group), overriding the priority order inside that range; the last matching range wins. Ranges are listed, added and removed in the dialog.
 - Remove trackers from the All trackers panel: unlink several trackers at once, optionally also removing the entries on the services; failures are reported per tracker.
 - Entries updated at once (Settings → Library): limits how many entries the library and metadata updates refresh at the same time (1–10, default 5 as before), using the previous personal fork's setting.
+- Discord Rich Presence uses the previous personal fork's own status images.
 - [Hikka](https://hikka.io/) tracker support ([@Lorg0n](https://github.com/Lorg0n)) ([#1386](https://github.com/mihonapp/mihon/pull/1386))
   - Fix Hikka not defaulting to "Plan to Read" for unread titles ([@MajorTanya](https://github.com/MajorTanya)) ([#3534](https://github.com/mihonapp/mihon/pull/3534))
   - Fix Hikka search throwing error due to unclosed response ([@MajorTanya](https://github.com/MajorTanya)) ([#3548](https://github.com/mihonapp/mihon/pull/3548))
@@ -62,6 +63,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Tapping the manga title in the reader now goes back like the arrow, to the screen the reader was opened from, instead of opening the entry in a new main screen.
 - Restoring a backup of the previous personal fork no longer turns its last-update time into the next expected update: that fork stored the next update in another field, which is now read.
 - Discord account tokens and connection passwords are no longer written into backups: they were stored as ordinary settings and are now private ones (included only when private settings are backed up on purpose). Existing logins are moved over on the next start, and the public copies are removed, also when an older backup brings them back.
+- Discord Rich Presence no longer crashes the app when Android refuses to start its foreground service (for example when started from the background); it stops instead.
 - Manga with blacklisted chapters or Smart Scanlator Merge show chapter, unread and bookmark counts and continue-reading targets for the chapters actually listed. Manga without these rules are counted exactly as before and cost nothing extra.
 - Don't use GMS to detect if GMS is available ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3525](https://github.com/mihonapp/mihon/pull/3525))
 
