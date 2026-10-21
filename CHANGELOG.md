@@ -89,6 +89,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Restore TachiyomiSY's EH/NHentai metadata search in the library. `artist:`, `group:`, `parody:`, `character:`, `uploader:`, `female:`, `male:`, `reclass:` and the short aliases `a:`, `c:`/`char:`, `f:`, `g:`/`creator:`/`circle:`, `l:`, `m:`, `p:`/`series:`, `r:` now match the stored EH metadata; they previously matched unrelated manga fields (`artist:`) or nothing. `language:`/`lang:` keep matching the source language. The other Mihon fields (`id:`, `src:`, wildcards, ...) are unchanged.
 - Fixed a crash when displaying the Storage Overview empty state.
 - Fixed a database migration crash caused by an obsolete chapter-history trigger referencing a removed table.
+- Library category tabs now count what they show: when a subcategory is selected, the parent tab's badge shows that subcategory's count (including its own subcategories) instead of the whole parent's total, and choosing All restores the full count. Each tab keeps its own selection and count while another tab is open. With category tabs hidden, the toolbar count follows the same rule. A selection whose subcategory was deleted or moved elsewhere now shows the whole tab, and grouping by source, status or tracker ignores subcategory selections.
 
 ## [v0.20.0] - 2026-06-27
 ### Added

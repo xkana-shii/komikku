@@ -1993,10 +1993,16 @@ class LibraryViewModel(
         // KNS -->
         private val categoriesById by lazy { libraryData.categories.associateBy(Category::id) }
 
-        /** The selected subcategory of [category]'s tab and everything below it; null = the whole tab. */
+        /**
+         * The selected subcategory of [category]'s tab and everything below it; null = the whole tab.
+         * Only category tabs have subcategories; a selection that was deleted or moved out of the tab
+         * falls back to the whole tab.
+         */
         private fun selectedSubtree(category: Category): Set<Long>? {
+            if (groupType != LibraryGroup.BY_DEFAULT || category.isSystemCategory) return null
             val selectedId = subcategorySelection[category.id] ?: return null
             if (selectedId !in categoriesById) return null
+            if (category.id !in CategoryTree.ancestorIds(selectedId, categoriesById)) return null
             return CategoryTree.descendantIds(selectedId, libraryData.categories) + selectedId
         }
 
@@ -2024,7 +2030,12 @@ class LibraryViewModel(
         // KNS <--
 
         fun getItemCountForCategory(category: Category): Int? {
-            return if (showMangaCount || !searchQuery.isNullOrEmpty()) groupedFavorites[category]?.size else null
+            if (!showMangaCount && searchQuery.isNullOrEmpty()) return null
+            // KNS -->
+            // Each tab counts what it shows: its own selected subcategory, whether or not it is active.
+            if (selectedSubtree(category) != null) return getItemsForCategory(category).size
+            // KNS <--
+            return groupedFavorites[category]?.size
         }
 
         fun getToolbarTitle(

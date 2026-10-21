@@ -953,3 +953,26 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
   device checks for acceptance #28 (Rich Presence included).
+
+### Batch 12 — subcategory-aware Library badge counts
+
+- **Cause:** `LibraryViewModel.State.getItemCountForCategory` returned the size of the tab's whole
+  group, while `getItemsForCategory` already filtered by that tab's entry in `subcategorySelection`.
+- **Fix:** the count now uses the same effective membership as `getItemsForCategory` whenever the tab
+  has a selected subtree, keyed by the tab's own id, so inactive tabs keep their own count. Nothing is
+  queried: it reuses the state's grouped, already searched and filtered entries; each manga is counted
+  once. `getToolbarTitle` already reads this count when tabs are hidden; the whole-library count
+  with tabs shown is unchanged. The badge preference and the search exception are unchanged.
+- **Safer selection lookup:** `selectedSubtree` ignores selections outside category grouping and on the
+  system category, and falls back to the whole tab when the selected category was deleted or is not
+  below the tab. Items and counts both use it, so they always agree.
+- **UI:** `LibraryTab` passes `state.getItemCountForCategory`; a selection change produces a new
+  `State`, so `LibraryTabs` badges recompose without further changes.
+- **Tests:** `LibrarySubcategoryCountTest` (8, on the real `State`): All 10 / Test 2 / Other 5 / All
+  again; per-tab persistence across tab switches; nested descendants, shared manga counted once, an
+  empty child counting 0; membership moves and removals; search/filter-narrowed counts and the badge
+  preference; deleted and foreign selections; source grouping; toolbar counts.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 250 with 1 skipped, data 89, domain 190; 0
+  failures), assembleDebug, assembleRelease, `git diff --check`.
+- **Not verified:** on a device.
