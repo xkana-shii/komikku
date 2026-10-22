@@ -74,13 +74,6 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Add option to set which readers use vertical chapter navigator ([@AntsyLich](https://github.com/AntsyLich)) ([#3528](https://github.com/mihonapp/mihon/pull/3528))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - The library's include/exclude category filters now cover subcategories: excluding a parent also excludes manga filed only in its subcategories, and same-named subcategories under other parents are never matched.
 - Refreshing a category tab also updates the manga filed only in its subcategories.
 - History's unfinished-manga filter now counts only the chapters the chapter list shows, so a manga whose remaining chapters are all blacklisted or hidden duplicates counts as finished.
@@ -133,13 +126,6 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Add option to open app settings from system settings ([@JFronny](https://github.com/JFronny)) ([#3180](https://github.com/mihonapp/mihon/pull/3180))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Change the term "extension repo" to "extension store" ([@AntsyLich](https://github.com/AntsyLich)) ([#3349](https://github.com/mihonapp/mihon/pull/3349))
 - Change the term "Obsolete" to "Orphaned" for extensions ([@AntsyLich](https://github.com/AntsyLich)) ([#3383](https://github.com/mihonapp/mihon/pull/3383))
 - Remove text limit of manga notes ([@AntsyLich](https://github.com/AntsyLich)) ([#3410](https://github.com/mihonapp/mihon/pull/3410))
@@ -164,13 +150,6 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Add a one time popup asking for donation from long time users ([@AntsyLich](https://github.com/AntsyLich)) ([#3203](https://github.com/mihonapp/mihon/pull/3203))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Don't prompt users to enable Google Play services if disabled or unavailable ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3152](https://github.com/mihonapp/mihon/pull/3152))
 - Make "Support Us" more prominent in More screen ([@AntsyLich](https://github.com/AntsyLich)) ([#3196](https://github.com/mihonapp/mihon/pull/3196))
 
@@ -196,13 +175,6 @@ Same as v0.19.6
 
 ## [v0.19.5] - 2026-03-20
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Retry in reader now redownloads image ([@AntsyLich](https://github.com/AntsyLich)) ([#3089](https://github.com/mihonapp/mihon/pull/3089))
 
 ### Fixed
@@ -229,13 +201,6 @@ Same as v0.19.6
 - Utilize tracker for library duplicate detection ([@NarwhalHorns](https://github.com/NarwhalHorns)) ([#2978](https://github.com/mihonapp/mihon/pull/2978))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Update tracker icons ([@AntsyLich](https://github.com/AntsyLich)) ([#2773](https://github.com/mihonapp/mihon/pull/2773))
 - Add a small increment to chapter number before comparison to fix progress sync issues for Suwayomi ([@cpiber](https://github.com/cpiber)) ([#2657](https://github.com/mihonapp/mihon/pull/2675))
 - Add all pages of adjacent chapters in the UI instead of only the first or last three ([@AntsyLich](https://github.com/AntsyLich)) ([#2995](https://github.com/mihonapp/mihon/pull/2995))
@@ -276,13 +241,6 @@ Same as v0.19.6
 - Option to customize the number of concurrent source and page downloads ([@AntsyLich](https://github.com/AntsyLich)) ([#2637](https://github.com/mihonapp/mihon/pull/2637))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Increased default concurrent page downloads to 5 ([@AntsyLich](https://github.com/AntsyLich)) ([#2637](https://github.com/mihonapp/mihon/pull/2637))
 
 ### Improved
@@ -315,13 +273,6 @@ Same as v0.19.6
 
 ## [v0.19.1] - 2025-08-07
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - LocalSource now reads ComicInfo.xml file for chapter (if available) to display chapter title, number and scanlator ([@raxod502](https://github.com/radian-software)) ([#2332](https://github.com/mihonapp/mihon/pull/2332))
 
 ### Removed
@@ -366,13 +317,6 @@ Same as v0.19.6
 - Optimize library code to potentially better handle big user libraries ([@AntsyLich](https://github.com/AntsyLich)) ([#2329](https://github.com/mihonapp/mihon/pull/2329), [#2341](https://github.com/mihonapp/mihon/pull/2341))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Display all similarly named duplicates in duplicate manga dialogue ([@NarwhalHorns](https://github.com/NarwhalHorns), [@AntsyLich](https://github.com/AntsyLich)) ([#1861](https://github.com/mihonapp/mihon/pull/1861))
   - Display chapter count on items in duplicate manga dialogue ([@NarwhalHorns](https://github.com/NarwhalHorns)) ([#1963](https://github.com/mihonapp/mihon/pull/1963))
 - Update Facebook and Reddit icons ([@Joehuu](https://github.com/Joehuu)) ([#1994](https://github.com/mihonapp/mihon/pull/1994))
@@ -421,13 +365,6 @@ Same as v0.19.6
 - Add back option to disable unread chapter badge in library ([@AntsyLich](https://github.com/AntsyLich)) ([#1871](https://github.com/mihonapp/mihon/pull/1871))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Sliders UI ([@AntsyLich](https://github.com/AntsyLich)) ([#1840](https://github.com/mihonapp/mihon/pull/1840))
 - Apply "Downloaded only" filter to all entries regardless of favourite status ([@NGB-Was-Taken](https://github.com/NGB-Was-Taken)) ([#1603](https://github.com/mihonapp/mihon/pull/1603))
 - Ignore hidden files/folders for Local Source chapter list ([@BrutuZ](https://github.com/BrutuZ)) ([#1763](https://github.com/mihonapp/mihon/pull/1763))
@@ -456,13 +393,6 @@ Same as v0.19.6
 
 ## [v0.17.1] - 2024-12-06
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Bump default user agent ([@AntsyLich](https://github.com/AntsyLich)) ([`76dcf90`](https://github.com/mihonapp/mihon/commit/76dcf903403d565056f44c66d965c1ea8affffc3))
 
 ### Improved
@@ -514,13 +444,6 @@ Same as v0.19.6
 - Option to backup non-library read entries ([@Animeboynz](https://github.com/Animeboynz), [@jobobby04](https://github.com/jobobby04), [@AntsyLich](https://github.com/AntsyLich)) ([#1324](https://github.com/mihonapp/mihon/pull/1324))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Read archive files from memory instead of temporarily extracting to internal storage ([@FooIbar](https://github.com/FooIbar)) ([#326](https://github.com/mihonapp/mihon/pull/326))
   - Fix dual page split ([@FooIbar](https://github.com/FooIbar)) ([#485](https://github.com/mihonapp/mihon/pull/485))
 - Bump default user agent ([@AntsyLich](https://github.com/AntsyLich)) ([`8160b47`](https://github.com/mihonapp/mihon/commit/8160b47ff5fbbd9b32caeb462b5be881fabd3449))
@@ -666,13 +589,6 @@ Same as v0.19.6
 - Advance setting to install custom color profiles ([@wwww-wwww](https://github.com/wwww-wwww)) ([#523](https://github.com/mihonapp/mihon/pull/523))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Permanently enable 32-bit color mode ([@wwww-wwww](https://github.com/wwww-wwww)) ([#523](https://github.com/mihonapp/mihon/pull/523))
 
 ### Fixed
@@ -688,13 +604,6 @@ Same as v0.19.6
 
 ## [v0.16.4] - 2024-02-27
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Don't include custom user agent for MAL (circumvents MAL block) ([@AntsyLich](https://github.com/AntsyLich)) ([`085ad8d`](https://github.com/mihonapp/mihon/commit/085ad8d44637c375a8ed24aba3a6f75f5b0cc9ee))
 
 ## [v0.16.3] - 2024-01-30
@@ -702,13 +611,6 @@ Same as v0.19.6
 - Copy extension debug info when clicking logo or name in the extension details screen ([@MajorTanya](https://github.com/MajorTanya)) ([#271](https://github.com/mihonapp/mihon/pull/271))
 
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Hide display cutoff setting in reader settings sheet if fullscreen is disabled ([@Riztard](https://github.com/Riztard)) ([#241](https://github.com/mihonapp/mihon/pull/241))
 - Library update error filename to `mihon_update_errors.txt` from `tachiyomi_update_errors.txt` ([@mjishnu](https://github.com/mjishnu)) ([#253](https://github.com/mihonapp/mihon/pull/253))
 
@@ -723,13 +625,6 @@ Same as v0.19.6
 
 ## [v0.16.2] - 2024-01-28
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Backup now contains scanlator filter of a series ([@jobobby04](https://github.com/jobobby04)) ([#166](https://github.com/mihonapp/mihon/pull/166))
 - App icon scaling ([@AntsyLich](https://github.com/AntsyLich)) ([`26815c7`](https://github.com/mihonapp/mihon/commit/26815c7356111394665467c1e81255ac9ee33c1a))
 - Tracker OAuth client to Mihon's (fixes login issue for Shikimori tracker) ([@AntsyLich](https://github.com/AntsyLich)) ([`e3f33e2`](https://github.com/mihonapp/mihon/commit/e3f33e24f5e928ac8a85d1f500fd42d4715fc6b5))
@@ -752,13 +647,6 @@ Same as v0.19.6
 
 ## [v0.16.1] - 2024-01-18
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Branding to Mihon (for references we missed) ([@AntsyLich](https://github.com/AntsyLich)) ([`6539406`](https://github.com/mihonapp/mihon/commit/653940613d661eb371aab3b3c3a8181e4e308c43))
 - Preview builds are now called Beta builds ([@AntsyLich](https://github.com/AntsyLich)) ([`3c3a1cd`](https://github.com/mihonapp/mihon/commit/3c3a1cd448ab1f653ddd12b2afe0cba38968d1b9))
 
@@ -768,13 +656,6 @@ Same as v0.19.6
 
 ## [v0.16.0] - 2024-01-16
 ### Changed
-- Scanlator preferences show, under each scanlator, how many chapters it released and which chapter numbers they cover (as in the previous personal fork), counted over all of the entry's chapters so hidden duplicates and blacklisted chapters are included.
-- Library: tapping the selected category tab hides its subcategory row, and tapping it again shows it. The row keeps that state while you switch categories, instead of reappearing on every switch.
-- Saving a source filter under the name of an existing saved search (the feeds' searches) asks whether to replace it, as in the previous personal fork; confirming updates that saved search in place, so feeds built on it follow, and cancelling changes nothing.
-- Global Search can again be limited to one Sources-tab category: a Source category chip next to Pinned and All picks the category, and only its sources are searched. The choice is remembered.
-- The chapter selection bar shows Blacklist and Remove from blacklist directly after the bookmark actions again.
-- The entry screen's "Related titles" section is now called "Related".
-- MangaBaka metadata autofill uses the original cover image when MangaBaka has one, and the 250px version only otherwise.
 - Branding to Mihon ([@AntsyLich](https://github.com/AntsyLich))
 - Minimum supported Android version to 8 ([@AntsyLich](https://github.com/AntsyLich)) ([`dfb3091`](https://github.com/mihonapp/mihon/commit/dfb3091e380dda3e9bfb64bf5c9a685cf3a03d0e))
 
