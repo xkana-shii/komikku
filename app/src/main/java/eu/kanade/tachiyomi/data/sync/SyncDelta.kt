@@ -91,6 +91,11 @@ internal fun preserveForcePushSections(
             local.customDescription = remote.customDescription
             local.customGenre = remote.customGenre
             local.customStatus = remote.customStatus
+            // KUN -->
+            // The marker travels with the values: the restore half must see the same "included"
+            // state the server holds, not this device's disabled-section default.
+            local.customInfoIncluded = remote.customInfoIncluded
+            // KUN <--
         }
     }
 }
@@ -148,6 +153,11 @@ internal fun clearDisabledSectionsForRestore(backup: Backup, settings: SyncSetti
             manga.customDescription = null
             manga.customGenre = null
             manga.customStatus = 0
+            // KUN -->
+            // A cleared section must not look like an explicit "the user removed every override"
+            // either, or a future restore-flag regression would clear the local file entry.
+            manga.customInfoIncluded = false
+            // KUN <--
         }
     }
 }

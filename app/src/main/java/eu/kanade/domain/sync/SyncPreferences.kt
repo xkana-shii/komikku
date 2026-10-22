@@ -62,6 +62,19 @@ class SyncPreferences(
         Preference.appStateKey("sync_force_push_pending"),
         false,
     )
+
+    /**
+     * Whether the pinned-source set is synced. Off by default: pinned sources are usually
+     * device-specific, so the key is excluded from the sync upload and skipped on restore.
+     * When on, the synced set replaces the local pins.
+     *
+     * App-state key: this is a per-device choice and must not be uploaded or restored with app
+     * settings, or enabling it on one device would silently enable it on all of them.
+     */
+    val syncPinnedSources = preferenceStore.getBoolean(
+        Preference.appStateKey("sync_pinned_sources"),
+        false,
+    )
     // KUN <--
 
     val syncInterval = preferenceStore.getInt("sync_interval", 0)
@@ -110,8 +123,11 @@ class SyncPreferences(
      *
      * [serverSupportsV2] is the persisted flag that SyncYomiSyncService sets when the capability
      * probe succeeds; it is only meaningful for the host it was probed against, so require a match.
+     *
+     * This is the cached probe result, not a live check: the settings UI uses it to decide whether
+     * pinned-source replacement can be offered, without probing the server on every screen open.
      */
-    private fun isSyncYomiV2(): Boolean {
+    fun isSyncYomiV2(): Boolean {
         return syncService.get() == SyncManager.SyncService.SYNCYOMI.value &&
             v2ProbedHost.get() == clientHost.get() &&
             serverSupportsV2.get()
@@ -196,6 +212,9 @@ class SyncPreferences(
             readEntries = preferenceStore.getBoolean("sync_readEntries", true).get(),
             savedSearchesFeeds = preferenceStore.getBoolean("sync_savedSearchesFeeds", true).get(),
             // SY <--
+            // KUN -->
+            syncPinnedSources = this.syncPinnedSources.get(),
+            // KUN <--
         )
     }
 
@@ -215,6 +234,9 @@ class SyncPreferences(
         preferenceStore.getBoolean("sync_readEntries", true).set(syncSettings.readEntries)
         preferenceStore.getBoolean("sync_savedSearchesFeeds", true).set(syncSettings.savedSearchesFeeds)
         // SY <--
+        // KUN -->
+        syncPinnedSources.set(syncSettings.syncPinnedSources)
+        // KUN <--
     }
 
     fun getSyncTriggerOptions(): SyncTriggerOptions {

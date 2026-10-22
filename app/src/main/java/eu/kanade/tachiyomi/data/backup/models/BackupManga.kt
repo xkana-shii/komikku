@@ -86,6 +86,19 @@ class BackupManga(
     @ProtoNumber(804) var customDescription: String? = null,
     @ProtoNumber(805) var customGenre: List<String>? = null,
 
+    // KUN -->
+    // Fork-reserved block 10000-10999 (see AGENTS.md, "Backup protobuf field numbers"). Upstream
+    // owns the low ranges and has already claimed 604 for a different wire type in an open SY PR.
+    // Whether the sender included the custom-info overrides in this entry. Nullable so an older
+    // peer or backup that never sent the field is "unknown" (merge only): `true` with every
+    // override empty is an explicit clear, while an absent marker must never clear anything.
+    @ProtoNumber(10000) var customInfoIncluded: Boolean? = null,
+    // Whether the sender included the merged-reference list for this entry. Nullable so a legacy
+    // payload that never sent the field is not mistaken for "this merge has no children": only
+    // `true` lets a winning payload delete local references.
+    @ProtoNumber(10001) var mergedMangaReferencesIncluded: Boolean? = null,
+    // KUN <--
+
 ) {
     fun getMangaImpl(): Manga {
         return Manga.create().copy(

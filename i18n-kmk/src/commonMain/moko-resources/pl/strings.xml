@@ -186,4 +186,6 @@
     <string name="pref_discord_show_timestamp">Pokaż czas</string>
     <string name="custom_theme_palette_pop">Pop</string>
     <string name="pref_category_discord_customization">Dostosowanie Discorda</string>
+    <string name="pref_sync_pinned_sources">Synchronizuj przypięte źródła</string>
+    <string name="pref_sync_pinned_sources_summary">Wyłączone: przypięte źródła pozostają na tym urządzeniu. Włączone: są synchronizowane, a scalony zestaw zastępuje przypięte źródła na wszystkich urządzeniach.</string>
 </resources>

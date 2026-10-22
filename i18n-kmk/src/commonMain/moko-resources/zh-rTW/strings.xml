@@ -223,4 +223,6 @@
     <string name="pref_fetch_manga_metadata_on_add_description">在將作品加入書櫃後，自動抓取標題、作者等最新漫畫資訊</string>
     <string name="pref_fetch_manga_chapters_on_add">新增至書櫃時更新章節列表</string>
     <string name="pref_fetch_manga_chapters_on_add_description">在將作品加入書櫃後，自動抓取最新章節列表</string>
+    <string name="pref_sync_pinned_sources">同步釘選來源</string>
+    <string name="pref_sync_pinned_sources_summary">關閉時，釘選來源僅保留在此裝置上。開啟時，它們會被同步，合併後的集合會在所有裝置上取代釘選的來源。</string>
 </resources>

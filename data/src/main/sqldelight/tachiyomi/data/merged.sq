@@ -29,6 +29,31 @@ SELECT * FROM merged WHERE merge_url = ?;
 deleteByMergeId:
 DELETE FROM merged WHERE merge_id = ?;
 
+-- KUN -->
+-- Resolves the merge entry a reference belongs to. A user edit of a reference changes a child row,
+-- so no manga trigger fires on the merge parent; the repository bumps it explicitly.
+selectMergeIdById:
+SELECT merge_id FROM merged WHERE _id = ?;
+
+-- Reads one reference so the settings update can tell a real edit from an unchanged save (an
+-- unchanged save must not bump the merge parent).
+selectById:
+SELECT * FROM merged WHERE _id = ?;
+
+-- Restore write for a reference the payload owns: refreshes the resolved child id as well as every
+-- setting, so a child that was deleted and re-added does not leave `manga_id = NULL`.
+updateFromRestore:
+UPDATE merged
+SET
+    info_manga = :infoManga,
+    get_chapter_updates = :getChapterUpdates,
+    chapter_sort_mode = :chapterSortMode,
+    chapter_priority = :chapterPriority,
+    download_chapters = :downloadChapters,
+    manga_id = :mangaId
+WHERE _id = :id;
+-- KUN <--
+
 selectMergedMangasById:
 SELECT manga.*
 FROM (

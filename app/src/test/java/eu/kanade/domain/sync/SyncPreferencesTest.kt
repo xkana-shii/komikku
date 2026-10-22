@@ -1,9 +1,12 @@
 package eu.kanade.domain.sync
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.InMemoryPreferenceStore.InMemoryPreference
+import tachiyomi.core.common.preference.Preference
 
 /**
  * Ported from TachiyomiSY (jobobby04/TachiyomiSY#1658).
@@ -44,4 +47,45 @@ class SyncPreferencesTest {
 
         assertEquals(emptySet<String>(), prefs.pendingDeletedChapterKeys.get())
     }
+
+    // KUN -->
+    @Test
+    fun `pinned source sync is off by default`() {
+        val prefs = SyncPreferences(InMemoryPreferenceStore())
+
+        assertFalse(prefs.getSyncSettings().syncPinnedSources)
+    }
+
+    @Test
+    fun `pinned source sync round-trips through the sync settings`() {
+        val prefs = SyncPreferences(InMemoryPreferenceStore())
+        assertFalse(prefs.getSyncSettings().syncPinnedSources)
+
+        prefs.setSyncSettings(prefs.getSyncSettings().copy(syncPinnedSources = true))
+        assertTrue(prefs.getSyncSettings().syncPinnedSources)
+
+        prefs.setSyncSettings(prefs.getSyncSettings().copy(syncPinnedSources = false))
+        assertFalse(prefs.getSyncSettings().syncPinnedSources)
+    }
+
+    @Test
+    fun `pinned source sync is device-local app state`() {
+        val prefs = SyncPreferences(InMemoryPreferenceStore())
+
+        assertEquals(
+            Preference.appStateKey("sync_pinned_sources"),
+            prefs.syncPinnedSources.key(),
+        )
+        assertTrue(Preference.isAppState(prefs.syncPinnedSources.key()))
+    }
+
+    @Test
+    fun `cached protocol v2 needs the SyncYomi service and the probed host`() {
+        assertTrue(syncPreferences(syncService = 1).isSyncYomiV2())
+        assertFalse(syncPreferences(syncService = 2).isSyncYomiV2())
+        assertFalse(syncPreferences(syncService = 0).isSyncYomiV2())
+        assertFalse(syncPreferences(syncService = 1, serverSupportsV2 = false).isSyncYomiV2())
+        assertFalse(syncPreferences(syncService = 1, probedHost = "https://other").isSyncYomiV2())
+    }
+    // KUN <--
 }

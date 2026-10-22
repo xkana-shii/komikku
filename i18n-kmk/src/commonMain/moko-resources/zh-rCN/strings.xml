@@ -223,4 +223,6 @@
     <string name="discord_app_description">Komikku - 一款漫画阅读应用</string>
     <string name="pref_discord_show_progress_summary">显示当前阅读章节</string>
     <string name="pref_discord_show_timestamp_summary">显示活动时间</string>
+    <string name="pref_sync_pinned_sources">同步固定来源</string>
+    <string name="pref_sync_pinned_sources_summary">关闭时，固定来源仅保留在此设备上。开启时，它们会被同步，合并后的集合会在所有设备上替换固定的来源。</string>
 </resources>
