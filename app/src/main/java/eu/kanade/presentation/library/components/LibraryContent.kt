@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -67,6 +68,9 @@ fun LibraryContent(
 
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
+        // KNS --> shown or hidden by tapping the selected tab; switching category keeps it as it is
+        var subcategoryRowVisible by rememberSaveable { mutableStateOf(true) }
+        // KNS <--
 
         // KUN --> the pager must follow the coerced index even when the tab row is hidden
         val categoryIds = categories.map { it.id }
@@ -91,17 +95,23 @@ fun LibraryContent(
                 pagerState = pagerState,
                 getItemCountForCategory = getItemCountForCategory,
                 onTabItemClick = {
-                    scope.launch {
-                        pagerState.animateScrollToPage(it)
-                    }
+                    // KNS -->
+                    val tap = SubcategoryRowVisibility.onTabTap(it, pagerState.currentPage, subcategoryRowVisible)
+                    subcategoryRowVisible = tap.rowVisible
+                    tap.scrollTo?.let { page -> scope.launch { pagerState.animateScrollToPage(page) } }
+                    // KNS <--
                 },
             )
         }
 
         // KNS -->
-        categories.getOrNull(pagerState.currentPage)?.let(getSubcategoryNavigation)?.let { navigation ->
-            LibrarySubcategoryChips(navigation = navigation, onSelect = onSelectSubcategory)
-        }
+        // The row can only be hidden from the tab row, so without tabs it always shows.
+        categories.getOrNull(pagerState.currentPage)
+            ?.takeIf { subcategoryRowVisible || !showPageTabs }
+            ?.let(getSubcategoryNavigation)
+            ?.let { navigation ->
+                LibrarySubcategoryChips(navigation = navigation, onSelect = onSelectSubcategory)
+            }
         // KNS <--
 
         PullRefresh(

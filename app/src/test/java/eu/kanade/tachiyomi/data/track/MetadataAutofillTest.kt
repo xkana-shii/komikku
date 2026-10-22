@@ -105,7 +105,10 @@ class MetadataAutofillTest {
         metadata.title shouldBe "Frieren: Beyond Journey's End"
         metadata.authors shouldBe "Yamada Kanehito"
         metadata.artists shouldBe "Abe Tsukasa"
-        metadata.thumbnailUrl shouldBe "https://cdn.mangabaka.org/250/1.jpg"
+        // The raw image wins over the 250px one; without a raw image the 250px one is used.
+        metadata.thumbnailUrl shouldBe "https://cdn.mangabaka.org/raw/1.jpg"
+        json.decodeFromString<MangaBakaItem>(mangaBakaSeries(1).replace(Regex(""""raw":\{"url":"[^"]*"\},"""), ""))
+            .toAutofillMetadata(null).thumbnailUrl shouldBe "https://cdn.mangabaka.org/250/1.jpg"
     }
 
     @Test

@@ -121,6 +121,10 @@ class SourcePreferences(
 
     val sourcesTabSourcesInCategories = preferenceStore.getStringSet("sources_tab_source_categories", mutableSetOf())
 
+    // KNS --> the previous personal fork's Global Search source-category scope (same key); blank = no category
+    val globalSearchSourceCategory = preferenceStore.getString(Preference.appStateKey("global_search_source_category"), "")
+    // KNS <--
+
     val dataSaver = preferenceStore.getEnum("data_saver", DataSaver.NONE)
 
     val dataSaverIgnoreJpeg = preferenceStore.getBoolean("ignore_jpeg", false)

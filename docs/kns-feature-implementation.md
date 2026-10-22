@@ -1249,3 +1249,38 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - History date groups now reuse Updates' shared `DateHeading`, including its date formatting, count badge,
   padding and fast-scroll animation. The existing `HistoryUiModel.Header.mangaCount` calculation remains
   unchanged: it counts distinct manga from the visible, locally grouped History entries.
+
+### Batch 20 — main behaviour restored (part 1)
+
+- **Scanlator priority (investigated):** storage (`manga.user_scanlator_priority`, `StringListColumnAdapter` with
+  `", "`), backup field #614, the restore (`RestoreRepositoryImpl.restoreForkState`, ordinary restore with
+  `scanlatorSettingsPresent` replaces) and its use (`applySmartScanlatorMerge`) are identical to `main`. The real backup
+  `app.komikku.kns_2026-10-21_12-33.tachibk` carries 52 priorities, all flagged, none naming merged entries or untrimmed
+  names (2 name a scanlator no longer in the chapters), plus 51 `enabled` overrides in field #618. No code path that
+  drops them was found; candidates outside the code: the crashed first restore, and a SyncYomi payload from a server
+  without these values, which an authoritative sync applies. Not changed.
+- **Scanlator rows:** `scanlatorStatsOf` (all chapters, unfiltered) → `ScanlatorStats(count, ScanlatorCoverage)` using the
+  existing domain `scanlatorCoverage` (from `main`), shown as `main` did ("%d chapters", ranges, "and %d more").
+- **History unread dot:** `HistoryVisibleCounts` left excluded scanlators in, so Smart Merge could pick an excluded
+  unread release; they are now filtered like `LibraryVisibleCounts` and the History SQL do. The global Smart Merge
+  preference is part of the History flow.
+- **Language flags:** `UiPreferences.showFlags` (`show_flags`, default true, same key as `main`) and its Appearance switch
+  were missing; `showLanguageFlags()`/`languageFlagPrefix`/`languageMark` gate the flags in `BaseSourceItem`,
+  `ExtensionsScreen`, `MigrateSourceScreen`, `SourcesFilterScreen` and `getNameForMangaInfo`.
+- **Subcategory row:** `SubcategoryRowVisibility.onTabTap` (tap on the selected tab toggles, other tabs only scroll),
+  state in `LibraryContent` (`rememberSaveable`); without tabs the row always shows.
+- **HQ zoom:** `WebGpuConfig` only applied webtoon zoom-out and the general double-tap switch. `WebGpuZoomGestures` maps
+  paged double tap / disable zoom in and long-strip double tap / pinch onto the library's `doubleTapZoomEnabled` and
+  `pinchZoomEnabled` (the double-tap drag zoom is gated by the same flag). Long-strip "disable zoom out" already works
+  through `minScale = 0` (= home scale).
+- **Feeds:** `SavedSearchCreateDialog` rejected existing names; it asks to overwrite again and `saveSearch` updates the
+  existing saved search in place (`UpdateSavedSearch`, names compared trimmed and case-insensitively).
+- **Global Search categories:** `globalSearchSourceCategory` (`main`'s key), `SearchViewModel.setSourceCategory`, the
+  category in the search key, `GlobalSearchViewModel.sourcesInCategory` filter and the toolbar chip.
+- **Small items:** raw MangaBaka cover (`MangaBakaCover.raw`), "Related", blacklist actions after the bookmark actions in
+  `MangaBottomActionMenu`, the reader chapter list observing `Download.statusFlow`.
+- **Tests:** `RestoredMainBehaviorTest` (7), `HistoryVisibleCountsTest` (+3: Smart Merge duplicate, excluded scanlator,
+  genuine unread), `MetadataAutofillTest` (raw cover).
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  testDebugUnitTest (app 330 with 1 skipped, data 93, domain 198; 0 failures), assembleDebug, assembleRelease,
+  `git diff --check`. Not verified on a device.

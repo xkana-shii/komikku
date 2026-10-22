@@ -384,7 +384,7 @@
     <string name="action_automation_decrease_speed">Slower</string>
     <string name="action_automation_start">Start automation</string>
     <string name="action_automation_stop">Stop automation</string>
-    <string name="sequel_prequel">Related titles</string>
+    <string name="sequel_prequel">Related</string>
     <string name="relation_find_source">Find this title in your installed sources, or open its website.</string>
     <string name="relation_prequel">Prequel</string>
     <string name="relation_sequel">Sequel</string>
@@ -424,6 +424,8 @@
     <string name="scanlator_preferences">Scanlator preferences</string>
     <string name="scanlator_priority">Priority</string>
     <string name="scanlator_priority_summary">The first scanlator in this list is preferred when several release the same chapter.</string>
+    <string name="scanlator_chapter_count">%d chapters</string>
+    <string name="scanlator_coverage_more">and %d more</string>
     <string name="scanlator_hide">Hide %1$s</string>
     <string name="scanlator_show">Show %1$s</string>
     <string name="action_move_up">Move up</string>
@@ -436,6 +438,13 @@
     <string name="scanlator_merge_effective_disabled">Effective: disabled</string>
     <string name="autofill_no_eligible_tracker">None of this entry\'s trackers can fill in metadata. Log in to one that can.</string>
     <string name="autofill_no_metadata">%1$s returned no metadata to fill in</string>
+    <!-- KNS <-->
+    <!-- KNS --> restored settings
+    <string name="pref_global_search_source_category">Source category</string>
+    <string name="pref_global_search_source_category_all">All categories</string>
+    <string name="save_search_overwrite_confirm">A saved search with this name already exists. Overwrite?</string>
+    <string name="pref_language_flags">Show language flags</string>
+    <string name="pref_language_flags_summary">Display flags instead of language names</string>
     <!-- KNS <-->
     <!-- KNS --> selective category backups
     <string name="backup_all_categories">All categories</string>

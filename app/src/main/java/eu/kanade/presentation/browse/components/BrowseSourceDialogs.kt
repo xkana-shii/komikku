@@ -16,7 +16,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.window.DialogProperties
 import eu.kanade.tachiyomi.util.system.toast
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.source.interactor.UpdateSavedSearch
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -94,6 +96,34 @@ fun SavedSearchCreateDialog(
         mutableStateOf(TextFieldValue(""))
     }
     val context = LocalContext.current
+    // KNS --> an existing name asks to overwrite that saved search (as on the previous personal fork)
+    var showOverwriteDialog by rememberSaveable { mutableStateOf(false) }
+    if (showOverwriteDialog) {
+        AlertDialog(
+            onDismissRequest = { showOverwriteDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        saveSearch(textFieldValue.text.trim())
+                        showOverwriteDialog = false
+                        onDismissRequest()
+                    },
+                ) {
+                    Text(text = stringResource(MR.strings.action_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOverwriteDialog = false }) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            },
+            title = { Text(text = stringResource(SYMR.strings.save_search)) },
+            text = { Text(text = stringResource(KMR.strings.save_search_overwrite_confirm)) },
+            properties = DialogProperties(usePlatformDefaultWidth = true),
+        )
+        return
+    }
+    // KNS <--
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(text = stringResource(SYMR.strings.save_search)) },
@@ -115,12 +145,17 @@ fun SavedSearchCreateDialog(
             TextButton(
                 onClick = {
                     val searchName = textFieldValue.text.trim()
-                    if (searchName.isNotBlank() && searchName !in currentSavedSearches) {
-                        saveSearch(searchName)
-                        onDismissRequest()
-                    } else {
-                        context.toast(SYMR.strings.save_search_invalid_name)
+                    // KNS -->
+                    when {
+                        searchName.isBlank() -> context.toast(SYMR.strings.save_search_invalid_name)
+                        UpdateSavedSearch.existingFor(searchName, currentSavedSearches) { it } != null ->
+                            showOverwriteDialog = true
+                        else -> {
+                            saveSearch(searchName)
+                            onDismissRequest()
+                        }
                     }
+                    // KNS <--
                 },
             ) {
                 Text(text = stringResource(MR.strings.action_ok))

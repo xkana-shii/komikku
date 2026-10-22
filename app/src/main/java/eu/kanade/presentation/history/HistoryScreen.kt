@@ -30,6 +30,7 @@ import eu.kanade.tachiyomi.ui.history.HistoryViewModel
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
 import kotlinx.datetime.LocalDate
 import mihon.app.di.appGraph
+import mihon.feature.upcoming.DateHeading
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Checklist
 import mihon.icons.materialsymbols.rounded.DeleteSweep
@@ -38,7 +39,6 @@ import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
-import mihon.feature.upcoming.DateHeading
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding

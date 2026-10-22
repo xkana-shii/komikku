@@ -181,6 +181,26 @@ fun MangaBottomActionMenu(
                         // KNS <--
                     )
                 }
+                // KNS --> right after the bookmark actions, as on the previous personal fork
+                if (onBlacklistClicked != null) {
+                    Button(
+                        title = stringResource(KMR.strings.action_blacklist_chapter),
+                        icon = MaterialSymbols.Rounded.Block,
+                        toConfirm = confirm[7],
+                        onLongClick = { onLongClickItem(7) },
+                        onClick = onBlacklistClicked,
+                    )
+                }
+                if (onUnblacklistClicked != null) {
+                    Button(
+                        title = stringResource(KMR.strings.action_unblacklist_chapter),
+                        icon = MaterialSymbols.RoundedFilled.Visibility,
+                        toConfirm = confirm[8],
+                        onLongClick = { onLongClickItem(8) },
+                        onClick = onUnblacklistClicked,
+                    )
+                }
+                // KNS <--
                 if (onMarkAsReadClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_mark_as_read),
@@ -226,26 +246,6 @@ fun MangaBottomActionMenu(
                         onClick = onDeleteClicked,
                     )
                 }
-                // KNS -->
-                if (onBlacklistClicked != null) {
-                    Button(
-                        title = stringResource(KMR.strings.action_blacklist_chapter),
-                        icon = MaterialSymbols.Rounded.Block,
-                        toConfirm = confirm[7],
-                        onLongClick = { onLongClickItem(7) },
-                        onClick = onBlacklistClicked,
-                    )
-                }
-                if (onUnblacklistClicked != null) {
-                    Button(
-                        title = stringResource(KMR.strings.action_unblacklist_chapter),
-                        icon = MaterialSymbols.RoundedFilled.Visibility,
-                        toConfirm = confirm[8],
-                        onLongClick = { onLongClickItem(8) },
-                        onClick = onUnblacklistClicked,
-                    )
-                }
-                // KNS <--
             }
         }
     }

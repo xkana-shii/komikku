@@ -27,7 +27,8 @@ internal fun Track.toApiStatus() = when (status) {
 internal fun MangaBakaItem.toAutofillMetadata(description: String?) = TrackMangaMetadata(
     remoteId = id,
     title = chooseBestTitle(),
-    thumbnailUrl = cover.x250.x1?.ifEmpty { null },
+    // The original image (as the previous personal fork used); the 250px one only when there is none.
+    thumbnailUrl = cover.raw?.url?.ifEmpty { null } ?: cover.x250.x1?.ifEmpty { null },
     description = description?.ifEmpty { null },
     authors = authors?.joinToString(", ")?.ifEmpty { null },
     artists = artists?.joinToString(", ")?.ifEmpty { null },

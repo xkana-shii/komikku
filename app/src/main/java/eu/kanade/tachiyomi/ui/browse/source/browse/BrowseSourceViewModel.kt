@@ -87,6 +87,7 @@ import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.source.interactor.DeleteSavedSearchById
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.interactor.InsertSavedSearch
+import tachiyomi.domain.source.interactor.UpdateSavedSearch
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.model.StubSource
@@ -134,6 +135,9 @@ open class BrowseSourceViewModel(
     private val getFlatMetadataById: GetFlatMetadataById,
     private val deleteSavedSearchById: DeleteSavedSearchById,
     private val insertSavedSearch: InsertSavedSearch,
+    // KNS -->
+    private val updateSavedSearch: UpdateSavedSearch,
+    // KNS <--
     private val getExhSavedSearch: GetExhSavedSearch,
     // SY <--
 ) : ViewModel() {
@@ -676,17 +680,24 @@ open class BrowseSourceViewModel(
                 it.isBlank() || it == GetRemoteManga.QUERY_POPULAR || it == GetRemoteManga.QUERY_LATEST
             }?.trim()
             val filterList = state.value.filters.ifEmpty { source.getFilterList() }
-            insertSavedSearch.await(
-                SavedSearch(
-                    id = -1,
-                    source = source.id,
-                    name = name.trim(),
-                    query = query,
-                    filtersJson = runCatching {
-                        filterSerializer.serialize(filterList).ifEmpty { null }?.let { Json.encodeToString(it) }
-                    }.getOrNull(),
-                ),
+            // KNS --> saving under an existing name replaces that saved search (the dialog asked first),
+            // keeping its id so feeds built on it follow, instead of adding a second one
+            val existing = UpdateSavedSearch.existingFor(name, state.value.savedSearches) { it.name }
+            val savedSearch = SavedSearch(
+                id = existing?.id ?: -1,
+                source = source.id,
+                name = name.trim(),
+                query = query,
+                filtersJson = runCatching {
+                    filterSerializer.serialize(filterList).ifEmpty { null }?.let { Json.encodeToString(it) }
+                }.getOrNull(),
             )
+            if (existing != null) {
+                updateSavedSearch.await(savedSearch)
+            } else {
+                insertSavedSearch.await(savedSearch)
+            }
+            // KNS <--
         }
     }
 

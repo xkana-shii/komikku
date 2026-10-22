@@ -109,7 +109,10 @@ class HistoryViewModel(
         getHistoryItemPreferenceFlow()
             .distinctUntilChanged(),
         // KMK <--
-    ) { query, itemPreferences -> query to itemPreferences }
+        // KNS --> the global Smart Merge switch changes which chapters count (manga rules re-emit by themselves)
+        libraryPreferences.smartScanlatorMerge.changes(),
+        // KNS <--
+    ) { query, itemPreferences, _ -> query to itemPreferences }
         .flatMapLatest { (query, pref) ->
             getHistory.subscribe(
                 query ?: "",

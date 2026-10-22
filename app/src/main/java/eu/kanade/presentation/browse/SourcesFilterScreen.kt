@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.presentation.browse.components.BaseSourceItem
+import eu.kanade.presentation.browse.components.languageMark
+import eu.kanade.presentation.browse.components.showLanguageFlags
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.util.animateItemFastScroll
@@ -160,10 +162,16 @@ private fun SourcesFilterHeader(
         modifier = modifier,
         title = LocaleHelper.getSourceDisplayName(language, LocalContext.current) +
             // KMK -->
-            (
-                " (${LocaleHelper.getDisplayName(language)} ${FlagEmoji.getEmojiLangFlag(language)})"
-                    .takeIf { language !in listOf("all", "other") } ?: " (${FlagEmoji.getEmojiLangFlag(language)})"
-                ),
+            // KNS --> flags only when "Show language flags" is on
+            if (showLanguageFlags()) {
+                (
+                    " (${LocaleHelper.getDisplayName(language)} ${FlagEmoji.getEmojiLangFlag(language)})"
+                        .takeIf { language !in listOf("all", "other") } ?: " (${FlagEmoji.getEmojiLangFlag(language)})"
+                    )
+            } else {
+                " (${LocaleHelper.getDisplayName(language)})".takeIf { language !in listOf("all", "other") }.orEmpty()
+            },
+        // KNS <--
         // KMK <--
         checked = enabled,
         onCheckedChanged = { onClickItem(language) },
@@ -184,7 +192,9 @@ fun SourcesFilterToggle(
         modifier = modifier,
         title = stringResource(SYMR.strings.pref_category_all_sources) +
             // KMK -->
-            " (${FlagEmoji.getEmojiLangFlag(language)})",
+            // KNS -->
+            " (${languageMark(language, showLanguageFlags())})",
+        // KNS <--
         // KMK <--
         checked = isEnabled,
         onCheckedChanged = { onClickItem() },

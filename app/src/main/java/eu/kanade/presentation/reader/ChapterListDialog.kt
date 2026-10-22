@@ -94,8 +94,11 @@ fun ChapterListDialog(
                         chapterItem.manga.source,
                     )
                 }
+                // KNS --> observed, so a retried failed download leaves the error state right away
+                val activeStatus = activeDownload?.statusFlow?.collectAsState()?.value
+                // KNS <--
                 val downloadState = when {
-                    activeDownload != null -> activeDownload.status
+                    activeStatus != null -> activeStatus
                     downloaded -> Download.State.DOWNLOADED
                     else -> Download.State.NOT_DOWNLOADED
                 }

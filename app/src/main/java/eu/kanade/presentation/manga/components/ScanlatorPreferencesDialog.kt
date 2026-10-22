@@ -57,6 +57,9 @@ import mihon.icons.materialsymbols.roundedfilled.CheckCircle
 import mihon.icons.materialsymbols.roundedfilled.Visibility
 import mihon.icons.materialsymbols.roundedfilled.VisibilityOff
 import sh.calvin.reorderable.ReorderableColumn
+import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.model.ScanlatorCoverage
+import tachiyomi.domain.chapter.model.scanlatorCoverage
 import tachiyomi.domain.chapter.service.chapterBlacklistKeyMetadata
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -78,6 +81,8 @@ fun ScanlatorPreferencesDialog(
     onHideBlacklistedChange: (Boolean) -> Unit,
     onChanges: (List<ScanlatorPreferencesDraft.Change>) -> Unit,
     onDismissRequest: () -> Unit,
+    /** Each scanlator's chapters (all of them, not only the visible ones), as the old `main` showed. */
+    scanlatorStats: Map<String, ScanlatorStats> = emptyMap(),
 ) {
     var draft by remember(initial) { mutableStateOf(initial) }
     val update: (ScanlatorPreferencesDraft) -> Unit = { next ->
@@ -112,6 +117,7 @@ fun ScanlatorPreferencesDialog(
                     ScanlatorPreferencesContent(
                         draft = draft,
                         globalSmartMerge = globalSmartMerge,
+                        scanlatorStats = scanlatorStats,
                         onDraftChange = update,
                     )
                 }
@@ -137,6 +143,7 @@ fun ScanlatorPreferencesDialog(
 private fun ScanlatorPreferencesContent(
     draft: ScanlatorPreferencesDraft,
     globalSmartMerge: Boolean,
+    scanlatorStats: Map<String, ScanlatorStats>,
     onDraftChange: (ScanlatorPreferencesDraft) -> Unit,
 ) {
     SmartMergeSelector(
@@ -166,16 +173,20 @@ private fun ScanlatorPreferencesContent(
                             IconButton(onClick = {}, modifier = Modifier.draggableHandle()) {
                                 Icon(MaterialSymbols.Rounded.DragHandle, contentDescription = null)
                             }
-                            Text(
-                                text = scanlator,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                            Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(start = 8.dp)
+                                    .padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
                                     .alpha(if (excluded) DISABLED_ALPHA else 1f),
-                            )
+                            ) {
+                                Text(
+                                    text = scanlator,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                scanlatorStats[scanlator]?.let { ScanlatorStatsText(it) }
+                            }
                             IconButton(onClick = { onDraftChange(draft.toggleExcluded(scanlator)) }) {
                                 Icon(
                                     imageVector = if (excluded) {
@@ -202,6 +213,27 @@ private fun ScanlatorPreferencesContent(
     }
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
     ScanlatorRangeRules(draft = draft, onDraftChange = onDraftChange)
+}
+
+/** A scanlator's chapter count and the chapter numbers it covers, as the old `main` showed them. */
+@Composable
+private fun ScanlatorStatsText(stats: ScanlatorStats) {
+    Text(
+        text = stringResource(KMR.strings.scanlator_chapter_count, stats.chapterCount),
+        style = MaterialTheme.typography.bodySmall,
+    )
+    stats.coverage?.let { coverage ->
+        Text(
+            text = coverage.groups.joinToString(", ") +
+                if (coverage.hiddenCount == 0) {
+                    ""
+                } else {
+                    ", " + stringResource(KMR.strings.scanlator_coverage_more, coverage.hiddenCount)
+                },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 /** The three Smart Scanlator Merge override states as one row of small icon buttons. */
@@ -419,4 +451,13 @@ internal fun blacklistEntryFallback(key: String): String {
     return listOfNotNull(number?.let { "#$it" }, scanlator).joinToString(" · ")
         .ifEmpty { key.substringAfterLast('/').ifEmpty { key } }
 }
+
+/** All of a scanlator's chapters, whatever Smart Merge and the blacklist currently show. */
+data class ScanlatorStats(val chapterCount: Int, val coverage: ScanlatorCoverage?)
+
+/** [ScanlatorStats] per scanlator name, from every chapter of the manga. */
+fun scanlatorStatsOf(chapters: List<Chapter>): Map<String, ScanlatorStats> =
+    chapters.mapNotNull { chapter -> chapter.scanlator?.takeIf { it.isNotBlank() }?.let { it to chapter } }
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (_, list) -> ScanlatorStats(list.size, scanlatorCoverage(list.map(Chapter::chapterNumber))) }
 // KNS <--

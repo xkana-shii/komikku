@@ -56,6 +56,8 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
+import eu.kanade.presentation.manga.components.ScanlatorStats
+import eu.kanade.presentation.manga.components.scanlatorStatsOf
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.getBestColor
@@ -1732,6 +1734,7 @@ class MangaViewModel(
             blacklist = state.manga.blacklistedChapters.map { key ->
                 BlacklistEntry(key = key, chapters = resolveChapterBlacklistMatches(key, all).map { it.name })
             },
+            scanlatorStats = scanlatorStatsOf(all),
         )
     }
 
@@ -2137,6 +2140,8 @@ class MangaViewModel(
         val globalSmartMerge: Boolean,
         val rangeRules: List<ScanlatorRangeRule>,
         val blacklist: List<BlacklistEntry>,
+        /** Every chapter per scanlator (hidden ones too), for its count and covered numbers. */
+        val scanlatorStats: Map<String, ScanlatorStats> = emptyMap(),
     )
     // KNS <--
 

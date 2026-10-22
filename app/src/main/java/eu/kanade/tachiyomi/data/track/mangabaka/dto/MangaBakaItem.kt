@@ -74,8 +74,18 @@ data class MangaBakaRelationship(
 
 @Serializable
 data class MangaBakaCover(
+    // KNS --> the original image, which metadata autofill prefers
+    val raw: MangaBakaRawCover? = null,
+    // KNS <--
     val x250: MangaBakaScaledCover,
 )
+
+// KNS -->
+@Serializable
+data class MangaBakaRawCover(
+    val url: String? = null,
+)
+// KNS <--
 
 @Serializable
 data class MangaBakaScaledCover(

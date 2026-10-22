@@ -20,7 +20,9 @@ import kotlin.time.Instant
 
 // KNS -->
 class HistoryVisibleCountsTest {
-    private val mangaRepository = mockk<MangaRepository>()
+    private val mangaRepository = mockk<MangaRepository> {
+        coEvery { getExcludedScanlatorsByMangaIds(any()) } returns emptyMap()
+    }
     private val chapterRepository = mockk<ChapterRepository>()
     private val subject = HistoryVisibleCounts(
         mangaRepository,
@@ -56,8 +58,49 @@ class HistoryVisibleCountsTest {
         coVerify(exactly = 0) { chapterRepository.getChaptersByMangaIds(any()) }
     }
 
-    private fun chapter(id: Long, read: Boolean) =
-        Chapter.create().copy(id = id, mangaId = 1, url = "/$id", chapterNumber = id.toDouble(), read = read)
+    @Test
+    fun `a read chapter whose unread duplicate Smart Merge hides leaves no unread dot`() = runTest {
+        val manga = Manga.create().copy(id = 1, smartMergeOverride = true, scanlatorPriority = listOf("A", "B"))
+        coEvery { mangaRepository.getMangaById(1) } returns manga
+        coEvery { chapterRepository.getChaptersByMangaIds(listOf(1L)) } returns listOf(
+            chapter(id = 1, read = true, number = 1.0, scanlator = "A"),
+            chapter(id = 2, read = false, number = 1.0, scanlator = "B"),
+        )
+        val counted = subject.apply(listOf(entry(mangaId = 1, total = 2, read = 1))).single()
+        (counted.totalCountCalculated to counted.readCountCalculated) shouldBe (1L to 1L)
+        counted.unreadCount shouldBe 0L
+    }
+
+    @Test
+    fun `an excluded scanlator's unread release never becomes the visible one`() = runTest {
+        // B would win the merge, but B is excluded, so A's read chapter is the visible release.
+        val manga = Manga.create().copy(id = 1, smartMergeOverride = true, scanlatorPriority = listOf("B", "A"))
+        coEvery { mangaRepository.getMangaById(1) } returns manga
+        coEvery { mangaRepository.getExcludedScanlatorsByMangaIds(listOf(1L)) } returns mapOf(1L to listOf("B"))
+        coEvery { chapterRepository.getChaptersByMangaIds(listOf(1L)) } returns listOf(
+            chapter(id = 1, read = true, number = 1.0, scanlator = "A"),
+            chapter(id = 2, read = false, number = 1.0, scanlator = "B"),
+        )
+        // The query already leaves the excluded release out: 1 chapter, read.
+        val counted = subject.apply(listOf(entry(mangaId = 1, total = 1, read = 1))).single()
+        counted.unreadCount shouldBe 0L
+        HistoryVisibleCounts.filterUnfinished(listOf(counted), unfinished = true) shouldBe emptyList()
+    }
+
+    @Test
+    fun `a genuinely unread visible chapter keeps the dot`() = runTest {
+        val manga = Manga.create().copy(id = 1, blacklistedChapters = listOf(chapterUrlBlacklistKey("/3")))
+        coEvery { mangaRepository.getMangaById(1) } returns manga
+        coEvery { chapterRepository.getChaptersByMangaIds(listOf(1L)) } returns listOf(
+            chapter(id = 1, read = true),
+            chapter(id = 2, read = false),
+            chapter(id = 3, read = false),
+        )
+        subject.apply(listOf(entry(mangaId = 1, total = 3, read = 1))).single().unreadCount shouldBe 1L
+    }
+
+    private fun chapter(id: Long, read: Boolean, number: Double = id.toDouble(), scanlator: String? = null) =
+        Chapter.create().copy(id = id, mangaId = 1, url = "/$id", chapterNumber = number, read = read, scanlator = scanlator)
 
     private fun entry(mangaId: Long, total: Long, read: Long) = HistoryWithRelations(
         id = mangaId,

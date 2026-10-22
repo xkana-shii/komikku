@@ -733,6 +733,7 @@ class MangaScreen(
                 onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
                 onChanges = viewModel::applyScanlatorPreferenceChanges,
                 onDismissRequest = { scanlatorPreferences = null },
+                scanlatorStats = data.scanlatorStats,
             )
         }
         // KNS <--
