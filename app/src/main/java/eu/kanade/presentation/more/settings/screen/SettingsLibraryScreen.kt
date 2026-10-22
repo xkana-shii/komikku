@@ -261,6 +261,9 @@ object SettingsLibraryScreen : SearchableSettings {
     private fun getBehaviorGroup(
         libraryPreferences: LibraryPreferences,
     ): Preference.PreferenceGroup {
+        // KNS -->
+        val autoRefreshOpenedManga by libraryPreferences.autoRefreshOpenedManga.collectAsState()
+        // KNS <--
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_behavior),
             preferenceItems = listOf(
@@ -328,8 +331,22 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_smart_scanlator_merge),
                     subtitle = stringResource(KMR.strings.pref_smart_scanlator_merge_summary),
                 ),
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = libraryPreferences.autoRefreshOpenedManga,
+                    title = stringResource(KMR.strings.pref_auto_refresh_opened_manga),
+                    subtitle = stringResource(KMR.strings.pref_auto_refresh_opened_manga_summary),
+                ),
                 // KNS <--
-            ),
+            ) +
+                // KNS --> only offered while opened entries are refreshed
+                listOfNotNull(
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = libraryPreferences.autoResetChapterFlagsOnRefresh,
+                        title = stringResource(KMR.strings.pref_auto_reset_chapter_flags_on_refresh),
+                        subtitle = stringResource(KMR.strings.pref_auto_reset_chapter_flags_on_refresh_summary),
+                    ).takeIf { autoRefreshOpenedManga },
+                ),
+            // KNS <--
         )
     }
 

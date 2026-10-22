@@ -188,6 +188,12 @@ class LibraryPreferences(
     // is stored on the manga (`Manga.smartMergeOverride`), not here.
     val smartScanlatorMerge = preferenceStore.getBoolean("pref_smart_scanlator_merge", false)
 
+    /** Refresh an entry's details and chapters every time it is opened (keys of the previous personal fork). */
+    val autoRefreshOpenedManga = preferenceStore.getBoolean("auto_refresh_opened_manga", false)
+
+    /** With [autoRefreshOpenedManga], also reset the entry's chapter flags to the defaults on open. */
+    val autoResetChapterFlagsOnRefresh = preferenceStore.getBoolean("auto_reset_chapter_flags_on_refresh", false)
+
     /** Whether a manga's chapter list hides its blacklisted chapters (they can be revealed per manga). */
     fun hideBlacklistedChapters(mangaId: Long) =
         preferenceStore.getBoolean("pref_hide_blacklisted_chapters_$mangaId", true)

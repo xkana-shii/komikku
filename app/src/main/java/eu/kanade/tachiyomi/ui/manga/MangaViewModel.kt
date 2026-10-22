@@ -397,9 +397,16 @@ class MangaViewModel(
     }
     // SY <--
 
+    // KNS --> read once per opened entry, so changing them while it is open starts nothing
+    private val autoRefreshOnOpen = libraryPreferences.autoRefreshOpenedManga.get()
+    private val autoResetFlagsOnOpen = libraryPreferences.autoResetChapterFlagsOnRefresh.get()
+    // KNS <--
+
     private val defaultChapterFlagsJob = viewModelScope.launchIO {
         val manga = getMangaAndChapters.awaitManga(mangaId)
-        if (!manga.favorite) {
+        // KNS --> also when an auto-refreshed entry resets its flags (once, when it is opened)
+        if (OpenRefresh.of(manga, hasChapters = true, autoRefreshOnOpen, autoResetFlagsOnOpen).resetChapterFlags) {
+            // KNS <--
             setMangaDefaultChapterFlags.await(manga)
         }
     }
@@ -741,8 +748,16 @@ class MangaViewModel(
             }
             // SY <--
 
-            val needRefreshInfo = !manga.initialized
-            val needRefreshChapter = loadedState.chapters.isEmpty()
+            // KNS --> an opened entry is refreshed when "Automatically refresh opened manga" is on
+            val refresh = OpenRefresh.of(
+                manga = manga,
+                hasChapters = loadedState.chapters.isNotEmpty(),
+                autoRefresh = autoRefreshOnOpen,
+                autoResetFlags = autoResetFlagsOnOpen,
+            )
+            val needRefreshInfo = refresh.fetchDetails
+            val needRefreshChapter = refresh.fetchChapters
+            // KNS <--
 
             // Fetch info-chapters when needed
             if (needRefreshInfo || needRefreshChapter) {
@@ -2509,3 +2524,28 @@ sealed interface RelatedManga {
     }
 }
 // KMK <--
+
+// KNS -->
+/**
+ * What opening an entry fetches, from the previous personal fork: details when the entry is not
+ * initialized, chapters when it has none; with "Automatically refresh opened manga" an initialized entry
+ * fetches both. Chapter flags reset for entries outside the library and, only with the separate reset
+ * setting, for an auto-refreshed entry.
+ */
+internal data class OpenRefresh(
+    val fetchDetails: Boolean,
+    val fetchChapters: Boolean,
+    val resetChapterFlags: Boolean,
+) {
+    companion object {
+        fun of(manga: Manga, hasChapters: Boolean, autoRefresh: Boolean, autoResetFlags: Boolean): OpenRefresh {
+            val autoRefreshing = autoRefresh && manga.initialized
+            return OpenRefresh(
+                fetchDetails = !manga.initialized || autoRefreshing,
+                fetchChapters = !hasChapters || autoRefreshing,
+                resetChapterFlags = !manga.favorite || (autoRefreshing && autoResetFlags),
+            )
+        }
+    }
+}
+// KNS <--

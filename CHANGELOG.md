@@ -11,6 +11,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+### Added
+- Settings → Library → Automatically refresh opened manga is back from the previous personal fork (same saved keys, off by default): opening an entry that is already set up refreshes its details and chapters once, in the background, while the stored details show; the chapters are not downloaded. With it on, "Also reset chapter flags to default" appears and, separately, resets the entry's chapter sort and filters to the defaults when it is opened.
+
 ### Fixed
 - Restoring app settings no longer applies device-local app state (sync cursors and similar) from an older or hand-edited backup.
 - Automatic scrolling in the High Quality long-strip reader no longer stops at the end of a chapter while the next chapter is still loading; it waits for it and only stops after the last chapter.

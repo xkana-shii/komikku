@@ -324,6 +324,10 @@
     <string name="tracker_last_update_failed">Last update failed: %1$s</string>
     <string name="tracker_remove_trackers">Remove trackers</string>
     <string name="tracker_remove_remotely">Also remove from the services</string>
+    <string name="pref_auto_refresh_opened_manga">Automatically refresh opened manga</string>
+    <string name="pref_auto_refresh_opened_manga_summary">Refresh manga info/chapters every time you open a manga, even if already initialized.</string>
+    <string name="pref_auto_reset_chapter_flags_on_refresh">Also reset chapter flags to default</string>
+    <string name="pref_auto_reset_chapter_flags_on_refresh_summary">When auto-refreshing, also reset chapter flags to your defaults.</string>
     <string name="tracker_updated_count">Trackers updated: %1$d</string>
     <string name="tracker_unsynced_a11y">%1$s: chapter count differs from the preferred tracker</string>
     <string name="tracker_sync_error_a11y">%1$s: the last update failed</string>
