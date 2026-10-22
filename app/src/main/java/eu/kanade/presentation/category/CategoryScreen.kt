@@ -2,6 +2,7 @@ package eu.kanade.presentation.category
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -143,14 +144,6 @@ fun CategoryScreen(
                                     icon = MaterialSymbols.Rounded.Checklist,
                                     onClick = { actions.onSelectionMode(true) },
                                 ),
-                                AppBar.OverflowAction(
-                                    title = stringResource(KMR.strings.category_manager_expand_all),
-                                    onClick = actions.onExpandAll,
-                                ),
-                                AppBar.OverflowAction(
-                                    title = stringResource(KMR.strings.category_manager_collapse_all),
-                                    onClick = actions.onCollapseAll,
-                                ),
                             ),
                         )
                     },
@@ -245,11 +238,23 @@ private fun CategoryContent(
             )
         }
         item(key = "category-manager-sort") {
-            SortModeSelector(
-                sortMode = state.sortMode,
-                onSortMode = actions.onSortMode,
-                modifier = Modifier.animateItem(),
-            )
+            // KNS --> as on the previous personal fork: sort, then Expand all / Collapse all
+            Column(modifier = Modifier.fillMaxWidth().animateItem()) {
+                SortModeSelector(sortMode = state.sortMode, onSortMode = actions.onSortMode)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = actions.onExpandAll) {
+                        Text(stringResource(KMR.strings.category_manager_expand_all))
+                    }
+                    TextButton(onClick = actions.onCollapseAll) {
+                        Text(stringResource(KMR.strings.category_manager_collapse_all))
+                    }
+                }
+            }
+            // KNS <--
         }
         items(items = rowState, key = { it.category.key }) { row ->
             ReorderableItem(reorderableState, row.category.key) {

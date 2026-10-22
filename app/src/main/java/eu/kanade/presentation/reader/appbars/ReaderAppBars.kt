@@ -81,18 +81,8 @@ fun ReaderAppBars(
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
     // SY -->
-    isExhToolsVisible: Boolean,
-    onSetExhUtilsVisibility: (Boolean) -> Unit,
-    isAutoScroll: Boolean,
-    isAutoScrollEnabled: Boolean,
-    onToggleAutoscroll: (Boolean) -> Unit,
-    autoScrollFrequency: String,
-    onSetAutoScrollFrequency: (String) -> Unit,
-    onClickAutoScrollHelp: () -> Unit,
     onClickRetryAll: () -> Unit,
-    onClickRetryAllHelp: () -> Unit,
     onClickBoostPage: () -> Unit,
-    onClickBoostPageHelp: () -> Unit,
     currentPageText: String,
     enabledButtons: Set<String>,
     currentReadingMode: ReadingMode,
@@ -123,12 +113,6 @@ fun ReaderAppBars(
                     mangaTitle = mangaTitle,
                     chapterTitle = chapterTitle,
                     navigateUp = navigateUp,
-                    bookmarked = bookmarked,
-                    onToggleBookmarked = onToggleBookmarked,
-                    // KNS -->
-                    bookmarkColor = bookmarkColor,
-                    onBookmarkColorSelected = onBookmarkColorSelected,
-                    // KNS <--
                     // SY -->
                     onOpenInWebView = null, // onOpenInWebView,
                     onOpenInBrowser = null, // onOpenInBrowser,
@@ -136,21 +120,17 @@ fun ReaderAppBars(
                     // SY <--
                 )
                 // SY -->
+                // KNS --> the previous personal fork's action row: bookmark, retry all, boost page
                 ExhUtils(
-                    isVisible = isExhToolsVisible,
-                    onSetExhUtilsVisibility = onSetExhUtilsVisibility,
                     backgroundColor = backgroundColor,
-                    isAutoScroll = isAutoScroll,
-                    isAutoScrollEnabled = isAutoScrollEnabled,
-                    onToggleAutoscroll = onToggleAutoscroll,
-                    autoScrollFrequency = autoScrollFrequency,
-                    onSetAutoScrollFrequency = onSetAutoScrollFrequency,
-                    onClickAutoScrollHelp = onClickAutoScrollHelp,
                     onClickRetryAll = onClickRetryAll,
-                    onClickRetryAllHelp = onClickRetryAllHelp,
                     onClickBoostPage = onClickBoostPage,
-                    onClickBoostPageHelp = onClickBoostPageHelp,
+                    bookmarked = bookmarked,
+                    bookmarkColor = bookmarkColor,
+                    onToggleBookmarked = onToggleBookmarked,
+                    onBookmarkColorSelected = onBookmarkColorSelected,
                 )
+                // KNS <--
             }
             // SY <--
         }
@@ -170,10 +150,14 @@ fun ReaderAppBars(
                     ) {
                         Row {
                             Spacer(modifier = Modifier.width(MaterialTheme.padding.small))
-                            Box(
+                            // KNS --> automation sits with the vertical navigator, as on the previous personal fork
+                            Column(
                                 modifier = Modifier.fillMaxHeight(),
-                                contentAlignment = Alignment.BottomCenter,
+                                verticalArrangement = Arrangement.Bottom,
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
+                                automationControls?.invoke()
+                                // KNS <--
                                 ChapterNavigator(
                                     // KUN -->
                                     // Apply the "Vertical navigator height" setting (SY #3531).
@@ -209,8 +193,8 @@ fun ReaderAppBars(
             exit = slideOutVertically(readerBarsSlideAnimationSpec) { it } + fadeOut(readerBarsFadeAnimationSpec),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small)) {
-                // KNS -->
-                automationControls?.invoke()
+                // KNS --> above the bottom navigator; beside the vertical one otherwise
+                if (chapterNavigatorType.isHorizontal()) automationControls?.invoke()
                 // KNS <--
                 if (chapterNavigatorType.isHorizontal()) {
                     ChapterNavigator(

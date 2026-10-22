@@ -323,6 +323,9 @@
     <string name="tracker_remove_trackers">Remove trackers</string>
     <string name="tracker_remove_remotely">Also remove from the services</string>
     <string name="tracker_updated_count">Trackers updated: %1$d</string>
+    <string name="tracker_unsynced_a11y">%1$s: chapter count differs from the preferred tracker</string>
+    <string name="tracker_sync_error_a11y">%1$s: the last update failed</string>
+    <string name="tracker_preferred_a11y">%1$s is the preferred tracker</string>
     <string name="pref_priority_tracker">Priority tracker</string>
     <string name="pref_reader_automation">Automation</string>
     <string name="pref_auto_reread">Start a reread</string>

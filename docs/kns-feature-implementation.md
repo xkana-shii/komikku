@@ -1284,3 +1284,32 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
   testDebugUnitTest (app 330 with 1 skipped, data 93, domain 198; 0 failures), assembleDebug, assembleRelease,
   `git diff --check`. Not verified on a device.
+
+### Batch 21 — main behaviour restored (part 2: reader, trackers, categories)
+
+- **Reader bars:** `ReaderTopBar` keeps the title and the overflow actions only; `ExhUtils` is `main`'s always-visible
+  action row (Bookmark with tap/long-press colour menu, Retry all, Boost page; `RocketLaunch` stands in for `main`'s
+  `Speed` icon, which the Material Symbols pack does not have). The E-Hentai autoscroll panel, its interval field and the
+  help buttons are no longer passed through `ReaderAppBars`/`ReaderActivity`; the view-model code behind them is left in
+  place. The same composables serve the classic and the WebGPU reader.
+- **Automation:** `ReaderAutomationControls` is `main`'s End-aligned column (faster, start/stop, slower) in the bars'
+  colour, invoked next to a vertical chapter navigator and above a horizontal one. `ReaderAutomationController` no longer
+  ends a scroll run on a stall while `viewerChapters.nextChapter` exists — the WebGPU strip stalls at the end of the
+  loaded pages until the next chapter loads; `StallDetector.reset()` restarts the count.
+- **Trackers:** `TrackerSheetPresentation` (adapted from `main`) resolves the card's values from the preferred tracker
+  (`TrackerProgressSync`), the mismatched and failed trackers and the icon actions. `UnifiedTrackerCard` (replacing
+  `UnifiedTrackerPanel`) is `main`'s card; fields open `UnifiedTrackEditorScreen` for the preferred binding, -/+ apply
+  `UpdateTracks.Change.Progress` through `UnifiedTrackerEdits` (`main` refreshed first and stepped from the furthest
+  progress per rereading group; this steps from the shown progress), the X opens the multi-tracker remove dialog, and
+  edit mode is view-model state. Deviations from `main`: a star badge marks the preferred tracker (new `star` icon), the
+  score star is an icon, untracked enhanced trackers stay visible (`main` hid them), and the foundation's
+  "Set all to …" alignment row is kept under the card. Preferred-tracker storage is unchanged
+  (`pref_preferred_tracker_for_manga`, same as `main`).
+- **Edit categories:** `CategoryListItem` follows `main`'s row (inline icon actions at ≥ 420 dp, icon menu below; folder
+  badge with the subcategory count; "Name (count)") on the foundation's `CategoryManagerRow` tree; Expand/Collapse all are
+  `TextButton`s under the sort selector. Added Material Symbols `create_new_folder`, `drive_file_move`, `flag` (rounded)
+  and `star` (rounded filled) from Google's Material Symbols release.
+- **Tests:** `TrackerSheetPresentationTest` (5), `ReaderAutomationTest` (+1: stall reset).
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  testDebugUnitTest (app 336 with 1 skipped, data 93, domain 198; 0 failures), assembleDebug, assembleRelease,
+  `git diff --check`. Not verified on a device.

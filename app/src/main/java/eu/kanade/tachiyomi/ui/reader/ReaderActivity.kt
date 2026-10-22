@@ -768,18 +768,8 @@ class ReaderActivity : BaseActivity() {
             },
             onClickSettings = viewModel::openSettingsDialog,
             // SY -->
-            isExhToolsVisible = state.ehUtilsVisible,
-            onSetExhUtilsVisibility = viewModel::showEhUtils,
-            isAutoScroll = state.autoScroll,
-            isAutoScrollEnabled = state.isAutoScrollEnabled,
-            onToggleAutoscroll = viewModel::toggleAutoScroll,
-            autoScrollFrequency = state.ehAutoscrollFreq,
-            onSetAutoScrollFrequency = viewModel::setAutoScrollFrequency,
-            onClickAutoScrollHelp = viewModel::openAutoScrollHelpDialog,
             onClickRetryAll = ::exhRetryAll,
-            onClickRetryAllHelp = viewModel::openRetryAllHelp,
             onClickBoostPage = ::exhBoostPage,
-            onClickBoostPageHelp = viewModel::openBoostPageHelp,
             currentPageText = state.currentPageText,
             enabledButtons = readerBottomButtons,
             currentReadingMode = ReadingMode.fromPreference(

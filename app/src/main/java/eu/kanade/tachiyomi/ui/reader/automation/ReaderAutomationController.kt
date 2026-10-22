@@ -129,7 +129,13 @@ class ReaderAutomationController(
                         secondsPerScreen = preferences.autoScrollSpeed.get(),
                         refreshRate = refreshRate(),
                     )
-                    if (stall.record(target.scrollBy(pixels))) return AutomationStop.END
+                    if (stall.record(target.scrollBy(pixels))) {
+                        // A strip stops moving at the end of the loaded pages while the next chapter
+                        // loads (the High Quality strip only loads it near the end): wait for it, and end
+                        // only after the last chapter, as the previous personal fork kept going too.
+                        if (state().viewerChapters?.nextChapter == null) return AutomationStop.END
+                        stall.reset()
+                    }
                 }
                 is AutomationTarget.Flip -> {
                     delay(preferences.autoFlipInterval.get() * 1000L)
