@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -17,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.relativeDateText
@@ -91,7 +89,7 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
         if (favorites != null || views != null) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 favorites?.let {
-                    MetadataFact(
+                    DescriptionFact(
                         icon = MaterialSymbols.Rounded.Favorite,
                         text = pluralStringResource(
                             SYMR.plurals.num_favorites,
@@ -101,7 +99,7 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
                     )
                 }
                 views?.let {
-                    MetadataFact(
+                    DescriptionFact(
                         icon = MaterialSymbols.RoundedFilled.Visibility,
                         text = pluralStringResource(
                             SYMR.plurals.num_views,
@@ -115,13 +113,13 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             meta.pageCount?.let {
-                MetadataFact(
+                DescriptionFact(
                     icon = MaterialSymbols.Rounded.Book,
                     text = pluralStringResource(SYMR.plurals.num_pages, it, it),
                 )
             }
             meta.uploadDate?.let {
-                MetadataFact(
+                DescriptionFact(
                     icon = MaterialSymbols.Rounded.Schedule,
                     text = relativeDateText(
                         Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date,
@@ -132,18 +130,3 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
     }
 }
 
-@Composable
-private fun MetadataFact(icon: ImageVector, text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 2.dp),
-        )
-        Text(text = text, style = MaterialTheme.typography.bodyMedium)
-    }
-}

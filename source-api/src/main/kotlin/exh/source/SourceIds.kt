@@ -17,6 +17,7 @@ const val EIGHTMUSES_SOURCE_ID = 1802675169972965535L
 const val HBROWSE_SOURCE_ID = 1401584337232758222L
 // SY -->
 const val NINEHENTAI_SOURCE_ID = 7689490563697355048L
+const val HENTAINEXUS_SOURCE_ID = 7719798645438596394L
 // SY <--
 
 // If MERGED_SOURCE_ID is to update, remember to update updatesView.sq and libraryView.sq too

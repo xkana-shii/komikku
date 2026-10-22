@@ -19,6 +19,7 @@ import eu.kanade.tachiyomi.source.online.all.NHentai
 import eu.kanade.tachiyomi.source.online.all.Pururin
 import eu.kanade.tachiyomi.source.online.english.EightMuses
 import eu.kanade.tachiyomi.source.online.english.NineHentai
+import eu.kanade.tachiyomi.source.online.english.HentaiNexus
 import exh.log.xLogD
 import exh.log.xLogE
 import exh.source.BlacklistedSources
@@ -28,6 +29,8 @@ import exh.source.EIGHTMUSES_SOURCE_ID
 import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.EnhancedHttpSource
 import exh.source.ExhPreferences
+import exh.source.NINEHENTAI_SOURCE_ID
+import exh.source.HENTAINEXUS_SOURCE_ID
 import exh.source.MERGED_SOURCE_ID
 import exh.source.NINEHENTAI_SOURCE_ID
 import exh.source.handleSourceLibrary
@@ -60,6 +63,8 @@ class AndroidSourceManager(
     private val localSource: LocalSource,
     private val downloadManager: Lazy<DownloadManager>,
     // SY -->
+    private val nineHentaiFactory: NineHentai.Factory,
+    private val hentaiNexusFactory: HentaiNexus.Factory,
     private val exhPreferences: ExhPreferences,
     private val sourcePreferences: SourcePreferences,
     private val nineHentaiFactory: NineHentai.Factory,
@@ -379,7 +384,22 @@ class AndroidSourceManager(
                 createSource = { delegate, _ -> nineHentaiFactory.create(delegate) },
                 // KUN <--
             ),
+            DelegatedSource(
+                "HentaiNexus",
+                HENTAINEXUS_SOURCE_ID,
+                "eu.kanade.tachiyomi.extension.en.hentainexus.HentaiNexus",
+                HentaiNexus::class,
+                // KUN -->
+                createSource = { delegate, _ -> hentaiNexusFactory.create(delegate) },
+                // KUN <--
+            ),
         )
+
+        // Keiyoushi extensions are obfuscated and all share the generated entry point class name,
+        // so sources with a fixed id are also matched by it
+        private val DELEGATED_SOURCES_BY_ID = DELEGATED_SOURCES.values
+            .filterNot { it.factory }
+            .associateBy { it.sourceId }
 
         val currentDelegatedSources: MutableMap<Long, DelegatedSource> =
             ListenMutableMap(mutableMapOf(), ::handleSourceLibrary)
