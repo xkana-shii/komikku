@@ -201,6 +201,10 @@ internal fun PreferenceItem(
                     tracker = item.tracker,
                     isLoggedIn = isLoggedIn,
                     isRefreshing = isRefreshing,
+                    // KNS --> The preferred tracker is changed explicitly with a long press.
+                    isPriority = item.isPriority && isLoggedIn,
+                    onLongClick = item.onLongClick.takeIf { isLoggedIn },
+                    // KNS <--
                     onClick = { if (isLoggedIn) item.logout() else item.login() },
                 )
             }

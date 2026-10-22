@@ -1,6 +1,6 @@
 package eu.kanade.presentation.more.settings.widget
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +29,9 @@ import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Check
 import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.roundedfilled.Star
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
@@ -38,6 +40,10 @@ fun TrackingPreferenceWidget(
     tracker: Tracker,
     isLoggedIn: Boolean,
     isRefreshing: Boolean,
+    // KNS --> Keep main's preferred tracker affordance with the current icon set.
+    isPriority: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    // KNS <--
     onClick: (() -> Unit)? = null,
 ) {
     val highlighted = LocalPreferenceHighlighted.current
@@ -45,16 +51,19 @@ fun TrackingPreferenceWidget(
     Box(modifier = Modifier.highlightBackground(highlighted)) {
         Row(
             modifier = modifier
+                // KNS --> A long press changes only the preferred tracker; normal taps keep login/logout behavior.
+                .combinedClickable(
+                    enabled = onClick != null || onLongClick != null,
+                    onClick = { onClick?.invoke() },
+                    onLongClick = onLongClick,
+                )
+                // KNS <--
                 .fillMaxWidth()
                 .padding(horizontal = PrefsHorizontalPadding, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
                 modifier = Modifier
-                    .clickable(
-                        enabled = onClick != null,
-                        onClick = { onClick?.invoke() },
-                    )
                     .weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -82,6 +91,18 @@ fun TrackingPreferenceWidget(
                     }
                 }
             }
+            // KNS --> The star mirrors main's placement while using the newer Material Symbols icon.
+            if (isPriority) {
+                Icon(
+                    imageVector = MaterialSymbols.RoundedFilled.Star,
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(32.dp),
+                    tint = Color(0xFFFFC107),
+                    contentDescription = stringResource(KMR.strings.pref_priority_tracker),
+                )
+            }
+            // KNS <--
             if (isLoggedIn) {
                 if (tracker !is EnhancedTracker) {
                     IconButton(

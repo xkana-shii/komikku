@@ -1342,3 +1342,18 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
   testDebugUnitTest (app 389 with 1 skipped, data 119, domain 198; 0 failures), assembleDebug, assembleRelease,
   `git diff --check`. Sync and restore not exercised on a device.
+
+### Batch 23 — tracking settings and library transition polish
+
+- **Tracking settings:** restored `main`'s row-level preferred-tracker interaction in the Metro settings screen. A long
+  press on a logged-in tracker selects it as the global priority tracker, and a second long press clears it. The star is
+  the current filled Material Symbols icon; login, logout, and profile refresh retain the foundation behavior.
+- **Auto Reread:** restored `main`'s dedicated Auto Reread settings screen. Its existing tracker preferences and the
+  reset-to-zero/current-chapter modes are now reached from the Tracking summary row rather than being structurally
+  different inline preferences.
+- **Library subcategories:** retained the existing independent `subcategoryRowVisible` state and wrapped the chip row in
+  the standard `AnimatedVisibility` vertical expand/collapse plus fade transition. Switching tabs still does not expose a
+  row the user hid.
+- **Validation:** `spotlessApply`, `:app:compileDebugKotlin`, and focused
+  `RestoredMainBehaviorTest` / `StartRereadTest` all completed with exit code 0. UI animation and long-press behavior
+  still need device verification.

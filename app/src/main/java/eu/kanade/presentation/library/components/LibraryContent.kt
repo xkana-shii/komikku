@@ -1,5 +1,10 @@
 package eu.kanade.presentation.library.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -107,10 +112,17 @@ fun LibraryContent(
         // KNS -->
         // The row can only be hidden from the tab row, so without tabs it always shows.
         categories.getOrNull(pagerState.currentPage)
-            ?.takeIf { subcategoryRowVisible || !showPageTabs }
             ?.let(getSubcategoryNavigation)
             ?.let { navigation ->
-                LibrarySubcategoryChips(navigation = navigation, onSelect = onSelectSubcategory)
+                // KNS --> Keep row visibility separate from category selection, with the app's standard transition.
+                AnimatedVisibility(
+                    visible = subcategoryRowVisible || !showPageTabs,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    LibrarySubcategoryChips(navigation = navigation, onSelect = onSelectSubcategory)
+                }
+                // KNS <--
             }
         // KNS <--
 

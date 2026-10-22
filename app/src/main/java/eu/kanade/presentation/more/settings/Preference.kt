@@ -152,6 +152,10 @@ sealed class Preference {
          * A [PreferenceItem] for individual tracker.
          */
         data class TrackerPreference(
+            // KNS --> Restore the main-screen preferred tracker interaction after the Metro migration.
+            val isPriority: Boolean = false,
+            val onLongClick: (() -> Unit)? = null,
+            // KNS <--
             val tracker: Tracker,
             val login: () -> Unit,
             val logout: () -> Unit,
