@@ -390,6 +390,12 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
             emptySet()
         }
         dueIntervalCategories = due
+
+        // Sources the user excluded from library updates, by name (the previous personal fork's setting)
+        val excludedSourceIds = LibraryUpdateSourceExclusion.excludedIds(
+            listToUpdate.mapTo(mutableSetOf()) { it.manga.source },
+            libraryPreferences.updateSourcesExclude.get(),
+        ) { sourceManager.getOrStub(it).name }
         // KNS <--
 
         mangaToUpdate = listToUpdate
@@ -398,6 +404,7 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
             // SY <--
             // KNS -->
             .filter { !isScheduledRun || CategoryUpdateSchedule.isMangaDue(it.categories, categoriesById, due) }
+            .filter { it.manga.source !in excludedSourceIds }
             // KNS <--
             .filter {
                 when {

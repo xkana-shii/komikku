@@ -634,6 +634,9 @@ object SettingsReaderScreen : SearchableSettings {
                         14 to stringResource(SYMR.strings.reader_preload_amount_14_pages),
                         16 to stringResource(SYMR.strings.reader_preload_amount_16_pages),
                         20 to stringResource(SYMR.strings.reader_preload_amount_20_pages),
+                        // KNS --> from the previous personal fork; downloads stay bounded by the reader threads
+                        100 to stringResource(KMR.strings.reader_preload_amount_100_pages),
+                        // KNS <--
                     ),
                     title = stringResource(SYMR.strings.reader_preload_amount),
                     subtitle = stringResource(SYMR.strings.reader_preload_amount_summary),

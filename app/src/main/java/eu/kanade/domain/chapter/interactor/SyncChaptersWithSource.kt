@@ -26,6 +26,7 @@ import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.model.toChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.chapter.service.ChapterRecognition
+import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.source.local.isLocal
@@ -46,6 +47,9 @@ class SyncChaptersWithSource(
     // SY -->
     private val syncPreferences: SyncPreferences,
     // SY <--
+    // KNS -->
+    private val downloadPreferences: DownloadPreferences,
+    // KNS <--
 ) {
 
     /**
@@ -110,6 +114,10 @@ class SyncChaptersWithSource(
                 chapter.copy(chapterNumber = numbering.chapter?.let(ChapterRecognition::toDouble) ?: -1.0)
             }
 
+        // KNS -->
+        val triggerChapterRename = downloadPreferences.triggerChapterRename.get()
+        // KNS <--
+
         for (chapter in recognizedChapters) {
             if (!sourceUrls.add(chapter.url)) continue
 
@@ -125,7 +133,10 @@ class SyncChaptersWithSource(
                 newChapters.add(toAddChapter)
             } else {
                 if (shouldUpdateDbChapter.await(dbChapter, chapter)) {
-                    val shouldRenameChapter = downloadProvider.isChapterDirNameChanged(dbChapter, chapter) &&
+                    // KNS --> only with "Trigger chapter rename" (on by default)
+                    val shouldRenameChapter = triggerChapterRename &&
+                        // KNS <--
+                        downloadProvider.isChapterDirNameChanged(dbChapter, chapter) &&
                         downloadManager.isChapterDownloaded(
                             dbChapter.name,
                             dbChapter.scanlator,

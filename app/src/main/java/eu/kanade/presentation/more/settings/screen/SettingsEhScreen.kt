@@ -70,6 +70,7 @@ import tachiyomi.domain.manga.interactor.DeleteFavoriteEntries
 import tachiyomi.domain.manga.interactor.GetExhFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
@@ -156,6 +157,9 @@ object SettingsEhScreen : SearchableSettings {
                     getLoginPreference(exhPreferences, openWarnConfigureDialogController),
                     useHentaiAtHome(exhentaiEnabled, exhPreferences),
                     useJapaneseTitle(exhentaiEnabled, exhPreferences),
+                    // KNS -->
+                    useCleanTitle(exhentaiEnabled, exhPreferences),
+                    // KNS <--
                     useOriginalImages(exhentaiEnabled, exhPreferences),
                     watchedTags(exhentaiEnabled),
                     tagFilterThreshold(exhentaiEnabled, exhPreferences),
@@ -260,6 +264,21 @@ object SettingsEhScreen : SearchableSettings {
             visible = exhentaiEnabled,
         )
     }
+
+    // KNS -->
+    @Composable
+    fun useCleanTitle(
+        exhentaiEnabled: Boolean,
+        exhPreferences: ExhPreferences,
+    ): Preference.PreferenceItem.SwitchPreference {
+        return Preference.PreferenceItem.SwitchPreference(
+            preference = exhPreferences.useCleanTitle,
+            title = stringResource(KMR.strings.clean_title),
+            subtitle = stringResource(KMR.strings.clean_title_summary),
+            visible = exhentaiEnabled,
+        )
+    }
+    // KNS <--
 
     @Composable
     fun useJapaneseTitle(

@@ -191,6 +191,9 @@ class LibraryPreferences(
     /** Refresh an entry's details and chapters every time it is opened (keys of the previous personal fork). */
     val autoRefreshOpenedManga = preferenceStore.getBoolean("auto_refresh_opened_manga", false)
 
+    /** Names of the sources library updates skip (key and values of the previous personal fork). */
+    val updateSourcesExclude = preferenceStore.getStringSet("library_update_sources_exclude", emptySet())
+
     /** With [autoRefreshOpenedManga], also reset the entry's chapter flags to the defaults on open. */
     val autoResetChapterFlagsOnRefresh = preferenceStore.getBoolean("auto_reset_chapter_flags_on_refresh", false)
 

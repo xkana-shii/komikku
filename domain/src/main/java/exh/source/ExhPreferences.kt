@@ -38,6 +38,10 @@ class ExhPreferences(
 
     val useJapaneseTitle = preferenceStore.getBoolean("use_jp_title", false)
 
+    // KNS --> remove bracketed and parenthesised tags from gallery titles (previous personal fork)
+    val useCleanTitle = preferenceStore.getBoolean("use_clean_title", true)
+    // KNS <--
+
     val exhUseOriginalImages = preferenceStore.getBoolean("eh_useOrigImages", false)
 
     val ehTagFilterValue = preferenceStore.getInt("eh_tag_filtering_value", 0)

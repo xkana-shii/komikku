@@ -12,6 +12,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 ### Added
+- Settings → Library → Excluded sources is back from the previous personal fork (same key and stored source names): library update runs, scheduled or started by hand, skip entries from the chosen sources, alongside category intervals, update restrictions and the category scope. Names excluded earlier stay listed even when that source is no longer installed, so they can be cleared. Refreshing a single entry is not affected.
+- Settings → Downloads → Trigger chapter rename is back (same key, on by default) and works again: when a source renames a chapter that is downloaded, its download folder is renamed to match only while it is on. The previous fork kept the switch after its effect had been removed; now it controls the existing rename.
+- E-Hentai/ExHentai → Remove special characters from titles is back (key `use_clean_title`, on by default as before): gallery titles fetched from E-Hentai/ExHentai, in search results and gallery details, have their [bracketed], (parenthesised) and {braced} tags removed. Other sources and custom titles are untouched; entries already in the library change on their next metadata refresh.
+- The reader's page preload amount offers 100 pages again. The default stays 10, and downloads remain limited by the reader thread count into the page cache, so more pages are queued ahead without more running at once.
 - Settings → Library → Automatically refresh opened manga is back from the previous personal fork (same saved keys, off by default): opening an entry that is already set up refreshes its details and chapters once, in the background, while the stored details show; the chapters are not downloaded. With it on, "Also reset chapter flags to default" appears and, separately, resets the entry's chapter sort and filters to the defaults when it is opened.
 
 ### Fixed

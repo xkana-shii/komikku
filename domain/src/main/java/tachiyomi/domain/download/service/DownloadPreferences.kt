@@ -19,6 +19,10 @@ class DownloadPreferences(
 
     val saveChaptersAsCBZ = preferenceStore.getBoolean("save_chapter_as_cbz", true)
 
+    // KNS --> rename a downloaded chapter when its source renames it (key of the previous personal fork)
+    val triggerChapterRename = preferenceStore.getBoolean("trigger_chapter_rename", true)
+    // KNS <--
+
     val autoDownloadWhileReading: Preference<Int> = preferenceStore.getInt("auto_download_while_reading", 0)
 
     val removeAfterReadSlots = preferenceStore.getInt("remove_after_read_slots", -1)

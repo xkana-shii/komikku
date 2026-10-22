@@ -18,6 +18,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
+import eu.kanade.tachiyomi.data.library.LibraryUpdateSourceExclusion
 import eu.kanade.tachiyomi.data.library.LibraryUpdateWorker
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.category.genre.SortTagScreen
@@ -128,6 +129,15 @@ object SettingsLibraryScreen : SearchableSettings {
         val autoUpdateCategoriesPref = libraryPreferences.updateCategories
         val autoUpdateCategoriesExcludePref = libraryPreferences.updateCategoriesExclude
 
+        // KNS --> the library's sources, by name, as the previous personal fork listed them
+        val getSourcesWithFavoriteCount = remember { context.appGraph.getSourcesWithFavoriteCount }
+        val sourcesWithCount by getSourcesWithFavoriteCount.subscribe().collectAsState(initial = emptyList())
+        val excludedSourceNames by libraryPreferences.updateSourcesExclude.collectAsState()
+        val sourceEntries = remember(sourcesWithCount, excludedSourceNames) {
+            LibraryUpdateSourceExclusion.entries(sourcesWithCount.map { it.first.name }, excludedSourceNames)
+        }
+        // KNS <--
+
         val autoUpdateInterval by autoUpdateIntervalPref.collectAsState()
 
         val included by autoUpdateCategoriesPref.collectAsState()
@@ -196,6 +206,14 @@ object SettingsLibraryScreen : SearchableSettings {
                     ),
                     onClick = { showCategoriesDialog = true },
                 ),
+                // KNS -->
+                Preference.PreferenceItem.MultiSelectListPreference(
+                    preference = libraryPreferences.updateSourcesExclude,
+                    entries = sourceEntries,
+                    title = stringResource(KMR.strings.pref_excluded_sources),
+                    subtitle = stringResource(MR.strings.exclude, "%s"),
+                ),
+                // KNS <--
                 // SY -->
                 Preference.PreferenceItem.ListPreference(
                     preference = libraryPreferences.groupLibraryUpdateType,

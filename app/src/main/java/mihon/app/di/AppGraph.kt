@@ -158,6 +158,10 @@ interface AppGraph : ViewModelGraph {
     val connectionsPreferences: ConnectionsPreferences
     val syncPreferences: SyncPreferences
     val exhPreferences: ExhPreferences
+
+    // KNS --> the sources offered by Settings > Library > Excluded sources
+    val getSourcesWithFavoriteCount: eu.kanade.domain.source.interactor.GetSourcesWithFavoriteCount
+    // KNS <--
     val delegateSourcePreferences: DelegateSourcePreferences
     val coverCache: CoverCache
     val pagePreviewCache: PagePreviewCache

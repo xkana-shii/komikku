@@ -166,7 +166,9 @@ class EHentai(
                 ),
                 manga = SManga.create().apply {
                     // Get title
-                    title = thumbnailElement.attr("title")
+                    // KNS -->
+                    title = EhCleanTitle.apply(thumbnailElement.attr("title"), exhPreferences.useCleanTitle.get())
+                    // KNS <--
                     url = EHentaiSearchMetadata.normalizeUrl(linkElement.attr("href"))
                     // Get image
                     thumbnail_url = thumbnailElement.attr("src")
@@ -737,9 +739,14 @@ class EHentai(
                 gToken = EHentaiSearchMetadata.galleryToken(url)
 
                 exh = this@EHentai.exh
-                title = select("#gn").text().trimOrNull()
+                // KNS -->
+                title = select("#gn").text().trimOrNull()?.let { EhCleanTitle.apply(it, exhPreferences.useCleanTitle.get()) }
+                // KNS <--
 
+                // KNS -->
                 altTitle = select("#gj").text().trimOrNull()
+                    ?.let { EhCleanTitle.apply(it, exhPreferences.useCleanTitle.get()) }
+                // KNS <--
 
                 thumbnailUrl = select("#gd1 div").attr("style").nullIfBlank()?.let {
                     it.substring(it.indexOf('(') + 1 until it.lastIndexOf(')'))

@@ -46,6 +46,13 @@ object SettingsDownloadScreen : SearchableSettings {
                 preference = downloadPreferences.saveChaptersAsCBZ,
                 title = stringResource(MR.strings.save_chapter_as_cbz),
             ),
+            // KNS -->
+            Preference.PreferenceItem.SwitchPreference(
+                preference = downloadPreferences.triggerChapterRename,
+                title = stringResource(KMR.strings.trigger_chapter_rename),
+                subtitle = stringResource(KMR.strings.trigger_chapter_rename_summary),
+            ),
+            // KNS <--
             Preference.PreferenceItem.SliderPreference(
                 preference = downloadPreferences.parallelSourceLimit,
                 valueRange = 1..10,

@@ -14,6 +14,7 @@ import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.domain.chapter.interactor.ShouldUpdateDbChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
+import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import kotlin.time.Instant
@@ -54,6 +55,7 @@ class SyncChaptersBookmarkColorTest {
             getExcludedScanlators = mockk { coEvery { await(any()) } returns emptySet() },
             libraryPreferences = LibraryPreferences(store),
             syncPreferences = SyncPreferences(store),
+            downloadPreferences = DownloadPreferences(store),
         )
 
         sync.await(
