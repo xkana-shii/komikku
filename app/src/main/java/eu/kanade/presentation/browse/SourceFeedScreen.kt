@@ -84,6 +84,16 @@ sealed class SourceFeedUI {
     }
 }
 
+// KNS --> A late request may update only the exact feed configuration that started it.
+internal fun SourceFeedUI.sameConfiguration(other: SourceFeedUI): Boolean = when {
+    this is SourceFeedUI.Latest && other is SourceFeedUI.Latest -> true
+    this is SourceFeedUI.Browse && other is SourceFeedUI.Browse -> true
+    this is SourceFeedUI.SourceSavedSearch && other is SourceFeedUI.SourceSavedSearch ->
+        feed == other.feed && savedSearch == other.savedSearch
+    else -> false
+}
+// KNS <--
+
 @Composable
 fun SourceFeedScreen(
     name: String,

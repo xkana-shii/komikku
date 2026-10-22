@@ -17,15 +17,14 @@ import eu.kanade.presentation.browse.FeedItemUI
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.util.system.LocaleHelper
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -44,7 +43,6 @@ import tachiyomi.domain.source.interactor.CountFeedSavedSearchGlobal
 import tachiyomi.domain.source.interactor.DeleteFeedSavedSearchById
 import tachiyomi.domain.source.interactor.GetFeedSavedSearchGlobal
 import tachiyomi.domain.source.interactor.GetSavedSearchBySourceId
-import tachiyomi.domain.source.interactor.GetSavedSearchGlobalFeed
 import tachiyomi.domain.source.interactor.InsertFeedSavedSearch
 import tachiyomi.domain.source.interactor.ObserveSavedSearches
 import tachiyomi.domain.source.interactor.ReorderFeed
@@ -66,7 +64,6 @@ class FeedViewModel(
     private val getManga: GetManga,
     private val networkToLocalManga: NetworkToLocalManga,
     getFeedSavedSearchGlobal: GetFeedSavedSearchGlobal,
-    private val getSavedSearchGlobalFeed: GetSavedSearchGlobalFeed,
     private val countFeedSavedSearchGlobal: CountFeedSavedSearchGlobal,
     private val getSavedSearchBySourceId: GetSavedSearchBySourceId,
     private val insertFeedSavedSearch: InsertFeedSavedSearch,
@@ -88,19 +85,40 @@ class FeedViewModel(
     // KUN -->
     private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
     // KUN <--
+    // KNS --> Cancel superseded work and reject a late result even if a source ignores cancellation.
+    private val feedJobs = mutableMapOf<Long, Job>()
+    private val latestFeedResults = LatestFeedResults()
+    // KNS <--
     var pushed: Boolean = false
 
     init {
-        observeSavedSearches.withSavedSearches(getFeedSavedSearchGlobal.subscribe())
-            .distinctUntilChanged()
-            .onEach {
-                val items = getSourcesToGetFeed(it).map { (feed, savedSearch) ->
+        // KNS --> Observe effective configurations and reload only rows whose configuration changed.
+        observeSavedSearches.resolve(getFeedSavedSearchGlobal.subscribe())
+            .onEach { resolvedFeeds ->
+                val previousItems = state.value.items.orEmpty().associateBy { it.feed.id }
+                val items = resolvedFeeds.map { resolved ->
+                    val feed = resolved.feed
+                    val savedSearch = resolved.savedSearch
+                    val previous = previousItems[feed.id]
                     createCatalogueSearchItem(
                         feed = feed,
                         savedSearch = savedSearch,
                         source = sourceManager.get(feed.source),
-                        results = null,
+                        results = if (previous?.feed == feed && previous.savedSearch == savedSearch) {
+                            previous.results
+                        } else {
+                            null
+                        },
                     )
+                }
+                val itemsToRefresh = items.filter { item ->
+                    val previous = previousItems[item.feed.id]
+                    previous == null || previous.feed != item.feed || previous.savedSearch != item.savedSearch
+                }
+                val currentIds = items.mapTo(mutableSetOf()) { it.feed.id }
+                (feedJobs.keys - currentIds).forEach { removedId ->
+                    feedJobs.remove(removedId)?.cancel()
+                    latestFeedResults.forget(removedId)
                 }
                 state.update { state ->
                     state.copy(
@@ -110,16 +128,18 @@ class FeedViewModel(
                         // KMK <--
                     )
                 }
-                getFeed(items)
+                getFeed(itemsToRefresh)
             }
             .catch { _events.send(Event.FailedFetchingSources) }
             .launchIn(viewModelScope)
+        // KNS <--
     }
 
     fun init() {
         pushed = false
-        viewModelScope.launchIO {
-            val newItems = state.value.items?.map { it.copy(results = null) } ?: return@launchIO
+        // KNS --> Keep request bookkeeping on the ViewModel's main dispatcher.
+        viewModelScope.launch {
+            val newItems = state.value.items?.map { it.copy(results = null) } ?: return@launch
             state.update { state ->
                 state.copy(
                     items = newItems
@@ -130,6 +150,7 @@ class FeedViewModel(
             }
             getFeed(newItems)
         }
+        // KNS <--
     }
 
     fun openAddDialog() {
@@ -241,13 +262,6 @@ class FeedViewModel(
     }
     // KMK <--
 
-    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): List<Pair<FeedSavedSearch, SavedSearch?>> {
-        val savedSearches = getSavedSearchGlobalFeed.await()
-            .associateBy { it.id }
-        return feedSavedSearch
-            .map { it to savedSearches[it.savedSearch] }
-    }
-
     /**
      * Creates a catalogue search item
      */
@@ -279,60 +293,75 @@ class FeedViewModel(
      * Initiates get manga per feed.
      */
     private fun getFeed(feedSavedSearch: List<FeedItemUI>) {
-        viewModelScope.launch {
-            feedSavedSearch.map { itemUI ->
-                async {
-                    val page = try {
-                        if (itemUI.source != null) {
-                            withContext(coroutineDispatcher) {
-                                if (itemUI.savedSearch == null) {
-                                    // KMK -->
-                                    if (itemUI.source.supportsLatest) {
-                                        // KMK <--
-                                        itemUI.source.getLatestUpdates(1)
-                                        // KMK -->
-                                    } else {
-                                        itemUI.source.getPopularManga(1)
-                                    }
+        // KNS --> One cancellable, generation-checked job per effective feed configuration.
+        feedSavedSearch.forEach { itemUI ->
+            val request = latestFeedResults.start(itemUI.feed.id)
+            feedJobs.remove(itemUI.feed.id)?.cancel()
+            feedJobs[itemUI.feed.id] = viewModelScope.launch {
+                val page = try {
+                    if (itemUI.source != null) {
+                        withContext(coroutineDispatcher) {
+                            if (itemUI.savedSearch == null) {
+                                // KMK -->
+                                if (itemUI.source.supportsLatest) {
                                     // KMK <--
+                                    itemUI.source.getLatestUpdates(1)
+                                    // KMK -->
                                 } else {
-                                    itemUI.source.getSearchManga(
-                                        1,
-                                        itemUI.savedSearch.query?.sanitize().orEmpty(),
-                                        getFilterList(itemUI.savedSearch, itemUI.source),
-                                    )
+                                    itemUI.source.getPopularManga(1)
                                 }
-                            }.mangas
-                        } else {
-                            emptyList()
-                        }
-                    } catch (_: Exception) {
+                                // KMK <--
+                            } else {
+                                itemUI.source.getSearchManga(
+                                    1,
+                                    itemUI.savedSearch.query?.sanitize().orEmpty(),
+                                    getFilterList(itemUI.savedSearch, itemUI.source),
+                                )
+                            }
+                        }.mangas
+                    } else {
                         emptyList()
                     }
-
-                    val result = withIOContext {
-                        itemUI.copy(
-                            results = page
-                                .map { it.toDomainManga(itemUI.source!!.id) }
-                                .distinctBy { it.url }
-                                .let { networkToLocalManga(it) }
-                                // KMK -->
-                                .filter { !hideInLibraryFeedItems.get() || !it.favorite },
-                            // KMK <--
-                        )
-                    }
-
-                    state.update { state ->
-                        state.copy(
-                            items = state.items?.map { if (it.feed.id == result.feed.id) result else it }
-                                // KMK -->
-                                ?.toList(),
-                            // KMK <--
-                        )
-                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
                 }
-            }.awaitAll()
+
+                val result = withIOContext {
+                    itemUI.copy(
+                        results = page
+                            .map { it.toDomainManga(itemUI.source!!.id) }
+                            .distinctBy { it.url }
+                            .let { networkToLocalManga(it) }
+                            // KMK -->
+                            .filter { !hideInLibraryFeedItems.get() || !it.favorite },
+                        // KMK <--
+                    )
+                }
+
+                val acceptedResult = latestFeedResults.accept(request, result) ?: return@launch
+                state.update { state ->
+                    state.copy(
+                        items = state.items?.map {
+                            if (
+                                it.feed.id == acceptedResult.feed.id &&
+                                it.feed == acceptedResult.feed &&
+                                it.savedSearch == acceptedResult.savedSearch
+                            ) {
+                                acceptedResult
+                            } else {
+                                it
+                            }
+                        }
+                            // KMK -->
+                            ?.toList(),
+                        // KMK <--
+                    )
+                }
+            }
         }
+        // KNS <--
     }
 
     private val filterSerializer = FilterSerializer()

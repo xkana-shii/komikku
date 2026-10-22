@@ -10,13 +10,8 @@ package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
  */
 data class WebGpuZoomGestures(val doubleTapZoom: Boolean, val pinchZoom: Boolean) {
 
-    /**
-     * Whether the viewer detects double taps at all. Its double tap detection also starts the "double
-     * tap and drag" zoom, which a second finger then turns into a pinch, without checking the double
-     * tap zoom switch; so without double tap zoom there is no double tap detection, as in the legacy
-     * viewers, and a tap is reported on lift.
-     */
-    fun doubleTapGestures(disableDoubleTapGestures: Boolean): Boolean = doubleTapZoom && !disableDoubleTapGestures
+    /** Double taps are still recognized when zoom is off so the second tap is not a ghost tap. */
+    fun doubleTapGestures(disableDoubleTapGestures: Boolean): Boolean = !disableDoubleTapGestures
 
     companion object {
         fun paged(doubleTapZoom: Boolean, disableZoomIn: Boolean) =
@@ -26,4 +21,13 @@ data class WebGpuZoomGestures(val doubleTapZoom: Boolean, val pinchZoom: Boolean
             WebGpuZoomGestures(doubleTapZoom = doubleTapZoom, pinchZoom = pinchZoom)
     }
 }
+
+internal enum class MovedSecondTapRoute { QUICK_SCALE, REGULAR_GESTURE }
+
+internal fun movedSecondTapRoute(doubleTapZoomEnabled: Boolean): MovedSecondTapRoute =
+    if (doubleTapZoomEnabled) MovedSecondTapRoute.QUICK_SCALE else MovedSecondTapRoute.REGULAR_GESTURE
+
+/** Multi-pointer translation at home scale is useful only while an enabled pinch is being handled. */
+internal fun canPanAtHomeScale(singlePointer: Boolean, pinchZoomEnabled: Boolean): Boolean =
+    singlePointer || pinchZoomEnabled
 // KNS <--

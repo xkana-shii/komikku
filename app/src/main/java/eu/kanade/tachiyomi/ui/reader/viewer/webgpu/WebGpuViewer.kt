@@ -78,7 +78,9 @@ open class WebGpuViewer(
     val activity: ReaderActivity,
     val isReversed: Boolean,
     val isVertical: Boolean,
-    val pager: ImageView = ImageView(activity, isVertical = isVertical, isReversed = isReversed),
+    // KNS --> Gesture routing fixes layered over the upstream renderer.
+    val pager: ImageView = KnsImageView(activity, isVertical = isVertical, isReversed = isReversed),
+    // KNS <--
 ) : Viewer {
 
     open val isContinuous: Boolean = false

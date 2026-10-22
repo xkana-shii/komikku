@@ -7,7 +7,11 @@ import eu.kanade.presentation.library.components.SubcategoryRowVisibility
 import eu.kanade.presentation.manga.components.ScanlatorStats
 import eu.kanade.presentation.manga.components.scanlatorStatsOf
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchViewModel
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.MovedSecondTapRoute
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuZoomGestures
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.canPanAtHomeScale
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.movedSecondTapRoute
+import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonScaleGesture
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -97,26 +101,42 @@ class RestoredMainBehaviorTest {
     }
 
     @Test
-    fun `without double tap zoom no double tap is detected, so double tap and hold plus a second finger cannot zoom`() {
-        // Pinch off, double tap off, disable zoom out on: the reported bypass.
+    fun `High Quality moved second taps route to regular pinch handling when double tap zoom is off`() {
+        // Pinch off, double tap off: recognize the pair so it cannot become two ghost taps, then
+        // route movement through the regular handler where pinch remains disabled.
         WebGpuZoomGestures.continuous(doubleTapZoom = false, pinchZoom = false).run {
-            doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
+            doubleTapGestures(disableDoubleTapGestures = false) shouldBe true
             pinchZoom shouldBe false
         }
-        // Pinch off, double tap on: double tap (and its drag) still zooms.
-        WebGpuZoomGestures.continuous(doubleTapZoom = true, pinchZoom = false)
-            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe true
-        // Double tap off, pinch on: pinch still zooms, double tap does not.
-        WebGpuZoomGestures.continuous(doubleTapZoom = false, pinchZoom = true).run {
-            doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
-            pinchZoom shouldBe true
-        }
-        // Paged "disable zoom in" removes double tap detection too.
+        movedSecondTapRoute(doubleTapZoomEnabled = false) shouldBe MovedSecondTapRoute.REGULAR_GESTURE
+        movedSecondTapRoute(doubleTapZoomEnabled = true) shouldBe MovedSecondTapRoute.QUICK_SCALE
+
+        // A disabled pinch cannot translate content at home scale, but single-finger movement and
+        // an enabled pinch still work. The renderer also permits panning once genuinely zoomed.
+        canPanAtHomeScale(singlePointer = false, pinchZoomEnabled = false) shouldBe false
+        canPanAtHomeScale(singlePointer = true, pinchZoomEnabled = false) shouldBe true
+        canPanAtHomeScale(singlePointer = false, pinchZoomEnabled = true) shouldBe true
+
+        // Paged "disable zoom in" removes both zoom routes, not double-tap recognition.
         WebGpuZoomGestures.paged(doubleTapZoom = true, disableZoomIn = true)
-            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
+            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe true
         // The general "disable double tap gestures" setting still wins.
         WebGpuZoomGestures.continuous(doubleTapZoom = true, pinchZoom = true)
             .doubleTapGestures(disableDoubleTapGestures = true) shouldBe false
+    }
+
+    @Test
+    fun `Legacy scale routing keeps double tap zoom and pinch zoom independent`() {
+        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = true, pinchZoomEnabled = false) shouldBe
+            WebtoonScaleGesture(accepted = true, quickScale = true)
+        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = false, pinchZoomEnabled = true) shouldBe
+            WebtoonScaleGesture(accepted = true, quickScale = false)
+        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = false, pinchZoomEnabled = false) shouldBe
+            WebtoonScaleGesture(accepted = false, quickScale = false)
+        WebtoonScaleGesture.resolve(false, doubleTapZoomEnabled = true, pinchZoomEnabled = false) shouldBe
+            WebtoonScaleGesture(accepted = false, quickScale = false)
+        WebtoonScaleGesture.resolve(false, doubleTapZoomEnabled = false, pinchZoomEnabled = true) shouldBe
+            WebtoonScaleGesture(accepted = true, quickScale = false)
     }
 
     // Feeds (saved searches) -----------------------------------------------------------------------

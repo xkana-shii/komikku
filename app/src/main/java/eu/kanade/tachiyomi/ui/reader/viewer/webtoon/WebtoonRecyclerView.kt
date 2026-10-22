@@ -236,11 +236,17 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         requestLayout()
     }
 
-    fun onScaleBegin() {
-        if (detector.isDoubleTapping) {
-            detector.isQuickScaling = true
-        }
+    // KNS -->
+    fun onScaleBegin(): Boolean {
+        val gesture = WebtoonScaleGesture.resolve(
+            doubleTapInProgress = detector.isDoubleTapping,
+            doubleTapZoomEnabled = doubleTapZoom,
+            pinchZoomEnabled = pinchToZoom,
+        )
+        detector.isQuickScaling = gesture.quickScale
+        return gesture.accepted
     }
+    // KNS <--
 
     fun onScaleEnd() {
         if (scaleX < minRate) {

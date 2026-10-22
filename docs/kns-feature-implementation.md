@@ -331,15 +331,15 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 | 11.1-c | Search/filter snapshot reconstruction | PARTIAL | | — | — |
 | 11.1-d | Source-feed associations | PRESENT | | — | — |
 | 11.1-e | Feed ordering | PARTIAL | | — | — |
-| 11.1-f | Saved-search overwrite handling | MISSING | Old `UpdateSavedSearch`/`UpdateFeedSavedSearch` | — | — |
+| 11.1-f | Saved-search overwrite handling | DONE | In-place identity preserved; global and source feeds observe the resolved search | `ObserveSavedSearchesTest`, `LatestFeedResultsTest` | batch 24 |
 | 11.1-g | Restore saved searches before feeds | PRESENT | Komi-kun #59 feed restorer | Komi-kun `FeedRestorerTest` | — |
 | 11.1-h | Source-category-aware feeds | PARTIAL | | — | — |
 | 11.2-a | Independent feed loading states | PARTIAL | | — | — |
 | 11.2-b | Per-feed retry | MISSING | | — | — |
 | 11.2-c | Refresh all feeds (not only errors) | MISSING | | — | — |
 | 11.2-d | Error rows with retry | MISSING | | — | — |
-| 11.2-e | No stale result substitution | MISSING | | — | — |
-| 11.2-f | Isolated feed request data | MISSING | | — | — |
+| 11.2-e | No stale result substitution | DONE | Per-feed cancellation plus request generations reject late results | `LatestFeedResultsTest` | batch 24 |
+| 11.2-f | Isolated feed request data | DONE | Each request holds its resolved saved-search snapshot | `ObserveSavedSearchesTest` | batch 24 |
 | 11.2-g | Usable transitions | PARTIAL | | — | — |
 | 11.3-a | Saved searches usable from source and feed | PRESENT | | — | — |
 | 11.3-b | Valid saved-search feeds not rejected | PARTIAL | Komi-kun #59 identity fix | — | — |
@@ -1249,10 +1249,11 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Smart Merge:** notices and date-like chapter names no longer collide with numbered chapters. The winning
   scanlator retains every one of its uploads, including identical duplicates; only cross-scanlator candidates
   are hidden. The existing URL/hybrid blacklist continues to target individual uploads.
-- **Reread dates and HQ gestures:** automatic tracker updates preserve existing reading dates and fill only
-  absent values. High Quality WebGPU double-tap gesture detection now respects the relevant zoom restriction.
-- **Feeds:** a feed-table flow is combined with saved-search changes so a saved search replaced in place is
-  resolved again by every feed that references it.
+- **Reread dates and initial HQ gesture attempt:** automatic tracker updates preserve existing reading dates and fill
+  only absent values. The initial WebGPU change disabled double-tap recognition together with zoom; batch 24 replaces
+  that coupling because it exposed the second tap as ordinary pointer input and allowed unintended translation.
+- **Initial feed observation attempt:** a feed-table flow was combined with saved-search changes, but the emitted feed
+  rows remained equal and a downstream `distinctUntilChanged` discarded them. Batch 24 observes resolved configurations.
 
 ### Batch 19 — History date-heading presentation
 
@@ -1279,10 +1280,10 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   `ExtensionsScreen`, `MigrateSourceScreen`, `SourcesFilterScreen` and `getNameForMangaInfo`.
 - **Subcategory row:** `SubcategoryRowVisibility.onTabTap` (tap on the selected tab toggles, other tabs only scroll),
   state in `LibraryContent` (`rememberSaveable`); without tabs the row always shows.
-- **HQ zoom:** `WebGpuConfig` only applied webtoon zoom-out and the general double-tap switch. `WebGpuZoomGestures` maps
-  paged double tap / disable zoom in and long-strip double tap / pinch onto the library's `doubleTapZoomEnabled` and
-  `pinchZoomEnabled` (the double-tap drag zoom is gated by the same flag). Long-strip "disable zoom out" already works
-  through `minScale = 0` (= home scale).
+- **HQ zoom (initial mapping):** `WebGpuConfig` maps paged double tap / disable zoom in and long-strip double tap /
+  pinch onto the library's zoom flags. Webgpuviewer 53 did not gate its double-tap-drag branch with
+  `doubleTapZoomEnabled`; batch 24 supplies the corrected pointer routing. Long-strip "disable zoom out" continues to
+  work through `minScale = 0` (= home scale).
 - **Feeds:** `SavedSearchCreateDialog` rejected existing names; it asks to overwrite again and `saveSearch` updates the
   existing saved search in place (`UpdateSavedSearch`, names compared trimmed and case-insensitively).
 - **Global Search categories:** `globalSearchSourceCategory` (`main`'s key), `SearchViewModel.setSourceCategory`, the
@@ -1357,3 +1358,25 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** `spotlessApply`, `:app:compileDebugKotlin`, and focused
   `RestoredMainBehaviorTest` / `StartRereadTest` all completed with exit code 0. UI animation and long-press behavior
   still need device verification.
+
+### Batch 24 — Reader gesture-state and live feed corrections
+
+- **Legacy reader:** `WebtoonScaleGesture` decides whether Android's scale detector may begin. A double tap becomes
+  quick scale only when double-tap zoom is enabled; otherwise only an enabled pinch can start scaling. This closes the
+  combined double-tap/add-pointer bypass while leaving either gesture independently usable.
+- **High Quality reader:** `KnsImageViewer` and `KnsImageViewerContinuous` adapt webgpuviewer 53's existing renderer and
+  pointer loop. Double taps stay recognized when zoom is disabled, but movement on the second tap transitions to the
+  normal handler instead of quick scale. Multi-pointer movement is inert at home scale when pinch is disabled, while
+  single-finger paging/scrolling, enabled pinch and panning genuinely zoomed content retain their paths. The rendering,
+  surface, HDR and image-generation code remains webgpuviewer 53's.
+- **Feeds:** `ObserveSavedSearches` now emits feed rows already paired with the matching saved-search snapshot, so an
+  in-place query/filter/sort replacement changes flow equality. Both global and source-feed ViewModels retain results
+  for unchanged rows, clear and reload only changed rows, cancel superseded per-feed jobs and use `LatestFeedResults`
+  generations to reject late old results.
+- **Tests:** `RestoredMainBehaviorTest` covers independent Legacy/HQ gesture routes and the disabled-pinch home-scale
+  translation gate. `ObserveSavedSearchesTest` covers live and reopened collectors, unrelated searches, multiple feeds,
+  query/filter/sort/source-option replacements and successive replacements. `LatestFeedResultsTest` verifies displayed
+  results remain new when old requests complete late and that feeds are isolated.
+- **Validation:** `spotlessCheck testDebugUnitTest assembleDebug assembleRelease -q` exits 0 (727 tests, 0 failures,
+  1 skipped); focused app/domain regressions and `:app:compileDebugKotlin` also pass. Physical-device gesture
+  verification is pending.

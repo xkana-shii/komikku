@@ -23,10 +23,12 @@ import eu.kanade.domain.source.interactor.ToggleIncognito
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.SourceFeedUI
+import eu.kanade.presentation.browse.sameConfiguration
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
+import eu.kanade.tachiyomi.ui.browse.feed.LatestFeedResults
 import eu.kanade.tachiyomi.ui.browse.feed.MaxFeedItems
 import exh.source.EH_PACKAGE
 import exh.source.LOCAL_SOURCE_PACKAGE
@@ -34,9 +36,9 @@ import exh.source.getMainSource
 import exh.source.isEhBasedSource
 import exh.source.mangaDexSourceIds
 import exh.util.nullIfBlank
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -57,8 +59,8 @@ import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.source.interactor.CountFeedSavedSearchBySourceId
 import tachiyomi.domain.source.interactor.DeleteFeedSavedSearchById
 import tachiyomi.domain.source.interactor.GetFeedSavedSearchBySourceId
-import tachiyomi.domain.source.interactor.GetSavedSearchBySourceIdFeed
 import tachiyomi.domain.source.interactor.InsertFeedSavedSearch
+import tachiyomi.domain.source.interactor.ObserveSavedSearches
 import tachiyomi.domain.source.interactor.ReorderFeed
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearch
@@ -79,7 +81,9 @@ class SourceFeedViewModel(
     private val getManga: GetManga,
     private val networkToLocalManga: NetworkToLocalManga,
     getFeedSavedSearchBySourceId: GetFeedSavedSearchBySourceId,
-    private val getSavedSearchBySourceIdFeed: GetSavedSearchBySourceIdFeed,
+    // KNS --> Resolve feed rows again when their saved-search configuration is replaced.
+    private val observeSavedSearches: ObserveSavedSearches,
+    // KNS <--
     private val countFeedSavedSearchBySourceId: CountFeedSavedSearchBySourceId,
     private val insertFeedSavedSearch: InsertFeedSavedSearch,
     private val deleteFeedSavedSearchById: DeleteFeedSavedSearchById,
@@ -110,6 +114,10 @@ class SourceFeedViewModel(
     // KUN -->
     private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(5)
     // KUN <--
+    // KNS --> Cancel superseded work and reject late results from sources that ignore cancellation.
+    private val feedJobs = mutableMapOf<Long, Job>()
+    private val latestFeedResults = LatestFeedResults()
+    // KNS <--
 
     val startExpanded by uiPreferences.expandFilters.asState(viewModelScope)
 
@@ -127,17 +135,48 @@ class SourceFeedViewModel(
             // KMK -->
             reloadSavedSearches()
 
-            getFeedSavedSearchBySourceId.subscribe(source.id)
-                .onEach {
-                    val items = getSourcesToGetFeed(it)
+            // KNS --> Observe effective configurations and reload only affected source-feed rows.
+            observeSavedSearches.resolve(getFeedSavedSearchBySourceId.subscribe(source.id))
+                .onEach { resolvedFeeds ->
+                    val previousItems = state.value.items.associateBy(SourceFeedUI::id)
+                    val items = buildList {
+                        if (source.supportsLatest) {
+                            add(SourceFeedUI.Latest(previousItems[-1]?.results))
+                        }
+                        add(SourceFeedUI.Browse(previousItems[-2]?.results))
+                        resolvedFeeds.forEach { resolved ->
+                            val savedSearch = resolved.savedSearch ?: return@forEach
+                            val previous = previousItems[resolved.feed.id] as? SourceFeedUI.SourceSavedSearch
+                            add(
+                                SourceFeedUI.SourceSavedSearch(
+                                    resolved.feed,
+                                    savedSearch,
+                                    if (previous?.feed == resolved.feed && previous.savedSearch == savedSearch) {
+                                        previous.results
+                                    } else {
+                                        null
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                    val itemsToRefresh = items.filter { item ->
+                        previousItems[item.id]?.sameConfiguration(item) != true
+                    }
+                    val currentIds = items.mapTo(mutableSetOf(), SourceFeedUI::id)
+                    (feedJobs.keys - currentIds).forEach { removedId ->
+                        feedJobs.remove(removedId)?.cancel()
+                        latestFeedResults.forget(removedId)
+                    }
                     state.update { state ->
                         state.copy(
                             items = items,
                         )
                     }
-                    getFeed(items)
+                    getFeed(itemsToRefresh)
                 }
                 .launchIn(viewModelScope)
+            // KNS <--
             // KMK <--
         }
 
@@ -210,25 +249,6 @@ class SourceFeedViewModel(
     }
     // KMK <--
 
-    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): List<SourceFeedUI> {
-        val source = source ?: return emptyList()
-        val savedSearches = getSavedSearchBySourceIdFeed.await(source.id)
-            .associateBy { it.id }
-
-        return (
-            listOfNotNull(
-                if (source.supportsLatest) {
-                    SourceFeedUI.Latest(null)
-                } else {
-                    null
-                },
-                SourceFeedUI.Browse(null),
-            ) + feedSavedSearch
-                .map { SourceFeedUI.SourceSavedSearch(it, savedSearches[it.savedSearch]!!, null) }
-            )
-            .toList()
-    }
-
     // KMK -->
     private val hideInLibraryFeedItems = sourcePreferences.hideInLibraryFeedItems.get()
     // KMK <--
@@ -237,45 +257,50 @@ class SourceFeedViewModel(
      * Initiates get manga per feed.
      */
     private fun getFeed(feedSavedSearch: List<SourceFeedUI>) {
-        viewModelScope.launch {
-            val source = source ?: return@launch
-            feedSavedSearch.map { sourceFeed ->
-                async {
-                    val page = try {
-                        withContext(coroutineDispatcher) {
-                            when (sourceFeed) {
-                                is SourceFeedUI.Browse -> source.getPopularManga(1)
-                                is SourceFeedUI.Latest -> source.getLatestUpdates(1)
-                                is SourceFeedUI.SourceSavedSearch -> source.getSearchManga(
-                                    page = 1,
-                                    query = sourceFeed.savedSearch.query?.sanitize().orEmpty(),
-                                    filters = getFilterList(sourceFeed.savedSearch, source),
-                                )
-                            }
-                        }.mangas
-                    } catch (_: Exception) {
-                        emptyList()
-                    }
-
-                    val titles = withIOContext {
-                        page.map { it.toDomainManga(source.id) }
-                            .distinctBy { it.url }
-                            .let { networkToLocalManga(it) }
-                            // KMK -->
-                            .filter { !hideInLibraryFeedItems || !it.favorite }
-                        // KMK <--
-                    }
-
-                    state.update { state ->
-                        state.copy(
-                            items = state.items.map { item ->
-                                if (item.id == sourceFeed.id) sourceFeed.withResults(titles) else item
-                            }.toList(),
-                        )
-                    }
+        // KNS --> One cancellable, generation-checked job per effective feed configuration.
+        val source = source ?: return
+        feedSavedSearch.forEach { sourceFeed ->
+            val request = latestFeedResults.start(sourceFeed.id)
+            feedJobs.remove(sourceFeed.id)?.cancel()
+            feedJobs[sourceFeed.id] = viewModelScope.launch {
+                val page = try {
+                    withContext(coroutineDispatcher) {
+                        when (sourceFeed) {
+                            is SourceFeedUI.Browse -> source.getPopularManga(1)
+                            is SourceFeedUI.Latest -> source.getLatestUpdates(1)
+                            is SourceFeedUI.SourceSavedSearch -> source.getSearchManga(
+                                page = 1,
+                                query = sourceFeed.savedSearch.query?.sanitize().orEmpty(),
+                                filters = getFilterList(sourceFeed.savedSearch, source),
+                            )
+                        }
+                    }.mangas
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
                 }
-            }.awaitAll()
+
+                val titles = withIOContext {
+                    page.map { it.toDomainManga(source.id) }
+                        .distinctBy { it.url }
+                        .let { networkToLocalManga(it) }
+                        // KMK -->
+                        .filter { !hideInLibraryFeedItems || !it.favorite }
+                    // KMK <--
+                }
+
+                val acceptedTitles = latestFeedResults.accept(request, titles) ?: return@launch
+                state.update { state ->
+                    state.copy(
+                        items = state.items.map { item ->
+                            if (item.sameConfiguration(sourceFeed)) sourceFeed.withResults(acceptedTitles) else item
+                        }.toList(),
+                    )
+                }
+            }
         }
+        // KNS <--
     }
 
     private val filterSerializer = FilterSerializer()

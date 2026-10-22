@@ -4,27 +4,38 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.SavedSearchRepository
 
 // KNS -->
 /**
- * Feeds point at their saved search by id, and replacing a saved search updates it in place. The feed
- * lists only watch the feed table, so this re-emits [feeds] whenever a saved search changes too, and a
- * feed then reloads with the saved search's new query and filters.
+ * Resolves feed rows and saved searches from the same observed snapshot. Replacing a saved search
+ * updates the resolved value even though the feed row and its saved-search id stay unchanged.
  */
 @Inject
 class ObserveSavedSearches(
     private val savedSearchRepository: SavedSearchRepository,
 ) {
-    fun <T> withSavedSearches(feeds: Flow<T>): Flow<T> = reloadOn(feeds, savedSearchRepository.getAllAsFlow())
+    fun resolve(feeds: Flow<List<FeedSavedSearch>>): Flow<List<ResolvedFeedSavedSearch>> =
+        resolve(feeds, savedSearchRepository.getAllAsFlow())
 
     companion object {
-        /** [feeds], emitted again whenever [savedSearches] changes. */
-        fun <T> reloadOn(feeds: Flow<T>, savedSearches: Flow<List<SavedSearch>>): Flow<T> =
-            combine(feeds, savedSearches.distinctUntilChanged()) { feed, searches -> feed to searches }
-                .distinctUntilChanged()
-                .let { pairs -> kotlinx.coroutines.flow.flow { pairs.collect { emit(it.first) } } }
+        fun resolve(
+            feeds: Flow<List<FeedSavedSearch>>,
+            savedSearches: Flow<List<SavedSearch>>,
+        ): Flow<List<ResolvedFeedSavedSearch>> = combine(
+            feeds,
+            savedSearches.distinctUntilChanged(),
+        ) { feedRows, searches ->
+            val searchesById = searches.associateBy(SavedSearch::id)
+            feedRows.map { feed -> ResolvedFeedSavedSearch(feed, searchesById[feed.savedSearch]) }
+        }.distinctUntilChanged()
     }
 }
+
+data class ResolvedFeedSavedSearch(
+    val feed: FeedSavedSearch,
+    val savedSearch: SavedSearch?,
+)
 // KNS <--

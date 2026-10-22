@@ -83,8 +83,9 @@ class WebtoonFrame(context: Context) : FrameLayout(context) {
      */
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            recycler?.onScaleBegin()
-            return true
+            // KNS --> Refuse the detector before it can scale when neither route is enabled.
+            return recycler?.onScaleBegin() == true
+            // KNS <--
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {

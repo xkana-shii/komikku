@@ -170,7 +170,9 @@ Every new addition or change authored for `xkana-shii/komikku` **must** be marke
 - **Network:** OkHttp 5 with DNS-over-HTTPS
 - **Serialization:** Kotlinx Serialization (JSON/Protobuf); Apollo GraphQL for AniList/Kitsu/Shikimori/Suwayomi
 - **Reader:** WebGPU renderer (`ca.mpreg:webgpuviewer`) + `ca.mpreg:imagedecoder` progressive decoding,
-  SSIV fallback
+  SSIV fallback. Fork gesture routing adapts webgpuviewer 53 in
+  `app/src/main/java/ca/mpreg/webgpuviewer/viewer/KnsImageViewer*.kt`; keep those copies aligned when upgrading the
+  dependency.
 - **JS engine:** QuickJS (used by sources)
 - **Concurrency:** Kotlin coroutines + Flow for new code; RxJava 1 remains in `source-api` for extension compatibility
 - **Toolchain:** JDK 21 to build (`.github/.java-version`; the daemon JVM is pinned in
@@ -427,6 +429,7 @@ The in-app updater reads `v*` releases from `xkana-shii/komikku` and `r<count>` 
 
 - `App.kt` – Metro graph bootstrap, logging setup, Coil initialization
 - `MainActivity.kt` – Voyager navigation host
+- `app/src/main/java/ca/mpreg/webgpuviewer/viewer/KnsImageViewer*.kt` – webgpuviewer 53 rendering with KNS pointer routing
 - `app/src/main/java/mihon/app/di/AppGraph.kt` / `AppBindings.kt` – the DI graph and its bindings
 - `data/src/main/java/tachiyomi/data/DatabaseBindings.kt` – database wiring
 - `buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`, `AndroidConfig.kt` – flags, SDK versions

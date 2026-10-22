@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
 
-import ca.mpreg.webgpuviewer.ImageViewContinuous
 import ca.mpreg.webgpuviewer.viewer.ImagePage
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -8,7 +7,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 
 class WebGpuViewerContinuous(activity: ReaderActivity, val useGap: Boolean = false) :
-    WebGpuViewer(activity, isReversed = false, isVertical = true, pager = ImageViewContinuous(activity)) {
+    // KNS --> Use the patched pointer-state router while retaining the upstream renderer state.
+    WebGpuViewer(activity, isReversed = false, isVertical = true, pager = KnsImageViewContinuous(activity)) {
+    // KNS <--
 
     override val isContinuous: Boolean get() = true
 
@@ -19,7 +20,9 @@ class WebGpuViewerContinuous(activity: ReaderActivity, val useGap: Boolean = fal
 
     override val cacheSize get() = 2 + 2 * max(4, state.pagesAbove + state.pagesBelow)
 
-    private val state get() = (pager as ImageViewContinuous).state
+    // KNS -->
+    private val state get() = (pager as KnsImageViewContinuous).state
+    // KNS <--
 
     init {
         state.backgroundColor = readerBackgroundColor()

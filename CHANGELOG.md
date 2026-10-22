@@ -17,8 +17,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - History day headers now use the shared Updates-style date heading and count badge. The badge continues to show the number of distinct manga read in the currently displayed entries for that day.
 - Smart Scanlator Merge no longer treats dated notices such as “March 6th” as a chapter release, and never hides uploads from the selected scanlator—even byte-for-byte duplicates. Blacklisting one upload still affects only that record.
 - Automatic tracker progress updates now preserve existing start and finish dates during rereads, filling only a missing date.
-- High Quality reader double-tap detection now observes its zoom restriction, preventing a second pointer from turning a disabled double-tap gesture into a pinch zoom.
-- Feeds now refresh when a referenced saved search is replaced in place.
+- Legacy long-strip scaling no longer treats a disabled double-tap sequence as quick scale when another pointer is added, so combined double-tap/pinch input cannot bypass both disabled zoom settings.
+- High Quality reader double taps remain recognized without becoming navigation ghost taps when their zoom is disabled; moved second taps fall back to normal gesture handling, and disabled pinch input no longer translates content at its home scale. Single-finger navigation, enabled pinch zoom and panning already-zoomed content remain available.
+- Global and source feeds now apply an overwritten saved search immediately while open, refresh only affected rows with the new query and serialized filters/sort options, and prevent canceled or older requests from replacing newer results. Reopening a feed also resolves the latest saved-search configuration.
 
 ### Changed
 - Sync (from Komi-kun): clearing every custom title/author/cover/description override and editing a merged entry's references now sync. A winning sync replaces the stored overrides exactly (an all-empty set clears them) and reconciles the merge's references (new ones added, missing ones removed); manual restores and losing payloads only add, as before. History resets, custom-info edits and reference edits mark the entry for the next delta sync.
