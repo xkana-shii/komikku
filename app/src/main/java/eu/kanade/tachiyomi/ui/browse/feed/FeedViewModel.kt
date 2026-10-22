@@ -295,7 +295,18 @@ class FeedViewModel(
     private fun getFeed(feedSavedSearch: List<FeedItemUI>) {
         // KNS --> One cancellable, generation-checked job per effective feed configuration.
         feedSavedSearch.forEach { itemUI ->
-            val request = latestFeedResults.start(itemUI.feed.id)
+            val configuration = FeedRequestConfiguration(
+                sourceId = itemUI.feed.source,
+                savedSearch = itemUI.savedSearch,
+                kind = if (itemUI.savedSearch != null) {
+                    FeedRequestConfiguration.Kind.SAVED_SEARCH
+                } else if (itemUI.source?.supportsLatest == true) {
+                    FeedRequestConfiguration.Kind.LATEST
+                } else {
+                    FeedRequestConfiguration.Kind.POPULAR
+                },
+            )
+            val request = latestFeedResults.start(itemUI.feed.id, configuration)
             feedJobs.remove(itemUI.feed.id)?.cancel()
             feedJobs[itemUI.feed.id] = viewModelScope.launch {
                 val page = try {
@@ -340,8 +351,23 @@ class FeedViewModel(
                     )
                 }
 
-                val acceptedResult = latestFeedResults.accept(request, result) ?: return@launch
                 state.update { state ->
+                    val activeItem = state.items?.firstOrNull { it.feed.id == request.feedId }
+                    val activeConfiguration = activeItem?.let {
+                        FeedRequestConfiguration(
+                            sourceId = it.feed.source,
+                            savedSearch = it.savedSearch,
+                            kind = if (it.savedSearch != null) {
+                                FeedRequestConfiguration.Kind.SAVED_SEARCH
+                            } else if (it.source?.supportsLatest == true) {
+                                FeedRequestConfiguration.Kind.LATEST
+                            } else {
+                                FeedRequestConfiguration.Kind.POPULAR
+                            },
+                        )
+                    }
+                    val acceptedResult = latestFeedResults.accept(request, activeConfiguration, result)
+                        ?: return@update state
                     state.copy(
                         items = state.items?.map {
                             if (

@@ -28,6 +28,7 @@ import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
+import eu.kanade.tachiyomi.ui.browse.feed.FeedRequestConfiguration
 import eu.kanade.tachiyomi.ui.browse.feed.LatestFeedResults
 import eu.kanade.tachiyomi.ui.browse.feed.MaxFeedItems
 import exh.source.EH_PACKAGE
@@ -260,7 +261,16 @@ class SourceFeedViewModel(
         // KNS --> One cancellable, generation-checked job per effective feed configuration.
         val source = source ?: return
         feedSavedSearch.forEach { sourceFeed ->
-            val request = latestFeedResults.start(sourceFeed.id)
+            val configuration = FeedRequestConfiguration(
+                sourceId = source.id,
+                savedSearch = (sourceFeed as? SourceFeedUI.SourceSavedSearch)?.savedSearch,
+                kind = when (sourceFeed) {
+                    is SourceFeedUI.SourceSavedSearch -> FeedRequestConfiguration.Kind.SAVED_SEARCH
+                    is SourceFeedUI.Latest -> FeedRequestConfiguration.Kind.LATEST
+                    is SourceFeedUI.Browse -> FeedRequestConfiguration.Kind.POPULAR
+                },
+            )
+            val request = latestFeedResults.start(sourceFeed.id, configuration)
             feedJobs.remove(sourceFeed.id)?.cancel()
             feedJobs[sourceFeed.id] = viewModelScope.launch {
                 val page = try {
@@ -290,8 +300,21 @@ class SourceFeedViewModel(
                     // KMK <--
                 }
 
-                val acceptedTitles = latestFeedResults.accept(request, titles) ?: return@launch
                 state.update { state ->
+                    val activeItem = state.items.firstOrNull { it.id == request.feedId }
+                    val activeConfiguration = activeItem?.let {
+                        FeedRequestConfiguration(
+                            sourceId = source.id,
+                            savedSearch = (it as? SourceFeedUI.SourceSavedSearch)?.savedSearch,
+                            kind = when (it) {
+                                is SourceFeedUI.SourceSavedSearch -> FeedRequestConfiguration.Kind.SAVED_SEARCH
+                                is SourceFeedUI.Latest -> FeedRequestConfiguration.Kind.LATEST
+                                is SourceFeedUI.Browse -> FeedRequestConfiguration.Kind.POPULAR
+                            },
+                        )
+                    }
+                    val acceptedTitles = latestFeedResults.accept(request, activeConfiguration, titles)
+                        ?: return@update state
                     state.copy(
                         items = state.items.map { item ->
                             if (item.sameConfiguration(sourceFeed)) sourceFeed.withResults(acceptedTitles) else item

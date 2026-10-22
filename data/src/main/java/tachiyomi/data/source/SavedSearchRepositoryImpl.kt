@@ -8,6 +8,8 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
 import tachiyomi.domain.source.model.SavedSearch
@@ -19,6 +21,10 @@ import tachiyomi.domain.source.repository.SavedSearchRepository
 class SavedSearchRepositoryImpl(
     private val database: Database,
 ) : SavedSearchRepository {
+
+    // KNS --> Explicit runtime invalidation for in-place replacements used by live feeds.
+    private val updates = MutableSharedFlow<SavedSearch>(extraBufferCapacity = 64)
+    // KNS <--
 
     override suspend fun getById(savedSearchId: Long): SavedSearch? {
         return database.saved_searchQueries
@@ -37,6 +43,8 @@ class SavedSearchRepositoryImpl(
     override fun getAllAsFlow(): Flow<List<SavedSearch>> {
         return database.saved_searchQueries.selectAll(SavedSearchMapper::map).subscribeToList()
     }
+
+    override fun getUpdatesAsFlow(): Flow<SavedSearch> = updates.asSharedFlow()
     // KNS <--
 
     override suspend fun deleteAll() {
@@ -105,6 +113,9 @@ class SavedSearchRepositoryImpl(
             filtersJson = savedSearch.filtersJson,
             id = savedSearch.id,
         )
+        // KNS --> Do not make an active feed depend only on SQLDelight query invalidation timing.
+        updates.emit(savedSearch)
+        // KNS <--
     }
     // KUN <--
 }

@@ -4,6 +4,8 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.SavedSearchRepository
@@ -17,8 +19,15 @@ import tachiyomi.domain.source.repository.SavedSearchRepository
 class ObserveSavedSearches(
     private val savedSearchRepository: SavedSearchRepository,
 ) {
-    fun resolve(feeds: Flow<List<FeedSavedSearch>>): Flow<List<ResolvedFeedSavedSearch>> =
-        resolve(feeds, savedSearchRepository.getAllAsFlow())
+    fun resolve(feeds: Flow<List<FeedSavedSearch>>): Flow<List<ResolvedFeedSavedSearch>> {
+        // KNS --> The write event is a second, explicit invalidation path for active ViewModels.
+        val savedSearches = merge(
+            savedSearchRepository.getAllAsFlow(),
+            savedSearchRepository.getUpdatesAsFlow().mapLatest { savedSearchRepository.getAll() },
+        ).distinctUntilChanged()
+        return resolve(feeds, savedSearches)
+        // KNS <--
+    }
 
     companion object {
         fun resolve(

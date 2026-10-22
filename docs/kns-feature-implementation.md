@@ -1380,3 +1380,25 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** `spotlessCheck testDebugUnitTest assembleDebug assembleRelease -q` exits 0 (727 tests, 0 failures,
   1 skipped); focused app/domain regressions and `:app:compileDebugKotlin` also pass. Physical-device gesture
   verification is pending.
+
+### Batch 24 — Reader gesture restrictions and live saved-search feed updates
+
+- **HQ Reader reference:** Inspected Houri's local checkout and its `webgpuviewer-houri` dependency. Houri is pinned to WebGPU commit `6be74d0`; the relevant dependency history includes `e22bec3` (pan below home scale) and `38d8995` (pan fling during double-tap gestures). The effective application-side correction was identified in Houri commit `7e06ee89b854`, which gates double-tap sequences before they reach the WebGPU surface when double-tap zoom is disabled.
+
+- **HQ gesture adaptation:** Adapted Houri's host-side `GestureDetector` gate to Komikku's existing WebGPU v53 integration. When double-tap zoom is disabled, the host consumes the affected gesture sequence rather than allowing subsequent pointer events to trigger unintended renderer translation. The previous broad renderer copies are replaced by this narrower approach, leaving the existing WebGPU rendering implementation and optimizations intact. Normal reader navigation and permitted gestures must remain unaffected.
+
+- **Legacy zoom restrictions:** Addressed a separate classic-reader issue in the scale detector's gesture-acceptance logic. A double tap followed by an additional pointer and pinch could trigger scaling even when pinch and double-tap zoom were disabled. The revised acceptance logic is intended to prevent this combined gesture from bypassing the existing preferences without disabling permitted zoom, scrolling, or navigation. Houri's Legacy implementation was not used as the solution because it still exhibits this issue.
+
+- **Saved-search invalidation:** The previous feed correction made feeds observe saved-search changes, but an active feed could continue displaying results from the old configuration until the app restarted. Added an explicit post-write invalidation signal alongside SQLDelight observation so replacing a saved search notifies its dependent feeds while the application remains running.
+
+- **Feed request consistency:** Search requests now carry the source, query, filter configuration, and generation that were active when the request started. A completed request is accepted only if its generation and effective configuration still match the current feed. This prevents an outdated in-flight request from replacing results belonging to a newer saved-search configuration. The intended behavior is to refresh affected feeds immediately while preserving their identities and unrelated settings.
+
+- **Regression coverage:** Work was reported on live saved-search update tests, including configuration-to-result consistency rather than checking flow emissions alone. `SavedSearchLiveUpdateTest.kt` was being inspected during the interrupted validation. Confirm its final contents and test results before marking coverage complete.
+
+- **Validation:** Not yet confirmed. The previous session was interrupted while focused formatting, compilation, and tests were running. No successful final validation or local commit was confirmed. Inspect existing test results, resolve any failures, then run `spotlessCheck`, `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, and `git diff --check`.
+
+- **Device verification pending:** Test disabled double-tap and pinch combinations separately in both Legacy and HQ rendering, including double tap followed by a second pointer. Confirm HQ no longer translates the image unexpectedly and Legacy no longer scales it. Verify that overwriting a saved search updates the actual contents of an already-open feed without restarting the application, including when an older request remains in flight.
+
+- **Preserved behavior:** The WebGPU v53 renderer, Reader automation, page navigation, Smart Scanlator Merge, individual chapter blacklist behavior, tracking and rereading fixes, and existing feed identities are intended to remain unchanged.
+
+- **Status:** DONE-UNVERIFIED — implementation reported, automated validation and device verification pending. Update the status and test results after successful validation.

@@ -78,9 +78,7 @@ open class WebGpuViewer(
     val activity: ReaderActivity,
     val isReversed: Boolean,
     val isVertical: Boolean,
-    // KNS --> Gesture routing fixes layered over the upstream renderer.
-    val pager: ImageView = KnsImageView(activity, isVertical = isVertical, isReversed = isReversed),
-    // KNS <--
+    val pager: ImageView = ImageView(activity, isVertical = isVertical, isReversed = isReversed),
 ) : Viewer {
 
     open val isContinuous: Boolean = false
@@ -938,7 +936,16 @@ open class WebGpuViewer(
         }
     }
 
-    override fun getView(): View = pager
+    // KNS --> Adapted from Houri 7e06ee89b8: keep a prohibited second tap away from WebGPU.
+    private val touchProxy by lazy {
+        WebGpuDoubleTapZoomGateLayout(activity).apply {
+            addViewer(pager)
+            shouldSwallowDoubleTap = { !pager.state.doubleTapZoomEnabled }
+        }
+    }
+
+    override fun getView(): View = touchProxy
+    // KNS <--
 
     private val cropBorders: Boolean
         get() = if (isContinuous) config.imageCropBordersWebtoon else config.imageCropBorders

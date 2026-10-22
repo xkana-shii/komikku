@@ -1,6 +1,7 @@
 package tachiyomi.domain.source.repository
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import tachiyomi.domain.source.model.SavedSearch
 
 interface SavedSearchRepository {
@@ -16,6 +17,9 @@ interface SavedSearchRepository {
 
     // KNS --> every saved search, re-emitted when one is added, replaced or removed
     fun getAllAsFlow(): Flow<List<SavedSearch>>
+
+    /** Successful in-place replacements, emitted immediately after their database write. */
+    fun getUpdatesAsFlow(): Flow<SavedSearch> = emptyFlow()
     // KNS <--
     // KUN <--
 

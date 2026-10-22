@@ -7,10 +7,8 @@ import eu.kanade.presentation.library.components.SubcategoryRowVisibility
 import eu.kanade.presentation.manga.components.ScanlatorStats
 import eu.kanade.presentation.manga.components.scanlatorStatsOf
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchViewModel
-import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.MovedSecondTapRoute
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuDoubleTapGestureGate
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuZoomGestures
-import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.canPanAtHomeScale
-import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.movedSecondTapRoute
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonScaleGesture
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -101,25 +99,27 @@ class RestoredMainBehaviorTest {
     }
 
     @Test
-    fun `High Quality moved second taps route to regular pinch handling when double tap zoom is off`() {
-        // Pinch off, double tap off: recognize the pair so it cannot become two ghost taps, then
-        // route movement through the regular handler where pinch remains disabled.
+    fun `High Quality consumes the whole prohibited second gesture outside the WebGPU surface`() {
+        // The renderer skips its double-tap window while its zoom route is disabled.
         WebGpuZoomGestures.continuous(doubleTapZoom = false, pinchZoom = false).run {
-            doubleTapGestures(disableDoubleTapGestures = false) shouldBe true
+            doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
             pinchZoom shouldBe false
         }
-        movedSecondTapRoute(doubleTapZoomEnabled = false) shouldBe MovedSecondTapRoute.REGULAR_GESTURE
-        movedSecondTapRoute(doubleTapZoomEnabled = true) shouldBe MovedSecondTapRoute.QUICK_SCALE
 
-        // A disabled pinch cannot translate content at home scale, but single-finger movement and
-        // an enabled pinch still work. The renderer also permits panning once genuinely zoomed.
-        canPanAtHomeScale(singlePointer = false, pinchZoomEnabled = false) shouldBe false
-        canPanAtHomeScale(singlePointer = true, pinchZoomEnabled = false) shouldBe true
-        canPanAtHomeScale(singlePointer = false, pinchZoomEnabled = true) shouldBe true
+        val gate = WebGpuDoubleTapGestureGate()
+        gate.onDoubleTap(disabled = true) shouldBe true
+        gate.shouldConsume(terminalEvent = false) shouldBe true // second down
+        gate.shouldConsume(terminalEvent = false) shouldBe true // added pointer / movement
+        gate.shouldConsume(terminalEvent = true) shouldBe true // final up
+        gate.shouldConsume(terminalEvent = false) shouldBe false // next independent gesture
 
-        // Paged "disable zoom in" removes both zoom routes, not double-tap recognition.
+        // An allowed double tap and its following events pass through.
+        gate.onDoubleTap(disabled = false) shouldBe false
+        gate.shouldConsume(terminalEvent = false) shouldBe false
+
+        // Paged "disable zoom in" removes both renderer zoom routes and its pair window.
         WebGpuZoomGestures.paged(doubleTapZoom = true, disableZoomIn = true)
-            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe true
+            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
         // The general "disable double tap gestures" setting still wins.
         WebGpuZoomGestures.continuous(doubleTapZoom = true, pinchZoom = true)
             .doubleTapGestures(disableDoubleTapGestures = true) shouldBe false
