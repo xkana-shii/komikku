@@ -18,6 +18,7 @@ import eu.kanade.tachiyomi.source.online.all.MergedSource
 import eu.kanade.tachiyomi.source.online.all.NHentai
 import eu.kanade.tachiyomi.source.online.all.Pururin
 import eu.kanade.tachiyomi.source.online.english.EightMuses
+import eu.kanade.tachiyomi.source.online.english.NineHentai
 import exh.log.xLogD
 import exh.log.xLogE
 import exh.source.BlacklistedSources
@@ -28,6 +29,7 @@ import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.EnhancedHttpSource
 import exh.source.ExhPreferences
 import exh.source.MERGED_SOURCE_ID
+import exh.source.NINEHENTAI_SOURCE_ID
 import exh.source.handleSourceLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -60,6 +62,7 @@ class AndroidSourceManager(
     // SY -->
     private val exhPreferences: ExhPreferences,
     private val sourcePreferences: SourcePreferences,
+    private val nineHentaiFactory: NineHentai.Factory,
     // SY <--
     // KMK -->
     private val getMergedReferencesById: GetMergedReferencesById,
@@ -365,6 +368,15 @@ class AndroidSourceManager(
                 Lanraragi::class,
                 // KUN -->
                 createSource = ::Lanraragi,
+                // KUN <--
+            ),
+            DelegatedSource(
+                "NineHentai",
+                NINEHENTAI_SOURCE_ID,
+                "eu.kanade.tachiyomi.extension.en.ninehentai.NineHentai",
+                NineHentai::class,
+                // KUN -->
+                createSource = { delegate, _ -> nineHentaiFactory.create(delegate) },
                 // KUN <--
             ),
         )

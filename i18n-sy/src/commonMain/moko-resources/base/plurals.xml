@@ -35,6 +35,14 @@
         <item quantity="one">%1$d page</item>
         <item quantity="other">%1$d pages</item>
     </plurals>
+    <plurals name="num_favorites">
+        <item quantity="one">%1$s favorite</item>
+        <item quantity="other">%1$s favorites</item>
+    </plurals>
+    <plurals name="num_views">
+        <item quantity="one">%1$s view</item>
+        <item quantity="other">%1$s views</item>
+    </plurals>
 
     <!-- Enhanced E/ExHentai Browse View -->
     <plurals name="browse_language_and_pages">

@@ -94,6 +94,7 @@ import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.source.online.all.NHentai
 import eu.kanade.tachiyomi.source.online.all.Pururin
 import eu.kanade.tachiyomi.source.online.english.EightMuses
+import eu.kanade.tachiyomi.source.online.english.NineHentai
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.ui.manga.MergedMangaData
@@ -108,6 +109,7 @@ import exh.ui.metadata.adapters.EightMusesDescription
 import exh.ui.metadata.adapters.LanraragiDescription
 import exh.ui.metadata.adapters.MangaDexDescription
 import exh.ui.metadata.adapters.NHentaiDescription
+import exh.ui.metadata.adapters.NineHentaiDescription
 import exh.ui.metadata.adapters.PururinDescription
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -1490,6 +1492,9 @@ fun metadataDescription(source: Source): MetadataDescriptionComposable? {
             }
             is Lanraragi -> { state, openMetadataViewer, _ ->
                 LanraragiDescription(state, openMetadataViewer)
+            }
+            is NineHentai -> { state, openMetadataViewer, _ ->
+                NineHentaiDescription(state, openMetadataViewer)
             }
             else -> null
         }
