@@ -1244,6 +1244,16 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
   are keyed by the old ids. Clearing that app's data (or reinstalling) and restoring again removes them.
 - **Validation:** see Batch 18 (validated together).
 
+### Batch 19 — merge, reread and feed regression corrections
+
+- **Smart Merge:** notices and date-like chapter names no longer collide with numbered chapters. The winning
+  scanlator retains every one of its uploads, including identical duplicates; only cross-scanlator candidates
+  are hidden. The existing URL/hybrid blacklist continues to target individual uploads.
+- **Reread dates and HQ gestures:** automatic tracker updates preserve existing reading dates and fill only
+  absent values. High Quality WebGPU double-tap gesture detection now respects the relevant zoom restriction.
+- **Feeds:** a feed-table flow is combined with saved-search changes so a saved search replaced in place is
+  resolved again by every feed that references it.
+
 ### Batch 19 — History date-heading presentation
 
 - History date groups now reuse Updates' shared `DateHeading`, including its date formatting, count badge,

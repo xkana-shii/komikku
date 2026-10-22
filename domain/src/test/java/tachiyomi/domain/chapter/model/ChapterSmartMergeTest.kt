@@ -181,6 +181,86 @@ class ChapterSmartMergeTest {
             .map(Chapter::id) shouldBe listOf(chapterOne.id)
     }
 
+    @Test
+    fun `a dated notice carrying a chapter number does not hide that chapter`() {
+        // The Edge of Ambiguity on Mangago: "March 6th" was recognized as chapter 6.
+        val notice = chapter(1, 6.0, "Jujucat").copy(name = "March 6th")
+        val chapterSix = chapter(2, 6.0, "Jujucat").copy(name = "Ch. 6")
+        val other = chapter(3, 6.0, "Other").copy(name = "Ch. 6")
+        val merged = listOf(notice, chapterSix, other).applySmartScanlatorMerge(
+            priority = listOf("Jujucat", "Other"),
+            blacklistedChapters = emptyList(),
+            rangeRules = emptyList(),
+        )
+        merged.map(Chapter::id) shouldBe listOf(1L, 2L)
+    }
+
+    @Test
+    fun `notices and date posts are never merged`() {
+        val names = listOf("March 6th Notice", "Season Comeback 6/15", "Anniversary 1", "Hiatus announcement 3")
+        names.forEachIndexed { index, name ->
+            chapter(10L + index, 6.0, "Other").copy(name = name).isNotice() shouldBe true
+        }
+        chapter(20, 6.0, "Other").copy(name = "Chapter 6: March 6th").isNotice() shouldBe false
+        chapter(21, 1.5, "Other").copy(name = "Side story 1.5").isNotice() shouldBe false
+    }
+
+    @Test
+    fun `distinct uploads of the preferred scanlator stay visible`() {
+        val official = chapter(1, 10.0, "Jujucat").copy(name = "Chapter 10 (Official)")
+        val scanlated = chapter(2, 10.0, "Jujucat").copy(name = "Chapter 10")
+        val other = chapter(3, 10.0, "Other").copy(name = "Chapter 10")
+        listOf(official, scanlated, other).applySmartScanlatorMerge(
+            priority = listOf("Jujucat", "Other"),
+            blacklistedChapters = emptyList(),
+            rangeRules = emptyList(),
+        ).map(Chapter::id) shouldBe listOf(1L, 2L)
+    }
+
+    @Test
+    fun `identical uploads from one scanlator are all retained`() {
+        val first = chapter(1, 10.0, "Jujucat", "/a").copy(name = "Chapter 10")
+        val relisted = chapter(2, 10.0, "Jujucat", "/b").copy(name = " chapter  10 ")
+        listOf(first, relisted).applySmartScanlatorMerge(emptyList(), emptyList(), emptyList())
+            .map(Chapter::id) shouldBe listOf(1L, 2L)
+    }
+
+    @Test
+    fun `equivalent releases of different scanlators follow priority then range rules`() {
+        val a = chapter(1, 10.0, "A").copy(name = "Chapter 10")
+        val b = chapter(2, 10.0, "B").copy(name = "Chapter 10")
+        val c = chapter(3, 10.0, "C").copy(name = "Chapter 10")
+        listOf(a, b, c).applySmartScanlatorMerge(listOf("B", "A", "C"), emptyList(), emptyList())
+            .map(Chapter::id) shouldBe listOf(2L)
+        listOf(a, b, c).applySmartScanlatorMerge(
+            listOf("B", "A", "C"),
+            emptyList(),
+            listOf(encodeScanlatorRangeRule(ScanlatorRangeRule(5.0, 15.0, "C"))),
+        ).map(Chapter::id) shouldBe listOf(3L)
+    }
+
+    @Test
+    fun `a blacklisted preferred release falls back to the next scanlator`() {
+        val preferred = chapter(1, 10.0, "A").copy(name = "Chapter 10")
+        val fallback = chapter(2, 10.0, "B").copy(name = "Chapter 10")
+        listOf(preferred, fallback).applySmartScanlatorMerge(
+            listOf("A", "B"),
+            listOf(hybridChapterBlacklistKey(preferred)),
+            emptyList(),
+        ).map(Chapter::id) shouldBe listOf(2L)
+    }
+
+    @Test
+    fun `visible unread count includes a chapter that shares its number with a notice`() {
+        val chapters = (1..107).map { chapter(it.toLong(), it.toDouble(), "Jujucat").copy(name = "Ch. $it") } +
+            chapter(500, 6.0, "Jujucat").copy(name = "March 6th", read = true) +
+            chapter(501, 6.0, "Other").copy(name = "Ch. 6")
+        val manga = Manga.create().copy(scanlatorPriority = listOf("Jujucat", "Other"))
+        val visible = chapters.filterChapterVisibility(manga, smartScanlatorMergeEnabled = true)
+        visible.count { !it.read } shouldBe 107
+        visible.any { it.id == 6L } shouldBe true
+    }
+
     private fun chapter(
         id: Long,
         number: Double,

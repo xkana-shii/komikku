@@ -10,6 +10,14 @@ package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
  */
 data class WebGpuZoomGestures(val doubleTapZoom: Boolean, val pinchZoom: Boolean) {
 
+    /**
+     * Whether the viewer detects double taps at all. Its double tap detection also starts the "double
+     * tap and drag" zoom, which a second finger then turns into a pinch, without checking the double
+     * tap zoom switch; so without double tap zoom there is no double tap detection, as in the legacy
+     * viewers, and a tap is reported on lift.
+     */
+    fun doubleTapGestures(disableDoubleTapGestures: Boolean): Boolean = doubleTapZoom && !disableDoubleTapGestures
+
     companion object {
         fun paged(doubleTapZoom: Boolean, disableZoomIn: Boolean) =
             WebGpuZoomGestures(doubleTapZoom = doubleTapZoom && !disableZoomIn, pinchZoom = !disableZoomIn)

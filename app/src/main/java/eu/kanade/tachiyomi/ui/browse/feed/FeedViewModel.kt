@@ -46,6 +46,7 @@ import tachiyomi.domain.source.interactor.GetFeedSavedSearchGlobal
 import tachiyomi.domain.source.interactor.GetSavedSearchBySourceId
 import tachiyomi.domain.source.interactor.GetSavedSearchGlobalFeed
 import tachiyomi.domain.source.interactor.InsertFeedSavedSearch
+import tachiyomi.domain.source.interactor.ObserveSavedSearches
 import tachiyomi.domain.source.interactor.ReorderFeed
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
@@ -70,6 +71,9 @@ class FeedViewModel(
     private val getSavedSearchBySourceId: GetSavedSearchBySourceId,
     private val insertFeedSavedSearch: InsertFeedSavedSearch,
     private val deleteFeedSavedSearchById: DeleteFeedSavedSearchById,
+    // KNS --> Rebuild feed items when a referenced saved search is overwritten in place.
+    observeSavedSearches: ObserveSavedSearches,
+    // KNS <--
     // KMK -->
     private val reorderFeed: ReorderFeed,
     // KMK <--
@@ -87,7 +91,7 @@ class FeedViewModel(
     var pushed: Boolean = false
 
     init {
-        getFeedSavedSearchGlobal.subscribe()
+        observeSavedSearches.withSavedSearches(getFeedSavedSearchGlobal.subscribe())
             .distinctUntilChanged()
             .onEach {
                 val items = getSourcesToGetFeed(it).map { (feed, savedSearch) ->

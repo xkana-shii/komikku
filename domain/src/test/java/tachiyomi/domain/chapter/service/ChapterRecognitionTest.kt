@@ -427,6 +427,33 @@ class ChapterRecognitionTest {
             listOf(ChapterNumbering("1", "7"), ChapterNumbering(null, "2"))
     }
 
+    // KNS -->
+    @Test
+    fun `A date is no chapter number`() {
+        ChapterRecognition.parseChapterNumber("", "March 6th") shouldBe -1.0
+        ChapterRecognition.parseChapterNumber("", "March 6th Notice") shouldBe -1.0
+        ChapterRecognition.parseChapterNumber("", "Season Comeback 6/15") shouldBe -1.0
+        ChapterRecognition.parseChapterNumber("", "6 June update") shouldBe -1.0
+    }
+
+    @Test
+    fun `A chapter named after a date keeps its chapter number`() {
+        ChapterRecognition.parseChapterNumber("", "Ch. 6") shouldBe 6.0
+        ChapterRecognition.parseChapterNumber("", "Chapter 6: Beginning") shouldBe 6.0
+        ChapterRecognition.parseChapterNumber("", "Chapter 7: March 6th") shouldBe 7.0
+        ChapterRecognition.parseChapterNumber("", "Chapter 10.5") shouldBe 10.5
+    }
+
+    @Test
+    fun `A dated notice between chapters gets a number between them, not the day of its date`() {
+        assertNumbers(
+            "Chapter 6" to ChapterNumbering(null, "6"),
+            "March 6th" to ChapterNumbering(null, "5.5"),
+            "Chapter 5" to ChapterNumbering(null, "5"),
+        )
+    }
+    // KNS <--
+
     private fun assertNumbers(vararg expected: Pair<String, ChapterNumbering>) = assertNumbers("", *expected)
 
     /**

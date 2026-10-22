@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
+import eu.kanade.tachiyomi.data.track.ReadingDates
 import eu.kanade.tachiyomi.data.track.comick.dto.ComickOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.serialization.json.Json
@@ -55,8 +56,13 @@ class Comick(id: Long) : BaseTracker(id, "Comick"), DeletableTracker {
     ): Track {
         if (track.status != COMPLETED && track.status != READING && didReadChapter) {
             track.status = READING
+            // KNS --> reading chapter 1 again keeps an existing start date
             if (track.last_chapter_read == 1.0) {
-                track.started_reading_date = Clock.System.now().toEpochMilliseconds()
+                track.started_reading_date = ReadingDates.started(
+                    track.started_reading_date,
+                    Clock.System.now().toEpochMilliseconds(),
+                )
+                // KNS <--
             }
         }
 

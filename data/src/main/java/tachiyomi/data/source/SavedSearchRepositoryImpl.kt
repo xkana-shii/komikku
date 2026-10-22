@@ -33,6 +33,12 @@ class SavedSearchRepositoryImpl(
             .awaitAsList()
     }
 
+    // KNS -->
+    override fun getAllAsFlow(): Flow<List<SavedSearch>> {
+        return database.saved_searchQueries.selectAll(SavedSearchMapper::map).subscribeToList()
+    }
+    // KNS <--
+
     override suspend fun deleteAll() {
         database.saved_searchQueries.deleteAll()
     }

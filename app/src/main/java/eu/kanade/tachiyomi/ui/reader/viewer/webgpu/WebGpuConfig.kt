@@ -32,6 +32,7 @@ class WebGpuConfig(
     private var pagedDisableZoomIn = false
     private var webtoonDoubleTapZoom = true
     private var webtoonPinchZoom = true
+    private var disableDoubleTapGestures = false
 
     private fun applyZoomGestures() {
         val gestures = if (viewer is WebGpuViewerContinuous) {
@@ -41,6 +42,7 @@ class WebGpuConfig(
         }
         viewer.pager.state.doubleTapZoomEnabled = gestures.doubleTapZoom
         viewer.pager.state.pinchZoomEnabled = gestures.pinchZoom
+        viewer.pager.state.doubleTapGesturesEnabled = gestures.doubleTapGestures(disableDoubleTapGestures)
     }
     // KNS <--
 
@@ -214,7 +216,10 @@ class WebGpuConfig(
         )
 
         readerPreferences.disableDoubleTapGestures.register({
-            viewer.pager.state.doubleTapGesturesEnabled = !it
+            // KNS --> combined with the double tap zoom setting in applyZoomGestures
+            disableDoubleTapGestures = it
+            applyZoomGestures()
+            // KNS <--
         })
 
         // KNS --> the zoom settings the legacy viewers honour, applied to the High Quality pager too

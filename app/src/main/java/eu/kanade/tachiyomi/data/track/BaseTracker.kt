@@ -142,7 +142,9 @@ abstract class BaseTracker(
         track.last_chapter_read = chapterNumber.toDouble()
         if (track.total_chapters != 0L && track.last_chapter_read.toLong() == track.total_chapters) {
             track.status = getCompletionStatus()
-            track.finished_reading_date = System.currentTimeMillis()
+            // KNS --> completing (also a reread) keeps an existing finish date
+            track.finished_reading_date = ReadingDates.finished(track.finished_reading_date, System.currentTimeMillis())
+            // KNS <--
         }
         updateRemote(track)
         // KMK -->

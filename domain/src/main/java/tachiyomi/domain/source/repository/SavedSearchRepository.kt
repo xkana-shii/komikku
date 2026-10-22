@@ -13,6 +13,10 @@ interface SavedSearchRepository {
     suspend fun deleteAll()
 
     suspend fun update(savedSearch: SavedSearch)
+
+    // KNS --> every saved search, re-emitted when one is added, replaced or removed
+    fun getAllAsFlow(): Flow<List<SavedSearch>>
+    // KNS <--
     // KUN <--
 
     suspend fun getBySourceId(sourceId: Long): List<SavedSearch>

@@ -15,6 +15,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Restoring app settings no longer applies device-local app state (sync cursors and similar) from an older or hand-edited backup.
 - Automatic scrolling in the High Quality long-strip reader no longer stops at the end of a chapter while the next chapter is still loading; it waits for it and only stops after the last chapter.
 - History day headers now use the shared Updates-style date heading and count badge. The badge continues to show the number of distinct manga read in the currently displayed entries for that day.
+- Smart Scanlator Merge no longer treats dated notices such as “March 6th” as a chapter release, and never hides uploads from the selected scanlator—even byte-for-byte duplicates. Blacklisting one upload still affects only that record.
+- Automatic tracker progress updates now preserve existing start and finish dates during rereads, filling only a missing date.
+- High Quality reader double-tap detection now observes its zoom restriction, preventing a second pointer from turning a disabled double-tap gesture into a pinch zoom.
+- Feeds now refresh when a referenced saved search is replaced in place.
 
 ### Changed
 - Sync (from Komi-kun): clearing every custom title/author/cover/description override and editing a merged entry's references now sync. A winning sync replaces the stored overrides exactly (an all-empty set clears them) and reconciles the merge's references (new ones added, missing ones removed); manual restores and losing payloads only add, as before. History resets, custom-info edits and reference edits mark the entry for the next delta sync.

@@ -96,6 +96,29 @@ class RestoredMainBehaviorTest {
         }
     }
 
+    @Test
+    fun `without double tap zoom no double tap is detected, so double tap and hold plus a second finger cannot zoom`() {
+        // Pinch off, double tap off, disable zoom out on: the reported bypass.
+        WebGpuZoomGestures.continuous(doubleTapZoom = false, pinchZoom = false).run {
+            doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
+            pinchZoom shouldBe false
+        }
+        // Pinch off, double tap on: double tap (and its drag) still zooms.
+        WebGpuZoomGestures.continuous(doubleTapZoom = true, pinchZoom = false)
+            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe true
+        // Double tap off, pinch on: pinch still zooms, double tap does not.
+        WebGpuZoomGestures.continuous(doubleTapZoom = false, pinchZoom = true).run {
+            doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
+            pinchZoom shouldBe true
+        }
+        // Paged "disable zoom in" removes double tap detection too.
+        WebGpuZoomGestures.paged(doubleTapZoom = true, disableZoomIn = true)
+            .doubleTapGestures(disableDoubleTapGestures = false) shouldBe false
+        // The general "disable double tap gestures" setting still wins.
+        WebGpuZoomGestures.continuous(doubleTapZoom = true, pinchZoom = true)
+            .doubleTapGestures(disableDoubleTapGestures = true) shouldBe false
+    }
+
     // Feeds (saved searches) -----------------------------------------------------------------------
 
     @Test

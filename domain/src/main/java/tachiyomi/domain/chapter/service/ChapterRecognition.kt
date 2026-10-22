@@ -77,6 +77,17 @@ object ChapterRecognition {
      */
     private val prologue = Regex("""\b(?:prologue|one.?shot|pilot)\b""")
 
+    // KNS -->
+    /**
+     * A date in a name, whose day is no chapter number.
+     * Example: March 6th Notice -R> " Notice", Season Comeback 6/15 -R> "Season Comeback "
+     */
+    private val date = Regex(
+        """\b(?:$MONTHS)\.? *[0-9]{1,2}(?:st|nd|rd|th)?\b|\b[0-9]{1,2}(?:st|nd|rd|th)? *(?:of *)?(?:$MONTHS)\b""" +
+            """|\b[0-9]{1,2}/[0-9]{1,2}(?:/[0-9]{2,4})?\b""",
+    )
+    // KNS <--
+
     /**
      * Formats numbers without trailing zeros, with ASCII digits and a dot whatever the locale, e.g. 10.5, 3, 24.005
      */
@@ -283,7 +294,9 @@ object ChapterRecognition {
      */
     private fun parseName(name: String): RecognizedNumber? {
         // The volume can't also be the chapter number
-        val withoutVolume = volume.replace(name, " ")
+        // KNS --> nor the day of a date, e.g. the 6 of "March 6th" (an announcement, not chapter 6)
+        val withoutVolume = date.replace(volume.replace(name, " "), " ")
+        // KNS <--
         val partMatch = part.find(withoutVolume)
         val partLetter = partMatch?.groupValues?.get(1)?.let(::parsePart)?.takeIf { it in 1..26 }?.let { 'a' + it - 1 }
         if (partMatch != null && partLetter != null) {
@@ -332,3 +345,8 @@ object ChapterRecognition {
         }
     }
 }
+
+// KNS -->
+internal const val MONTHS = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|" +
+    "sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+// KNS <--

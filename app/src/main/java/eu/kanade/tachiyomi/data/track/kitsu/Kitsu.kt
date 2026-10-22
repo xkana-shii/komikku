@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
+import eu.kanade.tachiyomi.data.track.ReadingDates
 import eu.kanade.tachiyomi.data.track.kitsu.dto.KitsuOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
@@ -128,11 +129,15 @@ class Kitsu(id: Long) : BaseTracker(id, "Kitsu"), DeletableTracker {
             if (didReadChapter) {
                 if (track.last_chapter_read.toLong() == track.total_chapters && track.total_chapters > 0) {
                     track.status = COMPLETED
-                    track.finished_reading_date = System.currentTimeMillis()
+                    // KNS --> completing (also a reread) keeps an existing finish date
+                    track.finished_reading_date = ReadingDates.finished(track.finished_reading_date, System.currentTimeMillis())
+                    // KNS <--
                 } else {
                     track.status = READING
                     if (track.last_chapter_read == 1.0) {
-                        track.started_reading_date = System.currentTimeMillis()
+                        // KNS --> reading chapter 1 again keeps an existing start date
+                        track.started_reading_date = ReadingDates.started(track.started_reading_date, System.currentTimeMillis())
+                        // KNS <--
                     }
                 }
             }

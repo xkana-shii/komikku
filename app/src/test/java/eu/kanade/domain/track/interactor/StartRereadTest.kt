@@ -15,6 +15,7 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.UpsertTrack
 import tachiyomi.domain.track.model.Track
+import kotlin.time.Instant
 
 // KNS -->
 class StartRereadTest {
@@ -65,6 +66,38 @@ class StartRereadTest {
         coVerify(exactly = 0) { kitsu.update(any(), any()) }
         coVerify(exactly = 0) { anilist.update(any(), any()) }
         coVerify { upsert.awaitOrThrow(match { it.trackerId == 1L && it.status == 6L && it.startDate != null }) }
+    }
+
+    @Test
+    fun `starting a reread keeps existing dates and only fills a missing start date per tracker`() = runTest {
+        val getTracks = mockk<GetTracks>()
+        val manager = mockk<TrackerManager>()
+        val upsert = mockk<UpsertTrack>(relaxed = true)
+        val first = tracker(id = 1, completed = 2, rereading = 6)
+        val second = tracker(id = 2, completed = 2, rereading = 6)
+        val third = tracker(id = 3, completed = 2, rereading = 6)
+        every { manager.get(1) } returns first
+        every { manager.get(2) } returns second
+        every { manager.get(3) } returns third
+        val jan10 = Instant.parse("2024-01-10T00:00:00Z")
+        val jan20 = Instant.parse("2024-01-20T00:00:00Z")
+        coEvery { getTracks.await(10) } returns listOf(
+            // Example A: both dates; Example B: neither; only a finish date.
+            track(trackerId = 1, status = 2).copy(startDate = jan10, finishDate = jan20),
+            track(trackerId = 2, status = 2),
+            track(trackerId = 3, status = 2).copy(finishDate = jan20),
+        )
+
+        StartReread(getTracks, manager, upsert, mockk(relaxed = true))
+            .await(10, chapters, currentChapter = null, mode = AutoRereadResetMode.RESET_TO_ZERO)
+
+        coVerify { upsert.awaitOrThrow(match { it.trackerId == 1L && it.startDate == jan10 && it.finishDate == jan20 }) }
+        coVerify {
+            upsert.awaitOrThrow(match { it.trackerId == 2L && it.startDate != null && it.finishDate == null })
+        }
+        coVerify {
+            upsert.awaitOrThrow(match { it.trackerId == 3L && it.startDate != null && it.finishDate == jan20 })
+        }
     }
 
     private fun tracker(id: Long, completed: Long, rereading: Long) = mockk<BaseTracker> {

@@ -1,5 +1,6 @@
 package tachiyomi.domain.chapter.model
 
+import tachiyomi.domain.chapter.service.MONTHS
 import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.manga.model.Manga
 
@@ -28,9 +29,24 @@ fun parseScanlatorRangeRule(raw: String): ScanlatorRangeRule? {
 }
 
 /**
- * Removes blacklisted chapters and, when configured, keeps one chapter for each valid positive
- * number. Range rules take priority over the global scanlator order. Source order is retained
- * whenever candidates have the same preference.
+ * A notice rather than a chapter: an announcement, hiatus or anniversary post, or a dated post, with no
+ * "chapter" before a number. Its number (often the day of its date, or one a source guessed) says nothing
+ * about which chapter it is, so Smart Merge never treats it as a release of that chapter.
+ */
+private val noticeName = Regex(
+    """\b(?:notice|announcement|hiatus|anniversary|comeback|delay(?:ed)?|break)\b""" +
+        """|\b(?:$MONTHS)\.? *[0-9]{1,2}(?:st|nd|rd|th)?\b|\b[0-9]{1,2}/[0-9]{1,2}\b""",
+    RegexOption.IGNORE_CASE,
+)
+private val chapterPrefix = Regex("""\b(?:ch|chap|chapter|ep|episode)\.? *[0-9]|#[0-9]""", RegexOption.IGNORE_CASE)
+internal fun Chapter.isNotice(): Boolean = noticeName.containsMatchIn(name) && !chapterPrefix.containsMatchIn(name)
+
+/**
+ * Removes blacklisted chapters and, when configured, keeps the preferred release of each valid positive
+ * number. Range rules take priority over the global scanlator order; source order decides between
+ * equally preferred scanlators. Every upload of the chosen scanlator stays, including exact duplicate
+ * uploads; the user can hide one specific record through the blacklist. Notices are never merged with
+ * the chapter whose number they happen to carry.
  */
 fun List<Chapter>.applySmartScanlatorMerge(
     priority: List<String>,
@@ -40,13 +56,13 @@ fun List<Chapter>.applySmartScanlatorMerge(
     val visible = filterBlacklistedChapters(this, blacklistedChapters, this)
     val parsedRules = rangeRules.mapNotNull(::parseScanlatorRangeRule)
     val selectedIds = visible.asSequence()
-        .filter { it.chapterNumber.isFinite() && it.chapterNumber > 0.0 }
+        .filter { it.chapterNumber.isFinite() && it.chapterNumber > 0.0 && !it.isNotice() }
         .groupBy(Chapter::chapterNumber)
         .values
-        .mapNotNull { candidates ->
+        .flatMap { candidates ->
             val number = candidates.first().chapterNumber
             val preferredScanlator = parsedRules.lastOrNull { it.covers(number) }?.scanlator
-            candidates.minWithOrNull(
+            val chosen = candidates.minWithOrNull(
                 compareBy<Chapter> { candidate ->
                     if (candidate.scanlator == preferredScanlator) 0 else 1
                 }.thenBy { candidate ->
@@ -54,12 +70,14 @@ fun List<Chapter>.applySmartScanlatorMerge(
                         .takeIf { it >= 0 }
                         ?: Int.MAX_VALUE
                 },
-            )?.id
+            ) ?: return@flatMap emptyList()
+            candidates.filter { it.scanlator == chosen.scanlator }.map(Chapter::id)
         }
         .toSet()
 
     return visible.filter { chapter ->
-        !chapter.chapterNumber.isFinite() || chapter.chapterNumber <= 0.0 || chapter.id in selectedIds
+        !chapter.chapterNumber.isFinite() || chapter.chapterNumber <= 0.0 || chapter.isNotice() ||
+            chapter.id in selectedIds
     }
 }
 
