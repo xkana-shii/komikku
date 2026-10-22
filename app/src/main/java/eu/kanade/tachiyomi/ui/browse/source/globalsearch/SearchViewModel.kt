@@ -55,8 +55,16 @@ abstract class SearchViewModel(
     private val disabledSources = sourcePreferences.disabledSources.get()
     protected val pinnedSources = sourcePreferences.pinnedSources.get()
 
+    // KNS --> the Sources tab's `sourceId|category` entries, for the Global Search category scope
+    protected val sourcesInCategories = sourcePreferences.sourcesTabSourcesInCategories.get()
+    // KNS <--
+
     private var lastQuery: String? = null
     private var lastSourceFilter: SourceFilter? = null
+
+    // KNS -->
+    private var lastSourceCategory: String? = null
+    // KNS <--
 
     protected var extensionFilter: String? = null
 
@@ -81,6 +89,13 @@ abstract class SearchViewModel(
             }
         }
         // KMK <--
+        // KNS --> the category scope is remembered across restarts
+        viewModelScope.launch {
+            preferences.globalSearchSourceCategory.changes().collectLatest { category ->
+                state.update { it.copy(sourceCategory = category) }
+            }
+        }
+        // KNS <--
     }
 
     @Composable
@@ -141,6 +156,15 @@ abstract class SearchViewModel(
         search()
     }
 
+    // KNS -->
+    /** Limits the search to the sources of one Sources-tab category; composes with Pinned / All. */
+    fun setSourceCategory(category: String) {
+        preferences.globalSearchSourceCategory.set(category)
+        state.update { it.copy(sourceCategory = category) }
+        search()
+    }
+    // KNS <--
+
     fun toggleFilterResults() {
         preferences.globalSearchFilterState.toggle()
     }
@@ -148,14 +172,20 @@ abstract class SearchViewModel(
     fun search() {
         val query = state.value.searchQuery
         val sourceFilter = state.value.sourceFilter
+        // KNS -->
+        val sourceCategory = state.value.sourceCategory
+        // KNS <--
 
         if (query.isNullOrBlank()) return
 
         val sameQuery = this.lastQuery == query
-        if (sameQuery && this.lastSourceFilter == sourceFilter) return
+        if (sameQuery && this.lastSourceFilter == sourceFilter && /* KNS */ this.lastSourceCategory == sourceCategory) return
 
         this.lastQuery = query
         this.lastSourceFilter = sourceFilter
+        // KNS -->
+        this.lastSourceCategory = sourceCategory
+        // KNS <--
 
         searchJob?.cancel()
 
@@ -245,6 +275,9 @@ abstract class SearchViewModel(
         val from: Manga? = null,
         val searchQuery: String? = null,
         val sourceFilter: SourceFilter = SourceFilter.PinnedOnly,
+        // KNS -->
+        val sourceCategory: String = "",
+        // KNS <--
         val onlyShowHasResults: Boolean = false,
         val items: Map<Source, SearchItemResult> = mapOf(),
         val dialog: Dialog? = null,

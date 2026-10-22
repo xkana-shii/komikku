@@ -192,12 +192,25 @@ class LibraryPreferences(
     fun hideBlacklistedChapters(mangaId: Long) =
         preferenceStore.getBoolean("pref_hide_blacklisted_chapters_$mangaId", true)
 
-    /** Library filter: manga with at least one bookmark of these colors ([BookmarkColor] names). */
+    /**
+     * Library included bookmark colors. This deliberately retains the old key, so every existing
+     * selection is an idempotent migration to the new included side of the tri-state filter.
+     */
     val filterBookmarkColors = preferenceStore.getStringSet("pref_filter_library_bookmark_colors", emptySet())
+
+    /** Library excluded bookmark colors ([BookmarkColor] names). */
+    val filterBookmarkColorsExclude = preferenceStore.getStringSet(
+        "pref_filter_library_bookmark_colors_exclude",
+        emptySet(),
+    )
 
     /** Chapter list filter of one manga: only bookmarks of these colors ([BookmarkColor] names). */
     fun bookmarkColorFilter(mangaId: Long) =
         preferenceStore.getStringSet("manga_bookmark_color_filter_$mangaId", emptySet())
+
+    /** Per-manga excluded bookmark colors; the old key above remains the included side. */
+    fun bookmarkColorFilterExclude(mangaId: Long) =
+        preferenceStore.getStringSet("manga_bookmark_color_filter_exclude_$mangaId", emptySet())
     // KNS <--
 
     val categorizedDisplaySettings = preferenceStore.getBoolean("categorized_display", false)

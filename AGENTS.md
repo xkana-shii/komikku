@@ -257,7 +257,8 @@ columns) and keep SyncYomi's `version`/`is_syncing`/`last_modified_at` columns a
 4. `./gradlew :data:generateSqlDelightInterface :data:verifyDebugDatabaseMigration` and add a migration
    test in `data/src/test/java/tachiyomi/data/` (see `MigrationTest`, `FreshKomikkuInstallMigrationTest`).
 
-The schema version is the highest migration number + 1 (currently 58; `57.sqm` holds the KNS
+The schema version is the highest migration number + 1 (currently 59; `58.sqm` recreates
+`updatesView` with the bookmark color; `57.sqm` holds the KNS
 columns). The previous personal `main` used an unrelated migration lineage up to version 57; such a
 database is converted on first open by `tachiyomi.data.compat.OldForkDatabaseConverter` (hooked in
 `mihon/app/di/OldForkDatabaseGate.kt`). Any new table or column needs no converter change unless an

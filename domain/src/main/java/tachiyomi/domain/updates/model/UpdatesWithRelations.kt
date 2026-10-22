@@ -15,6 +15,9 @@ data class UpdatesWithRelations(
     val chapterUrl: String,
     val read: Boolean,
     val bookmark: Boolean,
+    // KNS --> Exposed by updatesView so color filters need no per-row chapter lookup.
+    val bookmarkColor: Int,
+    // KNS <--
     val lastPageRead: Int,
     val sourceId: Long,
     val dateFetch: Instant,

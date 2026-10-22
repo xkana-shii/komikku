@@ -77,6 +77,10 @@ class Bangumi(id: Long) : BaseTracker(id, "Bangumi") {
         return api.search(query)
     }
 
+    // KNS -->
+    override val supportsMangaMetadata = true
+    // KNS <--
+
     override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
         return api.getMangaMetadata(track)
     }

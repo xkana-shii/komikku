@@ -32,6 +32,8 @@ import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.model.installedExtension
 import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.browse.components.SourceIcon
+import eu.kanade.presentation.browse.components.languageFlagPrefix
+import eu.kanade.presentation.browse.components.showLanguageFlags
 import eu.kanade.presentation.components.AnimatedFloatingSearchBox
 import eu.kanade.presentation.components.SOURCE_SEARCH_BOX_HEIGHT
 import eu.kanade.presentation.util.animateItemFastScroll
@@ -275,8 +277,10 @@ private fun MigrateSourceItem(
                     if (sourceLangString != null) {
                         Text(
                             modifier = Modifier.secondaryItemAlpha(),
-                            text = /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
+                            // KNS --> the flag follows the "Show language flags" setting
+                            text = /* KMK --> */ languageFlagPrefix(lang, showLanguageFlags()) + /* KMK <-- */
                                 sourceLangString,
+                            // KNS <--
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall,

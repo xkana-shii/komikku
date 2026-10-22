@@ -47,6 +47,7 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.interactor.DeleteSavedSearchById
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.interactor.InsertSavedSearch
+import tachiyomi.domain.source.interactor.UpdateSavedSearch
 import tachiyomi.domain.source.service.SourceManager
 
 @AssistedInject
@@ -73,6 +74,9 @@ class BrowseRecommendsViewModel(
     getFlatMetadataById: GetFlatMetadataById,
     deleteSavedSearchById: DeleteSavedSearchById,
     insertSavedSearch: InsertSavedSearch,
+    // KNS -->
+    updateSavedSearch: UpdateSavedSearch,
+    // KNS <--
     getExhSavedSearch: GetExhSavedSearch,
     @AppCoroutineScope private val appScope: CoroutineScope,
 ) : BrowseSourceViewModel(
@@ -105,6 +109,9 @@ class BrowseRecommendsViewModel(
     getFlatMetadataById = getFlatMetadataById,
     deleteSavedSearchById = deleteSavedSearchById,
     insertSavedSearch = insertSavedSearch,
+    // KNS -->
+    updateSavedSearch = updateSavedSearch,
+    // KNS <--
     getExhSavedSearch = getExhSavedSearch,
 ) {
 

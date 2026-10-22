@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALMangaMetadata
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALOAuth
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALSearchResult
 import eu.kanade.tachiyomi.data.track.myanimelist.dto.MALUser
+import eu.kanade.tachiyomi.data.track.myanimelist.dto.toAutofillMetadata
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.HttpException
@@ -201,32 +202,18 @@ class MyAnimeListApi(
                 .appendPath(track.remoteId.toString())
                 .appendQueryParameter(
                     "fields",
-                    "id,title,synopsis,main_picture,authors{first_name,last_name}",
+                    // KNS --> genres and the series' publication status for autofill
+                    "id,title,synopsis,main_picture,authors{first_name,last_name},genres,status",
+                    // KNS <--
                 )
                 .build()
             with(json) {
                 authClient.newCall(GET(url.toString()))
                     .awaitSuccess()
                     .parseAs<MALMangaMetadata>()
-                    .let { metadata ->
-                        TrackMangaMetadata(
-                            remoteId = metadata.id,
-                            title = metadata.title,
-                            thumbnailUrl = metadata.covers.large?.ifEmpty { null } ?: metadata.covers.medium,
-                            description = metadata.synopsis,
-                            artists = metadata.authors
-                                .filter { authorNode -> authorNode.role == "Art" }
-                                .mapNotNull { authorNode -> authorNode.node.getFullName() }
-                                .joinToString()
-                                .ifEmpty { null },
-                            authors = metadata.authors
-                                // count all with "Story" or "Story & Art" as authors, like is done for library entries
-                                .filter { authorNode -> authorNode.role.contains("Story") }
-                                .mapNotNull { authorNode -> authorNode.node.getFullName() }
-                                .joinToString()
-                                .ifEmpty { null },
-                        )
-                    }
+                    // KNS --> shared with the autofill tests
+                    .toAutofillMetadata()
+                // KNS <--
             }
         }
     }

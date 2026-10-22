@@ -123,7 +123,9 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.resolveVisibleChapter
+import tachiyomi.domain.chapter.service.ChapterBookmarks
 import tachiyomi.domain.chapter.service.ChapterVisibility
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.chapter.service.filterBlacklistedChapters
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.download.service.DownloadPreferences
@@ -1205,24 +1207,14 @@ class ReaderViewModel(
     }
 
     // KNS -->
-    fun showBookmarkColorPicker() {
-        if (getCurrentChapter() == null) return
-        mutableState.update { it.copy(dialog = Dialog.BookmarkColorPicker) }
-    }
-
     /** Bookmarks the current chapter with [color] ([BookmarkColor.NONE] = an ordinary bookmark). */
     fun setChapterBookmarkColor(color: BookmarkColor) {
         val readerChapter = getCurrentChapter() ?: return
+        // The same update as the manga and Updates menus, read before the local copy changes.
+        val updates = ChapterBookmarks.setColor(listOf(readerChapter.chapter.bookmarkTarget()), color)
         readerChapter.update { it.copy(bookmark = true, bookmarkColor = color.value) }
-        viewModelScope.launch {
-            updateChapter.await(
-                ChapterUpdate(readerChapter.chapter.id) {
-                    bookmark = true
-                    bookmarkColor = color.value
-                },
-            )
-        }
-        mutableState.update { it.copy(bookmarked = true, bookmarkColor = color.value, dialog = null) }
+        viewModelScope.launch { updateChapter.awaitAll(updates) }
+        mutableState.update { it.copy(bookmarked = true, bookmarkColor = color.value) }
     }
     // KNS <--
 
@@ -1870,7 +1862,6 @@ class ReaderViewModel(
         // SY <--
 
         // KNS -->
-        data object BookmarkColorPicker : Dialog
         data object RereadPrompt : Dialog
         // KNS <--
 

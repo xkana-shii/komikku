@@ -98,6 +98,9 @@ data object UpdatesTab : Tab {
             onMultiBookmarkClicked = viewModel::bookmarkUpdates,
             onMultiMarkAsReadClicked = viewModel::markUpdatesRead,
             onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
+            // KNS -->
+            onBookmarkColorSelected = viewModel::setBookmarkColor,
+            // KNS <--
             // KMK -->
             updateSwipeStartAction = viewModel.chapterSwipeStartAction,
             updateSwipeEndAction = viewModel.chapterSwipeEndAction,

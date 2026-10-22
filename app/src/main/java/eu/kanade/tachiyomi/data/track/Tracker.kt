@@ -96,6 +96,12 @@ interface Tracker {
 
     suspend fun setRemotePrivate(track: Track, private: Boolean)
 
+    // KNS -->
+    /** Whether [getMangaMetadata] is implemented, which the metadata editor's autofill requires. */
+    val supportsMangaMetadata: Boolean
+        get() = false
+    // KNS <--
+
     // SY -->
     suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata
 

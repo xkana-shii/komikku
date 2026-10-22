@@ -84,8 +84,10 @@ private val defaultContent: @Composable RowScope.(
             // KMK <--
             if (sourceLangString != null) {
                 Text(
-                    text = /* KMK --> */ FlagEmoji.getEmojiLangFlag(lang) + " " + /* KMK <-- */
+                    // KNS --> the flag follows the "Show language flags" setting
+                    text = /* KMK --> */ languageFlagPrefix(lang, showLanguageFlags()) + /* KMK <-- */
                         sourceLangString,
+                    // KNS <--
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,

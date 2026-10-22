@@ -23,11 +23,19 @@ data class MangaBakaItem(
     val artists: List<String>?,
     val description: String?,
     val published: MangaBakaPublishData,
-    val status: String,
-    val type: String,
+    // KNS --> optional: metadata autofill must not fail on a series without a status or type
+    val status: String? = null,
+    val type: String? = null,
+    // KNS <--
     val rating: Double?,
     val titles: List<MangaBakaItemTitle>?,
     // KNS -->
+    val genres: List<String>? = null,
+    val tags: List<String>? = null,
+    /** `active`, `merged` or `deleted`; a merged series points at its replacement with [mergedWith]. */
+    val state: String? = null,
+    @SerialName("merged_with")
+    val mergedWith: Long? = null,
     @SerialName("relationships_v2")
     val relationships: List<MangaBakaRelationship>? = null,
     // KNS <--
@@ -66,8 +74,18 @@ data class MangaBakaRelationship(
 
 @Serializable
 data class MangaBakaCover(
+    // KNS --> the original image, which metadata autofill prefers
+    val raw: MangaBakaRawCover? = null,
+    // KNS <--
     val x250: MangaBakaScaledCover,
 )
+
+// KNS -->
+@Serializable
+data class MangaBakaRawCover(
+    val url: String? = null,
+)
+// KNS <--
 
 @Serializable
 data class MangaBakaScaledCover(

@@ -59,7 +59,6 @@ import eu.kanade.presentation.track.TrackInfoDialogHome
 import eu.kanade.presentation.track.TrackScoreSelector
 import eu.kanade.presentation.track.TrackStatusSelector
 import eu.kanade.presentation.track.TrackerSearch
-import eu.kanade.presentation.track.UnifiedTrackerPanel
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.EnhancedTracker
@@ -163,6 +162,9 @@ data class TrackInfoDialogHomeScreen(
                     trackItems = state.trackItems,
                     dateFormat = dateFormat,
                     onStatusClick = {
+                        // KNS -->
+                        if (state.isUnified) return@TrackInfoDialogHome navigator.pushUnified(it, UnifiedTrackField.STATUS)
+                        // KNS <--
                         navigator.push(
                             TrackStatusSelectorScreen(
                                 track = it.track!!,
@@ -171,6 +173,9 @@ data class TrackInfoDialogHomeScreen(
                         )
                     },
                     onChapterClick = {
+                        // KNS -->
+                        if (state.isUnified) return@TrackInfoDialogHome navigator.pushUnified(it, UnifiedTrackField.CHAPTERS)
+                        // KNS <--
                         navigator.push(
                             TrackChapterSelectorScreen(
                                 track = it.track!!,
@@ -179,6 +184,9 @@ data class TrackInfoDialogHomeScreen(
                         )
                     },
                     onScoreClick = {
+                        // KNS -->
+                        if (state.isUnified) return@TrackInfoDialogHome navigator.pushUnified(it, UnifiedTrackField.SCORE)
+                        // KNS <--
                         navigator.push(
                             TrackScoreSelectorScreen(
                                 track = it.track!!,
@@ -187,6 +195,9 @@ data class TrackInfoDialogHomeScreen(
                         )
                     },
                     onStartDateEdit = {
+                        // KNS -->
+                        if (state.isUnified) return@TrackInfoDialogHome navigator.pushUnified(it, UnifiedTrackField.START_DATE)
+                        // KNS <--
                         navigator.push(
                             TrackDateSelectorScreen(
                                 track = it.track!!,
@@ -196,6 +207,9 @@ data class TrackInfoDialogHomeScreen(
                         )
                     },
                     onEndDateEdit = {
+                        // KNS -->
+                        if (state.isUnified) return@TrackInfoDialogHome navigator.pushUnified(it, UnifiedTrackField.END_DATE)
+                        // KNS <--
                         navigator.push(
                             TrackDateSelectorScreen(
                                 track = it.track!!,
@@ -228,36 +242,26 @@ data class TrackInfoDialogHomeScreen(
                     // KNS -->
                     preferredTrackerId = state.preferredTrackerId,
                     failures = state.failures,
-                    header = {
-                        val bound = state.trackItems.filter { it.track != null }
-                        if (bound.size > 1) {
-                            UnifiedTrackerPanel(
-                                trackers = bound.map { it.tracker },
-                                preferredTrackerId = state.preferredTrackerId,
-                                onPreferredChange = viewModel::setPreferredTracker,
-                                progressMismatch = state.progressMismatch,
-                                syncTarget = state.syncTarget.toInt().toString(),
-                                onSyncProgress = viewModel::syncProgress,
-                                onRemove = viewModel::removeTrackers,
-                                onEdit = { field ->
-                                    val source = viewModel.editSource(bound) ?: return@UnifiedTrackerPanel
-                                    navigator.push(
-                                        UnifiedTrackEditorScreen(
-                                            mangaId = mangaId,
-                                            track = source.track!!,
-                                            trackerId = source.tracker.id,
-                                            field = field,
-                                        ),
-                                    )
-                                },
-                            )
-                        }
-                    },
+                    seriesTitle = mangaTitle,
+                    editMode = state.unifiedEditMode,
+                    onToggleEditMode = viewModel::toggleUnifiedEditMode,
+                    onAdjustProgress = viewModel::adjustProgress,
+                    onSetPreferredTracker = { viewModel.setPreferredTracker(it.tracker.id) },
+                    onRemoveTrackers = viewModel::removeTrackers,
+                    syncTarget = state.syncTarget.toInt().toString(),
+                    onSyncProgress = viewModel::syncProgress,
                     // KNS <--
                 )
             }
         }
     }
+
+    // KNS -->
+    /** Edits [field] of every linked tracker, starting from [item], the preferred tracker's binding. */
+    private fun Navigator.pushUnified(item: TrackItem, field: UnifiedTrackField) {
+        push(UnifiedTrackEditorScreen(mangaId = mangaId, track = item.track!!, trackerId = item.tracker.id, field = field))
+    }
+    // KNS <--
 
     /**
      * Opens registered tracker url in browser
@@ -354,17 +358,25 @@ data class TrackInfoDialogHomeScreen(
                 trackItems.filter { it.track != null }.mapTo(mutableSetOf()) { it.tracker.id },
             )
 
-        fun setPreferredTracker(trackerId: Long?) {
-            trackPreferences.setPreferredTrackerForManga(mangaId, trackerId)
+        fun toggleUnifiedEditMode() {
+            state.update { it.copy(unifiedEditMode = !it.unifiedEditMode) }
         }
 
-        /** The binding unified edits start from: the preferred tracker, else the one furthest ahead. */
-        fun editSource(bound: List<TrackItem>): TrackItem? {
-            val preferred = TrackerProgressSync.resolvePreferredTrack(
-                bound.mapNotNull { it.track },
-                state.value.preferredTrackerId,
-            )
-            return bound.find { it.track == preferred }
+        /** Moves every linked tracker one chapter back or ahead of the card's (preferred) progress. */
+        fun adjustProgress(delta: Int) {
+            val target = (state.value.syncTarget.toInt() + delta).coerceAtLeast(0)
+            appScope.launch {
+                val result = unifiedTrackerEdits.apply(mangaId, UpdateTracks.Change.Progress(target))
+                withContext(Dispatchers.Main) {
+                    result.failures.forEach { (tracker, error) ->
+                        context.toast(context.stringResource(MR.strings.track_error, tracker.name, error.message ?: ""))
+                    }
+                }
+            }
+        }
+
+        fun setPreferredTracker(trackerId: Long?) {
+            trackPreferences.setPreferredTrackerForManga(mangaId, trackerId)
         }
 
         fun removeTrackers(trackerIds: Set<Long>, remotely: Boolean) {
@@ -549,11 +561,14 @@ data class TrackInfoDialogHomeScreen(
             val preferredTrackerId: Long? = null,
             /** Tracker id → message of its last failed unified edit. */
             val failures: Map<Long, String> = emptyMap(),
+            /** The unified card's edit mode: icons change entries and pick the preferred tracker. */
+            val unifiedEditMode: Boolean = false,
         ) {
             private val boundTracks get() = trackItems.mapNotNull { it.track }
 
-            val progressMismatch: Boolean
-                get() = TrackerProgressSync.hasMismatch(boundTracks, preferredTrackerId)
+            /** Two or more linked trackers are edited together through the unified card. */
+            val isUnified: Boolean
+                get() = boundTracks.size >= 2
 
             val syncTarget: Double
                 get() = TrackerProgressSync.progress(boundTracks, preferredTrackerId)

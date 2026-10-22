@@ -2,6 +2,7 @@ package tachiyomi.core.common.preference
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
@@ -102,6 +103,26 @@ class AndroidPreferenceStore(private val sharedPreferences: SharedPreferences) :
     override fun getAll(): Map<String, *> {
         return sharedPreferences.all ?: emptyMap<String, Any>()
     }
+
+    // KNS -->
+    /** One editor, one write: see [PreferenceStore.putAll]. */
+    override fun putAll(values: Map<String, Any>) {
+        if (values.isEmpty()) return
+        sharedPreferences.edit {
+            values.forEach { (key, value) ->
+                when (value) {
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Float -> putFloat(key, value)
+                    is String -> putString(key, value)
+                    is Boolean -> putBoolean(key, value)
+                    is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                    else -> throw IllegalArgumentException("Unsupported preference type for $key")
+                }
+            }
+        }
+    }
+    // KNS <--
 }
 
 private val SharedPreferences.keyFlow

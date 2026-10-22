@@ -53,6 +53,11 @@ class StallDetector(private val maxStalledFrames: Int = 30) {
         stalled = if (moved) 0 else stalled + 1
         return stalled >= maxStalledFrames
     }
+
+    /** Starts counting again, e.g. while waiting for the next chapter to load. */
+    fun reset() {
+        stalled = 0
+    }
 }
 
 object AutomationSpeed {

@@ -52,6 +52,16 @@ class ReaderAutomationTest {
     }
 
     @Test
+    fun `a reset stall counts again from zero while the next chapter loads`() {
+        val detector = StallDetector(maxStalledFrames = 2)
+        detector.record(false) shouldBe false
+        detector.record(false) shouldBe true
+        detector.reset()
+        detector.record(false) shouldBe false
+        detector.record(false) shouldBe true
+    }
+
+    @Test
     fun `scroll speed follows the refresh rate and stays within bounds`() {
         AutomationSpeed.pixelsPerFrame(screenHeight = 2400, secondsPerScreen = 5, refreshRate = 60f) shouldBe
             (8f plusOrMinus 0.001f)

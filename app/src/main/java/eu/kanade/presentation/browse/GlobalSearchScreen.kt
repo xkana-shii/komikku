@@ -40,6 +40,10 @@ fun GlobalSearchScreen(
     bulkFavoriteViewModel: BulkFavoriteViewModel,
     hasPinnedSources: Boolean,
     // KMK <--
+    // KNS -->
+    sourceCategories: List<String> = emptyList(),
+    onChangeSourceCategory: (String) -> Unit = {},
+    // KNS <--
 ) {
     // KMK -->
     val bulkFavoriteState by bulkFavoriteViewModel.state.collectAsState()
@@ -87,6 +91,11 @@ fun GlobalSearchScreen(
                     isRunning = bulkFavoriteState.isRunning,
                     hasPinnedSources = hasPinnedSources,
                     // KMK <--
+                    // KNS -->
+                    sourceCategory = state.sourceCategory,
+                    sourceCategories = sourceCategories,
+                    onChangeSourceCategory = onChangeSourceCategory,
+                    // KNS <--
                 )
             }
         },

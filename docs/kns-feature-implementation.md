@@ -953,3 +953,363 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 , domain 190; 0 failures), assembleDebug, assembleRelease, diff check.
 - **Remaining open items:** device test of an in-place upgrade from the old fork (database + preferences + backup);
   device checks for acceptance #28 (Rich Presence included).
+### Batch 11 — tri-state bookmark-color filters
+
+- **Shared UI:** Library, Updates and manga chapter settings now place an independent Edit action beside
+  the existing Bookmarked tri-state control. `BookmarkColorFilterDialog` reuses the category dialog's
+  save/cancel tri-state interaction for the ordinary bookmark plus all six palette colors, with color
+  swatches. Closing or cancelling leaves stored preferences unchanged.
+- **Filtering:** included colors require a match; excluded colors reject a matching bookmarked chapter.
+  For Library, a mixed-color manga passes only when it has an included color and no excluded bookmark
+  color. The existing aggregate query remains the only Library color data source. Saved color choices
+  refine Bookmarked only; disabled and Not bookmarked states preserve their existing semantics.
+- **Persistence and Updates:** old Library/per-manga color keys remain the included side of the new
+  pair, making migration non-destructive and idempotent. Updates has its own keys and `updatesView`
+  now exposes bookmark color, so normal query invalidation immediately refreshes filter eligibility
+  without per-row queries.
+- **Tests:** `BookmarkColorFilterTest` adds full palette and combined include/exclude coverage.
+
+### Batch 12 — colored bookmarks in Updates
+
+- **UI:** the Updates row tints its bookmark icon with `bookmarkColorOf(update.bookmarkColor) ?:
+  MaterialTheme.colorScheme.primary`, the same expression as the manga chapter list, so it reuses the
+  `BookmarkColor` palette (0 = theme color, 1–6 = red … purple). Unbookmarked chapters show no icon.
+- **Data:** `updatesView`, `UpdatesWithRelations` and `UpdatesRepositoryImpl` already carried the color
+  (batch 11). Batch 11 changed the view without a migration, so a database already at schema 58 kept
+  the old view and the Updates queries would fail on `bookmarkColor`. `58.sqm` drops and recreates
+  `updatesView` from its current definition (schema version 59). It touches no table data, and it is
+  independent of `OldForkDatabaseConverter`, which recreates views from the fresh schema anyway.
+- **Reactivity:** the view reads `chapter`, so a color change through `ChapterRepositoryImpl.update`
+  invalidates the subscribed Updates query; no per-row lookups.
+- **Tests:** `UpdatesBookmarkColorTest` (colors 0–6 and an unbookmarked chapter on the real view,
+  `bookmarked` filter and ordering unchanged, a color change re-emits the observed rows),
+  `UpdatesViewMigrationTest` (a schema-58 database with the old view gains `bookmarkColor` and keeps
+  its rows, colors and sync versions), `BookmarkColorTintTest` (0 → theme color, 1–6 → palette).
+- **Validation:** spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  assembleDebug, assembleRelease and `git diff --check` exit 0. The first testDebugUnitTest run failed on a
+  Windows file lock in Kotlin's incremental-compile backup (`:app:compileDebugKotlin`); the re-run exited
+  0 (app 244 with 1 skipped, data 93, domain 192; 0 failures).
+- **Not verified:** on a device — the Updates icon colors and an in-place upgrade from schema 58.
+
+### Batch 13 — subcategory-aware Library badge counts
+
+- **Cause:** `LibraryViewModel.State.getItemCountForCategory` returned the size of the tab's whole
+  group, while `getItemsForCategory` already filtered by that tab's entry in `subcategorySelection`.
+- **Fix:** the count now uses the same effective membership as `getItemsForCategory` whenever the tab
+  has a selected subtree, keyed by the tab's own id, so inactive tabs keep their own count. Nothing is
+  queried: it reuses the state's grouped, already searched and filtered entries; each manga is counted
+  once. `getToolbarTitle` already reads this count when tabs are hidden; the whole-library count
+  with tabs shown is unchanged. The badge preference and the search exception are unchanged.
+- **Safer selection lookup:** `selectedSubtree` ignores selections outside category grouping and on the
+  system category, and falls back to the whole tab when the selected category was deleted or is not
+  below the tab. Items and counts both use it, so they always agree.
+- **UI:** `LibraryTab` passes `state.getItemCountForCategory`; a selection change produces a new
+  `State`, so `LibraryTabs` badges recompose without further changes.
+- **Tests:** `LibrarySubcategoryCountTest` (8, on the real `State`): All 10 / Test 2 / Other 5 / All
+  again; per-tab persistence across tab switches; nested descendants, shared manga counted once, an
+  empty child counting 0; membership moves and removals; search/filter-narrowed counts and the badge
+  preference; deleted and foreign selections; source grouping; toolbar counts.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 250 with 1 skipped, data 89, domain 190; 0
+  failures), assembleDebug, assembleRelease, `git diff --check`.
+- **Not verified:** on a device.
+
+### Batch 14 — main's bookmark long-press menu in manga, Updates and the reader
+
+- **Menu:** `BookmarkColorDropdownMenu` (adapted from the old `main`) is an anchored Material dropdown
+  with all seven palette entries; each row is `BookmarkColorLabel` (20dp `BookmarkColorSwatch` with
+  `MaterialTheme.shapes.small`, the ordinary bookmark in `surfaceVariant`, 12dp to the name) and a
+  trailing check for the current color. Unlike `main` the check uses the theme content color, and it
+  is shown only when the selection has one shared bookmark color (`ChapterBookmarks.currentColor`).
+- **Shared operations:** `tachiyomi.domain.chapter.service.ChapterBookmarks` builds the chapter
+  updates for the ordinary toggle (state change + color reset) and for a chosen color (bookmark +
+  color, unchanged chapters skipped). The manga screen, Updates and the reader all use it;
+  `Chapter.bookmarkTarget()` / `UpdatesWithRelations.bookmarkTarget()` adapt their rows. Updates'
+  bookmark toggle previously kept the old color on removal; it now resets it like the other screens.
+- **Selection bars:** `MangaBottomActionMenu` takes `onBookmarkColorSelected` + `bookmarkColor`. A long
+  press on Bookmark or Remove bookmark opens the menu (with haptic feedback) instead of the
+  hold-to-label hint; without the callback the old hint stays. The Palette action is removed and the
+  confirm slots shrink from 10 to 9 (blacklist 7, unblacklist 8). The phone and tablet manga
+  layouts share `SharedMangaBottomActionMenu`; Updates wires `UpdatesViewModel.setBookmarkColor`.
+  `MangaViewModel.Dialog.BookmarkColor` / `showBookmarkColorDialog` are gone.
+- **Reader:** `ReaderTopBar` hosts the menu next to the bookmark button (state kept outside the
+  rebuilt action list) and calls `ReaderViewModel.setChapterBookmarkColor`. The app bars are one
+  Compose overlay above every viewer, so pager, webtoon and both WebGPU viewers share it; no viewer
+  code changed. `Dialog.BookmarkColorPicker` / `showBookmarkColorPicker` are gone. The check follows
+  `state.bookmarkColor`, which is reset on every chapter change.
+- **Dialog:** `BookmarkColorDialog` was first restyled with `BookmarkColorLabel`, then removed in a
+  follow-up commit because no screen opens it any more. `KMR.strings.action_bookmark_color` stays as
+  the reader button's long-press accessibility label; the bookmark color filter dialogs are unchanged.
+  Follow-up validation: all exit 0 (spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest with the same counts, assembleDebug,
+  assembleRelease, `git diff --check`).
+- **Tests:** `ChapterBookmarksTest` (6): ordinary add/remove with color reset, all seven ids,
+  multi-selection, replacing colors, bookmarking plain chapters, skipped no-op writes, the current
+  color for single/mixed/unbookmarked selections, identical updates from a manga chapter and its
+  Updates row. The app has no Compose UI test setup (no Robolectric or ui-test), so the
+  interaction is not covered by automated tests.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 252 with 1 skipped, data 93, domain 198; 0
+  failures), assembleDebug, assembleRelease, assembleNightly, `git diff --check`.
+- **Device checks pending:** long press opens the menu without a tap; dismissal changes nothing; menu
+  anchoring in the manga (phone and tablet) and Updates bars; the reader in pager, webtoon and WebGPU
+  paged/continuous modes, both orientations and RTL, without page turns; the reader check following
+  chapter changes; the remaining bottom-bar long-press hints.
+
+### Batch 15 — combined scanlator preferences and blacklist dialog
+
+- **Entry point:** `ChapterHeader` has an optional scanlator button (`Group` icon with a tooltip, disabled
+  in selection mode) that opens `MangaViewModel.showScanlatorPreferencesDialog`, in both manga layouts.
+  The two overflow entries (Blacklisted chapters, Scanlator preferences) and their `MangaToolbar` /
+  `ChapterVisibilityActions` parameters are removed.
+- **Dialog:** `ScanlatorPreferencesDialog` (new file) is one `AlertDialog` whose title holds the mode
+  switch (`Block` → blacklist, `Group` → scanlators) and whose body is `ScanlatorPreferencesContent`
+  or `BlacklistContent`, each with its own scroll state. Both edit one `ScanlatorPreferencesDraft`
+  held above the modes, including the half-typed range form, so switching never loses edits. Save
+  calls `setScanlatorPreferences(priority, override, rangeRules, excludedScanlators,
+  removedBlacklistEntries)`; Cancel stores nothing.
+- **Scanlators (Mihon PR #2828 as visual reference only):** `ReorderableColumn` rows with a drag handle,
+  the name (dimmed to `DISABLED_ALPHA` when excluded) and a `Visibility`/`VisibilityOff` toggle.
+  Excluded scanlators stay draggable so their priority is kept; exclusions are saved through the
+  existing `SetExcludedScanlators` only when they changed, and exclusions of scanlators that are not
+  available now are kept. The Smart Merge override is three tooltip icon buttons (`Public`,
+  `CheckCircle`, `Cancel`; primary when selected) with the effective-state line. Range rules keep
+  their parsing, order and "last match wins" semantics, now as a separate section below the list.
+  None of Mihon's data model, queries or new-scanlator ordering was imported.
+- **Blacklist:** the entries with their resolved chapters (or "unavailable"), removal staged until
+  Save (applied to the manga's current blacklist), and the hide toggle as an `IconToggleButton`
+  (`CheckBox` / `CheckBoxOutlineBlank`, state in its content description) on the unchanged per-manga
+  preference, applied immediately as before. `Dialog.BlacklistedChapters`, `showBlacklistDialog` and
+  `removeBlacklistEntries` are gone; `Dialog.ScanlatorPreferences` carries the blacklist and exclusions.
+- **Unchanged:** no schema, backup, sync or visibility logic changed; `ChapterSmartMergeTest` and the
+  visibility tests still pass. Also removed three imports orphaned by Batch 14.
+- **Tests:** `ScanlatorPreferencesDraftTest` (8): initial order, drag moves, exclusion toggles (also
+  for moved excluded rows), the three override states, mode switches keeping every edit, range form
+  validation and append order, saved ranges still overriding priority via `applySmartScanlatorMerge`,
+  staged blacklist removal with unavailable entries. No Compose UI test setup exists.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 260 with 1 skipped, data 93, domain 198; 0
+  failures), assembleDebug, assembleRelease, `git diff --check`.
+- **Device checks pending:** dragging feel and the lack of auto-scroll while dragging in a long list,
+  dialog height with many scanlators and ranges, small screens and large fonts, tooltips, and the
+  header button next to the chapter count in phone and tablet layouts.
+
+### Batch 16 — metadata autofill: MangaBaka restored, tags and status for four trackers
+
+- **Cause:** `MangaBaka` did not override `getMangaMetadata`, so `BaseTracker`'s `NotImplementedError`
+  surfaced as a tracker error; `TrackMangaMetadata` had no tags/status and the editor applied neither.
+- **Model:** `TrackMangaMetadata.tags` / `status` (an `SManga` status; null keeps the editor's).
+  `track/model/MetadataAutofill.kt`: `autofillTags` (trim, drop blanks, case-insensitive dedup),
+  `mergeAutofillTags` (current tags kept as typed, fetched ones appended), `autofillStatusSelection`
+  (spinner position), `hasAutofillData`, and `autofillEligible`.
+- **Eligibility:** `Tracker.supportsMangaMetadata` (default false; true on AniList, Bangumi, Kitsu,
+  MangaBaka, MangaUpdates, MdList, MyAnimeList, Shikimori). The editor offers bindings whose tracker
+  has the capability and is logged in, replacing the `EnhancedTracker` type filter; a manga with
+  bindings but none eligible gets its own message.
+- **MangaBaka:** `MangaBakaApi.getMangaMetadata` reads `GET /v1/series/{id}` (not the library entry),
+  follows `merged_with` (at most 5 hops, cycles rejected) and errors for missing (404) and `deleted`
+  series. `MangaBakaItem` gains optional `genres`, `tags`, `state`, `merged_with`; `status`/`type` became
+  optional (search keeps empty strings). `toAutofillMetadata` follows the old `main`: genres made
+  readable (`slice_of_life` → `Slice of life`) then tags; releasing/ongoing, completed, cancelled,
+  hiatus mapped, others null. The cover is the 250px variant (the foundation's DTO has no raw cover).
+- **AniList:** the metadata query adds `genres`, `tags { name }`, `status`; `toAutofillMetadata` maps
+  RELEASING/FINISHED/CANCELLED/HIATUS and keeps NOT_YET_RELEASED as null.
+- **MyAnimeList:** the `fields` parameter adds `genres,status` (series status, never `my_list_status`);
+  currently_publishing/finished/discontinued/on_hiatus mapped, not_yet_published and unknown null.
+- **MangaUpdates:** `MURecord` (the `GET /v1/series/{id}` record, schema checked against the official
+  OpenAPI spec) gains `genres[].genre`, `categories[].category` with `votes_plus`/`votes_minus`, and the
+  free-text `status`. Tags: genres, then categories without more down- than up-votes. Status from the
+  text: hiatus, then ongoing, then cancelled/discontinued/dropped, then complete. `completed` is not
+  used (it means "completely scanlated"). The KUN author handling moved with its marker.
+- **Editor:** tags merge into the chips, the status spinner is set for known statuses, nothing is saved
+  until Save. Cancellation is rethrown instead of being shown as a tracker error; empty metadata shows
+  "returned no metadata to fill in". Saving uses the unchanged `updateMangaInfo` path (manga fields
+  only; no tracker, Smart Category, bookmark, blacklist or sync state is touched).
+- **Tests:** `MetadataAutofillTest` (35, realistic provider JSON through the real DTOs): MangaBaka status
+  table, genres/tags, missing values, the real `MangaBakaApi` fetch with a canned-response OkHttp
+  interceptor (merge followed, only GET `/v1/series` requests, missing/deleted/cyclic errors), the
+  four trackers declaring the override and capability; AniList genres/tags/status; MAL statuses (with
+  `my_list_status` present), genres, credits, missing fields; MangaUpdates genres/categories/votes,
+  status texts, `completed` ignored, empty record; tag merge, status selection, empty metadata,
+  eligibility with several trackers. `htmlDecode` (android `Html`) is stubbed with jsoup's entity
+  unescaping in this test only.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 295 with 1 skipped, data 93, domain 198; 0
+  failures), assembleDebug, assembleRelease, `git diff --check`.
+- **Not verified:** live requests against the four services, and the editor's Save/Cancel with
+  autofilled tags and status on a device (the editor is an Android view without UI tests).
+
+### Batch 17 — scanlator dialog in Chapter filters, applied immediately
+
+- **Entry point:** the Chapter filters sheet's Scanlator row (`ScanlatorFilterItem`, which keeps its
+  exclusion indicator) now opens the combined dialog, stacked above the sheet through screen state
+  (`MangaViewModel.loadScanlatorPreferences`), like the old filter dialog was. Batch 15's chapter-header
+  button and `ChapterVisibilityActions.onOpenScanlatorPreferences` are removed; there is no overflow
+  entry. Mihon's `ScanlatorFilterDialog` and `MangaViewModel.setExcludedScanlators` lost their only
+  caller and are deleted; the eye icons write the same `excluded_scanlator` data.
+- **Immediate persistence:** `ScanlatorPreferencesDraft.changesFrom` turns each edit into the stored
+  settings it changed (`Change.Priority/Excluded/SmartMerge/RangeRules/RemoveBlacklistEntries`); mode
+  switches and range typing produce none, so nothing is written twice. A drag produces one change when
+  dropped (`onSettle`). `ScanlatorPreferenceChanges.apply` writes only the changed field through the
+  existing interactors; blacklist removal reads the stored blacklist first, so consecutive removals
+  do not resurrect each other. `SequentialWriter` runs the writes one at a time in submission order
+  on `viewModelScope`, so closing the dialog does not cancel them and an earlier slow write cannot
+  overwrite a newer one. The dialog has only Close; the hide toggle keeps its immediate preference.
+- **Tests:** `ScanlatorPreferencesDraftTest` (11) adds one-change-per-control, no-op edits and repeated
+  blacklist removal; `ScanlatorPreferencePersistenceTest` (6) runs real draft edits through the writer
+  and `ScanlatorPreferenceChanges` into mocked interactors backed by an in-memory manga: a drag
+  survives an immediate close, exclusions/Smart Merge/ranges show on reopening, rapid edits end on
+  the last value, consecutive blacklist removals stick, mode switches store nothing, and writes keep
+  order when earlier ones are slower. The entry point, the missing header button and the missing Save
+  action are UI facts without a Compose test setup; they were checked in code only.
+- **Validation:** spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  assembleDebug, assembleRelease and `git diff --check` exit 0. `:data/:domain/:app:testReleaseUnitTest`
+  do not exist in this build (AGP 9 only creates unit-test tasks for the tested build type; Gradle
+  lists only `testDebugUnitTest`), so `testDebugUnitTest` ran for the three modules instead: exit 0
+  (app 304 with 1 skipped, data 93, domain 198; 0 failures).
+- **Not verified:** on a device.
+
+### Batch 18 — selective category backups
+
+- **Selection model:** `BackupOptions.includedCategoryIds` (null = every category, a set = exactly those,
+  `0` = Default; empty selects nothing and is never read as "all"). `BackupCategorySelection` holds the
+  rules: toggling a category toggles its subtree, selecting everything again turns back into null,
+  membership is exact (a manga with any selected category; uncategorized only with Default), and the
+  backup's categories are the selected ones plus their ancestors (hierarchy only, no manga through
+  an ancestor). Adapted from the old `main` (`includedCategoryIds`, `selectAllCategories`,
+  `toggleCategory`), which had flat semantics and one category query per manga.
+- **Creator:** `BackupCreator.selectManga` keeps the full backup unchanged (library, read entries,
+  merged members); a selective one filters the library with one `getCategoriesByMangaIds` batch and
+  adds the members of selected merged entries as non-library entries. `backupCategories` keeps the
+  selected categories and their ancestors (their parent ids, Smart Category status and intervals come
+  from `backupCategoryOf` as before). `MangaBackupCreator` writes only a manga's selected categories,
+  so every category order in the backup resolves inside it and the restore never falls back to a
+  local category with the same order. The streaming writer and chunked batch queries are unchanged.
+- **Worker:** the positional `BooleanArray` stays as it was; `BackupCreateWorker.manualInputData` adds a
+  `category_ids` `LongArray` only for a selective backup, and `optionsOf` reads it back (absent = all).
+  Automatic backups pass no options and back up everything.
+- **UI:** `CreateBackupScreen` has a Categories card, collapsed by default (`rememberSaveable`), with a
+  `KeyboardArrowRight`/`KeyboardArrowDown` chevron and an All/None/"N selected" summary; expanded it shows
+  All categories, Default and the category tree indented by depth. Collapsing keeps the selection.
+- **Tests:** `SelectiveBackupTest` (10, real `BackupCreator` and `MangaBackupCreator` with mocked
+  repositories): all/none/empty never "all", subtree toggling, same-named children, Default, tree rows,
+  manga selection for child/parent/grandchild/Default/empty selections without duplicates, merged
+  members, ancestors kept and unrelated categories dropped, written category references resolving in
+  the backup's own `BackupCategoryHierarchy`, worker input round trip (all, none, some).
+- **Emulator check (read-only AVD, your 20,335-entry backup restored):** the section starts collapsed
+  with "All"; clearing All showed "None", selecting Normal "1 selected", collapsing and expanding kept
+  it; the backup (545 KB vs 19.6 MB) held 84 library entries, one category (Normal) and no category
+  reference outside the backup; the full backup has exactly 84 entries filed under Normal. Restoring a
+  selective backup was not run on the emulator; the resolution of its references is unit-tested.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface,
+  verifyDebugDatabaseMigration, testDebugUnitTest (app 320 with 1 skipped, data 93, domain 198; 0
+  failures; validated together with Batch 19), assembleDebug, assembleRelease, `git diff --check`.
+  `testReleaseUnitTest` does not exist in this build (see Batch 17).
+
+### Batch 19 — App settings restore crash
+
+- **Evidence:** the phone's crash buffer (read-only, `app.komikku.kns.dev`, 2026-10-21 16:30) had a
+  `DispatchException` caused by `OutOfMemoryError` on the main thread in `AndroidPreferenceStore.keyFlow`
+  (`SharedPreferencesImpl.notifyListeners`), followed by an OOM on `queued-work-looper` in
+  `SharedPreferencesImpl.writeToFile`/`writeSetXml`. The dev app's preference file then held 4,198
+  `pref_hide_blacklisted_chapters_<id>` and 9 `pref_smart_scanlator_merge_override_<id>` keys. The backup
+  used (`app.komikku.kns_2026-10-21_12-33.tachibk`) has 20,741 app preferences, 20,323 of them
+  `pref_hide_blacklisted_chapters_<id>` and 51 `pref_smart_scanlator_merge_override_<id>`.
+- **Cause:** `PreferenceRestorer` wrote each value with its own `Preference.set` (one `apply()` each).
+  While a disk write is in flight, every `apply()` copies the whole map and queues it, and notifies every
+  listener: with ~20,000 values that is quadratic memory. The old `main` skipped these two id-keyed
+  families ("tied to old database IDs"); the foundation restored them. Not involved: category restore
+  ordering, enum values, WorkManager scheduling, `49.sqm`/migration 58 or `StorageScreenContent`.
+- **Reproduction (read-only AVD `Medium_Phone_API_36.0`, 576 MB large heap):** the July backup restored
+  fine; with 19,000 synthetic `pref_hide_blacklisted_chapters_<id>` entries, App settings only crashed the
+  old build after ~15 s with the same stack (OOM in `notifyListeners`/`keyFlow`); 4,200 entries took 28 s.
+- **Fix:** `PreferenceStore.putAll` (default: one `set` per value; `AndroidPreferenceStore`: one editor, one
+  `apply()`), and the restorer collects every value (with the existing type checks, category remap and
+  pinned-source merge) and writes once. Keys holding a local manga id (`pref_hide_blacklisted_chapters_`,
+  `pref_smart_scanlator_merge_override_`, `manga_bookmark_color_filter_[exclude_]` + digits) are skipped
+  and counted in a warning; they would otherwise apply to whichever entry gets that id. Category
+  preferences resolve backup ids through `BackupCategoryHierarchy` name paths (as the manga restore does),
+  falling back to a top-level name, instead of bare names.
+- **Verified with the real backup on the fixed build (emulator):** App settings only 4 s (20,375 skipped,
+  375 settings, 255 KB file, no id-keyed key); all sections 71 s (20,335 entries); all sections again
+  into the populated library with the Library tab open 94 s; Categories + App settings 4 s; Library +
+  App settings 84 s; Categories only 4 s; Library only 84 s; Library + Categories 75 s. No crash, every
+  worker SUCCESS. `pref_smart_scanlator_merge` and `default_category` are not in that backup (defaults).
+- **Tests:** `PreferenceRestorerTest` (6): 20,323 + 51 + 1 id-keyed values skipped and the rest written by
+  exactly one `putAll` (no per-key writes), type mismatches not written, unknown old keys kept, category
+  preferences mapped by path between same-named children, unmatched category values leave the current
+  setting, the key filter, and an unknown enum value reading as the default (the real `getEnum`
+  deserializer). A full device backup/restore round trip of settings is covered by the emulator runs.
+- **Not done:** the phone's dev install still has the 4,198 + 9 stray keys from the crashed restore; they
+  are keyed by the old ids. Clearing that app's data (or reinstalling) and restoring again removes them.
+- **Validation:** see Batch 18 (validated together).
+
+### Batch 19 — History date-heading presentation
+
+- History date groups now reuse Updates' shared `DateHeading`, including its date formatting, count badge,
+  padding and fast-scroll animation. The existing `HistoryUiModel.Header.mangaCount` calculation remains
+  unchanged: it counts distinct manga from the visible, locally grouped History entries.
+
+### Batch 20 — main behaviour restored (part 1)
+
+- **Scanlator priority (investigated):** storage (`manga.user_scanlator_priority`, `StringListColumnAdapter` with
+  `", "`), backup field #614, the restore (`RestoreRepositoryImpl.restoreForkState`, ordinary restore with
+  `scanlatorSettingsPresent` replaces) and its use (`applySmartScanlatorMerge`) are identical to `main`. The real backup
+  `app.komikku.kns_2026-10-21_12-33.tachibk` carries 52 priorities, all flagged, none naming merged entries or untrimmed
+  names (2 name a scanlator no longer in the chapters), plus 51 `enabled` overrides in field #618. No code path that
+  drops them was found; candidates outside the code: the crashed first restore, and a SyncYomi payload from a server
+  without these values, which an authoritative sync applies. Not changed.
+- **Scanlator rows:** `scanlatorStatsOf` (all chapters, unfiltered) → `ScanlatorStats(count, ScanlatorCoverage)` using the
+  existing domain `scanlatorCoverage` (from `main`), shown as `main` did ("%d chapters", ranges, "and %d more").
+- **History unread dot:** `HistoryVisibleCounts` left excluded scanlators in, so Smart Merge could pick an excluded
+  unread release; they are now filtered like `LibraryVisibleCounts` and the History SQL do. The global Smart Merge
+  preference is part of the History flow.
+- **Language flags:** `UiPreferences.showFlags` (`show_flags`, default true, same key as `main`) and its Appearance switch
+  were missing; `showLanguageFlags()`/`languageFlagPrefix`/`languageMark` gate the flags in `BaseSourceItem`,
+  `ExtensionsScreen`, `MigrateSourceScreen`, `SourcesFilterScreen` and `getNameForMangaInfo`.
+- **Subcategory row:** `SubcategoryRowVisibility.onTabTap` (tap on the selected tab toggles, other tabs only scroll),
+  state in `LibraryContent` (`rememberSaveable`); without tabs the row always shows.
+- **HQ zoom:** `WebGpuConfig` only applied webtoon zoom-out and the general double-tap switch. `WebGpuZoomGestures` maps
+  paged double tap / disable zoom in and long-strip double tap / pinch onto the library's `doubleTapZoomEnabled` and
+  `pinchZoomEnabled` (the double-tap drag zoom is gated by the same flag). Long-strip "disable zoom out" already works
+  through `minScale = 0` (= home scale).
+- **Feeds:** `SavedSearchCreateDialog` rejected existing names; it asks to overwrite again and `saveSearch` updates the
+  existing saved search in place (`UpdateSavedSearch`, names compared trimmed and case-insensitively).
+- **Global Search categories:** `globalSearchSourceCategory` (`main`'s key), `SearchViewModel.setSourceCategory`, the
+  category in the search key, `GlobalSearchViewModel.sourcesInCategory` filter and the toolbar chip.
+- **Small items:** raw MangaBaka cover (`MangaBakaCover.raw`), "Related", blacklist actions after the bookmark actions in
+  `MangaBottomActionMenu`, the reader chapter list observing `Download.statusFlow`.
+- **Tests:** `RestoredMainBehaviorTest` (7), `HistoryVisibleCountsTest` (+3: Smart Merge duplicate, excluded scanlator,
+  genuine unread), `MetadataAutofillTest` (raw cover).
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  testDebugUnitTest (app 330 with 1 skipped, data 93, domain 198; 0 failures), assembleDebug, assembleRelease,
+  `git diff --check`. Not verified on a device.
+
+### Batch 21 — main behaviour restored (part 2: reader, trackers, categories)
+
+- **Reader bars:** `ReaderTopBar` keeps the title and the overflow actions only; `ExhUtils` is `main`'s always-visible
+  action row (Bookmark with tap/long-press colour menu, Retry all, Boost page; `RocketLaunch` stands in for `main`'s
+  `Speed` icon, which the Material Symbols pack does not have). The E-Hentai autoscroll panel, its interval field and the
+  help buttons are no longer passed through `ReaderAppBars`/`ReaderActivity`; the view-model code behind them is left in
+  place. The same composables serve the classic and the WebGPU reader.
+- **Automation:** `ReaderAutomationControls` is `main`'s End-aligned column (faster, start/stop, slower) in the bars'
+  colour, invoked next to a vertical chapter navigator and above a horizontal one. `ReaderAutomationController` no longer
+  ends a scroll run on a stall while `viewerChapters.nextChapter` exists — the WebGPU strip stalls at the end of the
+  loaded pages until the next chapter loads; `StallDetector.reset()` restarts the count.
+- **Trackers:** `TrackerSheetPresentation` (adapted from `main`) resolves the card's values from the preferred tracker
+  (`TrackerProgressSync`), the mismatched and failed trackers and the icon actions. `UnifiedTrackerCard` (replacing
+  `UnifiedTrackerPanel`) is `main`'s card; fields open `UnifiedTrackEditorScreen` for the preferred binding, -/+ apply
+  `UpdateTracks.Change.Progress` through `UnifiedTrackerEdits` (`main` refreshed first and stepped from the furthest
+  progress per rereading group; this steps from the shown progress), the X opens the multi-tracker remove dialog, and
+  edit mode is view-model state. Deviations from `main`: a star badge marks the preferred tracker (new `star` icon), the
+  score star is an icon, untracked enhanced trackers stay visible (`main` hid them), and the foundation's
+  "Set all to …" alignment row is kept under the card. Preferred-tracker storage is unchanged
+  (`pref_preferred_tracker_for_manga`, same as `main`).
+- **Edit categories:** `CategoryListItem` follows `main`'s row (inline icon actions at ≥ 420 dp, icon menu below; folder
+  badge with the subcategory count; "Name (count)") on the foundation's `CategoryManagerRow` tree; Expand/Collapse all are
+  `TextButton`s under the sort selector. Added Material Symbols `create_new_folder`, `drive_file_move`, `flag` (rounded)
+  and `star` (rounded filled) from Google's Material Symbols release.
+- **Tests:** `TrackerSheetPresentationTest` (5), `ReaderAutomationTest` (+1: stall reset).
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  testDebugUnitTest (app 336 with 1 skipped, data 93, domain 198; 0 failures), assembleDebug, assembleRelease,
+  `git diff --check`. Not verified on a device.

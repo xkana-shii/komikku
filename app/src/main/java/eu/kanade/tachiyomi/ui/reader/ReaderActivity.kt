@@ -65,7 +65,6 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.manga.model.readingMode
 import eu.kanade.domain.ui.UiPreferences
-import eu.kanade.presentation.manga.components.BookmarkColorDialog
 import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
@@ -506,11 +505,6 @@ class ReaderActivity : BaseActivity() {
                     },
                 )
 
-                ReaderViewModel.Dialog.BookmarkColorPicker -> BookmarkColorDialog(
-                    current = BookmarkColor.fromValue(state.bookmarkColor).takeIf { state.bookmarked },
-                    onSelect = viewModel::setChapterBookmarkColor,
-                    onDismissRequest = onDismissRequest,
-                )
                 // KNS <--
 
                 ReaderViewModel.Dialog.AutoScrollHelp -> AlertDialog(
@@ -716,7 +710,7 @@ class ReaderActivity : BaseActivity() {
             onToggleBookmarked = viewModel::toggleChapterBookmark,
             // KNS -->
             bookmarkColor = state.bookmarkColor,
-            onLongClickBookmark = viewModel::showBookmarkColorPicker,
+            onBookmarkColorSelected = viewModel::setChapterBookmarkColor,
             automationControls = {
                 ReaderAutomationControls(
                     viewer = state.viewer,
@@ -774,18 +768,8 @@ class ReaderActivity : BaseActivity() {
             },
             onClickSettings = viewModel::openSettingsDialog,
             // SY -->
-            isExhToolsVisible = state.ehUtilsVisible,
-            onSetExhUtilsVisibility = viewModel::showEhUtils,
-            isAutoScroll = state.autoScroll,
-            isAutoScrollEnabled = state.isAutoScrollEnabled,
-            onToggleAutoscroll = viewModel::toggleAutoScroll,
-            autoScrollFrequency = state.ehAutoscrollFreq,
-            onSetAutoScrollFrequency = viewModel::setAutoScrollFrequency,
-            onClickAutoScrollHelp = viewModel::openAutoScrollHelpDialog,
             onClickRetryAll = ::exhRetryAll,
-            onClickRetryAllHelp = viewModel::openRetryAllHelp,
             onClickBoostPage = ::exhBoostPage,
-            onClickBoostPageHelp = viewModel::openBoostPageHelp,
             currentPageText = state.currentPageText,
             enabledButtons = readerBottomButtons,
             currentReadingMode = ReadingMode.fromPreference(

@@ -26,11 +26,19 @@ enum class BookmarkColor(val value: Int) {
             entries.filterTo(mutableSetOf()) { it.name in names }
 
         /**
-         * Whether a manga or chapter with bookmarks of [colors] (stored values) passes [filter]. An
-         * empty filter passes everything.
+         * Whether bookmarked colors pass the shared include/exclude filter. Included colors require
+         * at least one match; exclusions always reject their matching color. This lets a manga with
+         * several bookmark colors remain predictable: it passes when it has an included color and
+         * none of its bookmarked colors are excluded.
          */
-        fun matchesFilter(colors: Collection<Int>, filter: Set<BookmarkColor>): Boolean =
-            filter.isEmpty() || colors.any { fromValue(it) in filter }
+        fun matchesFilter(
+            colors: Collection<Int>,
+            included: Set<BookmarkColor>,
+            excluded: Set<BookmarkColor> = emptySet(),
+        ): Boolean {
+            val palette = colors.map(::fromValue).toSet()
+            return palette.none(excluded::contains) && (included.isEmpty() || palette.any(included::contains))
+        }
     }
 }
 // KNS <--

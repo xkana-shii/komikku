@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.source
 
 import android.content.Context
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.browse.components.languageMark
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import exh.source.EH_PACKAGE
 import exh.source.LOCAL_SOURCE_PACKAGE
@@ -23,12 +25,18 @@ fun Source.getNameForMangaInfo(
         .filterNot { it in listOf("all", "other") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
+    // KNS -->
+    val showFlags = Injekt.get<UiPreferences>().showFlags.get()
+    // KNS <--
     return when {
         // SY -->
         !mergeSources.isNullOrEmpty() -> getMergedSourcesString(
             mergeSources,
             enabledLanguages,
             hasOneActiveLanguages,
+            // KNS -->
+            showFlags,
+            // KNS <--
         )
         // SY <--
         // KMK -->
@@ -37,13 +45,17 @@ fun Source.getNameForMangaInfo(
         // For edge cases where user disables a source they got manga of in their library.
         hasOneActiveLanguages && !isInEnabledLanguages ->
             // KMK -->
-            "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
+            // KNS -->
+            "$name (${languageMark(lang, showFlags)})"
+        // KNS <--
         // KMK <--
         // Hide the language tag when only one language is used.
         hasOneActiveLanguages && isInEnabledLanguages -> name
         else ->
             // KMK -->
-            "$name (${FlagEmoji.getEmojiLangFlag(lang)})"
+            // KNS -->
+            "$name (${languageMark(lang, showFlags)})"
+        // KNS <--
         // KMK <--
     }
 }
@@ -53,6 +65,9 @@ private fun getMergedSourcesString(
     mergeSources: List<Source>,
     enabledLangs: List<String>,
     onlyName: Boolean,
+    // KNS -->
+    showFlags: Boolean = true,
+    // KNS <--
 ): String {
     return if (onlyName) {
         mergeSources.joinToString { source ->
@@ -62,7 +77,9 @@ private fun getMergedSourcesString(
                 // KMK <--
                 source.lang !in enabledLangs ->
                     // KMK -->
-                    "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
+                    // KNS -->
+                    "${source.name} (${languageMark(source.lang, showFlags)})"
+                // KNS <--
                 // KMK <--
                 else ->
                     source.name
@@ -74,7 +91,9 @@ private fun getMergedSourcesString(
             if (source.isLocalOrStub()) {
                 source.toString()
             } else {
-                "${source.name} (${FlagEmoji.getEmojiLangFlag(source.lang)})"
+                // KNS -->
+                "${source.name} (${languageMark(source.lang, showFlags)})"
+                // KNS <--
             }
             // KMK <--
         }

@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaSearchResult
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaUserProfile
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaUserProfileResponse
+import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.DELETE
 import eu.kanade.tachiyomi.network.GET
@@ -20,6 +21,7 @@ import eu.kanade.tachiyomi.network.PUT
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import eu.kanade.tachiyomi.util.PkceUtil
+import eu.kanade.tachiyomi.util.lang.htmlDecode
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -208,10 +210,12 @@ class MangaBakaApi(
             cover_url = item.cover.x250.x1.orEmpty()
             tracking_url = "$BASE_URL/${item.id}"
             start_date = item.published.startDate.orEmpty()
-            publishing_status = item.status
-            publishing_type = item.type.replaceFirstChar { c ->
+            // KNS -->
+            publishing_status = item.status.orEmpty()
+            publishing_type = item.type.orEmpty().replaceFirstChar { c ->
                 if (c.isLowerCase()) c.titlecase(Locale.getDefault()) else c.toString()
             }
+            // KNS <--
             authors = item.authors.orEmpty()
             artists = item.artists.orEmpty()
         }
@@ -233,6 +237,34 @@ class MangaBakaApi(
                 }
             }
         }
+    }
+    // KNS <--
+
+    // KNS -->
+    /**
+     * Series metadata for the metadata editor, from the series endpoint (not the library entry), so
+     * genres, tags and the publication status come with it. A merged series is followed to the series
+     * it was merged into; a missing or deleted one is an error rather than empty metadata.
+     */
+    suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
+        val series = resolveMergedSeries(track.remoteId)
+        return series.toAutofillMetadata(series.description?.htmlDecode()?.trim())
+    }
+
+    private suspend fun resolveMergedSeries(id: Long): MangaBakaItem {
+        val visited = mutableSetOf<Long>()
+        var currentId = id
+        repeat(MAX_MERGE_HOPS + 1) {
+            if (!visited.add(currentId)) throw IllegalStateException("MangaBaka series $id is merged in a cycle")
+            val series = getSeries(currentId) ?: throw IllegalStateException("MangaBaka series $currentId does not exist")
+            val next = series.mergedWith?.takeIf { it > 0 && it != series.id }
+            if (next == null) {
+                if (series.state == "deleted") throw IllegalStateException("MangaBaka series $currentId was deleted")
+                return series
+            }
+            currentId = next
+        }
+        throw IllegalStateException("MangaBaka series $id is merged more than $MAX_MERGE_HOPS times")
     }
     // KNS <--
 
@@ -305,6 +337,10 @@ class MangaBakaApi(
 
         private const val BASE_URL = "https://mangabaka.org"
         private const val API_BASE_URL = "https://api.mangabaka.org"
+
+        // KNS -->
+        private const val MAX_MERGE_HOPS = 5
+        // KNS <--
         private const val LIBRARY_API_URL = "$API_BASE_URL/v1/my/library"
         private const val OAUTH_URL = "$BASE_URL/auth/oauth2"
         private const val SCOPES = "library.read library.write offline_access openid"

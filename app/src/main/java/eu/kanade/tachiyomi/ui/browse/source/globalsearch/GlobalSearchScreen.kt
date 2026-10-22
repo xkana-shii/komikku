@@ -79,6 +79,10 @@ class GlobalSearchScreen(
                 getManga = { viewModel.getManga(it) },
                 onChangeSearchFilter = viewModel::setSourceFilter,
                 onToggleResults = viewModel::toggleFilterResults,
+                // KNS -->
+                sourceCategories = viewModel.sourceCategories.collectAsState().value,
+                onChangeSourceCategory = viewModel::setSourceCategory,
+                // KNS <--
                 onClickSource = {
                     navigator.push(BrowseSourceScreen(it.id, state.searchQuery))
                 },

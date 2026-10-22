@@ -84,6 +84,14 @@ fun TrackInfoDialogHome(
     preferredTrackerId: Long? = null,
     failures: Map<Long, String> = emptyMap(),
     header: @Composable () -> Unit = {},
+    seriesTitle: String = "",
+    editMode: Boolean = false,
+    onToggleEditMode: () -> Unit = {},
+    onAdjustProgress: (Int) -> Unit = {},
+    onSetPreferredTracker: (TrackItem) -> Unit = {},
+    onRemoveTrackers: (trackerIds: Set<Long>, remotely: Boolean) -> Unit = { _, _ -> },
+    syncTarget: String = "",
+    onSyncProgress: () -> Unit = {},
     // KNS <--
 ) {
     Column(
@@ -91,14 +99,43 @@ fun TrackInfoDialogHome(
             .animateContentSize()
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            // KNS --> the previous personal fork's tighter sheet
+            .padding(8.dp)
             .windowInsetsPadding(WindowInsets.systemBars),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        // KNS <--
     ) {
         // KNS -->
         header()
+        val presentation = remember(trackItems, preferredTrackerId, dateFormat, failures) {
+            TrackerSheetPresentation(trackItems, preferredTrackerId, dateFormat, failures.keys)
+        }
+        val untracked = trackItems.filter { it.track == null }
+        if (presentation.bound.size >= 2) {
+            UnifiedTrackerCard(
+                presentation = presentation,
+                untracked = untracked,
+                seriesTitle = seriesTitle,
+                editMode = editMode,
+                onToggleEditMode = onToggleEditMode,
+                onStatusClick = onStatusClick,
+                onChapterClick = onChapterClick,
+                onScoreClick = onScoreClick,
+                onStartDateEdit = onStartDateEdit,
+                onEndDateEdit = onEndDateEdit,
+                onAdjustProgress = onAdjustProgress,
+                onNewSearch = onNewSearch,
+                onOpenInBrowser = onOpenInBrowser,
+                onCopyLink = onCopyLink,
+                onSetPreferredTracker = onSetPreferredTracker,
+                onRemoveTrackers = onRemoveTrackers,
+                syncTarget = syncTarget,
+                onSyncProgress = onSyncProgress,
+            )
+            return@Column
+        }
         // KNS <--
-        trackItems.forEach { item ->
+        presentation.bound.forEach { item ->
             if (item.track != null) {
                 val supportsScoring = item.tracker.getScoreList().isNotEmpty()
                 val supportsReadingDates = item.tracker.supportsReadingDates
@@ -144,13 +181,11 @@ fun TrackInfoDialogHome(
                     error = failures[item.tracker.id],
                     // KNS <--
                 )
-            } else {
-                TrackInfoItemEmpty(
-                    tracker = item.tracker,
-                    onNewSearch = { onNewSearch(item) },
-                )
             }
         }
+        // KNS --> trackers not linked yet are icons, as on the previous personal fork
+        UntrackedTrackerIcons(untracked, onNewSearch)
+        // KNS <--
     }
 }
 
@@ -353,26 +388,6 @@ private fun TrackDetailsItem(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (text == null) UNSET_TEXT_ALPHA else 1f),
         )
-    }
-}
-
-@Composable
-private fun TrackInfoItemEmpty(
-    tracker: Tracker,
-    onNewSearch: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TrackLogoIcon(tracker)
-        TextButton(
-            onClick = onNewSearch,
-            modifier = Modifier
-                .padding(start = 16.dp)
-                .weight(1f),
-        ) {
-            Text(text = stringResource(MR.strings.add_tracking))
-        }
     }
 }
 

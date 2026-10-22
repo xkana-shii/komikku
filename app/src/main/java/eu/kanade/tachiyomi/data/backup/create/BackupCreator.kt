@@ -27,6 +27,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import eu.kanade.tachiyomi.data.webhook.WebhookNotifier
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -37,8 +38,11 @@ import okio.sink
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.backup.service.BackupPreferences
+import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.interactor.GetMergedManga
+import tachiyomi.domain.manga.interactor.GetMergedMangaById
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.i18n.MR
@@ -71,6 +75,8 @@ class BackupCreator(
     // SY <--
     // KNS -->
     private val webhookNotifier: WebhookNotifier,
+    private val categoryRepository: CategoryRepository,
+    private val getMergedMangaById: GetMergedMangaById,
     // KNS <--
 ) {
     @AssistedFactory
@@ -102,12 +108,9 @@ class BackupCreator(
                 throw IllegalStateException(context.stringResource(MR.strings.create_backup_file_error))
             }
 
-            val nonFavoriteManga = if (options.readEntries) mangaRepository.getReadMangaNotInLibrary() else emptyList()
-            // SY -->
-            val mergedManga = getMergedManga.await()
-            // SY <--
-            val backupManga =
-                backupMangas(getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */, options)
+            // KNS --> the selected categories' entries only, for a selective backup
+            val backupManga = backupMangas(selectManga(options), options)
+            // KNS <--
 
             file.openOutputStream()
                 .also {
@@ -163,10 +166,46 @@ class BackupCreator(
         }
     }
 
+    // KNS -->
+    /**
+     * The entries to back up. A full backup takes the library, read entries outside it and merged
+     * entries' members, as before. A selective one takes the library entries filed in a selected
+     * category (see [BackupCategorySelection]) plus the members of selected merged entries, which a
+     * merged entry needs; members outside the selection are written as non-library entries, and
+     * read entries outside the library are left out.
+     */
+    internal suspend fun selectManga(options: BackupOptions): List<Manga> {
+        val selection = options.includedCategoryIds
+        if (selection == null) {
+            val nonFavoriteManga = if (options.readEntries) mangaRepository.getReadMangaNotInLibrary() else emptyList()
+            // SY -->
+            val mergedManga = getMergedManga.await()
+            // SY <--
+            return getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */
+        }
+        val favorites = getFavorites.await()
+        val categoriesByManga = categoryRepository.getCategoriesByMangaIds(favorites.map(Manga::id))
+        val selected = favorites.filter { manga ->
+            BackupCategorySelection.includesManga(selection, categoriesByManga[manga.id].orEmpty().map(Category::id))
+        }
+        val selectedIds = selected.mapTo(HashSet(), Manga::id)
+        val members = selected.filter { it.source == MERGED_SOURCE_ID }
+            .flatMap { getMergedMangaById.await(it.id) }
+            .filter { selectedIds.add(it.id) }
+            .map { it.copy(favorite = false) }
+        return selected + members
+    }
+    // KNS <--
+
     suspend fun backupCategories(options: BackupOptions): List<BackupCategory> {
         if (!options.categories) return emptyList()
 
-        return categoriesBackupCreator()
+        // KNS -->
+        val categories = categoriesBackupCreator()
+        val selection = options.includedCategoryIds ?: return categories
+        val kept = BackupCategorySelection.categoriesToBackUp(selection, categories.associate { it.id to it.parentId })
+        return categories.filter { it.id in kept }
+        // KNS <--
     }
 
     fun backupMangas(mangas: List<Manga>, options: BackupOptions): Flow<BackupManga> {

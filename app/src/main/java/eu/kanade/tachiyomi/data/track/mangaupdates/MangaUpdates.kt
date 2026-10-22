@@ -7,9 +7,9 @@ import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MUListItem
 import eu.kanade.tachiyomi.data.track.mangaupdates.dto.MURating
+import eu.kanade.tachiyomi.data.track.mangaupdates.dto.toAutofillMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
-import eu.kanade.tachiyomi.util.lang.htmlDecode
 import exh.log.xLogW
 import tachiyomi.i18n.MR
 import tachiyomi.domain.track.model.Track as DomainTrack
@@ -128,24 +128,14 @@ class MangaUpdates(id: Long) : BaseTracker(id, "MangaUpdates"), DeletableTracker
         saveCredentials(authenticated.uid.toString(), authenticated.sessionToken)
     }
 
-    override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
-        val series = api.getSeries(track)
-        return series.let {
-            TrackMangaMetadata(
-                it.seriesId,
-                it.title?.htmlDecode(),
-                it.image?.url?.original,
-                it.description?.htmlDecode(),
-                // KUN -->
-                // MUAuthor.type/name are non-null in this fork, so the safe calls/Elvis checks were dead.
-                it.authors.filter { "Author" in it.type }
-                    .joinToString(separator = ", ") { it.name },
-                it.authors.filter { "Artist" in it.type }
-                    .joinToString(separator = ", ") { it.name },
-                // KUN <--
-            )
-        }
-    }
+    // KNS -->
+    override val supportsMangaMetadata = true
+    // KNS <--
+
+    // KNS --> the series-detail record, now with genres, categories and publication status
+    override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata =
+        api.getSeries(track).toAutofillMetadata()
+    // KNS <--
 
     // SY -->
     override suspend fun searchById(id: String): TrackSearch? {

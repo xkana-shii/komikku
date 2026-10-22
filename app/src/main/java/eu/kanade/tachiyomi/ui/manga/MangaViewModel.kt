@@ -55,6 +55,9 @@ import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
+import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
+import eu.kanade.presentation.manga.components.ScanlatorStats
+import eu.kanade.presentation.manga.components.scanlatorStatsOf
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.getBestColor
@@ -147,13 +150,14 @@ import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
 import tachiyomi.domain.chapter.model.ScanlatorRangeRule
 import tachiyomi.domain.chapter.model.chapterListVisibility
 import tachiyomi.domain.chapter.model.encodeScanlatorRangeRule
 import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 import tachiyomi.domain.chapter.model.smartScanlatorMergeEnabled
+import tachiyomi.domain.chapter.service.ChapterBookmarks
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.chapter.service.calculateChapterGap
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.chapter.service.getChapterSort
@@ -250,6 +254,9 @@ class MangaViewModel(
     private val updateHelper: EHentaiUpdateHelper,
     // SY <--
     private val getManga: GetManga,
+    // KNS -->
+    private val scanlatorPreferenceChanges: ScanlatorPreferenceChanges,
+    // KNS <--
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
     private val getMergedMangaById: GetMergedMangaById,
     private val getMergedReferencesById: GetMergedReferencesById,
@@ -448,7 +455,10 @@ class MangaViewModel(
     private val visibilitySettings = combine(
         libraryPreferences.smartScanlatorMerge.changes(),
         libraryPreferences.hideBlacklistedChapters(mangaId).changes(),
-        libraryPreferences.bookmarkColorFilter(mangaId).changes().map(BookmarkColor::fromNames),
+        combine(
+            libraryPreferences.bookmarkColorFilter(mangaId).changes(),
+            libraryPreferences.bookmarkColorFilterExclude(mangaId).changes(),
+        ) { included, excluded -> BookmarkColor.fromNames(included) to BookmarkColor.fromNames(excluded) },
         ::Triple,
     ).distinctUntilChanged()
     // KNS <--
@@ -466,7 +476,7 @@ class MangaViewModel(
         // KNS -->
         visibilitySettings,
         // KNS <--
-    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted, colorFilter) ->
+    ) { (manga, chapters), flatMetadata, mergedData, override, (globalSmartMerge, hideBlacklisted, colorFilters) ->
         val effectiveManga = override ?: manga
         // KNS -->
         // The same visibility rule as the reader, History, downloads and library counts; revealed
@@ -492,7 +502,8 @@ class MangaViewModel(
             // KNS -->
             blacklistedCount = visibility.blacklistedChapterIds.size,
             hideBlacklistedChapters = hideBlacklisted,
-            bookmarkColorFilter = colorFilter,
+            bookmarkColorFilter = colorFilters.first,
+            bookmarkColorFilterExclude = colorFilters.second,
             // KNS <--
         )
     }
@@ -1641,17 +1652,10 @@ class MangaViewModel(
      */
     fun bookmarkChapters(chapters: List<Chapter>, bookmarked: Boolean) {
         viewModelScope.launch {
-            chapters
-                .filterNot { it.bookmark == bookmarked }
-                .map {
-                    ChapterUpdate(it.id) {
-                        bookmark = bookmarked
-                        // KNS --> (re-)bookmarking is ordinary until a color is chosen
-                        bookmarkColor = BookmarkColor.DEFAULT_ID
-                        // KNS <--
-                    }
-                }
+            // KNS --> (re-)bookmarking is ordinary until a color is chosen; shared with Updates
+            ChapterBookmarks.toggle(chapters.map { it.bookmarkTarget() }, bookmarked)
                 .let { updateChapter.awaitAll(it) }
+            // KNS <--
         }
         toggleAllSelection(false)
     }
@@ -1660,18 +1664,10 @@ class MangaViewModel(
     /** Bookmarks [chapters] with [color] ([BookmarkColor.NONE] = an ordinary bookmark). */
     fun setBookmarkColor(chapters: List<Chapter>, color: BookmarkColor) {
         viewModelScope.launch {
-            chapters
-                .filterNot { it.bookmark && it.bookmarkColor == color.value }
-                .map {
-                    ChapterUpdate(it.id) {
-                        bookmark = true
-                        bookmarkColor = color.value
-                    }
-                }
+            ChapterBookmarks.setColor(chapters.map { it.bookmarkTarget() }, color)
                 .let { updateChapter.awaitAll(it) }
         }
         toggleAllSelection(false)
-        dismissDialog()
     }
 
     /**
@@ -1708,69 +1704,51 @@ class MangaViewModel(
         toggleAllSelection(false)
     }
 
-    fun removeBlacklistEntries(entries: Collection<String>) {
-        val manga = successState?.manga ?: return
-        if (entries.isEmpty()) return
-        viewModelScope.launch {
-            updateManga.await(
-                MangaUpdate(manga.id) { blacklistedChapters = manga.blacklistedChapters.filterNot(entries::contains) },
-            )
-            showBlacklistDialog()
-        }
-    }
-
     fun setHideBlacklistedChapters(hide: Boolean) {
         libraryPreferences.hideBlacklistedChapters(mangaId).set(hide)
     }
 
-    fun setBookmarkColorFilter(colors: Set<BookmarkColor>) {
-        libraryPreferences.bookmarkColorFilter(mangaId).set(colors.mapTo(mutableSetOf()) { it.name })
-    }
-
-    fun showBlacklistDialog() {
-        val manga = successState?.manga ?: return
-        viewModelScope.launch {
-            val all = getChaptersForBlacklist(manga)
-            dialog.value = Dialog.BlacklistedChapters(
-                manga.blacklistedChapters.map { key ->
-                    BlacklistEntry(key = key, chapters = resolveChapterBlacklistMatches(key, all).map { it.name })
-                },
-            )
+    fun setBookmarkColorFilter(included: Set<BookmarkColor>, excluded: Set<BookmarkColor>) {
+        libraryPreferences.bookmarkColorFilter(mangaId).set(included.mapTo(mutableSetOf()) { it.name })
+        libraryPreferences.bookmarkColorFilterExclude(mangaId).set(excluded.mapTo(mutableSetOf()) { it.name })
+        if ((included.isNotEmpty() || excluded.isNotEmpty()) && successState?.manga?.bookmarkedFilter == TriState.DISABLED) {
+            setBookmarkedFilter(TriState.ENABLED_IS)
         }
     }
 
-    fun showBookmarkColorDialog(chapters: List<Chapter>) {
-        if (chapters.isEmpty()) return
-        dialog.value = Dialog.BookmarkColor(chapters)
-    }
-
-    fun showScanlatorPreferencesDialog() {
-        val state = successState ?: return
-        dialog.value = Dialog.ScanlatorPreferences(
+    /**
+     * The scanlator preferences dialog's data (opened from the chapter filters' Scanlator entry), whose
+     * second mode is the chapter blacklist: each entry with the chapters it currently hides (resolved
+     * against all chapters, hidden ones included). Null before the manga has loaded.
+     */
+    suspend fun loadScanlatorPreferences(): ScanlatorPreferencesData? {
+        val state = successState ?: return null
+        val all = getChaptersForBlacklist(state.manga)
+        return ScanlatorPreferencesData(
             scanlators = state.availableScanlators.toList(),
             priority = state.manga.scanlatorPriority,
+            excludedScanlators = state.excludedScanlators,
             smartMergeOverride = state.manga.smartMergeOverride,
             globalSmartMerge = libraryPreferences.smartScanlatorMerge.get(),
             rangeRules = state.manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
+            blacklist = state.manga.blacklistedChapters.map { key ->
+                BlacklistEntry(key = key, chapters = resolveChapterBlacklistMatches(key, all).map { it.name })
+            },
+            scanlatorStats = scanlatorStatsOf(all),
         )
     }
 
-    fun setScanlatorPreferences(
-        priority: List<String>,
-        smartMergeOverride: Boolean?,
-        rangeRules: List<ScanlatorRangeRule>,
-    ) {
-        val manga = successState?.manga ?: return
-        viewModelScope.launch {
-            updateManga.await(
-                MangaUpdate(manga.id) {
-                    scanlatorPriority = priority
-                    this.smartMergeOverride = smartMergeOverride
-                    scanlatorRangeRules = rangeRules.map(::encodeScanlatorRangeRule)
-                },
-            )
-        }
-        dismissDialog()
+    /**
+     * Stores the scanlator preferences dialog's edits as they happen, one at a time and in order, so a
+     * quick series of edits cannot store an older value last. Each write only touches its own field;
+     * blacklist removals start from the stored blacklist, so consecutive removals all stick.
+     */
+    private val scanlatorPreferenceWriter = SequentialWriter<ScanlatorPreferencesDraft.Change>(viewModelScope) {
+        scanlatorPreferenceChanges.apply(mangaId, it)
+    }
+
+    fun applyScanlatorPreferenceChanges(changes: List<ScanlatorPreferencesDraft.Change>) {
+        changes.forEach(scanlatorPreferenceWriter::submit)
     }
 
     /** All chapters of the manga (hidden and excluded ones too), to resolve blacklist entries. */
@@ -2146,21 +2124,25 @@ class MangaViewModel(
         data object FullCover : Dialog
 
         // KNS -->
-        data class BlacklistedChapters(val entries: List<BlacklistEntry>) : Dialog
-        data class BookmarkColor(val chapters: List<Chapter>) : Dialog
-        data class ScanlatorPreferences(
-            val scanlators: List<String>,
-            val priority: List<String>,
-            val smartMergeOverride: Boolean?,
-            val globalSmartMerge: Boolean,
-            val rangeRules: List<ScanlatorRangeRule>,
-        ) : Dialog
         // KNS <--
     }
 
     // KNS -->
     /** A blacklist entry and the current chapters it resolves to (none: the chapter is unavailable). */
     data class BlacklistEntry(val key: String, val chapters: List<String>)
+
+    /** What the scanlator preferences dialog opens with. */
+    data class ScanlatorPreferencesData(
+        val scanlators: List<String>,
+        val priority: List<String>,
+        val excludedScanlators: Set<String>,
+        val smartMergeOverride: Boolean?,
+        val globalSmartMerge: Boolean,
+        val rangeRules: List<ScanlatorRangeRule>,
+        val blacklist: List<BlacklistEntry>,
+        /** Every chapter per scanlator (hidden ones too), for its count and covered numbers. */
+        val scanlatorStats: Map<String, ScanlatorStats> = emptyMap(),
+    )
     // KNS <--
 
     fun dismissDialog() {
@@ -2186,12 +2168,6 @@ class MangaViewModel(
     fun showMigrateDialog(duplicate: Manga) {
         val manga = successState?.manga ?: return
         dialog.value = Dialog.Migrate(target = manga, current = duplicate)
-    }
-
-    fun setExcludedScanlators(excludedScanlators: Set<String>) {
-        viewModelScope.launch {
-            setExcludedScanlators.await(mangaId, excludedScanlators)
-        }
     }
 
     // SY -->
@@ -2224,6 +2200,7 @@ class MangaViewModel(
         val blacklistedCount: Int,
         val hideBlacklistedChapters: Boolean,
         val bookmarkColorFilter: Set<BookmarkColor>,
+        val bookmarkColorFilterExclude: Set<BookmarkColor>,
         // KNS <--
     )
 
@@ -2294,6 +2271,7 @@ class MangaViewModel(
 
             /** Only bookmarks of these colors are listed; empty = no color filter. */
             val bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
+            val bookmarkColorFilterExclude: Set<BookmarkColor> = emptySet(),
             val sequelPrequel: List<SequelPrequelEntry> = emptyList(),
             // KNS <--
         ) : State {
@@ -2376,7 +2354,7 @@ class MangaViewModel(
             val filterActive: Boolean
                 get() = scanlatorFilterActive || manga.chaptersFiltered() ||
                     // KNS -->
-                    bookmarkColorFilter.isNotEmpty()
+                    bookmarkColorFilter.isNotEmpty() || bookmarkColorFilterExclude.isNotEmpty()
             // KNS <--
 
             /**
@@ -2394,8 +2372,15 @@ class MangaViewModel(
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
                     // KNS -->
                     .filter { (chapter) ->
-                        bookmarkColorFilter.isEmpty() ||
-                            (chapter.bookmark && BookmarkColor.matchesFilter(listOf(chapter.bookmarkColor), bookmarkColorFilter))
+                        bookmarkedFilter != TriState.ENABLED_IS ||
+                            (bookmarkColorFilter.isEmpty() && bookmarkColorFilterExclude.isEmpty()) ||
+                            (
+                                chapter.bookmark && BookmarkColor.matchesFilter(
+                                    listOf(chapter.bookmarkColor),
+                                    bookmarkColorFilter,
+                                    bookmarkColorFilterExclude,
+                                )
+                                )
                     }
                     // KNS <--
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }

@@ -68,6 +68,7 @@ class UpdatesVisibilityFilterTest {
         chapterUrl = "/$chapterId",
         read = false,
         bookmark = false,
+        bookmarkColor = 0,
         lastPageRead = 0,
         sourceId = 1,
         dateFetch = Instant.fromEpochMilliseconds(0),

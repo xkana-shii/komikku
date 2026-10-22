@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALError
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALMangaMetadata
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALUser
+import eu.kanade.tachiyomi.data.track.anilist.dto.toAutofillMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import eu.kanade.tachiyomi.network.POST
@@ -17,7 +18,6 @@ import eu.kanade.tachiyomi.network.dataOrElse
 import eu.kanade.tachiyomi.network.interceptor.rateLimit
 import eu.kanade.tachiyomi.network.jsonMime
 import eu.kanade.tachiyomi.network.parseAs
-import eu.kanade.tachiyomi.util.lang.htmlDecode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -293,6 +293,11 @@ class AnilistApi(
                             |}
                         |}
                     |}
+                    |genres
+                    |tags {
+                        |name
+                    |}
+                    |status
                 |}
             |}
             |
@@ -314,25 +319,9 @@ class AnilistApi(
                     .awaitALSuccess()
                     // KMK <--
                     .parseAs<ALMangaMetadata>()
-                    .let { metadata ->
-                        val media = metadata.data.media
-                        TrackMangaMetadata(
-                            remoteId = media.id,
-                            title = media.title.userPreferred,
-                            thumbnailUrl = media.coverImage.large,
-                            description = media.description?.htmlDecode()?.ifEmpty { null },
-                            authors = media.staff.edges
-                                .filter { "Story" in it.role }
-                                .mapNotNull { it.node.name() }
-                                .joinToString(", ")
-                                .ifEmpty { null },
-                            artists = media.staff.edges
-                                .filter { "Art" in it.role }
-                                .mapNotNull { it.node.name() }
-                                .joinToString(", ")
-                                .ifEmpty { null },
-                        )
-                    }
+                    // KNS --> shared with the autofill tests; adds genres, tags and publication status
+                    .data.media.toAutofillMetadata()
+                // KNS <--
             }
         }
     }

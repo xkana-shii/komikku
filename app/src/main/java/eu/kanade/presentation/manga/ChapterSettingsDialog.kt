@@ -30,7 +30,7 @@ import eu.kanade.domain.manga.model.downloadedFilter
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.BookmarkColorFilterDialog
-import eu.kanade.presentation.manga.components.BookmarkColorFilterItem
+import eu.kanade.presentation.manga.components.BookmarkColorFilterRow
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Group
@@ -60,10 +60,12 @@ fun ChapterSettingsDialog(
     onResetToDefault: () -> Unit,
     // KNS -->
     bookmarkColorFilter: Set<BookmarkColor> = emptySet(),
-    onBookmarkColorFilterChanged: ((Set<BookmarkColor>) -> Unit)? = null,
+    bookmarkColorFilterExclude: Set<BookmarkColor> = emptySet(),
+    onBookmarkColorFilterChanged: ((Set<BookmarkColor>, Set<BookmarkColor>) -> Unit)? = null,
     // KNS <--
 ) {
     var showSetAsDefaultDialog by rememberSaveable { mutableStateOf(false) }
+    var showColorFilter by rememberSaveable { mutableStateOf(false) }
     if (showSetAsDefaultDialog) {
         SetAsDefaultDialog(
             onDismissRequest = { showSetAsDefaultDialog = false },
@@ -115,14 +117,14 @@ fun ChapterSettingsDialog(
                         onBookmarkedFilterChanged = onBookmarkedFilterChanged,
                         scanlatorFilterActive = scanlatorFilterActive,
                         onScanlatorFilterClicked = onScanlatorFilterClicked,
+                        onBookmarkColorEdit = onBookmarkColorFilterChanged?.let { { showColorFilter = true } },
                     )
                     // KNS -->
                     if (onBookmarkColorFilterChanged != null) {
-                        var showColorFilter by rememberSaveable { mutableStateOf(false) }
-                        BookmarkColorFilterItem(selected = bookmarkColorFilter, onClick = { showColorFilter = true })
                         if (showColorFilter) {
                             BookmarkColorFilterDialog(
-                                selected = bookmarkColorFilter,
+                                included = bookmarkColorFilter,
+                                excluded = bookmarkColorFilterExclude,
                                 onChanged = onBookmarkColorFilterChanged,
                                 onDismissRequest = { showColorFilter = false },
                             )
@@ -158,6 +160,7 @@ private fun ColumnScope.FilterPage(
     onBookmarkedFilterChanged: (TriState) -> Unit,
     scanlatorFilterActive: Boolean,
     onScanlatorFilterClicked: () -> Unit,
+    onBookmarkColorEdit: (() -> Unit)?,
 ) {
     TriStateItem(
         label = stringResource(MR.strings.label_downloaded),
@@ -169,11 +172,19 @@ private fun ColumnScope.FilterPage(
         state = unreadFilter,
         onClick = onUnreadFilterChanged,
     )
-    TriStateItem(
-        label = stringResource(MR.strings.action_filter_bookmarked),
-        state = bookmarkedFilter,
-        onClick = onBookmarkedFilterChanged,
-    )
+    if (onBookmarkColorEdit == null) {
+        TriStateItem(
+            label = stringResource(MR.strings.action_filter_bookmarked),
+            state = bookmarkedFilter,
+            onClick = onBookmarkedFilterChanged,
+        )
+    } else {
+        BookmarkColorFilterRow(
+            state = bookmarkedFilter,
+            onBookmarkedClick = onBookmarkedFilterChanged,
+            onEditClick = onBookmarkColorEdit,
+        )
+    }
     ScanlatorFilterItem(
         active = scanlatorFilterActive,
         onClick = onScanlatorFilterClicked,

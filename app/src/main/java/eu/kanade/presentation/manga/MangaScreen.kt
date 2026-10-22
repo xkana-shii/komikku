@@ -113,6 +113,8 @@ import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.chapter.service.ChapterBookmarks
+import tachiyomi.domain.chapter.service.bookmarkTarget
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
@@ -499,10 +501,6 @@ private fun MangaScreenSmallImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
-                // KNS -->
-                onClickBlacklist = chapterVisibilityActions.onOpenBlacklist,
-                onClickScanlatorPreferences = chapterVisibilityActions.onOpenScanlatorPreferences,
-                // KNS <--
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
                 // KMK -->
@@ -965,10 +963,6 @@ private fun MangaScreenLargeImpl(
                 onClickRefresh = onRefresh,
                 onClickMigrate = onMigrateClicked,
                 onClickEditNotes = onEditNotesClicked,
-                // KNS -->
-                onClickBlacklist = chapterVisibilityActions.onOpenBlacklist,
-                onClickScanlatorPreferences = chapterVisibilityActions.onOpenScanlatorPreferences,
-                // KNS <--
                 onCancelActionMode = { onAllChapterSelected(false) },
                 // SY -->
                 onClickEditInfo = onEditInfoClicked.takeIf { state.manga.favorite },
@@ -1323,7 +1317,10 @@ private fun SharedMangaBottomActionMenu(
             selected.fastAny { it.downloadState == Download.State.DOWNLOADED }
         },
         // KNS -->
-        onBookmarkColorClicked = { chapterVisibilityActions.onBookmarkColor(selected.fastMap { it.chapter }) },
+        onBookmarkColorSelected = { color ->
+            chapterVisibilityActions.onBookmarkColor(selected.fastMap { it.chapter }, color)
+        },
+        bookmarkColor = ChapterBookmarks.currentColor(selected.fastMap { it.chapter.bookmarkTarget() }),
         onBlacklistClicked = {
             chapterVisibilityActions.onBlacklist(selected.fastMap { it.chapter })
         }.takeIf { selected.fastAny { !it.blacklisted } },

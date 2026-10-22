@@ -44,6 +44,8 @@ import eu.kanade.presentation.browse.components.BaseBrowseItem
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.browse.components.ExtensionPill
 import eu.kanade.presentation.browse.components.label
+import eu.kanade.presentation.browse.components.languageFlagPrefix
+import eu.kanade.presentation.browse.components.showLanguageFlags
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
@@ -448,8 +450,10 @@ private fun ExtensionItemMetadata(
                 ?.takeIf { it.isNotEmpty() }
                 // KMK -->
                 ?.let { lang ->
-                    FlagEmoji.getEmojiLangFlag(lang) + " " +
+                    // KNS --> the flag follows the "Show language flags" setting
+                    languageFlagPrefix(lang, showLanguageFlags()) +
                         LocaleHelper.getSourceDisplayName(lang, LocalContext.current)
+                    // KNS <--
                 },
             // KMK <--
             extension.versionName.takeIf { it.isNotEmpty() },

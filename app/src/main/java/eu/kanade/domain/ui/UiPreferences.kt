@@ -57,6 +57,11 @@ class UiPreferences(
 
     val imagesInDescription = preferenceStore.getBoolean("pref_render_images_description", true)
 
+    // KNS --> restored from the previous personal fork, same key, so a saved choice applies again
+    /** Show language flags next to language names in Browse; off shows the language name or code only. */
+    val showFlags = preferenceStore.getBoolean("show_flags", true)
+    // KNS <--
+
     // SY -->
 
     val expandFilters = preferenceStore.getBoolean("eh_expand_filters", false)

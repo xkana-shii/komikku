@@ -12,8 +12,9 @@ import tachiyomi.domain.manga.repository.MangaRepository
 /**
  * History counts under the app-wide chapter visibility rule. The History query counts every chapter;
  * for manga with a blacklist or Smart Scanlator Merge the total and read counts are recomputed from the
- * visible chapters (respecting the manga's bookmark filter like the query does), so "unfinished" means
- * the same as in the chapter list. Entries without a rule are returned as they are.
+ * visible chapters (without excluded scanlators and respecting the manga's bookmark filter, like the
+ * query does), so "unfinished" and the unread dot mean the same as in the chapter list. Entries without
+ * a rule are returned as they are.
  */
 @Inject
 class HistoryVisibleCounts(
@@ -28,9 +29,15 @@ class HistoryVisibleCounts(
             .filter(chapterVisibility::hasRules)
         if (withRules.isEmpty()) return history
 
-        val chapters = chapterRepository.getChaptersByMangaIds(withRules.map { it.id }).groupBy(Chapter::mangaId)
+        val ids = withRules.map { it.id }
+        val chapters = chapterRepository.getChaptersByMangaIds(ids).groupBy(Chapter::mangaId)
+        // Excluded scanlators are left out first, as the chapter list and the History query do; otherwise
+        // Smart Merge could pick an excluded release as the visible one and report it unread.
+        val excluded = mangaRepository.getExcludedScanlatorsByMangaIds(ids)
         val counts = withRules.associate { manga ->
-            val visible = chapterVisibility.visibleChapters(manga, chapters[manga.id].orEmpty())
+            val excludedScanlators = excluded[manga.id].orEmpty().toSet()
+            val listed = chapters[manga.id].orEmpty().filterNot { it.scanlator in excludedScanlators }
+            val visible = chapterVisibility.visibleChapters(manga, listed)
                 .filter { it.matchesBookmarkFilter(manga) }
             manga.id to (visible.size.toLong() to visible.count { it.read }.toLong())
         }

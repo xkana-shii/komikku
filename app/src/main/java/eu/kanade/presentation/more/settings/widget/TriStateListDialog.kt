@@ -45,6 +45,7 @@ fun <T> TriStateListDialog(
     initialChecked: List<T>,
     initialInversed: List<T>,
     itemLabel: @Composable (T) -> String,
+    itemLeadingContent: (@Composable (T) -> Unit)? = null,
     onDismissRequest: () -> Unit,
     onValueChanged: (newIncluded: List<T>, newExcluded: List<T>) -> Unit,
 ) {
@@ -110,6 +111,7 @@ fun <T> TriStateListDialog(
                                         },
                                     ),
                                 )
+                                itemLeadingContent?.invoke(item)
                                 Text(text = itemLabel(item))
                             }
                         }

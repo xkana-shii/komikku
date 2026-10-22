@@ -35,6 +35,14 @@ class UpdatesPreferences(
         TriState.DISABLED,
     )
 
+    // KNS --> Independent tri-state bookmark-color filters for Updates.
+    val filterBookmarkColors = preferenceStore.getStringSet("pref_filter_updates_bookmark_colors", emptySet())
+    val filterBookmarkColorsExclude = preferenceStore.getStringSet(
+        "pref_filter_updates_bookmark_colors_exclude",
+        emptySet(),
+    )
+    // KNS <--
+
     val filterExcludedScanlators = preferenceStore.getBoolean(
         "pref_filter_updates_hide_excluded_scanlators",
         false,

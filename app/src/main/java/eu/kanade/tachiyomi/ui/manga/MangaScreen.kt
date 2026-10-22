@@ -55,13 +55,11 @@ import eu.kanade.presentation.manga.ChapterVisibilityActions
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.manga.EditCoverAction
 import eu.kanade.presentation.manga.MangaScreen
-import eu.kanade.presentation.manga.components.BlacklistedChaptersDialog
-import eu.kanade.presentation.manga.components.BookmarkColorDialog
 import eu.kanade.presentation.manga.components.ClearMangaDialog
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
-import eu.kanade.presentation.manga.components.ScanlatorFilterDialog
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDialog
+import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
 import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.more.settings.screen.SettingsEhScreen
 import eu.kanade.presentation.theme.TachiyomiTheme
@@ -119,7 +117,6 @@ import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.SequelPrequelEntry
@@ -415,9 +412,7 @@ class MangaScreen(
             chapterVisibilityActions = ChapterVisibilityActions(
                 onBlacklist = viewModel::blacklistChapters,
                 onUnblacklist = viewModel::unblacklistChapters,
-                onBookmarkColor = viewModel::showBookmarkColorDialog,
-                onOpenBlacklist = viewModel::showBlacklistDialog,
-                onOpenScanlatorPreferences = viewModel::showScanlatorPreferencesDialog,
+                onBookmarkColor = viewModel::setBookmarkColor,
             ),
             // KNS <--
             onChapterSwipe = viewModel::chapterSwipe,
@@ -493,7 +488,9 @@ class MangaScreen(
             // KMK <--
         )
 
-        var showScanlatorsDialog by remember { mutableStateOf(false) }
+        // KNS --> the scanlator preferences / blacklist dialog, shown above the chapter filters
+        var scanlatorPreferences by remember { mutableStateOf<MangaViewModel.ScanlatorPreferencesData?>(null) }
+        // KNS <--
 
         val onDismissRequest = {
             viewModel.dismissDialog()
@@ -568,9 +565,12 @@ class MangaScreen(
                 onSetAsDefault = viewModel::setCurrentSettingsAsDefault,
                 onResetToDefault = viewModel::resetToDefaultSettings,
                 scanlatorFilterActive = successState.scanlatorFilterActive,
-                onScanlatorFilterClicked = { showScanlatorsDialog = true },
+                // KNS --> the Scanlator entry opens the combined scanlator preferences / blacklist dialog
+                onScanlatorFilterClicked = { scope.launch { scanlatorPreferences = viewModel.loadScanlatorPreferences() } },
+                // KNS <--
                 // KNS -->
                 bookmarkColorFilter = successState.bookmarkColorFilter,
+                bookmarkColorFilterExclude = successState.bookmarkColorFilterExclude,
                 onBookmarkColorFilterChanged = viewModel::setBookmarkColorFilter,
                 // KNS <--
             )
@@ -687,38 +687,6 @@ class MangaScreen(
                 )
             }
             // KMK <--
-            // KNS -->
-            is MangaViewModel.Dialog.BlacklistedChapters -> {
-                BlacklistedChaptersDialog(
-                    entries = dialog.entries.map { it.key to it.chapters },
-                    hideBlacklisted = successState.hideBlacklistedChapters,
-                    onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
-                    onRemove = viewModel::removeBlacklistEntries,
-                    onDismissRequest = onDismissRequest,
-                )
-            }
-            is MangaViewModel.Dialog.BookmarkColor -> {
-                BookmarkColorDialog(
-                    current = dialog.chapters
-                        .map { if (it.bookmark) BookmarkColor.fromValue(it.bookmarkColor) else null }
-                        .distinct()
-                        .singleOrNull(),
-                    onSelect = { viewModel.setBookmarkColor(dialog.chapters, it) },
-                    onDismissRequest = onDismissRequest,
-                )
-            }
-            is MangaViewModel.Dialog.ScanlatorPreferences -> {
-                ScanlatorPreferencesDialog(
-                    scanlators = dialog.scanlators,
-                    priority = dialog.priority,
-                    smartMergeOverride = dialog.smartMergeOverride,
-                    globalSmartMerge = dialog.globalSmartMerge,
-                    rangeRules = dialog.rangeRules,
-                    onConfirm = viewModel::setScanlatorPreferences,
-                    onDismissRequest = onDismissRequest,
-                )
-            }
-            // KNS <--
         }
 
         // KNS -->
@@ -747,14 +715,28 @@ class MangaScreen(
         }
         // KNS <--
 
-        if (showScanlatorsDialog) {
-            ScanlatorFilterDialog(
-                availableScanlators = successState.availableScanlators,
-                excludedScanlators = successState.excludedScanlators,
-                onDismissRequest = { showScanlatorsDialog = false },
-                onConfirm = viewModel::setExcludedScanlators,
+        // KNS -->
+        scanlatorPreferences?.let { data ->
+            ScanlatorPreferencesDialog(
+                initial = remember(data) {
+                    ScanlatorPreferencesDraft.create(
+                        scanlators = data.scanlators,
+                        priority = data.priority,
+                        excluded = data.excludedScanlators,
+                        smartMergeOverride = data.smartMergeOverride,
+                        rangeRules = data.rangeRules,
+                        blacklist = data.blacklist.map { ScanlatorPreferencesDraft.BlacklistItem(it.key, it.chapters) },
+                    )
+                },
+                globalSmartMerge = data.globalSmartMerge,
+                hideBlacklisted = successState.hideBlacklistedChapters,
+                onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
+                onChanges = viewModel::applyScanlatorPreferenceChanges,
+                onDismissRequest = { scanlatorPreferences = null },
+                scanlatorStats = data.scanlatorStats,
             )
         }
+        // KNS <--
     }
 
     private fun continueReading(context: Context, unreadChapter: Chapter?) {

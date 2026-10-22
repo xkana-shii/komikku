@@ -44,9 +44,12 @@ import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.theme.colorscheme.AndroidViewColorScheme
 import eu.kanade.presentation.track.components.TrackLogoIcon
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import eu.kanade.tachiyomi.data.track.model.autofillEligible
+import eu.kanade.tachiyomi.data.track.model.autofillStatusSelection
+import eu.kanade.tachiyomi.data.track.model.hasAutofillData
+import eu.kanade.tachiyomi.data.track.model.mergeAutofillTags
 import eu.kanade.tachiyomi.databinding.EditMangaDialogBinding
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.lang.chop
@@ -62,6 +65,7 @@ import eu.kanade.tachiyomi.widget.materialdialogs.setTextEdit
 import eu.kanade.tachiyomi.widget.materialdialogs.setTitle
 import exh.util.dropBlank
 import exh.util.trimOrNull
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import logcat.LogPriority
@@ -72,6 +76,7 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.model.Track
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.source.local.isLocal
@@ -184,7 +189,9 @@ fun EditMangaDialog(
             onDismissRequest = { showTrackerSelectionDialogue.value = false },
             onTrackerSelect = { tracker, track ->
                 scope.launch {
-                    autofillFromTracker(binding!!, track, tracker)
+                    // KNS -->
+                    autofillFromTracker(binding!!, track, tracker, scope, colorScheme)
+                    // KNS <--
                 }
             },
         )
@@ -391,43 +398,105 @@ private fun onViewCreated(
     binding.resetInfo.setOnClickListener { resetInfo(manga, binding, scope, colorScheme) }
     binding.autofillFromTracker.setOnClickListener {
         scope.launch {
-            getTrackers(manga, binding, context, getTracks, trackerManager, tracks, showTrackerSelectionDialogue)
+            getTrackers(
+                manga,
+                binding,
+                context,
+                getTracks,
+                trackerManager,
+                tracks,
+                showTrackerSelectionDialogue,
+                // KNS -->
+                scope,
+                colorScheme,
+                // KNS <--
+            )
         }
     }
 }
 
-private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, context: Context, getTracks: GetTracks, trackerManager: TrackerManager, tracks: MutableState<List<Pair<Track, Tracker>>>, showTrackerSelectionDialogue: MutableState<Boolean>) {
-    tracks.value = getTracks.await(manga.id).mapNotNull { track ->
+private suspend fun getTrackers(
+    manga: Manga,
+    binding: EditMangaDialogBinding,
+    context: Context,
+    getTracks: GetTracks,
+    trackerManager: TrackerManager,
+    tracks: MutableState<List<Pair<Track, Tracker>>>,
+    showTrackerSelectionDialogue: MutableState<Boolean>,
+    // KNS -->
+    scope: CoroutineScope,
+    colorScheme: AndroidViewColorScheme,
+    // KNS <--
+) {
+    val bound = getTracks.await(manga.id).mapNotNull { track ->
         track to (trackerManager.get(track.trackerId) ?: return@mapNotNull null)
     }
-        .filterNot { (_, tracker) -> tracker is EnhancedTracker }
+    // KNS --> by capability (and login), so MangaBaka is offered and trackers without metadata are not
+    tracks.value = bound.autofillEligible()
 
-    if (tracks.value.isEmpty()) {
+    if (bound.isEmpty()) {
         context.toast(context.stringResource(SYMR.strings.entry_not_tracked))
         return
     }
+    if (tracks.value.isEmpty()) {
+        context.toast(context.stringResource(KMR.strings.autofill_no_eligible_tracker))
+        return
+    }
+    // KNS <--
 
     if (tracks.value.size > 1) {
         showTrackerSelectionDialogue.value = true
         return
     }
 
-    autofillFromTracker(binding, tracks.value.first().first, tracks.value.first().second)
+    autofillFromTracker(binding, tracks.value.first().first, tracks.value.first().second, scope, colorScheme)
 }
 
 private fun setTextIfNotBlank(field: (String) -> Unit, value: String?) {
     value?.takeIf { it.isNotBlank() }?.let { field(it) }
 }
 
-private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: Track, tracker: Tracker) {
+/**
+ * Fills the editor from [tracker]'s series metadata without saving: text fields with a value replace
+ * the editor's, fetched tags are added to the current ones, and a known publication status is
+ * selected. Missing values leave the editor as it is; Save or Cancel decides as usual.
+ */
+private suspend fun autofillFromTracker(
+    binding: EditMangaDialogBinding,
+    track: Track,
+    tracker: Tracker,
+    // KNS -->
+    scope: CoroutineScope,
+    colorScheme: AndroidViewColorScheme,
+    // KNS <--
+) {
     try {
         val trackerMangaMetadata = tracker.getMangaMetadata(track)
+        // KNS -->
+        if (!trackerMangaMetadata.hasAutofillData()) {
+            binding.root.context.toast(binding.root.context.stringResource(KMR.strings.autofill_no_metadata, tracker.name))
+            return
+        }
+        // KNS <--
 
         setTextIfNotBlank(binding.title::setText, trackerMangaMetadata.title)
         setTextIfNotBlank(binding.mangaAuthor::setText, trackerMangaMetadata.authors)
         setTextIfNotBlank(binding.mangaArtist::setText, trackerMangaMetadata.artists)
         setTextIfNotBlank(binding.thumbnailUrl::setText, trackerMangaMetadata.thumbnailUrl)
         setTextIfNotBlank(binding.mangaDescription::setText, trackerMangaMetadata.description)
+        // KNS -->
+        if (!trackerMangaMetadata.tags.isNullOrEmpty()) {
+            binding.mangaGenresTags.setChips(
+                mergeAutofillTags(binding.mangaGenresTags.getTextStrings(), trackerMangaMetadata.tags),
+                scope,
+                colorScheme,
+            )
+        }
+        autofillStatusSelection(trackerMangaMetadata.status)?.let(binding.status::setSelection)
+    } catch (e: CancellationException) {
+        // The dialog was closed while fetching: nothing to report.
+        throw e
+        // KNS <--
     } catch (e: Throwable) {
         tracker.logcat(LogPriority.ERROR, e)
         binding.root.context.toast(
