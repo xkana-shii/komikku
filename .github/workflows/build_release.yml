@@ -141,6 +141,8 @@ jobs:
 
       - name: Check code format
         run: ./gradlew spotlessCheck
+        env:
+          MIHON_GITHUB_RELEASE: 'false'
 
       - name: Build app
         run: ./gradlew assembleRelease -Pdist=github ${{ steps.opt_secrets.outputs.telemetry_flag }} -PdevSecret="${{ secrets.DEV_SECRETS }}"
@@ -152,6 +154,8 @@ jobs:
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
+        env:
+          MIHON_GITHUB_RELEASE: 'false'
 
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
