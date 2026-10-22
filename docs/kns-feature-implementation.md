@@ -1313,3 +1313,22 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
   testDebugUnitTest (app 336 with 1 skipped, data 93, domain 198; 0 failures), assembleDebug, assembleRelease,
   `git diff --check`. Not verified on a device.
+
+### Batch 22 — Komi-kun sync (#62, #63)
+
+- **Range examined:** `codex/komikun-foundation..komikun/master` @ `a484b6b6a7` (44 commits not in the branch's
+  history). 32 are integrated as `-x` picks or patch-equivalent; 6 were already `X` in `cherrypick_log.md` (CI,
+  branding, icon, MAL client). Boundary: `e4bf388abc` (#61) was the last integrated commit. New: 6.
+- **Picked:** `de600a93f6` (#62, restore state) — conflicts in `RestoredManga` (kept `forkState` and the two new
+  inclusion markers side by side) and `AGENTS.md` (kept this guide's steps, added the protobuf rule as step 8).
+  `96ce084c47` (#63, pinned-source replacement) — `PreferenceRestorer`: the fork writes one batch (restore crash fix),
+  so `restorePinnedSourcesPreference` returns the set to write (null = leave the pins) instead of writing it; the
+  app-state skip and the local-id skip both apply. Komi-kun's restorer test moved to `PreferenceRestorerSyncTest`
+  (both test classes had the same name) and checks the batch instead of direct writes.
+- **Not applicable (`X`):** `3b8eecea85` (OpenCode review workflow), `c973ed68e1` and `7d7fe387fb` (Komi-kun's Renovate
+  config); `a484b6b6a7` is a Renovate commit, excluded from the log by configuration.
+- **KNS:** `AGENTS.md` lists this fork's shipped proto numbers and reserves `20000-20999`; `BackupProtoNumberTest` pins
+  them. Safety ref: `backup/pre-kun-sync-20261021`.
+- **Validation:** all exit 0 — spotlessApply, spotlessCheck, generateSqlDelightInterface, verifyDebugDatabaseMigration,
+  testDebugUnitTest (app 389 with 1 skipped, data 119, domain 198; 0 failures), assembleDebug, assembleRelease,
+  `git diff --check`. Sync and restore not exercised on a device.

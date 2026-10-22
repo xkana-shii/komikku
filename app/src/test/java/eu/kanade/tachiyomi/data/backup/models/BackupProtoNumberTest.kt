@@ -23,6 +23,22 @@ class BackupProtoNumberTest {
         assertEquals(10001, numbers["mergedMangaReferencesIncluded"])
     }
 
+    // KNS -->
+    @Test
+    fun `fork backup fields keep the previous personal fork's proto numbers`() {
+        val manga = protoNumbers(BackupManga.serializer().descriptor)
+        assertEquals(614, manga["scanlatorPriority"])
+        assertEquals(615, manga["blacklistedChapters"])
+        assertEquals(616, manga["scanlatorRangeRules"])
+        assertEquals(618, manga["smartScanlatorMergeOverride"])
+        assertEquals(620, manga["scanlatorSettingsPresent"])
+
+        val chapter = protoNumbers(BackupChapter.serializer().descriptor)
+        assertEquals(14, chapter["bookmarkColor"])
+        assertEquals(15, chapter["fillermark"])
+    }
+    // KNS <--
+
     private fun protoNumbers(descriptor: SerialDescriptor): Map<String, Int> =
         (0 until descriptor.elementsCount)
             .mapNotNull { index ->

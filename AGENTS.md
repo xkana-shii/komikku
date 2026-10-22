@@ -314,6 +314,17 @@ Current komi-kun allocations:
 - `BackupManga.customInfoIncluded` = `10000`
 - `BackupManga.mergedMangaReferencesIncluded` = `10001`
 
+### This fork's (KNS) fields
+
+These numbers were shipped by the previous personal fork; they stay so its backups restore, and are
+guarded by `BackupProtoNumberTest`:
+
+- `BackupManga`: `scanlatorPriority` `614`, `blacklistedChapters` `615`, `scanlatorRangeRules` `616`,
+  `smartScanlatorMergeOverride` `618`, `scanlatorSettingsPresent` `620` (`613`, `617`, `619` are not used here).
+- `BackupChapter`: `bookmarkColor` `14`, `fillermark` `15` (read only). They sit inside Mihon's range; check
+  every Mihon backup-model change for a collision.
+- New KNS fields use `20000-20999` (same per-model hundreds as the komi-kun block), never `10000-10999`.
+
 Rules:
 
 - Never allocate a KUN field below `10000`; use the reserved block.

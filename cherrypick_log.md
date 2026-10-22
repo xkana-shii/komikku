@@ -4,22 +4,35 @@
 <!-- Only edit the Status and Notes columns; everything else is regenerated on every run. -->
 
 Commits from main upstream **mihon** and additional **tachiyomiSY**, **komikku**, **komikun** since **2024-01-01** (authors matching `renovate` excluded), checked against `codex/komikun-foundation`.
-Last updated **2026-10-20** from mihon `mihon/main` @ `487c313d31`, tachiyomiSY `tachiyomiSY/master` @ `5a469745d3`, komikku `komikku/master` @ `1656575e8f`, komikun `komikun/master` @ `9215170d59`.
+Last updated **2026-10-21** from mihon `mihon/main` @ `d001e6f210`, tachiyomiSY `tachiyomiSY/master` @ `a5187bdc9a`, komikku `komikku/master` @ `1656575e8f`, komikun `komikun/master` @ `a484b6b6a7`.
 How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills/cherrypick-log/README.md).
 
 **Status:** `O` cherry-picked · `?` maybe, needs review (includes commits that cancel each other out, flagged by the script) · empty = not found · `X` won't pick (set by hand, or version-bump-only commits). **Upstream** `↳ name` = copy of the mihon commit right below it. **Details** = how pairing / status was found (regenerated); **Notes** = yours, kept.
 
 | Upstream | O | ? | X | empty | other | total |
 |---|--:|--:|--:|--:|--:|--:|
-| mihon | 871 | 28 | 65 | 353 | 0 | 1317 |
-| tachiyomiSY | 820 | 1 | 15 | 182 | 0 | 1018 |
+| mihon | 871 | 28 | 65 | 356 | 0 | 1320 |
+| tachiyomiSY | 823 | 1 | 15 | 231 | 0 | 1070 |
 | komikku | 10 | 0 | 0 | 0 | 0 | 10 |
-| komikun | 30 | 0 | 6 | 0 | 0 | 36 |
+| komikun | 34 | 0 | 6 | 3 | 0 | 43 |
 
 ## Commits
 
 | Status | Commit | Upstream | Date | Title | Author | Details | Notes |
 |:-:|---|---|---|---|---|---|---|
+|   | [d001e6f210](https://github.com/mihonapp/mihon/commit/d001e6f210e6a077a30dd9a1392573a3225bba2f) | mihon | 2026-10-21 | Move the download queue list to Compose | AntsyLich |  |  |
+|   | [0ee3fa81d7](https://github.com/jobobby04/TachiyomiSY/commit/0ee3fa81d77032c21a30181c6d8e097e17da57cc) | tachiyomiSY | 2026-10-20 | Remove unused drawables | AntsyLich |  |  |
+|   | [3f098de027](https://github.com/jobobby04/TachiyomiSY/commit/3f098de027cc96652cf48a3c456a6660ecaae193) | tachiyomiSY | 2026-10-20 | Move SY icons to Material Symbols in icons-sy | AntsyLich |  |  |
+|   | [237980dda4](https://github.com/jobobby04/TachiyomiSY/commit/237980dda4d1343cc7970530276cc925deb7b83c) | ↳ tachiyomiSY | 2026-10-20 | Fix the More tab icon's exit animation | AntsyLich | pick of mihon `2ca6961e1c` [marker] |  |
+|   | [2ca6961e1c](https://github.com/mihonapp/mihon/commit/2ca6961e1cced35ea757de804ab78af13977f09c) | mihon | 2026-10-21 | Fix the More tab icon's exit animation | AntsyLich |  |  |
+|   | [0864ce0f46](https://github.com/mihonapp/mihon/commit/0864ce0f468a154f4da242cf080bf6d1baf7a58b) | mihon | 2026-10-21 | Redact some sensitive headers in logcat (#4156) | MajorTanya |  |  |
+| X | [7d7fe387fb](https://github.com/komi-kun/komi-kun/commit/7d7fe387fb1fe6fcf164ffee6188cd6fbca31314) | komikun | 2026-10-21 | chore(deps): enable semantic commits for Renovate (#67) | Luca Auer |  | Renovate semantic commits for Komi-kun's config; not applicable |
+| X | [c973ed68e1](https://github.com/komi-kun/komi-kun/commit/c973ed68e1434bf95eecbc63a7628e6aa5be77ae) | komikun | 2026-10-21 | chore(deps): introduce self-contained Renovate config (#65) | Luca Auer |  | Komi-kun's Renovate config; this fork keeps its own dependency tooling |
+| X | [3b8eecea85](https://github.com/komi-kun/komi-kun/commit/3b8eecea8578bba0eaa4daa1e2ce9861ff22c946) | komikun | 2026-10-21 | ci: make OpenCode reviews resilient to the step budget (#64) | Luca Auer |  | Komi-kun's OpenCode review workflow; this fork does not use it (workflows are fork-owned) |
+| O | [96ce084c47](https://github.com/komi-kun/komi-kun/commit/96ce084c476dc95b25c08cd5ab742bcd4569e646) | komikun | 2026-10-21 | feat(sync): add opt-in pinned-source replacement (#63) | Luca Auer | codex/komikun-foundation `5dcbd93372` [hash of komikun, title+author] |  |
+| O | [de600a93f6](https://github.com/komi-kun/komi-kun/commit/de600a93f6b3319512ccf1b2ebde8b6447445391) | komikun | 2026-10-21 | fix(sync): complete client-side restore state (#62) | Luca Auer | codex/komikun-foundation `7875089c58` [hash of komikun, title+author] |  |
+| O | [e4bf388abc](https://github.com/komi-kun/komi-kun/commit/e4bf388abcdd781136886442caf47a4206ae382f) | komikun | 2026-10-21 | fix(sync): gate and reconcile tracking and history restores (#61) | Luca Auer | codex/komikun-foundation `f5965c217c` [title+author] |  |
+| O | [6f840dcd9c](https://github.com/komi-kun/komi-kun/commit/6f840dcd9c1589cfe38b2f3d24628ade44999d35) | komikun | 2026-10-21 | fix(sync): restore clearable manga fields and scanlator filters (#60) | Luca Auer | codex/komikun-foundation `0335264fe4` [title+author] |  |
 | O | [9215170d59](https://github.com/komi-kun/komi-kun/commit/9215170d59b7bd99c5f9fca4396ebe314f66efa2) | komikun | 2026-10-21 | fix(backup): preserve feed identity and extension-store metadata (#59) | Luca Auer | codex/komikun-foundation `ff21b56966` [hash of komikun, title+author] | Picked with -x at the maintainer's request (2026-10-20) |
 | O | [6611a4dbb5](https://github.com/komi-kun/komi-kun/commit/6611a4dbb5cc92ffc3cb8404fb847cefced3e424) | komikun | 2026-10-20 | fix(sync): restore chapter metadata on existing chapters (#58) | Luca Auer | codex/komikun-foundation `a3ccc29298` [hash of komikun, title+author] |  |
 | X | [9853e52eb3](https://github.com/komi-kun/komi-kun/commit/9853e52eb3310a30243d72cc6fb4b2d4e7961285) | komikun | 2026-10-20 | ci: add OpenCode automated PR review workflow (#57) | Luca Auer |  | Foundation 2026-10-20: intentionally skipped (maintainer decision) - OpenCode automated PR-review workflow is Komi-kun repository infrastructure, not app functionality; this fork's workflows stay unchanged |
@@ -121,6 +134,7 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [36ec043a5c](https://github.com/mihonapp/mihon/commit/36ec043a5c28220cdd880dfd47dcb2f80fab8cc3) | mihon | 2026-10-10 | Delete downloads of duplicates read along with a chapter (#3030) | AntsyLich |  |  |
 |   | [0c1be369b0](https://github.com/mihonapp/mihon/commit/0c1be369b0fbb5413f3bc1c71914e4810a670db0) | mihon | 2026-10-10 | Ask to add an entry to the library before editing its cover (#2265) | AntsyLich |  |  |
 | O | [d1e71ab58f](https://github.com/mihonapp/mihon/commit/d1e71ab58ff21cf992be5e8be65754ea55149985) | mihon | 2026-10-09 | Bump webgpuviewer (#4051) | w |  |  |
+|   | [ccb33c8c74](https://github.com/jobobby04/TachiyomiSY/commit/ccb33c8c740dc0a877eb8d61b4b5c1b42ff4db9b) | ↳ tachiyomiSY | 2026-10-20 | Update icons and move remaining to Material Symbols (#4057) | AntsyLich | pick of mihon `a80027ff36` [marker] |  |
 | O | [a80027ff36](https://github.com/mihonapp/mihon/commit/a80027ff36d61661b24e16beb1c964f5bffbf12a) | mihon | 2026-10-09 | Update icons and move remaining to Material Symbols (#4057) | AntsyLich |  |  |
 | O | [dd46413e10](https://github.com/mihonapp/mihon/commit/dd46413e1017c145df660f0ac714fe30bff69d0e) | mihon | 2026-10-09 | List MangaBaka first among trackers | AntsyLich |  |  |
 | O | [ab7ee00c48](https://github.com/mihonapp/mihon/commit/ab7ee00c48ba1d514ecf73bfeb1e35e1faf23fa3) | mihon | 2026-10-07 | Fix tap navigation staying off after a cancelled button press (#3655) | 無字名3 |  |  |
@@ -226,26 +240,58 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [21af65b100](https://github.com/mihonapp/mihon/commit/21af65b10012f23e53dba9d01fd2474fcb810f7c) | mihon | 2026-09-04 | Fix unhelpful generic 401 error on AniList expiry (#3888) | MajorTanya |  |  |
 | O | [056d9baeeb](https://github.com/mihonapp/mihon/commit/056d9baeeba6b7f53c0638b3d30da72e71c159fa) | mihon | 2026-08-30 | Migrate composeGrid to new group ID (#3877) | 천재웅 |  |  |
 |   | [baad5c59bb](https://github.com/mihonapp/mihon/commit/baad5c59bb736e0a81b296ee33bdf2c9353761b6) | mihon | 2026-08-30 | Clean up some missed unused imports (#3876) | MajorTanya |  |  |
+|   | [ab55cd625d](https://github.com/jobobby04/TachiyomiSY/commit/ab55cd625d3d25971f05c8d7cf3cc63edcbe6a8a) | ↳ tachiyomiSY | 2026-10-20 | Use filled icon for library continue reading button | AntsyLich | pick of mihon `34a33ed4f8` [marker] |  |
 | O | [34a33ed4f8](https://github.com/mihonapp/mihon/commit/34a33ed4f8707ac49afd1e6faf877e1061cb5414) | mihon | 2026-08-30 | Use filled icon for library continue reading button | AntsyLich |  |  |
 | O | [7f342ca076](https://github.com/mihonapp/mihon/commit/7f342ca076fd23a3b52da750e10641f50d0c95a6) | mihon | 2026-08-29 | Use built-in DelegateLastClassLoader for extensions (#3874) | AntsyLich |  |  |
+|   | [472ffd6876](https://github.com/jobobby04/TachiyomiSY/commit/472ffd687628009c5b192a660f009982758b7f7b) | ↳ tachiyomiSY | 2026-10-20 | Switch to Material Symbols and use Valkyrie for ImageVector generation (#3873) | AntsyLich | pick of mihon `b695940114` [marker] |  |
 | O | [b695940114](https://github.com/mihonapp/mihon/commit/b695940114cc62e5d21b64efbf6bddf17408a681) | mihon | 2026-08-29 | Switch to Material Symbols and use Valkyrie for ImageVector generation (#3873) | AntsyLich |  |  |
 | O | [bb24e904a9](https://github.com/mihonapp/mihon/commit/bb24e904a9209b36e9d11168d200ae4151675369) | mihon | 2026-08-28 | Bump webgpuviewer, fix navigation directions and long strip bounds (#3870) | w |  |  |
+|   | [a5187bdc9a](https://github.com/jobobby04/TachiyomiSY/commit/a5187bdc9af672dc57a3c07ff85ca6939a2f2cd6) | tachiyomiSY | 2026-10-21 | Remove strings of the old migration list screen | AntsyLich |  |  |
+|   | [40efdb448e](https://github.com/jobobby04/TachiyomiSY/commit/40efdb448e17a22385a9c801334e80f5d66ec484) | tachiyomiSY | 2026-10-21 | Remove unused SY database queries | AntsyLich |  |  |
+|   | [9216142cef](https://github.com/jobobby04/TachiyomiSY/commit/9216142cef8fb4bfcbe7fd227246edcc4d108936) | tachiyomiSY | 2026-10-21 | Remove unused SY search helpers | AntsyLich |  |  |
+|   | [898d463b24](https://github.com/jobobby04/TachiyomiSY/commit/898d463b24cd99065ac8b18384ef4269420b435a) | tachiyomiSY | 2026-10-21 | Remove unused SY additions in shared code | AntsyLich |  |  |
+|   | [7d40efffbe](https://github.com/jobobby04/TachiyomiSY/commit/7d40efffbe0ead254f4ad01dd6f119c196c21bd9) | tachiyomiSY | 2026-10-21 | Remove the unused old migration list screen | AntsyLich |  |  |
+|   | [fbacb22dc2](https://github.com/jobobby04/TachiyomiSY/commit/fbacb22dc23ff66740a1c21b9ccc6bf0fcc52660) | tachiyomiSY | 2026-10-21 | Remove unused SY functions | AntsyLich |  |  |
+|   | [38fd1af533](https://github.com/jobobby04/TachiyomiSY/commit/38fd1af533abbabc383a2c0e5786a7c029a05afe) | tachiyomiSY | 2026-10-21 | Remove unused SY code | AntsyLich |  |  |
+|   | [6a9015fb42](https://github.com/jobobby04/TachiyomiSY/commit/6a9015fb42392c11584074c9751657cd38043822) | tachiyomiSY | 2026-10-21 | Remove unused SY resources | AntsyLich |  |  |
+|   | [bfc019859f](https://github.com/jobobby04/TachiyomiSY/commit/bfc019859fd522e13443d53ec193765131f984b2) | tachiyomiSY | 2026-10-21 | Remove unused SY strings | AntsyLich |  |  |
+|   | [fc7a899ae9](https://github.com/jobobby04/TachiyomiSY/commit/fc7a899ae91a369d9e4507be493e04094d583467) | tachiyomiSY | 2026-10-21 | Delete some unused layouts | Jobobby04 |  |  |
+|   | [5bbbee4e07](https://github.com/jobobby04/TachiyomiSY/commit/5bbbee4e0741078b36d1cecc2f174dc1dabb8531) | ↳ tachiyomiSY | 2026-10-21 | Make the source manager surface suspend (#3869) | AntsyLich | pick of mihon `5fadea61e7` [pr+title] |  |
 | O | [5fadea61e7](https://github.com/mihonapp/mihon/commit/5fadea61e75433a9db9fbd21eb90eec1199b53da) | mihon | 2026-08-28 | Make the source manager surface suspend (#3869) | AntsyLich |  | AI checked 2026-10-14: ported (cherry-pick trailer present) |
+|   | [bf6ffe61b8](https://github.com/jobobby04/TachiyomiSY/commit/bf6ffe61b834a8101d94ab845626c59d966d9f10) | tachiyomiSY | 2026-10-20 | Oops forgot these bindings, sorta important | Jobobby04 |  |  |
+|   | [b0958d0971](https://github.com/jobobby04/TachiyomiSY/commit/b0958d0971f7f4289bf536cdae2b1fb9e3a88541) | ↳ tachiyomiSY | 2026-10-20 | Bump webgpuviewer, imagedecoder, fixes (#3852) | w | pick of mihon `0854bde12e` [pr+title] |  |
 | O | [0854bde12e](https://github.com/mihonapp/mihon/commit/0854bde12ee777778a5927599860716e35720540) | mihon | 2026-08-26 | Bump webgpuviewer, imagedecoder, fixes (#3852) | w |  |  |
+|   | [57fb081b04](https://github.com/jobobby04/TachiyomiSY/commit/57fb081b043eb61712dddbefae9a72f7d6d5cc45) | ↳ tachiyomiSY | 2026-10-20 | Exit early in CloudflareInterceptor when cloudflare challenge is interactive (#3842) | tigeryu8900 | pick of mihon `ac249e3668` [pr+title] |  |
 | O | [ac249e3668](https://github.com/mihonapp/mihon/commit/ac249e3668a57f24782a49218834064459ba2d09) | mihon | 2026-08-23 | Exit early in CloudflareInterceptor when cloudflare challenge is interactive (#3842) | tigeryu8900 |  |  |
+|   | [883db3bcd5](https://github.com/jobobby04/TachiyomiSY/commit/883db3bcd586bb425e97cf98472e6d3a654c6940) | ↳ tachiyomiSY | 2026-10-20 | Bump webgpuviewer, fix animated images background color (#3843) | w | pick of mihon `e3813028bd` [pr+title] |  |
 | O | [e3813028bd](https://github.com/mihonapp/mihon/commit/e3813028bd0d3862905b21f9a7fa924c52be8046) | mihon | 2026-08-23 | Bump webgpuviewer, fix animated images background color (#3843) | w |  |  |
+|   | [0da93c8758](https://github.com/jobobby04/TachiyomiSY/commit/0da93c87587a8b5632afa1e685b00b0822fdfa68) | ↳ tachiyomiSY | 2026-10-20 | Wait for extensions to load before the list is propagated (#3841) | AntsyLich | pick of mihon `270b78ba95` [pr+title] |  |
 | O | [270b78ba95](https://github.com/mihonapp/mihon/commit/270b78ba952d5483e9ad4e16621e58510d1e036b) | mihon | 2026-08-22 | Wait for extensions to load before the list is propagated (#3841) | AntsyLich |  |  |
+|   | [35cb78515d](https://github.com/jobobby04/TachiyomiSY/commit/35cb78515d424446c80b7ba1c6cdda284478d052) | tachiyomiSY | 2026-10-20 | Build fix | Jobobby04 |  |  |
+|   | [ce4744cee1](https://github.com/jobobby04/TachiyomiSY/commit/ce4744cee192396043bb8466e44b99b77f1db6fc) | ↳ tachiyomiSY | 2026-10-20 | Limit vertical divider height in global search toolbar (#3839) | AntsyLich | pick of mihon `46c8f07c12` [pr+title] |  |
 | O | [46c8f07c12](https://github.com/mihonapp/mihon/commit/46c8f07c128ddbf146d00122fba8e424a8013173) | mihon | 2026-08-22 | Limit vertical divider height in global search toolbar (#3839) | AntsyLich |  |  |
+|   | [941cdd0a41](https://github.com/jobobby04/TachiyomiSY/commit/941cdd0a418ec7c3bca13ee0e57467aa18e4c1e0) | ↳ tachiyomiSY | 2026-10-20 | Use upstream scaffold (#3834) | AntsyLich | pick of mihon `a2c24ff042` [pr+title] |  |
 | O | [a2c24ff042](https://github.com/mihonapp/mihon/commit/a2c24ff0429ad2502b612c9ab1f2b09966629f73) | mihon | 2026-08-22 | Use upstream scaffold (#3834) | AntsyLich |  |  |
+|   | [84d8b9f231](https://github.com/jobobby04/TachiyomiSY/commit/84d8b9f2316c752c744c38d2177a6cbf60f9af07) | tachiyomiSY | 2026-10-20 | Cleanup | Jobobby04 |  |  |
+|   | [5b89f8dadd](https://github.com/jobobby04/TachiyomiSY/commit/5b89f8daddbefc72c96f285da83d0c03fc5f1448) | ↳ tachiyomiSY | 2026-10-20 | Migrate to Kitsu's GraphQL API (#3792) | MajorTanya | pick of mihon `31d3c23717` [pr+title] |  |
 | O | [31d3c23717](https://github.com/mihonapp/mihon/commit/31d3c23717dbdc49793910977eb423c55f52191b) | mihon | 2026-08-22 | Migrate to Kitsu's GraphQL API (#3792) | MajorTanya |  |  |
+|   | [d2c7418672](https://github.com/jobobby04/TachiyomiSY/commit/d2c74186720b47edadc78ed7cd6778b3fb631ffb) | ↳ tachiyomiSY | 2026-10-20 | Fix page loading for webgpuviewer and bump version (#3823) | w | pick of mihon `497e266256` [pr+title] |  |
 | O | [497e266256](https://github.com/mihonapp/mihon/commit/497e2662565c2727113125493a324465b9bc56ff) | mihon | 2026-08-20 | Fix page loading for webgpuviewer and bump version (#3823) | w |  |  |
+|   | [d051bc60fd](https://github.com/jobobby04/TachiyomiSY/commit/d051bc60fd06ac3f6b0007134067388002b57f25) | ↳ tachiyomiSY | 2026-10-20 | Use Shikimori's update endpoint (#3810) | MajorTanya | pick of mihon `0974e787ad` [pr+title] |  |
 | O | [0974e787ad](https://github.com/mihonapp/mihon/commit/0974e787adad22e572887ed2ef83b7d31ebeffc4) | mihon | 2026-08-21 | Use Shikimori's update endpoint (#3810) | MajorTanya |  |  |
+|   | [bce7dc30f5](https://github.com/jobobby04/TachiyomiSY/commit/bce7dc30f545035593530c9507e586e3e5a0b9b4) | ↳ tachiyomiSY | 2026-10-20 | Add support for using the user's chosen Kitsu rating scales (#3818) | MajorTanya | pick of mihon `01bfaa99ad` [pr+title] |  |
 | O | [01bfaa99ad](https://github.com/mihonapp/mihon/commit/01bfaa99ade3c0ed12b0894bfb0bb6c0c9bdbb98) | mihon | 2026-08-21 | Add support for using the user's chosen Kitsu rating scales (#3818) | MajorTanya |  |  |
+|   | [09ebe7fc5e](https://github.com/jobobby04/TachiyomiSY/commit/09ebe7fc5e08113812804ba5e28f938bfbabee99) | ↳ tachiyomiSY | 2026-10-20 | Trim MAL & MB `id:` query before lookup (#3793) | MajorTanya | pick of mihon `3cc0d2c324` [pr+title] |  |
 | O | [3cc0d2c324](https://github.com/mihonapp/mihon/commit/3cc0d2c324a2ef3c3d7b89b671e357a83a4e73fe) | mihon | 2026-08-17 | Trim MAL & MB `id:` query before lookup (#3793) | MajorTanya |  |  |
+|   | [f1827a7703](https://github.com/jobobby04/TachiyomiSY/commit/f1827a7703e7ebafd550ce079cb1e27f54a6ab61) | ↳ tachiyomiSY | 2026-10-20 | Fix fit height to in new renderer and bump webgpuviewer (#3801) | w | pick of mihon `f75f2598a3` [pr+title] |  |
 | O | [f75f2598a3](https://github.com/mihonapp/mihon/commit/f75f2598a3f42c1cd91eb09a7b1dfa1462d508b3) | mihon | 2026-08-17 | Fix fit height to in new renderer and bump webgpuviewer (#3801) | w |  |  |
+|   | [95e13d08b6](https://github.com/jobobby04/TachiyomiSY/commit/95e13d08b6cebebd6a6a61f667dd5cd54c0e0a10) | ↳ tachiyomiSY | 2026-10-20 | Add score info to MangaUpdates search results (#3795) | MajorTanya | pick of mihon `c613b52503` [pr+title] |  |
 | O | [c613b52503](https://github.com/mihonapp/mihon/commit/c613b52503d30029583fb876e3f0b06b211aed53) | mihon | 2026-08-17 | Add score info to MangaUpdates search results (#3795) | MajorTanya |  |  |
+|   | [e1706f358f](https://github.com/jobobby04/TachiyomiSY/commit/e1706f358f5108b786d43c84f3ef45c1a1b7ec1b) | ↳ tachiyomiSY | 2026-10-20 | Remove duplicate in strings.xml | AntsyLich | pick of mihon `3e98c15b74` [title+author] |  |
 |   | [3e98c15b74](https://github.com/mihonapp/mihon/commit/3e98c15b748de772044d65f3e65eb69ceae43218) | mihon | 2026-08-17 | Remove duplicate in strings.xml | AntsyLich |  |  |
+|   | [025a4a282b](https://github.com/jobobby04/TachiyomiSY/commit/025a4a282b27b65148f0b6866e307753b64104be) | ↳ tachiyomiSY | 2026-10-20 | Translations update from Hosted Weblate (#3701) | Weblate (bot) | pick of mihon `2b532ea0c4` [pr+title] |  |
 | O | [2b532ea0c4](https://github.com/mihonapp/mihon/commit/2b532ea0c406f4eff14a5074cec720fe97459ed8) | mihon | 2026-08-17 | Translations update from Hosted Weblate (#3701) | Weblate (bot) |  | AI checked 2026-10-20: content imported by the full translation sync |
+|   | [5d010c6611](https://github.com/jobobby04/TachiyomiSY/commit/5d010c66112ce06de3cb766e76d9e06c9c560391) | ↳ tachiyomiSY | 2026-10-20 | Migrate to Metro DI (#3608) | AntsyLich | pick of mihon `b2015d1ef3` [pr+title] |  |
 | O | [b2015d1ef3](https://github.com/mihonapp/mihon/commit/b2015d1ef3f954614ae4dccbb79c85a8df0e08fd) | mihon | 2026-08-16 | Migrate to Metro DI (#3608) | AntsyLich |  |  |
 | O | [b884b203a1](https://github.com/jobobby04/TachiyomiSY/commit/b884b203a1ea18ef094976e52522b5cd13b224b6) | ↳ tachiyomiSY | 2026-10-12 | Load extensions off the main thread (#3788) | AntsyLich | pick of mihon `5fa5f7e159` [pr+title] |  |
 | O | [5fa5f7e159](https://github.com/mihonapp/mihon/commit/5fa5f7e159aa9833c85f1d2f5706f14f3bfe3374) | mihon | 2026-08-16 | Load extensions off the main thread (#3788) | AntsyLich |  |  |
@@ -472,6 +518,8 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [41265cce32](https://github.com/mihonapp/mihon/commit/41265cce325e649d7f59c2fceabb954a174247ca) | mihon | 2026-06-23 | Query for new tachiyomix metadata from extensions (#3464) | AntsyLich | codex/komikun-foundation `df456e6eef` [hash of mihon, pr+title mihonapp/mihon#3464, title+author] |  |
 | O | [5e04ae4891](https://github.com/jobobby04/TachiyomiSY/commit/5e04ae48912cb17601b32d1b880c74463a6dae33) | ↳ tachiyomiSY | 2026-06-28 | Add option to open app settings from system settings (#3180) | J. Fronny | pick of mihon `176a5409b2` [pr+title] |  |
 | O | [176a5409b2](https://github.com/mihonapp/mihon/commit/176a5409b24989e1398c7af54bb73ddb0922fd28) | mihon | 2026-06-23 | Add option to open app settings from system settings (#3180) | J. Fronny |  |  |
+|   | [04564d87eb](https://github.com/jobobby04/TachiyomiSY/commit/04564d87eb9d347aeb66b4f9e63f22b004e6858a) | tachiyomiSY | 2026-10-20 | Use SY icon colors for app shortcuts | AntsyLich |  |  |
+|   | [f5e9e24628](https://github.com/jobobby04/TachiyomiSY/commit/f5e9e24628cb73e402f0935588abdae5eaab4821) | ↳ tachiyomiSY | 2026-10-20 | Update app shortcuts to use app icon color scheme (#2835) | NGB-Was-Taken | pick of mihon `f23170bfaa` [marker] |  |
 | O | [f23170bfaa](https://github.com/mihonapp/mihon/commit/f23170bfaa366c2a1869910534efba52edf24c3c) | mihon | 2026-06-23 | Update app shortcuts to use app icon color scheme (#2835) | NGB-Was-Taken |  |  |
 | O | [503177e7ab](https://github.com/jobobby04/TachiyomiSY/commit/503177e7abec977ef3dfe0fceef21f86b0066c05) | ↳ tachiyomiSY | 2026-06-28 | Prevent random `FileNotFoundException` when reading chapters (#3154) | Leodyver Semilla | pick of mihon `bc7f7e70a1` [pr+title] |  |
 | O | [bc7f7e70a1](https://github.com/mihonapp/mihon/commit/bc7f7e70a1de65f1f966e2e31f97457f8ac16ce6) | mihon | 2026-06-23 | Prevent random `FileNotFoundException` when reading chapters (#3154) | Leodyver Semilla |  |  |
@@ -664,6 +712,19 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | O | [8c480c6355](https://github.com/mihonapp/mihon/commit/8c480c6355d482ff25f4b81098a83988448d5631) | mihon | 2026-03-18 | Switch to AndroidX bundled sqlite driver (#3082) | AntsyLich | codex/komikun-foundation `70987d3cb7` [hash of mihon, in history as komikku, pr+title mihonapp/mihon#3082, title+author] |  |
 | O | [32e19736b9](https://github.com/jobobby04/TachiyomiSY/commit/32e19736b9f3347394d3c1a650ddd29f8ee36c08) | ↳ tachiyomiSY | 2026-03-18 | Address bundleOf deprecation (#3073) | MajorTanya | pick of mihon `33faa5a356` [pr+title]; codex/komikun-foundation `0f556ea9b5` [hash of mihon, pr+title mihonapp/mihon#3073, title+author] |  |
 | O | [33faa5a356](https://github.com/mihonapp/mihon/commit/33faa5a3562016a53d94b02aed69d95b10af5fc5) | mihon | 2026-03-18 | Address bundleOf deprecation (#3073) | MajorTanya | codex/komikun-foundation `0f556ea9b5` [hash of mihon, pr+title mihonapp/mihon#3073, title+author] |  |
+|   | [6dc1222edb](https://github.com/jobobby04/TachiyomiSY/commit/6dc1222edba7e3e71be7c17e89ae7ac224efd57d) | tachiyomiSY | 2026-10-21 | Add a cancel button to the edit info sheet | AntsyLich |  |  |
+|   | [79cfb78a03](https://github.com/jobobby04/TachiyomiSY/commit/79cfb78a030b2a2cb8fd415a48581e2d9d4700a3) | tachiyomiSY | 2026-10-21 | Hide the empty description on sources with metadata panels | AntsyLich |  |  |
+|   | [1b938bdf90](https://github.com/jobobby04/TachiyomiSY/commit/1b938bdf908c53ae7fc5e981e3bbed44b76780ca) | tachiyomiSY | 2026-10-21 | Remove leftovers from the Compose migration | AntsyLich |  |  |
+|   | [5a032b40f6](https://github.com/jobobby04/TachiyomiSY/commit/5a032b40f66790deb90c71a30823e8dea7a45bc1) | tachiyomiSY | 2026-10-21 | Use theme colors for E-Hentai browse ratings | AntsyLich |  |  |
+|   | [784c8f5ff5](https://github.com/jobobby04/TachiyomiSY/commit/784c8f5ff5b9d23578ab5edf1a07ecc67a3bf67a) | tachiyomiSY | 2026-10-21 | Move recommendation search sheet to Compose | AntsyLich |  |  |
+|   | [daec1a404d](https://github.com/jobobby04/TachiyomiSY/commit/daec1a404dc49fa411e84f940ec5cadc882e9ee0) | tachiyomiSY | 2026-10-21 | Move merge settings to Compose | AntsyLich |  |  |
+|   | [09c6644d50](https://github.com/jobobby04/TachiyomiSY/commit/09c6644d505e6027baf1cf5c75ccb70f21a8938e) | tachiyomiSY | 2026-10-21 | Move edit info to Compose | AntsyLich |  |  |
+|   | [0ccfc28513](https://github.com/jobobby04/TachiyomiSY/commit/0ccfc28513449e1b79b44908e3fe772e31a2a002) | tachiyomiSY | 2026-10-21 | Move metadata descriptions to Compose | AntsyLich |  |  |
+|   | [f56b4f977d](https://github.com/jobobby04/TachiyomiSY/commit/f56b4f977ddc2bbb35b11ceae9feb33fbf53ddc3) | tachiyomiSY | 2026-10-21 | Fix LANraragi metadata failing to parse on newer servers | AntsyLich |  |  |
+|   | [ca3e600a25](https://github.com/jobobby04/TachiyomiSY/commit/ca3e600a258f1770e04584b48539f8e79b42a511) | tachiyomiSY | 2026-10-21 | Fix LANraragi requesting details from the extension | AntsyLich |  |  |
+|   | [27a276465e](https://github.com/jobobby04/TachiyomiSY/commit/27a276465e80e8bdf7dfd7c8d8ff2ef7cec6f580) | tachiyomiSY | 2026-10-21 | Fix delegated sources not saving metadata | AntsyLich |  |  |
+| O | [84b66cf62d](https://github.com/jobobby04/TachiyomiSY/commit/84b66cf62db7862ed9b70d402bdf5fc0808935c9) | ↳ tachiyomiSY | 2026-10-21 | Revert "Bump workflows JDK to 21 (#3053)" | AntsyLich | pick of mihon `ce5820b496` [pr+title]; codex/komikun-foundation `06107dba9b` [hash of mihon, pr+title mihonapp/mihon#3053, title+author] |  |
+| O | [114b8c1527](https://github.com/jobobby04/TachiyomiSY/commit/114b8c1527c52cf63c48c3c97eade56f990a701d) | ↳ tachiyomiSY | 2026-10-21 | Bump workflows JDK to 21 (#3053) | AntsyLich | pick of mihon `ce5820b496` [marker]; codex/komikun-foundation `06107dba9b` [hash of mihon, pr+title mihonapp/mihon#3053, title+author] |  |
 | O | [ce5820b496](https://github.com/mihonapp/mihon/commit/ce5820b496dc6526b7afbf7344753c923802f737) | mihon | 2026-03-14 | Bump workflows JDK to 21 (#3053) | AntsyLich | codex/komikun-foundation `06107dba9b` [hash of mihon, pr+title mihonapp/mihon#3053, title+author] |  |
 | O | [b7d6cc8dd0](https://github.com/jobobby04/TachiyomiSY/commit/b7d6cc8dd00efa38363861f9dc131da9794823b1) | ↳ tachiyomiSY | 2026-03-18 | Add installation id for feature flags (#3052) | AntsyLich | pick of mihon `f6b2684323` [pr+title]; codex/komikun-foundation `2394ec3594` [hash of mihon, pr+title mihonapp/mihon#3052, title+author] |  |
 | O | [f6b2684323](https://github.com/mihonapp/mihon/commit/f6b2684323569ef0eb23e143cc5d65d7cc1aae3c) | mihon | 2026-03-10 | Add installation id for feature flags (#3052) | AntsyLich | codex/komikun-foundation `2394ec3594` [hash of mihon, pr+title mihonapp/mihon#3052, title+author] |  |
@@ -2035,7 +2096,8 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 |   | [1aa75f22d0](https://github.com/mihonapp/mihon/commit/1aa75f22d0761664af37a355c3a6660bed836502) | mihon | 2024-01-16 | Replace all Tachi links to Mihon | AntsyLich |  |  |
 |   | [91b7f0c1d0](https://github.com/jobobby04/TachiyomiSY/commit/91b7f0c1d0d8a64c1559857c54d46d9237178c1b) | ↳ tachiyomiSY | 2024-01-28 | Make tracker use Mihon's client | AntsyLich | pick of mihon `8c910f2a2c` [marker] |  |
 |   | [8c910f2a2c](https://github.com/mihonapp/mihon/commit/8c910f2a2c27dc339a4b05f03be3386a3afa2194) | mihon | 2024-01-16 | Make tracker use Mihon's client | AntsyLich |  |  |
-| O | [dfb3091e38](https://github.com/mihonapp/mihon/commit/dfb3091e380dda3e9bfb64bf5c9a685cf3a03d0e) | mihon | 2024-01-16 | Make the app Android 8+ | AntsyLich | codex/komikun-foundation `cdac438f1e` [hash of mihon, title+author] |  |
+| O | [a789987c65](https://github.com/jobobby04/TachiyomiSY/commit/a789987c652d5b4d4c56aef6509017d5b17d6135) | ↳ tachiyomiSY | 2026-10-20 | Move app shortcut adaptive icons out of drawable-v26 | AntsyLich | pick of mihon `dfb3091e38` [marker]; codex/komikun-foundation `cdac438f1e` [hash of mihon] |  |
+| O | [dfb3091e38](https://github.com/mihonapp/mihon/commit/dfb3091e380dda3e9bfb64bf5c9a685cf3a03d0e) | mihon | 2024-01-16 | Make the app Android 8+ | AntsyLich | codex/komikun-foundation `cdac438f1e` [hash of mihon] |  |
 |   | [98bdef230a](https://github.com/mihonapp/mihon/commit/98bdef230a0b1e141a6bfc7c6d2628d8b09dbdd3) | mihon | 2024-01-15 | Replace several reference of Tachiyomi to Mihon | AntsyLich |  |  |
 |   | [4b594fc11f](https://github.com/mihonapp/mihon/commit/4b594fc11f05fc60a905bf827610a2176932a06c) | mihon | 2024-01-15 | Add back update checker | AntsyLich |  |  |
 |   | [71931cf697](https://github.com/mihonapp/mihon/commit/71931cf6976cd6c71bbc6a90de4fe795dd4a6c38) | mihon | 2024-01-15 | Add back analytics | AntsyLich |  |  |
