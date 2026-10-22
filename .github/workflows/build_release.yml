@@ -139,8 +139,13 @@ jobs:
       - name: Set up gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
+      # Formatting does not require release signing credentials.
+      # Disable the release-signing branch during Gradle configuration
+      # to prevent a null storeFileBase64 from crashing spotlessCheck.
       - name: Check code format
         run: ./gradlew spotlessCheck
+        env:
+          MIHON_GITHUB_RELEASE: 'false'
 
       - name: Build app
         run: ./gradlew assembleRelease -Pdist=github ${{ steps.opt_secrets.outputs.telemetry_flag }} -PdevSecret="${{ secrets.DEV_SECRETS }}"
@@ -150,8 +155,11 @@ jobs:
           keyAlias: ${{ secrets.ALIAS }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
+      # Unit tests also do not require release signing credentials.
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
+        env:
+          MIHON_GITHUB_RELEASE: 'false'
 
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
