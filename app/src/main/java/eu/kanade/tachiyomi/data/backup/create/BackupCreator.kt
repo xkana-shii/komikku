@@ -109,7 +109,7 @@ class BackupCreator(
             }
 
             // KNS --> the selected categories' entries only, for a selective backup
-            val backupManga = backupMangas(selectManga(options), options)
+            val backupManga = backupMangas(selectManga(options).distinctBy { it.id }, options)
             // KNS <--
 
             file.openOutputStream()
