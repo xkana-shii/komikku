@@ -261,6 +261,39 @@ class ChapterSmartMergeTest {
         visible.any { it.id == 6L } shouldBe true
     }
 
+    @Test
+    fun `each chapter comes from the highest priority scanlator that has it`() {
+        // Delicious Snake on Mangago, in the user's priority order.
+        val priority = listOf("Kaizen", "bloomingdale", "desire scans", "Myth Toons", "Paradise scans", "Unknown")
+        var id = 0L
+        fun releases(scanlator: String, numbers: List<Double>) =
+            numbers.map { chapter(++id, it, scanlator).copy(name = "Ch. $it") }
+        val chapters = releases("Paradise scans", (1..9).map(Int::toDouble)) +
+            releases("Myth Toons", listOf(1.0, 2.0, 3.0, 4.0, 5.0, 9.0)) +
+            releases("Unknown", listOf(1.0)) +
+            releases("desire scans", (1..9).map(Int::toDouble)) +
+            releases("bloomingdale", listOf(0.5)) +
+            releases("Kaizen", (1..5).map(Int::toDouble))
+        val merged = chapters.applySmartScanlatorMerge(priority, emptyList(), emptyList())
+        merged.associate { it.chapterNumber to it.scanlator } shouldBe mapOf(
+            0.5 to "bloomingdale",
+            1.0 to "Kaizen", 2.0 to "Kaizen", 3.0 to "Kaizen", 4.0 to "Kaizen", 5.0 to "Kaizen",
+            6.0 to "desire scans", 7.0 to "desire scans", 8.0 to "desire scans", 9.0 to "desire scans",
+        )
+        merged.size shouldBe 10
+        // A range rule for 6-8 takes precedence over the order.
+        chapters.applySmartScanlatorMerge(
+            priority,
+            emptyList(),
+            listOf(encodeScanlatorRangeRule(ScanlatorRangeRule(6.0, 8.0, "Paradise scans"))),
+        ).filter { it.chapterNumber in 6.0..8.0 }.map { it.scanlator }.distinct() shouldBe listOf("Paradise scans")
+        // Without Smart Merge every release is visible.
+        chapters.filterChapterVisibility(
+            Manga.create().copy(scanlatorPriority = priority),
+            smartScanlatorMergeEnabled = false,
+        ).size shouldBe chapters.size
+    }
+
     private fun chapter(
         id: Long,
         number: Double,

@@ -94,7 +94,9 @@ data class ScanlatorPreferencesDraft(
     companion object {
         /**
          * A draft of the saved preferences: the saved priority first (scanlators that are no longer
-         * available are left out), then the scanlators without a priority alphabetically.
+         * available are left out of the list, but keep their stored place, see
+         * `ScanlatorPreferenceChanges.mergePriority`), then new scanlators without a priority after them,
+         * alphabetically.
          */
         fun create(
             scanlators: Collection<String>,

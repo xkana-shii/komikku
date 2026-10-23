@@ -156,5 +156,85 @@ class ScanlatorPreferencePersistenceTest {
         job.cancel()
         stored shouldBe listOf(1, 2, 3, 4, 5)
     }
+
+    @Test
+    fun `global persists after enabled and disabled, also when switched quickly`() {
+        manga = manga.copy(smartMergeOverride = true)
+        edit({ it.copy(smartMergeOverride = null) })
+        manga.smartMergeOverride shouldBe null
+        open().smartMergeOverride shouldBe null
+
+        edit(
+            { it.copy(smartMergeOverride = true) },
+            { it.copy(smartMergeOverride = false) },
+            { it.copy(smartMergeOverride = null) },
+        )
+        manga.smartMergeOverride shouldBe null
+        // The choice is stored as is; the effective value follows the global setting separately.
+        open().smartMergeOverride shouldBe null
+    }
+
+    @Test
+    fun `a drag keeps the stored place of scanlators the dialog did not list`() {
+        // "Myth Toons" has no chapters right now (e.g. during a refresh), so the dialog leaves it out.
+        manga = manga.copy(scanlatorPriority = listOf("Kaizen", "bloomingdale", "Myth Toons", "Paradise scans"))
+        val draft = ScanlatorPreferencesDraft.create(
+            scanlators = listOf("Kaizen", "bloomingdale", "Paradise scans", "Unknown"),
+            priority = manga.scanlatorPriority,
+            excluded = emptySet(),
+            smartMergeOverride = null,
+            rangeRules = emptyList(),
+            blacklist = emptyList(),
+        )
+        draft.order shouldBe listOf("Kaizen", "bloomingdale", "Paradise scans", "Unknown")
+        runBlocking { changes.apply(1, ScanlatorPreferencesDraft.Change.Priority(draft.move(1, 0).order)) }
+        manga.scanlatorPriority shouldBe listOf("bloomingdale", "Kaizen", "Myth Toons", "Paradise scans", "Unknown")
+    }
+
+    @Test
+    fun `merging a new order keeps absent scanlators, appends new ones and drops duplicates`() {
+        val merge = ScanlatorPreferenceChanges.Companion::mergePriority
+        merge(listOf("A", "B", "C"), listOf("C", "A")) shouldBe listOf("C", "B", "A")
+        merge(listOf("A", "B", "C"), listOf("B", "C")) shouldBe listOf("A", "B", "C")
+        merge(listOf("A", "B"), listOf("B", "A", "New")) shouldBe listOf("B", "A", "New")
+        merge(listOf("A", "A", "B"), listOf("B", "B")) shouldBe listOf("A", "B")
+        merge(emptyList(), listOf("X", "Y")) shouldBe listOf("X", "Y")
+        // A missing scanlator keeps its position and is listed there again when it reappears.
+        val stored = merge(listOf("Kaizen", "Myth Toons", "Paradise scans"), listOf("Paradise scans", "Kaizen"))
+        stored shouldBe listOf("Paradise scans", "Myth Toons", "Kaizen")
+        ScanlatorPreferencesDraft.create(
+            scanlators = listOf("Kaizen", "Myth Toons", "Paradise scans", "Brand new"),
+            priority = stored,
+            excluded = emptySet(),
+            smartMergeOverride = null,
+            rangeRules = emptyList(),
+            blacklist = emptyList(),
+        ).order shouldBe listOf("Paradise scans", "Myth Toons", "Kaizen", "Brand new")
+    }
+
+    @Test
+    fun `a write the database rejects is reported, and later writes still land`() = runBlocking<Unit> {
+        val failing = mockk<UpdateManga> {
+            coEvery { await(any()) } answers {
+                val update = firstArg<MangaUpdate>()
+                if (update.isSet(MangaUpdate::smartMergeOverride)) {
+                    manga = manga.copy(smartMergeOverride = update.smartMergeOverride)
+                }
+                !update.isSet(MangaUpdate::scanlatorRangeRules)
+            }
+        }
+        val failures = mutableListOf<ScanlatorPreferencesDraft.Change>()
+        val job = Job()
+        val writer = SequentialWriter<ScanlatorPreferencesDraft.Change>(
+            CoroutineScope(coroutineContext + job),
+            onError = { change, _ -> failures += change },
+        ) { ScanlatorPreferenceChanges(failing, setExcludedScanlators, getManga).apply(1, it) }
+        writer.submit(ScanlatorPreferencesDraft.Change.RangeRules(emptyList()))
+        writer.submit(ScanlatorPreferencesDraft.Change.SmartMerge(null))
+        withTimeout(5_000) { writer.awaitIdle() }
+        job.cancel()
+        failures shouldBe listOf(ScanlatorPreferencesDraft.Change.RangeRules(emptyList()))
+        manga.smartMergeOverride shouldBe null
+    }
 }
 // KNS <--

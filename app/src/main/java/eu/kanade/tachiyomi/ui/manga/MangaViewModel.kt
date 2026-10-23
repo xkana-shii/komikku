@@ -257,7 +257,7 @@ class MangaViewModel(
     // SY <--
     private val getManga: GetManga,
     // KNS -->
-    private val scanlatorPreferenceChanges: ScanlatorPreferenceChanges,
+    private val scanlatorPreferenceWriter: ScanlatorPreferenceWriter,
     // KNS <--
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
     private val getMergedMangaById: GetMergedMangaById,
@@ -1753,15 +1753,20 @@ class MangaViewModel(
      */
     suspend fun loadScanlatorPreferences(): ScanlatorPreferencesData? {
         val state = successState ?: return null
-        val all = getChaptersForBlacklist(state.manga)
+        // The stored values, read once earlier edits have landed: the screen state can still hold the
+        // values from before them, and a dialog built on those would show (and then store) old ones.
+        scanlatorPreferenceWriter.awaitIdle()
+        val manga = getManga.await(mangaId) ?: state.manga
+        val all = getChaptersForBlacklist(manga)
         return ScanlatorPreferencesData(
-            scanlators = state.availableScanlators.toList(),
-            priority = state.manga.scanlatorPriority,
-            excludedScanlators = state.excludedScanlators,
-            smartMergeOverride = state.manga.smartMergeOverride,
+            // The scanlators of all chapters, so ones hidden by a filter can still be ordered
+            scanlators = (state.availableScanlators + all.mapNotNull { it.scanlator?.ifBlank { null } }).toList(),
+            priority = manga.scanlatorPriority,
+            excludedScanlators = getExcludedScanlators.await(mangaId),
+            smartMergeOverride = manga.smartMergeOverride,
             globalSmartMerge = libraryPreferences.smartScanlatorMerge.get(),
-            rangeRules = state.manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
-            blacklist = state.manga.blacklistedChapters.map { key ->
+            rangeRules = manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
+            blacklist = manga.blacklistedChapters.map { key ->
                 BlacklistEntry(key = key, chapters = resolveChapterBlacklistMatches(key, all).map { it.name })
             },
             scanlatorStats = scanlatorStatsOf(all),
@@ -1773,12 +1778,9 @@ class MangaViewModel(
      * quick series of edits cannot store an older value last. Each write only touches its own field;
      * blacklist removals start from the stored blacklist, so consecutive removals all stick.
      */
-    private val scanlatorPreferenceWriter = SequentialWriter<ScanlatorPreferencesDraft.Change>(viewModelScope) {
-        scanlatorPreferenceChanges.apply(mangaId, it)
-    }
-
     fun applyScanlatorPreferenceChanges(changes: List<ScanlatorPreferencesDraft.Change>) {
-        changes.forEach(scanlatorPreferenceWriter::submit)
+        // An app-wide queue, so closing the dialog or leaving the entry right away cannot cancel the write
+        changes.forEach { scanlatorPreferenceWriter.submit(mangaId, it) }
     }
 
     /** All chapters of the manga (hidden and excluded ones too), to resolve blacklist entries. */

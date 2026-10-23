@@ -128,6 +128,7 @@ import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import tachiyomi.presentation.core.util.collectAsState
 
 class MangaScreen(
     private val mangaId: Long,
@@ -728,7 +729,10 @@ class MangaScreen(
                         blacklist = data.blacklist.map { ScanlatorPreferencesDraft.BlacklistItem(it.key, it.chapters) },
                     )
                 },
-                globalSmartMerge = data.globalSmartMerge,
+                // KNS --> live, so "Effective" follows a change of the global setting
+                globalSmartMerge = remember { context.appGraph.libraryPreferences.smartScanlatorMerge }
+                    .collectAsState().value,
+                // KNS <--
                 hideBlacklisted = successState.hideBlacklistedChapters,
                 onHideBlacklistedChange = viewModel::setHideBlacklistedChapters,
                 onChanges = viewModel::applyScanlatorPreferenceChanges,
