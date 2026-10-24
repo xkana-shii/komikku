@@ -4,11 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import exh.metadata.metadata.LanraragiSearchMetadata
-import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun LanraragiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
     val meta = state.meta as? LanraragiSearchMetadata ?: return
@@ -20,7 +23,7 @@ fun LanraragiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
         val pages = meta.pageCount ?: 1
         MetadataText(
             text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
-            icon = MaterialSymbols.RoundedFilled.MenuBook,
+            icon = SYMaterialSymbols.RoundedFilled.MenuBook,
         )
     }
 }

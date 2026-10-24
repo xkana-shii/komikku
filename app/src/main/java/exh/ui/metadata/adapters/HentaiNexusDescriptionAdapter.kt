@@ -8,12 +8,13 @@ import exh.metadata.metadata.HentaiNexusSearchMetadata
 import mihon.core.common.extensions.toInstantOrNull
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.CalendarMonth
-import mihon.icons.materialsymbols.rounded.Domain
 import mihon.icons.materialsymbols.rounded.Favorite
-import mihon.icons.materialsymbols.rounded.Festival
 import mihon.icons.materialsymbols.rounded.Group
 import mihon.icons.materialsymbols.rounded.Newspaper
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.rounded.Domain
+import mihon.icons.sy.materialsymbols.rounded.Festival
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import java.text.NumberFormat
@@ -58,18 +59,18 @@ fun HentaiNexusDescription(state: State.Success, openMetadataViewer: () -> Unit)
                 fact {
                     MetadataText(
                         text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
-                        icon = MaterialSymbols.RoundedFilled.MenuBook,
+                        icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                     )
                 }
             }
-            publisher?.let { fact { MetadataText(text = it, icon = MaterialSymbols.Rounded.Domain) } }
+            publisher?.let { fact { MetadataText(text = it, icon = SYMaterialSymbols.Rounded.Domain) } }
         }
 
         if (magazine != null || circle != null || event != null) {
             MetadataFacts {
                 magazine?.let { fact { MetadataText(text = it, icon = MaterialSymbols.Rounded.Newspaper) } }
                 circle?.let { fact { MetadataText(text = it, icon = MaterialSymbols.Rounded.Group) } }
-                event?.let { fact { MetadataText(text = it, icon = MaterialSymbols.Rounded.Festival) } }
+                event?.let { fact { MetadataText(text = it, icon = SYMaterialSymbols.Rounded.Festival) } }
             }
         }
     }

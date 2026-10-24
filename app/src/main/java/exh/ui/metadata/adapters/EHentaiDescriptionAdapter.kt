@@ -9,14 +9,18 @@ import exh.metadata.MetadataUtil
 import exh.metadata.metadata.EHentaiSearchMetadata
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Bookmark
-import mihon.icons.materialsymbols.rounded.SdCard
-import mihon.icons.materialsymbols.rounded.Translate
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.rounded.SdCard
+import mihon.icons.sy.materialsymbols.rounded.Translate
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun EHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit, search: (String) -> Unit) {
     val meta = state.meta as? EHentaiSearchMetadata ?: return
@@ -37,7 +41,7 @@ fun EHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit, sea
                 } else {
                     language
                 },
-                icon = MaterialSymbols.Rounded.Translate,
+                icon = SYMaterialSymbols.Rounded.Translate,
             )
             val hiddenReason = remember(meta.visible) { hiddenReason(meta.visible) }
             if (hiddenReason != null) {
@@ -71,13 +75,13 @@ fun EHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit, sea
                 val length = meta.length ?: 0
                 MetadataText(
                     text = pluralStringResource(SYMR.plurals.num_pages, length, length),
-                    icon = MaterialSymbols.RoundedFilled.MenuBook,
+                    icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                 )
             }
             fact {
                 MetadataText(
                     text = MetadataUtil.humanReadableByteCount(meta.size ?: 0, true),
-                    icon = MaterialSymbols.Rounded.SdCard,
+                    icon = SYMaterialSymbols.Rounded.SdCard,
                     copyable = false,
                 )
             }

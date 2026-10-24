@@ -9,8 +9,9 @@ import exh.metadata.metadata.HitomiSearchMetadata
 import exh.util.capitalize
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.CalendarMonth
-import mihon.icons.materialsymbols.rounded.Translate
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.rounded.Translate
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -38,7 +39,7 @@ fun HitomiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
             )
             MetadataChip(
                 text = meta.language?.capitalize() ?: unknown,
-                icon = MaterialSymbols.Rounded.Translate,
+                icon = SYMaterialSymbols.Rounded.Translate,
             )
             meta.hlId?.let {
                 MetadataChip(text = "#$it")
@@ -50,7 +51,7 @@ fun HitomiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
                 val pages = meta.pages ?: 0
                 MetadataText(
                     text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
-                    icon = MaterialSymbols.RoundedFilled.MenuBook,
+                    icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                 )
             }
             fact {

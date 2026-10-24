@@ -41,13 +41,16 @@ import eu.kanade.tachiyomi.util.system.copyToClipboard
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Info
 import mihon.icons.materialsymbols.rounded.Person
-import mihon.icons.materialsymbols.rounded.PersonOff
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.rounded.PersonOff
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import kotlin.math.round
 import kotlin.math.roundToInt
 
 /**
+ * SY-specific file
+ *
  * Lines of a metadata description, stacked with the panel's line spacing.
  */
 @Composable
@@ -193,7 +196,7 @@ fun MetadataUploader(
     if (disowned) {
         MetadataText(
             text = stringResource(SYMR.strings.disowned),
-            icon = MaterialSymbols.Rounded.PersonOff,
+            icon = SYMaterialSymbols.Rounded.PersonOff,
             iconTint = MaterialTheme.colorScheme.outline,
             style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
             color = MaterialTheme.colorScheme.outline,

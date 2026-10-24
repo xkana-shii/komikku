@@ -45,8 +45,9 @@ import kotlinx.coroutines.flow.StateFlow
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Group
 import mihon.icons.materialsymbols.rounded.Palette
-import mihon.icons.materialsymbols.rounded.Translate
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.rounded.Translate
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.asMangaCover
 import tachiyomi.i18n.MR
@@ -234,7 +235,7 @@ fun BrowseSourceEHentaiListItem(
                     language?.let {
                         MetadataChip(
                             text = if (translated) stringResource(SYMR.strings.language_translated, it) else it,
-                            icon = MaterialSymbols.Rounded.Translate,
+                            icon = SYMaterialSymbols.Rounded.Translate,
                             small = true,
                             copyable = false,
                         )
@@ -251,7 +252,7 @@ fun BrowseSourceEHentaiListItem(
                     metadata.length?.let { length ->
                         MetadataText(
                             text = pluralStringResource(SYMR.plurals.num_pages, length, length),
-                            icon = MaterialSymbols.RoundedFilled.MenuBook,
+                            icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                             copyable = false,
                         )
                     }

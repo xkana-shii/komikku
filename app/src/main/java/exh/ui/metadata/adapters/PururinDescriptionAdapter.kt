@@ -5,14 +5,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import exh.metadata.metadata.PururinSearchMetadata
-import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.SdCard
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.rounded.SdCard
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun PururinDescription(state: State.Success, openMetadataViewer: () -> Unit) {
     val meta = state.meta as? PururinSearchMetadata ?: return
@@ -47,13 +50,13 @@ fun PururinDescription(state: State.Success, openMetadataViewer: () -> Unit) {
                 val pages = meta.pages ?: 0
                 MetadataText(
                     text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
-                    icon = MaterialSymbols.RoundedFilled.MenuBook,
+                    icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                 )
             }
             fact {
                 MetadataText(
                     text = meta.fileSize ?: unknown,
-                    icon = MaterialSymbols.Rounded.SdCard,
+                    icon = SYMaterialSymbols.Rounded.SdCard,
                 )
             }
             fact {

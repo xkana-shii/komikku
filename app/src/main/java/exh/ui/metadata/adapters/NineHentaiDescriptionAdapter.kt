@@ -10,8 +10,9 @@ import mihon.core.common.extensions.toInstantOrNull
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Favorite
 import mihon.icons.materialsymbols.rounded.Schedule
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
 import mihon.icons.materialsymbols.roundedfilled.Visibility
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import java.text.NumberFormat
@@ -69,7 +70,7 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
                 fact {
                     MetadataText(
                         text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
-                        icon = MaterialSymbols.RoundedFilled.MenuBook,
+                        icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                     )
                 }
             }

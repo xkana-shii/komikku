@@ -8,7 +8,8 @@ import exh.metadata.MetadataUtil
 import exh.metadata.metadata.NHentaiSearchMetadata
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Bookmark
-import mihon.icons.materialsymbols.roundedfilled.MenuBook
+import mihon.icons.sy.materialsymbols.SYMaterialSymbols
+import mihon.icons.sy.materialsymbols.roundedfilled.MenuBook
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -18,6 +19,9 @@ import java.time.ZonedDateTime
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun NHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
     val meta = state.meta as? NHentaiSearchMetadata ?: return
@@ -44,7 +48,7 @@ fun NHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
                 val pages = meta.pageImagePreviewUrls.size
                 MetadataText(
                     text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
-                    icon = MaterialSymbols.RoundedFilled.MenuBook,
+                    icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                 )
             }
             meta.favoritesCount?.takeIf { it != 0L }?.let {

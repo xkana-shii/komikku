@@ -6,6 +6,9 @@ import exh.metadata.metadata.EightMusesSearchMetadata
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun EightMusesDescription(state: State.Success, openMetadataViewer: () -> Unit) {
     val meta = state.meta as? EightMusesSearchMetadata ?: return

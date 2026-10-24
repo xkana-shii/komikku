@@ -6,6 +6,9 @@ import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import exh.metadata.metadata.MangaDexSearchMetadata
 import exh.ui.metadata.adapters.MetadataUIUtil.getRatingString
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun MangaDexDescription(state: State.Success, openMetadataViewer: () -> Unit) {
     val meta = state.meta as? MangaDexSearchMetadata ?: return
