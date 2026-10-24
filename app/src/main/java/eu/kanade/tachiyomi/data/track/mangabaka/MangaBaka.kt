@@ -141,6 +141,12 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         return track
     }
 
+    // SY -->
+    override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
+        return api.getMangaMetadata(track)
+    }
+    // SY <--
+
     override suspend fun login(username: String, password: String) = login(password)
 
     suspend fun login(code: String) {

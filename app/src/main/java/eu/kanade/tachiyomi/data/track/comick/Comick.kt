@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.track.BaseTracker
 import eu.kanade.tachiyomi.data.track.DeletableTracker
 import eu.kanade.tachiyomi.data.track.ReadingDates
 import eu.kanade.tachiyomi.data.track.comick.dto.ComickOAuth
+import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
 import kotlinx.serialization.json.Json
 import tachiyomi.i18n.MR
@@ -101,6 +102,13 @@ class Comick(id: Long) : BaseTracker(id, "Comick"), DeletableTracker {
         track.copyPersonalFrom(remoteTrack)
         return track
     }
+
+    // SY -->
+    // KUN: keep the fork's non-nullable `Tracker.getMangaMetadata` signature
+    override suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
+        return api.getMangaMetadata(track)
+    }
+    // SY <--
 
     override suspend fun login(username: String, password: String) = login(password)
 

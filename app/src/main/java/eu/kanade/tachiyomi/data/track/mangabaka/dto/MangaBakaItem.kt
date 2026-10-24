@@ -92,6 +92,13 @@ data class MangaBakaScaledCover(
     val x1: String?,
 )
 
+// SY -->
+@Serializable
+data class MangaBakaRawCover(
+    val url: String?,
+)
+// SY <--
+
 @Serializable
 data class MangaBakaPublishData(
     @SerialName("start_date")
