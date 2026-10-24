@@ -12,6 +12,9 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * SY-specific file
+ */
 @Serializable
 class NineHentaiSearchMetadata : RaisedSearchMetadata() {
     var nhId: Int? = null

@@ -12,6 +12,9 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
+/**
+ * SY-specific file
+ */
 @Serializable
 class HentaiNexusSearchMetadata : RaisedSearchMetadata() {
     var hnId: Int? = null

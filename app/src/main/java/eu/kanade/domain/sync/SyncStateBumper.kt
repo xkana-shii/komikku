@@ -11,9 +11,10 @@ import tachiyomi.domain.manga.repository.MangaRepository
 /**
  * Bumps the sync state of manga whose user-visible change lives outside the manga row.
  *
- * History resets write `read_at = NULL` and a custom-info edit only touches the `user_*` columns,
- * which the version trigger does not watch, so the delta sync would not upload them as a local edit.
- * The bump is what makes the next upload carry the manga (and therefore the section) again.
+ * History resets write `read_at = NULL`, and a custom-info edit only touches the `user_*` columns.
+ * `update_last_modified_at_mangas` fires on any UPDATE, so the delta already selects the row, but
+ * `update_manga_version` does not watch `user_*`: without the bump the payload would go out with an
+ * unchanged `version` and lose the server's version-first merge. The bump is what makes the edit win.
  *
  * The bump is gated on the sync service being enabled *and* on the matching "choose what to sync"
  * flag. Uploading a manga while a section is disabled would send that section's local (possibly

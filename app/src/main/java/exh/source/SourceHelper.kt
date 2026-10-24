@@ -21,8 +21,8 @@ private val DELEGATED_METADATA_SOURCES by lazy {
         NHentai::class,
         Hitomi::class,
         Lanraragi::class,
-        NineHentai::class,
         HentaiNexus::class,
+        NineHentai::class,
     )
 }
 

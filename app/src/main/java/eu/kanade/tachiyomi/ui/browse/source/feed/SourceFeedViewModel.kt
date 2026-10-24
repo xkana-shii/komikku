@@ -109,6 +109,9 @@ class SourceFeedViewModel(
         fun create(sourceId: Long): SourceFeedViewModel
     }
 
+    // SY -->
+    // The `state` → `mutableState` split that runs through this file (including inside the KMK
+    // blocks below) is part of this port; the KMK code only had its identifier renamed.
     private val subscriberGate = SubscriberGate()
 
     private val mutableState = MutableStateFlow<SourceFeedState>(SourceFeedState())
@@ -118,6 +121,7 @@ class SourceFeedViewModel(
         .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), SourceFeedState())
 
     private val source: Source? get() = mutableState.value.source
+    // SY <--
 
     val sourceIsMangaDex = sourceId in mangaDexSourceIds
 

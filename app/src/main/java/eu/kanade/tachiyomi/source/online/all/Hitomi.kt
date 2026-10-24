@@ -62,7 +62,9 @@ class Hitomi(
     override fun newMetaInstance() = HitomiSearchMetadata()
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage =
+        // KUN -->: the helper resolves the gallery adder from the app graph
         urlImportFetchSearchMangaSuspend(context, query) {
+            // KUN <--
             super<DelegatedHttpSource>.getSearchManga(page, query, filters)
         }.let {
             MangasPage(
@@ -87,8 +89,12 @@ class Hitomi(
 
     override val overridesMangaDetails = true
 
-    private var cachedCdnDomain: String? = null
-    private var cdnDomainFetchedAt: Long = 0
+    // KUN -->
+    // Read from the preview/Coil threads as well as the detail fetch.
+    @Volatile private var cachedCdnDomain: String? = null
+
+    @Volatile private var cdnDomainFetchedAt: Long = 0
+    // KUN <--
 
     private suspend fun resolveCdnDomain(): String {
         val cached = cachedCdnDomain
@@ -111,11 +117,11 @@ class Hitomi(
     @Deprecated("Use the 1.x API instead", replaceWith = ReplaceWith("getMangaDetails"))
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return runAsObservable {
-            val parsed = parseToManga(manga, fetchGallery(manga))
             // KUN -->
-            // The metadata stores the preview carrier URL (an opaque hash on the loopback host,
-            // resolved by fetchPreviewImage) because it is also the page-preview entry point. The
-            // cover itself has to point at the real thumbnail host, which is only known here.
+            // parseToManga's result is post-processed below: the metadata keeps the preview carrier
+            // URL (a hash on the loopback host, resolved by fetchPreviewImage), while the cover has
+            // to point at the real thumbnail host, which is only known here.
+            val parsed = parseToManga(manga, fetchGallery(manga))
             parsed.thumbnailUrl()
                 ?.let { resolveThumbnailUrl(it) }
                 ?.let { parsed.thumbnail_url = it }
@@ -339,10 +345,10 @@ class Hitomi(
     private fun thumbPathFromHash(hash: String): String =
         hash.replace(Regex("""^.*(..)(.)$"""), "$2/$1")
 
+    // KUN -->
+    // suspend because the CDN domain and the gg.js offsets are only known after a detail fetch, and
+    // previews can be opened straight from a gallery.
     private suspend fun resolveThumbnailUrl(hash: String): String {
-        // KUN -->
-        // The CDN domain and the gg.js offsets are only known after a detail fetch; previews can be
-        // opened straight from a gallery, so make sure they are loaded before composing the URL.
         refreshGgScript()
         // KUN <--
         val cdnDomain = cachedCdnDomain ?: DEFAULT_CDN_DOMAIN

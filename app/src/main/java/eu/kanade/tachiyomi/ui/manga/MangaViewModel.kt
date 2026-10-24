@@ -976,10 +976,10 @@ class MangaViewModel(
             // KUN -->
             // The edit must survive leaving the screen right after it: the view model scope is
             // cancelled then. The app-wide, non-cancellable launch still runs off the UI thread, and
-            // it runs the write and the sync bump in order. The value the row held before the write
-            // is the one the edit is compared against.
-            val previousCustomInfo = state.manga.toMangaUserInfoUpdate()
+            // it runs the write and the sync bump in order. The row is re-read right before the
+            // write so the bump compares against what is actually stored, not a stale flow value.
             appScope.launchNonCancellable {
+                val previousCustomInfo = getManga.await(state.manga.id)?.toMangaUserInfoUpdate()
                 setMangaUserInfo.setAll(listOf(customInfo))
                 syncStateBumper.bumpForCustomInfoEdit(customInfo.id, previousCustomInfo, customInfo)
             }

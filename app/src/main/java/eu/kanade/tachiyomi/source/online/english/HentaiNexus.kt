@@ -33,6 +33,9 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * SY-specific file
+ */
 @AssistedInject
 class HentaiNexus(
     @Assisted delegate: HttpSource,

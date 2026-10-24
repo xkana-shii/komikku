@@ -31,13 +31,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.NestedMenuItem
 import eu.kanade.presentation.download.DownloadQueueList
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Sort
 import mihon.icons.materialsymbols.roundedfilled.Pause
@@ -49,20 +50,16 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 
 object DownloadQueueScreen : Screen() {
+    // KUN -->
+    // Voyager restores screens after process death; an object must resolve to its singleton.
     @Suppress("unused")
     private fun readResolve(): Any = DownloadQueueScreen
+    // KUN <--
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val viewModel =
-            assistedMetroViewModel<DownloadQueueViewModel, DownloadQueueViewModel.Factory> {
-                create(
-                    // KMK -->
-                    navigator = navigator,
-                    // KMK <--
-                )
-            }
+        val viewModel = metroViewModel<DownloadQueueViewModel>()
         val downloadList by viewModel.state.collectAsStateWithLifecycle()
         val downloadCount by remember {
             derivedStateOf { downloadList.sumOf { it.downloads.size } }
@@ -246,8 +243,9 @@ object DownloadQueueScreen : Screen() {
                 onCancel = { viewModel.cancel(listOf(it)) },
                 onCancelSeries = viewModel::cancelSeries,
                 // KUN -->
-                onShowManga = { viewModel.showManga(it.manga.id) },
+                onShowManga = { navigator.push(MangaScreen(it.manga.id)) },
                 // KUN <--
+
                 modifier = Modifier.nestedScroll(nestedScrollConnection),
             )
         }

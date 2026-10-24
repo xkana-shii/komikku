@@ -197,7 +197,11 @@ class ReaderActivity : BaseActivity() {
 
     private var menuToggleToast: Toast? = null
     private var readingModeToast: Toast? = null
+    // KUN -->
+    // Constructed lazily (TachiyomiSY 68fd60274e): the field's dependencies are not ready at
+    // property-initialisation time, which crashed the reader on open.
     private val displayRefreshHost by lazy { DisplayRefreshHost() }
+    // KUN <--
 
     private val windowInsetsController by lazy { WindowInsetsControllerCompat(window, window.decorView) }
 

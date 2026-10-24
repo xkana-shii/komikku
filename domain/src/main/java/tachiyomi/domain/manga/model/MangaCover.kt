@@ -89,7 +89,12 @@ fun Manga.asMangaCover(): MangaCover {
         mangaId = id,
         sourceId = source,
         isMangaFavorite = favorite,
-        ogUrl = thumbnailUrl,
+        // KUN -->
+        // ogUrl must stay the source cover: the history/updates rows build the same model with the
+        // two fields split, and a consumer that reads ogUrl as "the source cover" must agree.
+        ogUrl = ogThumbnailUrl,
+        userThumbnailUrl = userThumbnailUrl,
+        // KUN <--
         lastModified = coverLastModified,
     )
 }

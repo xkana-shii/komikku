@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalContext
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel.State
 import exh.metadata.MetadataUtil
 import exh.metadata.metadata.EHentaiSearchMetadata
+import exh.util.SourceTagsUtil
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.sy.materialsymbols.SYMaterialSymbols
@@ -17,6 +18,7 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.icons.FlagEmoji.Companion.getEmojiLangFlag
 
 /**
  * SY-specific file
@@ -35,11 +37,20 @@ fun EHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit, sea
                 color = genre?.first,
             )
             val language = meta.language ?: unknown
+            // KMK -->
+            // Komikku prefixes the language with its country flag; SY's Compose panel shows the
+            // bare name.
+            val languageWithFlag = remember(language) {
+                getEmojiLangFlag(
+                    SourceTagsUtil.getLocaleSourceUtil(language.lowercase())?.toLanguageTag().orEmpty(),
+                ) + " " + language
+            }
+            // KMK <--
             MetadataChip(
                 text = if (meta.translated == true) {
-                    stringResource(SYMR.strings.language_translated, language)
+                    stringResource(SYMR.strings.language_translated, languageWithFlag)
                 } else {
-                    language
+                    languageWithFlag
                 },
                 icon = SYMaterialSymbols.Rounded.Translate,
             )

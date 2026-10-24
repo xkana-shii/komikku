@@ -93,7 +93,9 @@ import mihon.app.di.injekt.MetroInteropModule
 import mihon.core.metro.AppCoroutineScope
 import mihon.core.metro.GraphProvider
 import mihon.core.migration.Migration
+import mihon.core.migration.MigrationContext
 import mihon.core.migration.Migrator
+import mihon.core.migration.migrations.CustomInfoJsonToDbMigration
 import mihon.telemetry.TelemetryConfig
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
@@ -108,6 +110,7 @@ import timber.log.Timber
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.InjektScope
 import uy.kohesive.injekt.api.get
+import java.io.File
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -287,7 +290,26 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         initializeMigrator()
+
+        // KUN -->
+        // `versionCode` is pinned at 83 in this fork, so `Migrator` short-circuits every migration
+        // added afterwards (`old >= new`). The edits.json import is the first migration whose
+        // absence loses user data (the JSON store it read is gone), so it also runs here, once:
+        // it writes the overrides and deletes the file, making later starts a no-op.
+        importLegacyCustomInfoOnce()
+        // KUN <--
     }
+
+    // KUN -->
+    private fun importLegacyCustomInfoOnce() {
+        if (!File(getExternalFilesDir(null), "edits.json").exists()) return
+        scope.launch {
+            migrations.filterIsInstance<CustomInfoJsonToDbMigration>()
+                .firstOrNull()
+                ?.invoke(MigrationContext(dryrun = false, previousVersion = BuildConfig.VERSION_CODE))
+        }
+    }
+    // KUN <--
 
     private fun initializeMigrator() {
         // SY -->

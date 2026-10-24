@@ -3,17 +3,12 @@ package eu.kanade.tachiyomi.ui.download
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cafe.adriel.voyager.navigator.Navigator
 import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Assisted
-import dev.zacsweers.metro.AssistedFactory
-import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.ContributesIntoMap
-import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
-import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,20 +19,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
 
-@AssistedInject
+@Inject
+@ViewModelKey
+@ContributesIntoMap(AppScope::class)
 class DownloadQueueViewModel(
     private val downloadManager: DownloadManager,
-    // KMK -->
-    @Assisted private val navigator: Navigator?,
-    // KMK <--
 ) : ViewModel() {
-
-    @AssistedFactory
-    @ManualViewModelAssistedFactoryKey
-    @ContributesIntoMap(AppScope::class)
-    interface Factory : ManualViewModelAssistedFactory {
-        fun create(navigator: Navigator?): DownloadQueueViewModel
-    }
 
     val state: StateFlow<List<DownloadQueueSection>> = downloadManager.queueState
         .map { downloads ->
@@ -70,12 +57,6 @@ class DownloadQueueViewModel(
     fun cancel(downloads: List<Download>) {
         viewModelScope.launch { downloadManager.cancelQueuedDownloads(downloads) }
     }
-
-    // KMK -->
-    fun showManga(mangaId: Long) {
-        navigator?.push(MangaScreen(mangaId))
-    }
-    // KMK <--
 
     /**
      * Moves [download] to the top or bottom of its section.

@@ -539,12 +539,12 @@ CREATE INDEX manga_category_category_id_index ON manga_category(category_id);
 -- table - history
 -- ---------------------------------------------------------------------------------------------------------
 
--- KUN -->
+-- SY -->
 -- Migration 14 moved the table aside under the same name and never dropped it, so a database
--- that went through it still holds that copy, which is stale and would block the rename.
--- Ported from TachiyomiSY cf3f4eddbf.
+-- that went through it still holds that copy, which is stale and would block the rename
+-- (TachiyomiSY cf3f4eddbf).
 DROP TABLE IF EXISTS history_temp;
--- KUN <--
+-- SY <--
 ALTER TABLE history RENAME TO history_temp;
 
 CREATE TABLE history(

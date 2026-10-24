@@ -104,6 +104,9 @@ class AndroidSourceManager(
                         mapOf(LocalSource.ID to localSource),
                     ).apply {
                         // KMK -->
+                        // KUN -->
+                        // Built directly instead of through the Komikku factories: the delegated
+                        // sources are constructed from this graph's context, not injected.
                         if (isHentaiEnabled) {
                             EHENTAI_EXT_SOURCES.forEach { (id, lang) ->
                                 put(id, EHentai(id, false, context, lang))
@@ -114,9 +117,12 @@ class AndroidSourceManager(
                                 }
                             }
                         }
+                        // KUN <--
                         // KMK <--
                         // SY -->
+                        // KUN -->
                         put(MERGED_SOURCE_ID, MergedSource(context))
+                        // KUN <--
                         // SY <--
                     }
                     extensions.forEach { extension ->
@@ -367,24 +373,6 @@ class AndroidSourceManager(
                 // KUN <--
             ),
             DelegatedSource(
-                "LANraragi",
-                fillInSourceId,
-                "eu.kanade.tachiyomi.extension.all.lanraragi.LANraragi",
-                Lanraragi::class,
-                // KUN -->
-                createSource = ::Lanraragi,
-                // KUN <--
-            ),
-            DelegatedSource(
-                "NineHentai",
-                NINEHENTAI_SOURCE_ID,
-                "eu.kanade.tachiyomi.extension.en.ninehentai.NineHentai",
-                NineHentai::class,
-                // KUN -->
-                createSource = ::NineHentai,
-                // KUN <--
-            ),
-            DelegatedSource(
                 "Hitomi",
                 Hitomi.HITOMI_SOURCE_IDS,
                 "eu.kanade.tachiyomi.extension.all.hitomi.Hitomi",
@@ -395,12 +383,30 @@ class AndroidSourceManager(
                 // KUN <--
             ),
             DelegatedSource(
+                "LANraragi",
+                fillInSourceId,
+                "eu.kanade.tachiyomi.extension.all.lanraragi.LANraragi",
+                Lanraragi::class,
+                // KUN -->
+                createSource = ::Lanraragi,
+                // KUN <--
+            ),
+            DelegatedSource(
                 "HentaiNexus",
                 HENTAINEXUS_SOURCE_ID,
                 "eu.kanade.tachiyomi.extension.en.hentainexus.HentaiNexus",
                 HentaiNexus::class,
                 // KUN -->
                 createSource = ::HentaiNexus,
+                // KUN <--
+            ),
+            DelegatedSource(
+                "NineHentai",
+                NINEHENTAI_SOURCE_ID,
+                "eu.kanade.tachiyomi.extension.en.ninehentai.NineHentai",
+                NineHentai::class,
+                // KUN -->
+                createSource = ::NineHentai,
                 // KUN <--
             ),
         )
@@ -425,14 +431,18 @@ class AndroidSourceManager(
                 originalSourceQualifiedClassName: String,
                 newSourceClass: KClass<out DelegatedHttpSource>,
                 factory: Boolean = false,
+                // KUN -->
                 createSource: ((HttpSource, Context) -> DelegatedHttpSource)? = null,
+                // KUN <--
             ) : this(
                 sourceName,
                 listOf(sourceId),
                 originalSourceQualifiedClassName,
                 newSourceClass,
                 factory,
+                // KUN -->
                 createSource,
+                // KUN <--
             )
             // SY <--
         }

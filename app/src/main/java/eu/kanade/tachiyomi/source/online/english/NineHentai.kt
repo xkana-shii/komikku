@@ -41,6 +41,9 @@ import org.jsoup.nodes.Document
 import tachiyomi.core.common.util.system.logcat
 import java.util.Calendar
 
+/**
+ * SY-specific file
+ */
 @AssistedInject
 class NineHentai(
     @Assisted delegate: HttpSource,

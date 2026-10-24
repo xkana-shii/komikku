@@ -32,7 +32,9 @@ import com.gowtham.ratingbar.RatingBarStyle
 import eu.kanade.presentation.library.components.CommonMangaItemDefaults
 import eu.kanade.presentation.library.components.GRID_SELECTED_COVER_ALPHA
 import eu.kanade.presentation.manga.components.MangaCover
+import eu.kanade.presentation.manga.components.MangaCoverHide
 import eu.kanade.presentation.util.relativeTimeSpanString
+import exh.debug.DebugToggles
 import exh.metadata.metadata.EHentaiSearchMetadata
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.ui.metadata.adapters.DISOWNED_UPLOADER
@@ -41,6 +43,7 @@ import exh.ui.metadata.adapters.MetadataGenre
 import exh.ui.metadata.adapters.MetadataText
 import exh.ui.metadata.adapters.MetadataUIUtil
 import exh.ui.metadata.adapters.MetadataUploader
+import exh.util.SourceTagsUtil
 import kotlinx.coroutines.flow.StateFlow
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Group
@@ -55,6 +58,7 @@ import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.BadgeGroup
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.icons.FlagEmoji.Companion.getEmojiLangFlag
 import tachiyomi.presentation.core.util.selectedBackground
 import kotlin.math.round
 
@@ -134,6 +138,21 @@ fun BrowseSourceEHentaiListItem(
     val language = remember(metadata) {
         metadata.tagNames(EHentaiSearchMetadata.EH_LANGUAGE_NAMESPACE, LANGUAGE_FLAGS, capitalize = true)
     }
+    // KMK -->
+    // SY's redesign shows the bare language name; Komikku prefixes each one with its flag, the way
+    // the rest of the app still does.
+    val languageWithFlag = remember(language) {
+        language
+            ?.split(", ")
+            ?.joinToString(", ") { name ->
+                val flag = SourceTagsUtil.getLocaleSourceUtil(name.lowercase())
+                    ?.toLanguageTag()
+                    ?.let { getEmojiLangFlag(it) }
+                    ?: getEmojiLangFlag("")
+                "$flag $name"
+            }
+    }
+    // KMK <--
     val translated = remember(metadata) {
         metadata.tags.any { it.namespace == EHentaiSearchMetadata.EH_LANGUAGE_NAMESPACE && it.name == TRANSLATED }
     }
@@ -151,24 +170,36 @@ fun BrowseSourceEHentaiListItem(
         // KMK <--
     ) {
         Box(modifier = Modifier.fillMaxHeight()) {
-            MangaCover.Book(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    // KMK -->
-                    .alpha(
-                        if (isSelected) {
-                            GRID_SELECTED_COVER_ALPHA
-                        } else if (manga.favorite) {
-                            CommonMangaItemDefaults.BrowseFavoriteCoverAlpha
-                        } else {
-                            1f
-                        },
-                    ),
-                bgColor = bgColor ?: MaterialTheme.colorScheme.surface.takeIf { isSelected },
-                tint = onBgColor,
+            // KMK -->
+            if (DebugToggles.HIDE_COVER_IMAGE_ONLY_SHOW_COLOR.enabled) {
+                MangaCoverHide.Book(
+                    modifier = Modifier.fillMaxHeight(),
+                    bgColor = bgColor ?: MaterialTheme.colorScheme.surface.takeIf { isSelected },
+                    tint = onBgColor,
+                )
+            } else {
                 // KMK <--
-                data = manga,
-            )
+                MangaCover.Book(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        // KMK -->
+                        .alpha(
+                            if (isSelected) {
+                                GRID_SELECTED_COVER_ALPHA
+                            } else if (manga.favorite) {
+                                CommonMangaItemDefaults.BrowseFavoriteCoverAlpha
+                            } else {
+                                1f
+                            },
+                        ),
+                    bgColor = bgColor ?: MaterialTheme.colorScheme.surface.takeIf { isSelected },
+                    tint = onBgColor,
+                    // KMK <--
+                    data = manga,
+                )
+                // KMK -->
+            }
+            // KMK <--
             BadgeGroup(
                 modifier = Modifier
                     .padding(4.dp)
@@ -233,8 +264,15 @@ fun BrowseSourceEHentaiListItem(
                         copyable = false,
                     )
                     language?.let {
+                        // KMK -->: use the flagged variant
+                        val languageText = languageWithFlag ?: it
+                        // KMK <--
                         MetadataChip(
-                            text = if (translated) stringResource(SYMR.strings.language_translated, it) else it,
+                            text = if (translated) {
+                                stringResource(SYMR.strings.language_translated, languageText)
+                            } else {
+                                languageText
+                            },
                             icon = SYMaterialSymbols.Rounded.Translate,
                             small = true,
                             copyable = false,
