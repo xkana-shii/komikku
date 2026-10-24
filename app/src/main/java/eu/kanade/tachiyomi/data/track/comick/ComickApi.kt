@@ -237,8 +237,18 @@ class ComickApi(
                 .data
         }
 
+        // KUN -->
+        // slug is optional in the lookup payload; the metadata we already have is still useful
+        val slug = titleItem.slug ?: return@withContext TrackMangaMetadata(
+            remoteId = titleItem.hid.asHidToLong(),
+            title = titleItem.title,
+            thumbnailUrl = titleItem.coverUrl,
+            description = titleItem.description,
+        )
+        // KUN <--
+
         val detailUrl = "$API_BASE_URL/v1.0/comic/".toUri().buildUpon()
-            .appendPath(titleItem.slug)
+            .appendPath(slug)
             .build()
         val detailResult = with(json) {
             client.newCall(GET(detailUrl.toString()))

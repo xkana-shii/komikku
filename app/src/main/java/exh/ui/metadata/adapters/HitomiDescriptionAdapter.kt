@@ -86,15 +86,17 @@ fun HitomiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
                 icon = MaterialSymbols.Rounded.Book,
                 text = pluralStringResource(SYMR.plurals.num_pages, pages, pages),
             )
-            val whenPosted = remember(meta.uploadDate) {
-                MetadataUtil.EX_DATE_FORMAT.format(
-                    ZonedDateTime.ofInstant(
-                        Instant.fromEpochSeconds(meta.uploadDate ?: 0).toJavaInstant(),
-                        ZoneId.systemDefault(),
-                    ),
-                )
+            meta.uploadDate?.let { uploadedAt ->
+                val whenPosted = remember(uploadedAt) {
+                    MetadataUtil.EX_DATE_FORMAT.format(
+                        ZonedDateTime.ofInstant(
+                            Instant.fromEpochSeconds(uploadedAt).toJavaInstant(),
+                            ZoneId.systemDefault(),
+                        ),
+                    )
+                }
+                DescriptionFact(icon = MaterialSymbols.Rounded.CalendarMonth, text = whenPosted)
             }
-            DescriptionFact(icon = MaterialSymbols.Rounded.CalendarMonth, text = whenPosted)
         }
 
         meta.uploader?.takeIf { it.isNotEmpty() }?.let { uploader ->

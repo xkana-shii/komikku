@@ -160,6 +160,7 @@ class AndroidSourceManager(
                         id in delegated.sourceIds
                     // SY <--
                 }
+                // KMK <--
             } else {
                 null
             }

@@ -30,6 +30,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.CacheControl
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Response
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
@@ -110,13 +111,30 @@ class Hitomi(
     @Deprecated("Use the 1.x API instead", replaceWith = ReplaceWith("getMangaDetails"))
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return runAsObservable {
-            val cdnDomain = resolveCdnDomain()
-            refreshGgScript()
-            val id = manga.url.substringAfterLast("-").substringBefore(".")
-            val response = client.newCall(GET("https://ltn.$cdnDomain/galleries/$id.js", headers)).awaitSuccess()
-            parseToManga(manga, response)
+            val parsed = parseToManga(manga, fetchGallery(manga))
+            // KUN -->
+            // The metadata stores the preview carrier URL (an opaque hash on the loopback host,
+            // resolved by fetchPreviewImage) because it is also the page-preview entry point. The
+            // cover itself has to point at the real thumbnail host, which is only known here.
+            parsed.thumbnailUrl()
+                ?.let { resolveThumbnailUrl(it) }
+                ?.let { parsed.thumbnail_url = it }
+            // KUN <--
+            parsed
         }
     }
+
+    // KUN -->
+    private fun SManga.thumbnailUrl(): String? = thumbnail_url?.toHttpUrlOrNull()?.fragment
+
+    /** The gallery's `galleries/<id>.js` payload, which is what [parseIntoMetadata] decodes. */
+    private suspend fun fetchGallery(manga: SManga): Response {
+        val cdnDomain = resolveCdnDomain()
+        refreshGgScript()
+        val id = manga.url.substringAfterLast("-").substringBefore(".")
+        return client.newCall(GET("https://ltn.$cdnDomain/galleries/$id.js", headers)).awaitSuccess()
+    }
+    // KUN <--
 
     override suspend fun parseIntoMetadata(metadata: HitomiSearchMetadata, input: Response) {
         val gallery = jsonParser.decodeFromString<Gallery>(
@@ -237,16 +255,23 @@ class Hitomi(
     override suspend fun mapUrlToMangaUrl(uri: Uri): String? {
         val lcFirstPathSegment = uri.pathSegments.firstOrNull()?.lowercase() ?: return null
 
-        if (lcFirstPathSegment != "manga" && lcFirstPathSegment != "reader") {
+        // KUN -->
+        // The manifest also claims /galleries/<id>.html (the canonical link form).
+        if (lcFirstPathSegment !in setOf("manga", "reader", "galleries")) {
             return null
         }
 
-        return "https://hitomi.la/manga/${uri.pathSegments[1].substringBefore('.')}.html"
+        return uri.pathSegments.getOrNull(1)?.substringBefore('.')?.let { "https://hitomi.la/manga/$it.html" }
+        // KUN <--
     }
 
     override suspend fun getPagePreviewList(manga: SManga, chapters: List<SChapter>, page: Int): PagePreviewPage {
         val metadata = fetchOrLoadMetadata(manga.id()) {
-            client.newCall(mangaDetailsRequest(manga)).awaitSuccess()
+            // KUN -->
+            // mangaDetailsRequest is the delegate's HTML gallery page; parseIntoMetadata decodes the
+            // extension's `galleries/<id>.js` payload.
+            fetchGallery(manga)
+            // KUN <--
         }
         return PagePreviewPage(
             page,
@@ -282,10 +307,11 @@ class Hitomi(
     }
 
     // gg.js state (cached 60s, same as extension)
-    private var ggScriptLastRetrieval: Long = 0
-    private var ggSubdomainOffsetDefault = 0
-    private var ggSubdomainOffsetMap: Map<Int, Int> = emptyMap()
-    private var ggCommonImageId = ""
+    @Volatile private var ggScriptLastRetrieval: Long = 0
+
+    @Volatile private var ggSubdomainOffsetDefault = 0
+
+    @Volatile private var ggSubdomainOffsetMap: Map<Int, Int> = emptyMap()
 
     private suspend fun refreshGgScript() {
         if (ggScriptLastRetrieval != 0L && (ggScriptLastRetrieval + 60_000) > System.currentTimeMillis()) return
@@ -299,7 +325,6 @@ class Hitomi(
         ggSubdomainOffsetMap = Regex("case (\\d+):").findAll(ggScript).associate {
             it.groupValues[1].toInt() to o
         }
-        ggCommonImageId = Regex("b: '(.+)'").find(ggScript)?.groupValues?.get(1) ?: ""
         ggScriptLastRetrieval = System.currentTimeMillis()
     }
 
@@ -311,7 +336,12 @@ class Hitomi(
     private fun thumbPathFromHash(hash: String): String =
         hash.replace(Regex("""^.*(..)(.)$"""), "$2/$1")
 
-    private fun resolveThumbnailUrl(hash: String): String {
+    private suspend fun resolveThumbnailUrl(hash: String): String {
+        // KUN -->
+        // The CDN domain and the gg.js offsets are only known after a detail fetch; previews can be
+        // opened straight from a gallery, so make sure they are loaded before composing the URL.
+        refreshGgScript()
+        // KUN <--
         val cdnDomain = cachedCdnDomain ?: DEFAULT_CDN_DOMAIN
         val imageId = imageIdFromHash(hash)
         val offset = ggSubdomainOffsetMap[imageId] ?: ggSubdomainOffsetDefault
