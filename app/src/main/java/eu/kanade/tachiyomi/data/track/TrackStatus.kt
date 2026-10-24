@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.track
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
 import eu.kanade.tachiyomi.data.track.bangumi.Bangumi
+import eu.kanade.tachiyomi.data.track.comick.Comick
 import eu.kanade.tachiyomi.data.track.hikka.Hikka
 import eu.kanade.tachiyomi.data.track.kavita.Kavita
 import eu.kanade.tachiyomi.data.track.kitsu.Kitsu
@@ -155,6 +156,16 @@ enum class TrackStatus(val int: Int, val res: StringResource) {
                     }
                 }
                 // KUN <--
+                trackerManager.comick.id -> {
+                    when (status) {
+                        Comick.READING -> READING
+                        Comick.COMPLETED -> COMPLETED
+                        Comick.ON_HOLD -> PAUSED
+                        Comick.DROPPED -> DROPPED
+                        Comick.PLAN_TO_READ -> PLAN_TO_READ
+                        else -> null
+                    }
+                }
                 else -> null
             }
         }
