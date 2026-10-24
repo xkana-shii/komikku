@@ -1,0 +1,201 @@
+-- KNS -->
+-- Migration 57 is already released by this fork; this sequential migration recreates the views for
+-- existing databases without changing that migration or the bookmark-color view upgrade in migration 58.
+-- KNS <--
+-- KUN -->
+-- Ported from TachiyomiSY 6759406595 and daa1ea69ba. Neither changes the tables, but both change
+-- the text of a view, so an upgraded database would keep the old definition and differ from a fresh
+-- install. They are recreated here exactly as view/libraryView.sq and view/updatesView.sq declare
+-- them (the library view is a performance-only rewrite; the updates view now shows the chapters of
+-- every entry in a merge instead of the single reference a GROUP BY happened to keep).
+DROP VIEW IF EXISTS libraryView;
+DROP VIEW IF EXISTS updatesView;
+
+CREATE VIEW libraryView AS
+SELECT
+    M.*,
+    coalesce(C.total, 0) AS totalCount,
+    coalesce(C.readCount, 0) AS readCount,
+    C.latestUpload AS latestUpload,
+    C.fetchedAt AS chapterFetchedAt,
+    -- Joining history to every chapter is the slowest part of the query, and only entries with excluded
+    -- scanlators need the chapters to leave theirs out
+    CASE WHEN EXISTS (SELECT 0 FROM excluded_scanlator WHERE excluded_scanlator.manga_id = M.id)
+    THEN (
+        SELECT max(history.read_at)
+        FROM history
+        JOIN chapter
+        ON chapter.id = history.chapter_id
+        WHERE history.manga_id = M.id
+        AND NOT EXISTS (
+            SELECT 0 FROM excluded_scanlator
+            WHERE excluded_scanlator.manga_id = M.id
+            AND excluded_scanlator.scanlator = chapter.remote_scanlator
+        )
+    )
+    ELSE (SELECT max(history.read_at) FROM history WHERE history.manga_id = M.id)
+    END AS lastRead,
+    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    -- KMK -->
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    -- KMK <--
+    coalesce(MC.categories, '0') AS categories
+FROM manga M
+LEFT JOIN (
+    SELECT
+        chapter.manga_id,
+        count(*) AS total,
+        sum(user_read) AS readCount,
+        max(chapter.remote_date_upload) AS latestUpload,
+        max(chapter.state_date_fetch) AS fetchedAt,
+        sum(user_bookmark) AS bookmarkCount,
+        -- KMK -->
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        -- KMK <--
+        excluded_scanlator.scanlator AS ex_scanlator
+    FROM chapter
+    LEFT JOIN excluded_scanlator
+    ON chapter.manga_id = excluded_scanlator.manga_id
+    AND chapter.remote_scanlator = excluded_scanlator.scanlator
+    WHERE ex_scanlator IS NULL
+    GROUP BY chapter.manga_id
+) AS C
+ON M.id = C.manga_id
+LEFT JOIN (
+    SELECT manga_id, group_concat(category_id) AS categories
+    FROM manga_category
+    GROUP BY manga_id
+) AS MC
+ON MC.manga_id = M.id
+WHERE M.source_id <> 6969
+UNION
+SELECT
+    M.*,
+    coalesce(C.total, 0) AS totalCount,
+    coalesce(C.readCount, 0) AS readCount,
+    C.latestUpload AS latestUpload,
+    C.fetchedAt AS chapterFetchedAt,
+    -- KUN -->
+    -- Same as the non-merged branch above, but over every manga of the merge group
+    CASE WHEN EXISTS (
+        SELECT 0 FROM excluded_scanlator
+        WHERE excluded_scanlator.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+    )
+    THEN (
+        SELECT max(history.read_at)
+        FROM history
+        JOIN chapter
+        ON chapter.id = history.chapter_id
+        WHERE history.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+        AND NOT EXISTS (
+            SELECT 0 FROM excluded_scanlator
+            WHERE excluded_scanlator.manga_id = history.manga_id
+            AND excluded_scanlator.scanlator = chapter.remote_scanlator
+        )
+    )
+    ELSE (
+        SELECT max(history.read_at)
+        FROM history
+        WHERE history.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+    )
+    END AS lastRead,
+    -- KUN <--
+    coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+    -- KMK -->
+    coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+    -- KMK <--
+    coalesce(MC.categories, '0') AS categories
+FROM manga M
+LEFT JOIN(
+    -- Only the chapters of merged entries can belong to a merge
+    SELECT
+        ME.merge_id,
+        count(*) AS total,
+        sum(user_read) AS readCount,
+        max(chapter.remote_date_upload) AS latestUpload,
+        max(chapter.state_date_fetch) AS fetchedAt,
+        sum(user_bookmark) AS bookmarkCount,
+        -- KMK -->
+        sum(CASE WHEN user_bookmark = 1 AND user_read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount,
+        -- KMK <--
+        excluded_scanlator.scanlator AS ex_scanlator
+    FROM chapter
+    LEFT JOIN excluded_scanlator
+    ON chapter.manga_id = excluded_scanlator.manga_id
+    AND chapter.remote_scanlator = excluded_scanlator.scanlator
+    JOIN merged AS ME
+    ON ME.manga_id = chapter.manga_id
+    WHERE ex_scanlator IS NULL
+    GROUP BY ME.merge_id
+) AS C
+ON C.merge_id = M.id
+LEFT JOIN (
+    SELECT manga_id, group_concat(category_id) AS categories
+    FROM manga_category
+    GROUP BY manga_id
+) AS MC
+ON MC.manga_id = M.id
+WHERE M.source_id = 6969;
+
+CREATE VIEW updatesView AS
+SELECT
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    chapter.id AS chapterId,
+    chapter.remote_name AS chapterName,
+    chapter.remote_scanlator AS scanlator,
+    chapter.remote_url AS chapterUrl,
+    chapter.user_read AS read,
+    chapter.user_bookmark AS bookmark,
+    -- KNS --> keep the fork's colored-bookmark projection
+    chapter.user_bookmark_color AS bookmarkColor,
+    -- KNS <--
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_date_upload AS dateUpload,
+    chapter.state_date_fetch AS dateFetch,
+    excluded_scanlator.scanlator AS excludedScanlator
+FROM manga JOIN chapter
+ON manga.id = chapter.manga_id
+LEFT JOIN excluded_scanlator
+ON manga.id = excluded_scanlator.manga_id
+AND chapter.remote_scanlator = excluded_scanlator.scanlator
+WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id <> 6969
+AND chapter.state_date_fetch > manga.user_favorite_at
+UNION
+SELECT
+    manga.id AS mangaId,
+    manga.remote_title AS mangaTitle,
+    chapter.id AS chapterId,
+    chapter.remote_name AS chapterName,
+    chapter.remote_scanlator AS scanlator,
+    chapter.remote_url AS chapterUrl,
+    chapter.user_read AS read,
+    chapter.user_bookmark AS bookmark,
+    -- KNS --> keep the fork's colored-bookmark projection
+    chapter.user_bookmark_color AS bookmarkColor,
+    -- KNS <--
+    chapter.user_last_page_read AS lastPageRead,
+    manga.source_id AS sourceId,
+    manga.user_favorite_at IS NOT NULL AS favorite,
+    manga.remote_cover AS thumbnailUrl,
+    manga.state_cover_last_modified AS coverLastModified,
+    chapter.remote_date_upload AS dateUpload,
+    chapter.state_date_fetch AS dateFetch,
+    excluded_scanlator.scanlator AS excludedScanlator
+FROM manga
+-- Every entry the merge holds, not just one of them
+JOIN merged AS ME
+ON ME.merge_id = manga.id
+JOIN chapter
+ON ME.manga_id = chapter.manga_id
+LEFT JOIN excluded_scanlator
+ON manga.id = excluded_scanlator.manga_id
+AND chapter.remote_scanlator = excluded_scanlator.scanlator
+WHERE manga.user_favorite_at IS NOT NULL AND manga.source_id = 6969
+AND chapter.state_date_fetch > manga.user_favorite_at
+ORDER BY dateFetch DESC;
+-- KUN <--
