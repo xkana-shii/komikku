@@ -129,4 +129,3 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
         }
     }
 }
-

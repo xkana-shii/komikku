@@ -42,6 +42,8 @@ class HitomiSearchMetadata : RaisedSearchMetadata() {
 
     var pages: Int? = null
 
+    var pageHashes: List<String> = emptyList()
+
     override fun createMangaInfo(manga: SManga): SManga {
         val cover = thumbnailUrl
 

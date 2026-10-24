@@ -371,13 +371,6 @@ class AndroidSourceManager(
                 // KUN <--
             ),
             DelegatedSource(
-                "Hitomi",
-                Hitomi.HITOMI_SOURCE_IDS,
-                "eu.kanade.tachiyomi.extension.all.hitomi.Hitomi",
-                Hitomi::class,
-                true,
-            ),
-            DelegatedSource(
                 "LANraragi",
                 fillInSourceId,
                 "eu.kanade.tachiyomi.extension.all.lanraragi.LANraragi",
@@ -385,7 +378,6 @@ class AndroidSourceManager(
                 // KUN -->
                 createSource = ::Lanraragi,
                 // KUN <--
-            ),
             ),
             DelegatedSource(
                 "NineHentai",

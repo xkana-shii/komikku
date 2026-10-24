@@ -7,8 +7,13 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.network.newCachelessCallWithProgress
+import eu.kanade.tachiyomi.source.PagePreviewInfo
+import eu.kanade.tachiyomi.source.PagePreviewPage
+import eu.kanade.tachiyomi.source.PagePreviewSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
+import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
@@ -19,12 +24,13 @@ import exh.metadata.metadata.HitomiSearchMetadata
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.metadata.metadata.base.RaisedTag
 import exh.source.DelegatedHttpSource
-import exh.util.urlImportFetchSearchManga
 import exh.util.urlImportFetchSearchMangaSuspend
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.CacheControl
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Response
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
@@ -46,7 +52,8 @@ class Hitomi(
     DelegatedHttpSource(delegate),
     MetadataSource<HitomiSearchMetadata, Response>,
     UrlImportableSource,
-    NamespaceSource {
+    NamespaceSource,
+    PagePreviewSource {
     @AssistedFactory
     fun interface Factory {
         fun create(delegate: HttpSource): Hitomi
@@ -84,11 +91,31 @@ class Hitomi(
     private var cachedCdnDomain: String? = null
     private var cdnDomainFetchedAt: Long = 0
 
+    private suspend fun resolveCdnDomain(): String {
+        val cached = cachedCdnDomain
+        if (cached != null && (System.currentTimeMillis() - cdnDomainFetchedAt) < 3600_000L) {
+            return cached
+        }
+        return try {
+            val commonJs = client.newCall(GET("https://hitomi.la/common.js", headers)).awaitSuccess()
+                .use { it.body.string() }
+            val domain = Regex("domain2\\s*=\\s*'([^']+)'").find(commonJs)?.groupValues?.get(1)
+                ?: DEFAULT_CDN_DOMAIN
+            cachedCdnDomain = domain
+            cdnDomainFetchedAt = System.currentTimeMillis()
+            domain
+        } catch (_: Exception) {
+            cachedCdnDomain ?: DEFAULT_CDN_DOMAIN
+        }
+    }
+
     @Deprecated("Use the 1.x API instead", replaceWith = ReplaceWith("getMangaDetails"))
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return runAsObservable {
+            val cdnDomain = resolveCdnDomain()
+            refreshGgScript()
             val id = manga.url.substringAfterLast("-").substringBefore(".")
-            val response = client.newCall(GET("https://ltn.gold-usergeneratedcontent.net/galleries/$id.js", headers)).awaitSuccess()
+            val response = client.newCall(GET("https://ltn.$cdnDomain/galleries/$id.js", headers)).awaitSuccess()
             parseToManga(manga, response)
         }
     }
@@ -97,7 +124,6 @@ class Hitomi(
         val gallery = jsonParser.decodeFromString<Gallery>(
             input.body.string().substringAfter("var galleryinfo = ").trim(),
         )
-        println(Json.encodeToString(gallery))
 
         with(metadata) {
             hlId = gallery.id?.toString() ?: gallery.galleryurl.let { HitomiSearchMetadata.hlIdFromUrl(it) }
@@ -152,6 +178,8 @@ class Hitomi(
                     .build()
                     .toString()
             }
+
+            pageHashes = gallery.files.map { it.hash }
 
             uploadDate = try {
                 DATE_FORMAT.parse(gallery.date.substringBeforeLast("-"))?.time?.let { it / 1000 }
@@ -218,6 +246,81 @@ class Hitomi(
         return "https://hitomi.la/manga/${uri.pathSegments[1].substringBefore('.')}.html"
     }
 
+    override suspend fun getPagePreviewList(manga: SManga, chapters: List<SChapter>, page: Int): PagePreviewPage {
+        val metadata = fetchOrLoadMetadata(manga.id()) {
+            client.newCall(mangaDetailsRequest(manga)).awaitSuccess()
+        }
+        return PagePreviewPage(
+            page,
+            metadata.pageHashes.mapIndexed { index, hash ->
+                PagePreviewInfo(
+                    index + 1,
+                    imageUrl = HttpUrl.Builder()
+                        .scheme("https")
+                        .host(IMAGE_LOOPBACK_HOST)
+                        .addQueryParameter(IMAGE_THUMBNAIL, "true")
+                        .fragment(hash)
+                        .build()
+                        .toString(),
+                )
+            },
+            false,
+            1,
+        )
+    }
+
+    override suspend fun fetchPreviewImage(page: PagePreviewInfo, cacheControl: CacheControl?): Response {
+        val hash = page.imageUrl.toHttpUrl().fragment
+            ?: throw IllegalStateException("No hash in preview URL: ${page.imageUrl}")
+        val url = resolveThumbnailUrl(hash)
+        return client.newCachelessCallWithProgress(
+            if (cacheControl != null) {
+                GET(url, headers, cache = cacheControl)
+            } else {
+                GET(url, headers)
+            },
+            page,
+        ).awaitSuccess()
+    }
+
+    // gg.js state (cached 60s, same as extension)
+    private var ggScriptLastRetrieval: Long = 0
+    private var ggSubdomainOffsetDefault = 0
+    private var ggSubdomainOffsetMap: Map<Int, Int> = emptyMap()
+    private var ggCommonImageId = ""
+
+    private suspend fun refreshGgScript() {
+        if (ggScriptLastRetrieval != 0L && (ggScriptLastRetrieval + 60_000) > System.currentTimeMillis()) return
+        val cdnDomain = resolveCdnDomain()
+        val ggScript = client.newCall(
+            GET("https://ltn.$cdnDomain/gg.js?_=${System.currentTimeMillis()}", headers),
+        ).awaitSuccess().use { it.body.string() }
+
+        ggSubdomainOffsetDefault = Regex("var o = (\\d)").find(ggScript)?.groupValues?.get(1)?.toInt() ?: 0
+        val o = Regex("o = (\\d); break;").find(ggScript)?.groupValues?.get(1)?.toInt() ?: 0
+        ggSubdomainOffsetMap = Regex("case (\\d+):").findAll(ggScript).associate {
+            it.groupValues[1].toInt() to o
+        }
+        ggCommonImageId = Regex("b: '(.+)'").find(ggScript)?.groupValues?.get(1) ?: ""
+        ggScriptLastRetrieval = System.currentTimeMillis()
+    }
+
+    private fun imageIdFromHash(hash: String): Int {
+        val match = Regex("(..)(.)$").find(hash) ?: return 0
+        return (match.groupValues[2] + match.groupValues[1]).toInt(16)
+    }
+
+    private fun thumbPathFromHash(hash: String): String =
+        hash.replace(Regex("""^.*(..)(.)$"""), "$2/$1")
+
+    private fun resolveThumbnailUrl(hash: String): String {
+        val cdnDomain = cachedCdnDomain ?: DEFAULT_CDN_DOMAIN
+        val imageId = imageIdFromHash(hash)
+        val offset = ggSubdomainOffsetMap[imageId] ?: ggSubdomainOffsetDefault
+        val subDomain = "${'a' + offset}tn"
+        return "https://$subDomain.$cdnDomain/avifsmalltn/${thumbPathFromHash(hash)}/$hash.avif"
+    }
+
     companion object {
         val HITOMI_SOURCE_IDS = listOf(
             690123758188633713L, // all
@@ -251,6 +354,7 @@ class Hitomi(
         private const val IMAGE_LOOPBACK_HOST = "127.0.0.1"
         private const val IMAGE_THUMBNAIL = "is_thumbnail"
         private const val IMAGE_GIF = "is_gif"
+        private const val DEFAULT_CDN_DOMAIN = "gold-usergeneratedcontent.net"
 
         private val jsonParser = Json {
             ignoreUnknownKeys = true

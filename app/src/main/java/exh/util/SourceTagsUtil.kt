@@ -9,13 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.graphics.toColorInt
 import exh.metadata.metadata.base.RaisedTag
-import exh.source.pururinSourceIds
 import exh.source.TSUMINO_SOURCE_ID
 import exh.source.eHentaiSourceIds
 import exh.source.hitomiSourceIds
 import exh.source.lanraragiSourceIds
 import exh.source.mangaDexSourceIds
 import exh.source.nHentaiSourceIds
+import exh.source.pururinSourceIds
 import tachiyomi.presentation.core.icons.FlagEmoji.Companion.getEmojiLangFlag
 import java.util.Locale
 
