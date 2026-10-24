@@ -12,6 +12,8 @@ import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.EHentai
+import eu.kanade.tachiyomi.source.online.all.Hitomi
+import eu.kanade.tachiyomi.source.online.all.Hitomi
 import eu.kanade.tachiyomi.source.online.all.Lanraragi
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.source.online.all.MergedSource
@@ -64,10 +66,12 @@ class AndroidSourceManager(
     private val downloadManager: Lazy<DownloadManager>,
     // SY -->
     private val nineHentaiFactory: NineHentai.Factory,
+    private val hitomiFactory: Hitomi.Factory,
     private val hentaiNexusFactory: HentaiNexus.Factory,
     private val exhPreferences: ExhPreferences,
     private val sourcePreferences: SourcePreferences,
     private val nineHentaiFactory: NineHentai.Factory,
+    private val hitomiFactory: Hitomi.Factory,
     // SY <--
     // KMK -->
     private val getMergedReferencesById: GetMergedReferencesById,
@@ -367,6 +371,13 @@ class AndroidSourceManager(
                 // KUN <--
             ),
             DelegatedSource(
+                "Hitomi",
+                Hitomi.HITOMI_SOURCE_IDS,
+                "eu.kanade.tachiyomi.extension.all.hitomi.Hitomi",
+                Hitomi::class,
+                true,
+            ),
+            DelegatedSource(
                 "LANraragi",
                 fillInSourceId,
                 "eu.kanade.tachiyomi.extension.all.lanraragi.LANraragi",
@@ -383,6 +394,16 @@ class AndroidSourceManager(
                 NineHentai::class,
                 // KUN -->
                 createSource = { delegate, _ -> nineHentaiFactory.create(delegate) },
+                // KUN <--
+            ),
+            DelegatedSource(
+                "Hitomi",
+                Hitomi.HITOMI_SOURCE_IDS,
+                "eu.kanade.tachiyomi.extension.all.hitomi.Hitomi",
+                Hitomi::class,
+                true,
+                // KUN -->
+                createSource = { delegate, _ -> hitomiFactory.create(delegate) },
                 // KUN <--
             ),
             DelegatedSource(

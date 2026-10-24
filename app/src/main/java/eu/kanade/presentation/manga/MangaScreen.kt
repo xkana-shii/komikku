@@ -89,6 +89,7 @@ import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.isIncognitoModeEnabled
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.EHentai
+import eu.kanade.tachiyomi.source.online.all.Hitomi
 import eu.kanade.tachiyomi.source.online.all.Lanraragi
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.source.online.all.NHentai
@@ -108,6 +109,7 @@ import exh.source.isEhBasedManga
 import exh.ui.metadata.adapters.EHentaiDescription
 import exh.ui.metadata.adapters.EightMusesDescription
 import exh.ui.metadata.adapters.HentaiNexusDescription
+import exh.ui.metadata.adapters.HitomiDescription
 import exh.ui.metadata.adapters.LanraragiDescription
 import exh.ui.metadata.adapters.MangaDexDescription
 import exh.ui.metadata.adapters.NHentaiDescription
@@ -1485,6 +1487,9 @@ fun metadataDescription(source: Source): MetadataDescriptionComposable? {
             }
             is NHentai -> { state, openMetadataViewer, _ ->
                 NHentaiDescription(state, openMetadataViewer)
+            }
+            is Hitomi -> { state, openMetadataViewer, _ ->
+                HitomiDescription(state, openMetadataViewer)
             }
             is EightMuses -> { state, openMetadataViewer, _ ->
                 EightMusesDescription(state, openMetadataViewer)

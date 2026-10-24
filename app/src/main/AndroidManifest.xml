@@ -361,6 +361,22 @@
 
                 <data android:pathPattern="/g/..*" />
             </intent-filter>
+            <!-- Hitomi.la -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+
+                <data android:host="hitomi.la" />
+                <data android:host="www.hitomi.la" />
+
+                <data android:pathPattern="/reader/..*" />
+                <data android:pathPattern="/galleries/..*" />
+            </intent-filter>
             <!-- Pururin -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

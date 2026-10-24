@@ -3,6 +3,9 @@ package exh
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
+import eu.kanade.tachiyomi.source.online.all.Hitomi
+import eu.kanade.tachiyomi.source.online.all.NHentai
+import exh.source.BlacklistedSources
 import exh.source.EH_OLD_ID
 import exh.source.EH_SOURCE_ID
 import exh.source.EXH_OLD_ID
@@ -46,6 +49,15 @@ object EXHMigrations {
                 url = newManga.url + "/c00001/",
             )
         }
+
+        // SY -->
+        // Migrate the old Hitomi extension id to the delegated source
+        if (newManga.source == 6910L) {
+            newManga = newManga.copy(
+                source = Hitomi.HITOMI_SOURCE_IDS.first(),
+            )
+        }
+        // SY <--
 
         // KMK -->
         // Allow importing of EHentai extension backups

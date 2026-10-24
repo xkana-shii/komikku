@@ -1,6 +1,7 @@
 package exh.source
 
 import eu.kanade.tachiyomi.source.AndroidSourceManager
+import eu.kanade.tachiyomi.source.online.all.Hitomi
 import eu.kanade.tachiyomi.source.online.all.Lanraragi
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.source.online.all.NHentai
@@ -18,6 +19,7 @@ private val DELEGATED_METADATA_SOURCES by lazy {
         Pururin::class,
         EightMuses::class,
         NHentai::class,
+        Hitomi::class,
         Lanraragi::class,
         NineHentai::class,
         HentaiNexus::class,
@@ -36,6 +38,13 @@ fun handleSourceLibrary() {
     nHentaiSourceIds = AndroidSourceManager.currentDelegatedSources
         .filter {
             it.value.newSourceClass == NHentai::class
+        }
+        .flatMap { it.value.sourceIds }
+        .toSet()
+
+    hitomiSourceIds = AndroidSourceManager.currentDelegatedSources
+        .filter {
+            it.value.newSourceClass == Hitomi::class
         }
         .flatMap { it.value.sourceIds }
         .toSet()
@@ -62,5 +71,5 @@ fun handleSourceLibrary() {
     LIBRARY_UPDATE_EXCLUDED_SOURCES = listOf(
         EH_SOURCE_ID,
         EXH_SOURCE_ID,
-    ) + nHentaiSourceIds + pururinSourceIds
+    ) + nHentaiSourceIds + pururinSourceIds + hitomiSourceIds
 }

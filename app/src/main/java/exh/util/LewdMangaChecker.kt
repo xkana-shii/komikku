@@ -35,6 +35,7 @@ private fun isHentaiSource(source: String): Boolean {
         source.contains("hentai cafe", true) ||
         source.contains("hentai2read", true) ||
         source.contains("hentaifox", true) ||
+        source.contains("hitomi.la", true) ||
         source.contains("hentainexus", true) ||
         source.contains("manhwahentai.me", true) ||
         source.contains("milftoon", true) ||

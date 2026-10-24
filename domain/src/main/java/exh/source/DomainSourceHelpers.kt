@@ -11,6 +11,8 @@ var metadataDelegatedSourceIds: List<Long> = emptyList()
 
 var nHentaiSourceIds: Set<Long> = emptySet()
 
+var hitomiSourceIds: Set<Long> = emptySet()
+
 var pururinSourceIds: Set<Long> = emptySet()
 
 var lanraragiSourceIds: Set<Long> = emptySet()
