@@ -99,6 +99,16 @@ interface MangaRepository {
 
     suspend fun getReadMangaNotInLibraryView(): List<LibraryManga>
 
+    // KUN -->
+
+    // Replaces *every* override: a null argument clears that field, it does not keep the
+
+    // stored value. Callers must go through SyncStateBumper afterwards or the edit never moves
+
+    // `version` and loses the server's merge (see SyncStateBumper.bumpForCustomInfoEdit).
+
+    // KUN <--
+
     suspend fun updateUserInfo(
         mangaId: Long,
         title: String?,

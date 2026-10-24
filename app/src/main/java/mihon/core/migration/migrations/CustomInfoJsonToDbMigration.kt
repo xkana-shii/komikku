@@ -42,9 +42,15 @@ class CustomInfoJsonToDbMigration(
                     editJson.bufferedReader().use { it.readText() },
                 )
             } catch (e: Exception) {
-                null
+                // KUN -->
+                // A decode failure means the only copy of the user's edits is this file (the store
+                // that wrote it truncated it in place). Keep it under a name nothing reads, so it
+                // can be repaired by hand, instead of deleting it.
+                editJson.renameTo(File(editJson.parentFile, "edits.json.import-failed"))
+                return@withContext true
+                // KUN <--
             }
-            val updates = json?.mangas?.mapNotNull { mangaJson ->
+            val updates = json.mangas?.mapNotNull { mangaJson ->
                 mangaJson.id?.let { id ->
                     MangaUserInfoUpdate(
                         id = id,
@@ -59,8 +65,10 @@ class CustomInfoJsonToDbMigration(
                 }
             }
             if (!updates.isNullOrEmpty()) {
-                mangaRepository.updateUserInfoAll(updates)
                 // KUN -->
+                // Throws on a failed write; the file is only deleted below once everything landed, so
+                // the next start retries.
+                mangaRepository.updateUserInfoAll(updates)
                 updates.forEach { syncStateBumper.bumpForCustomInfoEdit(it.id, null, it) }
                 // KUN <--
             }

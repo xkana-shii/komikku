@@ -80,6 +80,7 @@ import exh.log.XLogLogcatLogger
 import exh.log.xLogD
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -93,7 +94,9 @@ import mihon.app.di.injekt.MetroInteropModule
 import mihon.core.metro.AppCoroutineScope
 import mihon.core.metro.GraphProvider
 import mihon.core.migration.Migration
+import mihon.core.migration.MigrationContext
 import mihon.core.migration.Migrator
+import mihon.core.migration.migrations.CustomInfoJsonToDbMigration
 import mihon.core.migration.nextMigrationTarget
 import mihon.telemetry.TelemetryConfig
 import org.conscrypt.Conscrypt
@@ -109,6 +112,7 @@ import timber.log.Timber
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.InjektScope
 import uy.kohesive.injekt.api.get
+import java.io.File
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -281,14 +285,52 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (!WorkManager.isInitialized()) {
             WorkManager.initialize(this, Configuration.Builder().build())
         }
+        initializeMigrator()
+
+        // KUN -->
+        // The legacy edits.json import is a migration, but the migration framework folds a failure
+        // into the previous chain result, so a failed write would be recorded as done while the file
+        // (and the user's edits) are still there and nothing reads them any more. Run it once more
+        // after the migrator, while the file exists.
+        val legacyImport = scope.async {
+            Migrator.await()
+            importLegacyCustomInfoIfNeeded()
+        }
+        // KUN <--
+
         val syncPreferences: SyncPreferences = Injekt.get()
         val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
         if (syncPreferences.isSyncEnabled() && syncTriggerOpt.syncOnAppStart) {
-            scope.launch { SyncDataJob.startNow(this@App) }
+            scope.launch {
+                // KUN -->
+                // A sync started before the import would upload the pre-import state (and could even
+                // clear a peer's overrides), so both the migration and the import must land first.
+                legacyImport.await()
+                // KUN <--
+                SyncDataJob.startNow(this@App)
+            }
         }
-
-        initializeMigrator()
     }
+
+    // KUN -->
+    private suspend fun importLegacyCustomInfoIfNeeded() {
+        if (!File(getExternalFilesDir(null), "edits.json").exists()) return
+        val migration = migrations.filterIsInstance<CustomInfoJsonToDbMigration>().firstOrNull() ?: return
+        runCatching {
+            migration.invoke(
+                MigrationContext(
+                    dryrun = false,
+                    previousVersion = preferenceStore
+                        .getInt(Preference.appStateKey("eh_last_migration_version"), 0)
+                        .get(),
+                ),
+            )
+        }.onFailure {
+            // Keep the file: the next start tries again.
+            logcat(LogPriority.ERROR, it) { "Importing the legacy manga edits failed" }
+        }
+    }
+    // KUN <--
 
     private fun initializeMigrator() {
         // SY -->

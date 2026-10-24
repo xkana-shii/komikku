@@ -192,6 +192,7 @@ abstract class DelegatedHttpSource(val delegate: HttpSource) : HttpSource() {
         return delegate.fetchMangaDetails(manga)
     }
 
+    // SY -->
     /**
      * Set when [fetchMangaDetails] is overridden, so [getMangaUpdate] uses it instead of the delegate.
      */
@@ -201,6 +202,7 @@ abstract class DelegatedHttpSource(val delegate: HttpSource) : HttpSource() {
      * Set when [fetchChapterList] is overridden, so [getMangaUpdate] uses it instead of the delegate.
      */
     protected open val overridesChapterList = false
+    // SY <--
 
     /**
      * Returns the request for the details of a manga. Override only if it's needed to change the

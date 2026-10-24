@@ -140,7 +140,11 @@ class Hitomi(
     private suspend fun fetchGallery(manga: SManga): Response {
         val cdnDomain = resolveCdnDomain()
         refreshGgScript()
-        val id = manga.url.substringAfterLast("-").substringBefore(".")
+        // KUN -->
+        // Handles both the extension's `/manga/<slug>-<id>.html` and the `/galleries/<id>.html`
+        // form that URL import stores (no slug there, so substringAfterLast("-") did not work).
+        val id = HitomiSearchMetadata.hlIdFromUrl(manga.url)
+        // KUN <--
         return client.newCall(GET("https://ltn.$cdnDomain/galleries/$id.js", headers)).awaitSuccess()
     }
     // KUN <--

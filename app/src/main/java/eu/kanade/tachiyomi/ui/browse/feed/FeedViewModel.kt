@@ -91,6 +91,10 @@ class FeedViewModel(
     val state: StateFlow<FeedScreenState> = mutableState
         .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), FeedScreenState())
     // SY <--
+    // KUN -->
+    // The gate shares the state but does not pause anything: `SubscriberGate` only holds back flows
+    // that opt in with `pausedWhileUnsubscribed()`, and the feed queries (like upstream's) do not.
+    // KUN <--
 
     private val _events = Channel<Event>(Int.MAX_VALUE)
     val events = _events.receiveAsFlow()

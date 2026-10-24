@@ -4,6 +4,7 @@ package mihon.core.migration.migrations
 import android.content.Context
 import eu.kanade.domain.sync.SyncStateBumper
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -118,7 +119,7 @@ class CustomInfoJsonToDbMigrationTest {
     }
 
     @Test
-    fun `an unreadable file is discarded rather than retried forever`() {
+    fun `an unreadable file is quarantined rather than retried or deleted`() {
         runBlocking {
             val dir = newDir()
             Files.writeString(dir.resolve("edits.json"), "not json")
@@ -127,8 +128,31 @@ class CustomInfoJsonToDbMigrationTest {
             migration.invoke(mockk(relaxed = true)) shouldBe true
 
             coVerify(exactly = 0) { mangaRepository.updateUserInfoAll(any()) }
-            // Deleted, so the broken payload cannot fail the migration run again on every start.
+            // Moved aside (the only copy of the user's edits), so it cannot fail the run every start
+            // but can still be repaired by hand.
             Files.exists(dir.resolve("edits.json")) shouldBe false
+            Files.exists(dir.resolve("edits.json.import-failed")) shouldBe true
+        }
+    }
+
+    @Test
+    fun `a failed write keeps the file so the next start retries`() {
+        runBlocking {
+            val dir = newDir()
+            Files.writeString(dir.resolve("edits.json"), """{"mangas":[{"id":1,"title":"Edited"}]}""")
+            coEvery { mangaRepository.updateUserInfoAll(any()) } throws IllegalStateException("database locked")
+            val migration = migrationIn(dir)
+
+            var failed = false
+            try {
+                migration.invoke(mockk(relaxed = true))
+            } catch (e: IllegalStateException) {
+                failed = true
+            }
+            failed shouldBe true
+
+            // Still there: nothing else reads it, so dropping it would lose the edits.
+            Files.exists(dir.resolve("edits.json")) shouldBe true
         }
     }
 }
