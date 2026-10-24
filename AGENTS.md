@@ -461,9 +461,9 @@ main upstream `mihon/main`, additional `tachiyomiSY/master`, `komikku/master` (d
 
 - **Gradle OOM** – the daemon uses `-Xmx4g` (`gradle.properties`); run `./gradlew --stop` and retry.
 - **Spotless failures** – run `spotlessApply`, then `spotlessCheck`.
-- **App migrations do not run on upgrade** – this fork pins `versionCode` at 83, so `Migrator` skips
-  later version-gated migrations. Any migration that prevents data loss must also run from `App.onCreate`
-  behind its own one-shot guard; `importLegacyCustomInfoOnce()` is the reference implementation.
+- **App migrations** – `versionCode` stays pinned at 83, but `Migrator` tracks the highest applied
+  migration version (`eh_last_migration_version`) and targets `nextMigrationTarget(...)`. Add a
+  `mihon.core.migration.Migration` with the next free `version`; it runs exactly once on upgrade.
 - **SQLDelight errors** – run `./gradlew :data:generateSqlDelightInterface` after schema changes.
 - **Missing `google-services.json` / `client_secrets.json`** – not needed unless telemetry is compiled in
   (`-Pdist=ci|github` without `-Pinclude-telemetry=false`) or Google Drive backup is used.

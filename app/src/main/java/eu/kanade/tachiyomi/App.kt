@@ -93,9 +93,8 @@ import mihon.app.di.injekt.MetroInteropModule
 import mihon.core.metro.AppCoroutineScope
 import mihon.core.metro.GraphProvider
 import mihon.core.migration.Migration
-import mihon.core.migration.MigrationContext
 import mihon.core.migration.Migrator
-import mihon.core.migration.migrations.CustomInfoJsonToDbMigration
+import mihon.core.migration.nextMigrationTarget
 import mihon.telemetry.TelemetryConfig
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
@@ -110,7 +109,6 @@ import timber.log.Timber
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.InjektScope
 import uy.kohesive.injekt.api.get
-import java.io.File
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -290,48 +288,38 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         initializeMigrator()
-
-        // KUN -->
-        // `versionCode` is pinned at 83 in this fork, so `Migrator` short-circuits every migration
-        // added afterwards (`old >= new`). The edits.json import is the first migration whose
-        // absence loses user data (the JSON store it read is gone), so it also runs here, once:
-        // it writes the overrides and deletes the file, making later starts a no-op.
-        importLegacyCustomInfoOnce()
-        // KUN <--
     }
-
-    // KUN -->
-    private fun importLegacyCustomInfoOnce() {
-        if (!File(getExternalFilesDir(null), "edits.json").exists()) return
-        scope.launch {
-            migrations.filterIsInstance<CustomInfoJsonToDbMigration>()
-                .firstOrNull()
-                ?.invoke(
-                    MigrationContext(
-                        dryrun = false,
-                        previousVersion = preferenceStore
-                            .getInt(Preference.appStateKey("eh_last_version_code"), 0)
-                            .get(),
-                    ),
-                )
-        }
-    }
-    // KUN <--
 
     private fun initializeMigrator() {
         // SY -->
-        val preference = preferenceStore.getInt(Preference.appStateKey("eh_last_version_code"), 0)
+        val legacyVersionCode = preferenceStore.getInt(Preference.appStateKey("eh_last_version_code"), 0)
         // SY <--
+        // KUN -->
+        // `versionCode` is pinned at 83 in this fork, so passing it as the target made
+        // `MigrationStrategyFactory` short-circuit every migration added afterwards (`old >= new`).
+        // Track the highest *applied migration version* instead, seeded from the stored version code
+        // so builds that already ran migrations keep their history. Each migration then runs exactly
+        // once, whatever the app version code does.
+        val applied = preferenceStore.getInt(
+            Preference.appStateKey("eh_last_migration_version"),
+            legacyVersionCode.get(),
+        )
+        val target = nextMigrationTarget(applied.get(), migrations)
+        // KUN <--
         logcat {
-            "Migration from ${preference.get()} to ${BuildConfig.VERSION_CODE} with ${migrations.size} migration(s)"
+            "Migration from ${applied.get()} to $target with ${migrations.size} migration(s)"
         }
         Migrator.initialize(
-            old = preference.get(),
-            new = BuildConfig.VERSION_CODE,
+            old = applied.get(),
+            // KUN -->
+            new = target,
+            // KUN <--
             migrations = migrations.toList(),
             onMigrationComplete = {
-                logcat { "Updating last version to ${BuildConfig.VERSION_CODE}" }
-                preference.set(BuildConfig.VERSION_CODE)
+                // KUN -->
+                logcat { "Updating last migration version to $target" }
+                applied.set(target)
+                // KUN <--
             },
         )
     }
