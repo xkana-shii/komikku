@@ -160,7 +160,7 @@ class AndroidSourceManager(
                     sourceQName == delegated.originalSourceQualifiedClassName ||
                         (delegated.factory && sourceQName.startsWith(delegated.originalSourceQualifiedClassName)) ||
                         // SY -->
-                        id == delegated.sourceId
+                        id in delegated.sourceIds
                     // SY <--
                 }
             }
@@ -401,14 +401,32 @@ class AndroidSourceManager(
 
         data class DelegatedSource(
             val sourceName: String,
-            val sourceId: Long,
+            val sourceIds: List<Long>,
             val originalSourceQualifiedClassName: String,
             val newSourceClass: KClass<out DelegatedHttpSource>,
             val factory: Boolean = false,
             // KUN -->
             val createSource: ((HttpSource, Context) -> DelegatedHttpSource)? = null,
             // KUN <--
-        )
+        ) {
+            // SY -->
+            constructor(
+                sourceName: String,
+                sourceId: Long,
+                originalSourceQualifiedClassName: String,
+                newSourceClass: KClass<out DelegatedHttpSource>,
+                factory: Boolean = false,
+                createSource: ((HttpSource, Context) -> DelegatedHttpSource)? = null,
+            ) : this(
+                sourceName,
+                listOf(sourceId),
+                originalSourceQualifiedClassName,
+                newSourceClass,
+                factory,
+                createSource,
+            )
+            // SY <--
+        }
     }
 
     private class ListenMutableMap<K, V>(

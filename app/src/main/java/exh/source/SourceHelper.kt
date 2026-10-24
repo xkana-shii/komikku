@@ -29,34 +29,35 @@ fun handleSourceLibrary() {
         .filter {
             it.value.newSourceClass in DELEGATED_METADATA_SOURCES
         }
-        .map { it.value.sourceId }
+        .flatMap { it.value.sourceIds }
+        .distinct()
         .sorted()
 
     nHentaiSourceIds = AndroidSourceManager.currentDelegatedSources
         .filter {
             it.value.newSourceClass == NHentai::class
         }
-        .map { it.value.sourceId }
-        .sorted()
+        .flatMap { it.value.sourceIds }
+        .toSet()
 
     pururinSourceIds = AndroidSourceManager.currentDelegatedSources
         .filter { it.value.newSourceClass == Pururin::class }
-        .map { it.value.sourceId }
-        .sorted()
+        .flatMap { it.value.sourceIds }
+        .toSet()
 
     mangaDexSourceIds = AndroidSourceManager.currentDelegatedSources
         .filter {
             it.value.newSourceClass == MangaDex::class
         }
-        .map { it.value.sourceId }
-        .sorted()
+        .flatMap { it.value.sourceIds }
+        .toSet()
 
     lanraragiSourceIds = AndroidSourceManager.currentDelegatedSources
         .filter {
             it.value.newSourceClass == Lanraragi::class
         }
-        .map { it.value.sourceId }
-        .sorted()
+        .flatMap { it.value.sourceIds }
+        .toSet()
 
     LIBRARY_UPDATE_EXCLUDED_SOURCES = listOf(
         EH_SOURCE_ID,
