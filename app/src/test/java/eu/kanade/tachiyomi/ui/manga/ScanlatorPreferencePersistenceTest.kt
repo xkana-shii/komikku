@@ -4,6 +4,7 @@ import eu.kanade.domain.manga.interactor.SetExcludedScanlators
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft.BlacklistItem
+import eu.kanade.presentation.manga.components.ScanlatorPreferencesEditor
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -235,6 +236,109 @@ class ScanlatorPreferencePersistenceTest {
         job.cancel()
         failures shouldBe listOf(ScanlatorPreferencesDraft.Change.RangeRules(emptyList()))
         manga.smartMergeOverride shouldBe null
+    }
+
+    // ---- The dialog's editor, as the screen recording used it (To You at Dawn) ----
+
+    private val dawn = listOf("kaoru", "desire scans", "Kaizen", "Myth Toons", "Paradise scans", "Unknown")
+
+    /** Opens the dialog on the stored values, as reopening it does. */
+    private fun reopen(scanlators: List<String> = dawn) = ScanlatorPreferencesDraft.create(
+        scanlators = scanlators,
+        priority = manga.scanlatorPriority,
+        excluded = excluded,
+        smartMergeOverride = manga.smartMergeOverride,
+        rangeRules = manga.scanlatorRangeRules.mapNotNull(::parseScanlatorRangeRule),
+        blacklist = emptyList(),
+    )
+
+    /** Uses an open dialog through [ScanlatorPreferencesEditor] and the real writer, then closes it at once. */
+    private fun dialog(block: (ScanlatorPreferencesEditor) -> Unit) = runBlocking {
+        val job = Job()
+        val writer = SequentialWriter<ScanlatorPreferencesDraft.Change>(CoroutineScope(coroutineContext + job)) {
+            changes.apply(1, it)
+        }
+        block(ScanlatorPreferencesEditor(reopen()) { it.forEach(writer::submit) })
+        // Closing only dismisses; what was submitted is stored before the dialog reads it again.
+        withTimeout(5_000) { writer.awaitIdle() }
+        job.cancel()
+    }
+
+    private fun startDawn() {
+        manga = manga.copy(scanlatorPriority = dawn, smartMergeOverride = true)
+        excluded = emptySet()
+    }
+
+    @Test
+    fun `kaoru moved from the top to the bottom stays there after closing and reopening`() {
+        startDawn()
+        dialog { it.edit { draft -> draft.move(0, 5) } }
+        reopen().order shouldBe listOf("desire scans", "Kaizen", "Myth Toons", "Paradise scans", "Unknown", "kaoru")
+    }
+
+    @Test
+    fun `moves to the top, to the middle and repeated moves of one scanlator all persist`() {
+        startDawn()
+        dialog { it.edit { draft -> draft.move(5, 0) } }
+        reopen().order shouldBe listOf("Unknown", "kaoru", "desire scans", "Kaizen", "Myth Toons", "Paradise scans")
+        dialog { it.edit { draft -> draft.move(1, 3) } }
+        reopen().order shouldBe listOf("Unknown", "desire scans", "Kaizen", "kaoru", "Myth Toons", "Paradise scans")
+        dialog { editor ->
+            editor.edit { it.move(3, 0) }
+            editor.edit { it.move(0, 5) }
+            editor.edit { it.move(5, 2) }
+            editor.edit { it.move(4, 1) }
+        }
+        reopen().order shouldBe listOf("Unknown", "Myth Toons", "desire scans", "kaoru", "Kaizen", "Paradise scans")
+    }
+
+    @Test
+    fun `a drop callback created before a Global choice does not undo it`() {
+        startDawn()
+        dialog { editor ->
+            // The reorderable list keeps its drop callback until the order changes: here it was created
+            // before Global was chosen, as when the dialog opened.
+            val onSettle: (Int, Int) -> Unit = { from, to -> editor.edit { it.move(from, to) } }
+            editor.edit { it.copy(smartMergeOverride = null) }
+            editor.edit { it.toggleExcluded("Unknown") }
+            onSettle(0, 5)
+        }
+        manga.smartMergeOverride shouldBe null
+        excluded shouldBe setOf("Unknown")
+        reopen().run {
+            smartMergeOverride shouldBe null
+            order.last() shouldBe "kaoru"
+        }
+    }
+
+    @Test
+    fun `every Smart Merge choice persists when the dialog is closed right after, the last of a quick series wins`() {
+        startDawn()
+        listOf<Boolean?>(null, true, false, null).forEach { choice ->
+            dialog { editor -> editor.edit { it.copy(smartMergeOverride = choice) } }
+            reopen().smartMergeOverride shouldBe choice
+        }
+        dialog { editor ->
+            editor.edit { it.copy(smartMergeOverride = null) }
+            editor.edit { it.copy(smartMergeOverride = true) }
+            editor.edit { it.copy(smartMergeOverride = false) }
+            editor.edit { it.copy(smartMergeOverride = null) }
+        }
+        reopen().smartMergeOverride shouldBe null
+    }
+
+    @Test
+    fun `the saved order does not depend on the order the source lists scanlators in`() {
+        startDawn()
+        dialog { it.edit { draft -> draft.move(0, 5) } }
+        val saved = reopen().order
+        reopen(dawn.reversed()).order shouldBe saved
+        reopen(dawn.shuffled(java.util.Random(7))).order shouldBe saved
+        // A new scanlator goes after the saved ones; one that is missing for now keeps its place.
+        reopen(dawn + "New group").order shouldBe saved + "New group"
+        reopen(dawn - "Kaizen").order shouldBe saved - "Kaizen"
+        dialog { it.edit { draft -> draft.move(4, 0) } }
+        manga.scanlatorPriority.size shouldBe 6
     }
 }
 // KNS <--

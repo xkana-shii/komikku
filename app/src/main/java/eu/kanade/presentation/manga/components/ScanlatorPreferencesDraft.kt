@@ -1,5 +1,8 @@
 package eu.kanade.presentation.manga.components
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import tachiyomi.domain.chapter.model.ScanlatorRangeRule
 import tachiyomi.domain.chapter.model.parseScanlatorRangeRule
 
@@ -117,6 +120,28 @@ data class ScanlatorPreferencesDraft(
                 blacklist = blacklist,
             )
         }
+    }
+}
+
+/**
+ * The dialog's draft and the one way to edit it. Every edit is a function of the draft as it is when
+ * the edit happens, never of a copy a callback captured earlier: the reorderable list keeps its drop
+ * callback until the order changes, so a drop computed from that copy would undo a Smart Merge choice,
+ * an exclusion or a range made since. The changes an edit makes go to [onChanges] right away.
+ */
+class ScanlatorPreferencesEditor(
+    initial: ScanlatorPreferencesDraft,
+    private val onChanges: (List<ScanlatorPreferencesDraft.Change>) -> Unit,
+) {
+    var draft by mutableStateOf(initial)
+        private set
+
+    fun edit(transform: (ScanlatorPreferencesDraft) -> ScanlatorPreferencesDraft) {
+        val previous = draft
+        val next = transform(previous)
+        draft = next
+        val changes = next.changesFrom(previous)
+        if (changes.isNotEmpty()) onChanges(changes)
     }
 }
 // KNS <--

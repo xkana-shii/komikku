@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,12 +85,10 @@ fun ScanlatorPreferencesDialog(
     /** Each scanlator's chapters (all of them, not only the visible ones), as the old `main` showed. */
     scanlatorStats: Map<String, ScanlatorStats> = emptyMap(),
 ) {
-    var draft by remember(initial) { mutableStateOf(initial) }
-    val update: (ScanlatorPreferencesDraft) -> Unit = { next ->
-        val changes = next.changesFrom(draft)
-        draft = next
-        if (changes.isNotEmpty()) onChanges(changes)
-    }
+    val currentOnChanges by rememberUpdatedState(onChanges)
+    val editor = remember(initial) { ScanlatorPreferencesEditor(initial) { currentOnChanges(it) } }
+    val draft = editor.draft
+    val update: (DraftEdit) -> Unit = editor::edit
     // One scroll position per mode, so switching back returns to where the user was.
     val scanlatorScroll = rememberScrollState()
     val blacklistScroll = rememberScrollState()
@@ -108,7 +107,7 @@ fun ScanlatorPreferencesDialog(
                 } else {
                     MaterialSymbols.Rounded.Group to stringResource(KMR.strings.scanlator_preferences)
                 }
-                TooltipIconButton(icon = switchIcon, label = switchLabel, onClick = { update(draft.switchMode()) })
+                TooltipIconButton(icon = switchIcon, label = switchLabel, onClick = { update { it.switchMode() } })
             }
         },
         text = {
@@ -144,12 +143,12 @@ private fun ScanlatorPreferencesContent(
     draft: ScanlatorPreferencesDraft,
     globalSmartMerge: Boolean,
     scanlatorStats: Map<String, ScanlatorStats>,
-    onDraftChange: (ScanlatorPreferencesDraft) -> Unit,
+    onDraftChange: (DraftEdit) -> Unit,
 ) {
     SmartMergeSelector(
         override = draft.smartMergeOverride,
         globalSmartMerge = globalSmartMerge,
-        onChange = { onDraftChange(draft.copy(smartMergeOverride = it)) },
+        onChange = { override -> onDraftChange { it.copy(smartMergeOverride = override) } },
     )
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
     SectionHeader(KMR.strings.scanlator_priority, KMR.strings.scanlator_priority_summary)
@@ -158,7 +157,7 @@ private fun ScanlatorPreferencesContent(
     } else {
         ReorderableColumn(
             list = draft.order,
-            onSettle = { from, to -> onDraftChange(draft.move(from, to)) },
+            onSettle = { from, to -> onDraftChange { it.move(from, to) } },
             modifier = Modifier.padding(top = 4.dp),
         ) { _, scanlator, isDragging ->
             key(scanlator) {
@@ -187,7 +186,7 @@ private fun ScanlatorPreferencesContent(
                                 )
                                 scanlatorStats[scanlator]?.let { ScanlatorStatsText(it) }
                             }
-                            IconButton(onClick = { onDraftChange(draft.toggleExcluded(scanlator)) }) {
+                            IconButton(onClick = { onDraftChange { it.toggleExcluded(scanlator) } }) {
                                 Icon(
                                     imageVector = if (excluded) {
                                         MaterialSymbols.RoundedFilled.VisibilityOff
@@ -277,7 +276,7 @@ private fun SmartMergeSelector(override: Boolean?, globalSmartMerge: Boolean, on
  * last matching rule wins). Rules can be added with a from/to chapter and a scanlator, and removed.
  */
 @Composable
-private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange: (ScanlatorPreferencesDraft) -> Unit) {
+private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange: (DraftEdit) -> Unit) {
     SectionHeader(KMR.strings.scanlator_range_rules, KMR.strings.scanlator_range_rules_summary)
     draft.rangeRules.forEachIndexed { index, rule ->
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -293,7 +292,7 @@ private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange:
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            IconButton(onClick = { onDraftChange(draft.removeRangeRule(index)) }) {
+            IconButton(onClick = { onDraftChange { it.removeRangeRule(index) } }) {
                 Icon(MaterialSymbols.Rounded.Delete, contentDescription = stringResource(MR.strings.action_delete))
             }
         }
@@ -307,7 +306,7 @@ private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange:
     ) {
         OutlinedTextField(
             value = input.from,
-            onValueChange = { onDraftChange(draft.copy(rangeInput = input.copy(from = it))) },
+            onValueChange = { value -> onDraftChange { it.copy(rangeInput = it.rangeInput.copy(from = value)) } },
             label = { Text(stringResource(KMR.strings.scanlator_range_from)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -315,7 +314,7 @@ private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange:
         )
         OutlinedTextField(
             value = input.to,
-            onValueChange = { onDraftChange(draft.copy(rangeInput = input.copy(to = it))) },
+            onValueChange = { value -> onDraftChange { it.copy(rangeInput = it.rangeInput.copy(to = value)) } },
             label = { Text(stringResource(KMR.strings.scanlator_range_to)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -333,7 +332,7 @@ private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange:
                     DropdownMenuItem(
                         text = { Text(option) },
                         onClick = {
-                            onDraftChange(draft.copy(rangeInput = input.copy(scanlator = option)))
+                            onDraftChange { it.copy(rangeInput = it.rangeInput.copy(scanlator = option)) }
                             expanded = false
                         },
                     )
@@ -341,7 +340,7 @@ private fun ScanlatorRangeRules(draft: ScanlatorPreferencesDraft, onDraftChange:
             }
         }
         TextButton(
-            onClick = { onDraftChange(draft.addPendingRangeRule()) },
+            onClick = { onDraftChange { it.addPendingRangeRule() } },
             enabled = draft.pendingRangeRule != null,
         ) { Text(stringResource(KMR.strings.scanlator_range_add)) }
     }
@@ -356,7 +355,7 @@ private fun BlacklistContent(
     draft: ScanlatorPreferencesDraft,
     hideBlacklisted: Boolean,
     onHideBlacklistedChange: (Boolean) -> Unit,
-    onDraftChange: (ScanlatorPreferencesDraft) -> Unit,
+    onDraftChange: (DraftEdit) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -404,7 +403,7 @@ private fun BlacklistContent(
                     )
                 }
             }
-            IconButton(onClick = { onDraftChange(draft.removeBlacklistEntry(key)) }) {
+            IconButton(onClick = { onDraftChange { it.removeBlacklistEntry(key) } }) {
                 Icon(MaterialSymbols.Rounded.Delete, contentDescription = stringResource(MR.strings.action_delete))
             }
         }
@@ -460,4 +459,8 @@ fun scanlatorStatsOf(chapters: List<Chapter>): Map<String, ScanlatorStats> =
     chapters.mapNotNull { chapter -> chapter.scanlator?.takeIf { it.isNotBlank() }?.let { it to chapter } }
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, list) -> ScanlatorStats(list.size, scanlatorCoverage(list.map(Chapter::chapterNumber))) }
+// KNS <--
+
+// KNS --> an edit of the dialog's current draft, see ScanlatorPreferencesEditor
+private typealias DraftEdit = (ScanlatorPreferencesDraft) -> ScanlatorPreferencesDraft
 // KNS <--
