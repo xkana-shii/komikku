@@ -5,6 +5,7 @@ import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 
 interface MangaRepository {
@@ -97,5 +98,18 @@ interface MangaRepository {
     suspend fun deleteManga(mangaId: Long)
 
     suspend fun getReadMangaNotInLibraryView(): List<LibraryManga>
+
+    suspend fun updateUserInfo(
+        mangaId: Long,
+        title: String?,
+        author: String?,
+        artist: String?,
+        thumbnailUrl: String?,
+        description: String?,
+        genre: List<String>?,
+        status: Long?,
+    )
+
+    suspend fun updateUserInfoAll(updates: List<MangaUserInfoUpdate>)
     // SY <--
 }

@@ -124,16 +124,16 @@ import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.model.SubcategoryUpdateScope
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetIdsOfFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.interactor.GetMergedMangaById
-import tachiyomi.domain.manga.interactor.SetCustomMangaInfo
-import tachiyomi.domain.manga.model.CustomMangaInfo
+import tachiyomi.domain.manga.interactor.SetMangaUserInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.applyFilter
+import tachiyomi.domain.manga.model.toMangaUserInfoUpdate
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracks
@@ -173,9 +173,8 @@ class LibraryViewModel(
     private val sourcePreferences: SourcePreferences,
     private val getMergedMangaById: GetMergedMangaById,
     private val getTracks: GetTracks,
-    private val setCustomMangaInfo: SetCustomMangaInfo,
+    private val setMangaUserInfo: SetMangaUserInfo,
     // KUN -->
-    private val getCustomMangaInfo: GetCustomMangaInfo,
     private val syncStateBumper: SyncStateBumper,
     // KUN <--
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
@@ -1190,55 +1189,58 @@ class LibraryViewModel(
         val regex2 = "\\(.*?\\)".toRegex()
         val regex3 = "\\{.*?\\}".toRegex()
         val regex4 = ".*\\|".toRegex()
-        // KUN -->
-        // Custom info lives outside the manga row, so the sync triggers never see the edit. Remember
-        // what was stored before each write and bump the manga afterwards (gated by sync settings).
-        val customInfoEdits = mutableListOf<Pair<CustomMangaInfo?, CustomMangaInfo>>()
-        // KUN <--
-        state.value.selectedManga.fastFilter {
-            it.isEhBasedManga() ||
-                it.source in nHentaiSourceIds
-        }.fastForEach { manga ->
-            val editedTitle = manga.title
-                .replace(regex1, "").trim()
-                .replace(regex2, "").trim()
-                .replace(regex3, "").trim()
-                .let {
-                    if (it.contains("|")) {
-                        it.replace(regex4, "").trim()
-                    } else {
-                        it
+        viewModelScope.launch(Dispatchers.IO) {
+            // KUN -->
+            // The version trigger does not watch the user_* columns, so remember what was stored
+            // before each write and bump the manga afterwards (gated by sync settings).
+            val customInfoEdits = mutableListOf<Pair<MangaUserInfoUpdate?, MangaUserInfoUpdate>>()
+            // KUN <--
+            val updates = state.value.selectedManga.fastFilter {
+                it.isEhBasedManga() ||
+                    it.source in nHentaiSourceIds
+            }.mapNotNull { manga ->
+                val editedTitle = manga.title
+                    .replace(regex1, "").trim()
+                    .replace(regex2, "").trim()
+                    .replace(regex3, "").trim()
+                    .let {
+                        if (it.contains("|")) {
+                            it.replace(regex4, "").trim()
+                        } else {
+                            it
+                        }
+                    }
+                if (manga.title == editedTitle) return@mapNotNull null
+                val mangaInfo = MangaUserInfoUpdate(
+                    id = manga.id,
+                    title = editedTitle.nullIfBlank(),
+                    author = manga.author.takeUnless { it == manga.ogAuthor },
+                    artist = manga.artist.takeUnless { it == manga.ogArtist },
+                    thumbnailUrl = manga.thumbnailUrl.takeUnless { it == manga.ogThumbnailUrl },
+                    description = manga.description.takeUnless { it == manga.ogDescription },
+                    genre = manga.genre.takeUnless { it == manga.ogGenre },
+                    status = manga.status.takeUnless { it == manga.ogStatus },
+                )
+
+                // KUN -->
+                customInfoEdits += manga.toMangaUserInfoUpdate() to mangaInfo
+                // KUN <--
+                mangaInfo
+            }
+            setMangaUserInfo.setAll(updates)
+            // KUN -->
+            if (customInfoEdits.isNotEmpty()) {
+                // The bump must survive leaving the screen right after the edit: the view model scope is
+                // cancelled then. The app-wide, non-cancellable launch still runs off the UI thread.
+                appScope.launchNonCancellable {
+                    customInfoEdits.forEach { (before, after) ->
+                        syncStateBumper.bumpForCustomInfoEdit(after.id, before, after)
                     }
                 }
-            if (manga.title == editedTitle) return@fastForEach
-            val mangaInfo = CustomMangaInfo(
-                id = manga.id,
-                title = editedTitle.nullIfBlank(),
-                author = manga.author.takeUnless { it == manga.ogAuthor },
-                artist = manga.artist.takeUnless { it == manga.ogArtist },
-                thumbnailUrl = manga.thumbnailUrl.takeUnless { it == manga.ogThumbnailUrl },
-                description = manga.description.takeUnless { it == manga.ogDescription },
-                genre = manga.genre.takeUnless { it == manga.ogGenre },
-                status = manga.status.takeUnless { it == manga.ogStatus },
-            )
-
-            // KUN -->
-            customInfoEdits += getCustomMangaInfo.get(manga.id) to mangaInfo
-            // KUN <--
-            setCustomMangaInfo.set(mangaInfo)
-        }
-        // KUN -->
-        if (customInfoEdits.isNotEmpty()) {
-            // The bump must survive leaving the screen right after the edit: the view model scope is
-            // cancelled then. The app-wide, non-cancellable launch still runs off the UI thread.
-            appScope.launchNonCancellable {
-                customInfoEdits.forEach { (before, after) ->
-                    syncStateBumper.bumpForCustomInfoEdit(after.id, before, after)
-                }
             }
+            // KUN <--
+            clearSelection()
         }
-        // KUN <--
-        clearSelection()
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -1254,40 +1256,43 @@ class LibraryViewModel(
     }
 
     fun resetInfo() {
-        // KUN -->
-        val customInfoEdits = mutableListOf<Pair<CustomMangaInfo?, CustomMangaInfo>>()
-        // KUN <--
-        state.value.selection.forEach { id ->
-            val mangaInfo = CustomMangaInfo(
-                id = id,
-                title = null,
-                author = null,
-                artist = null,
-                thumbnailUrl = null,
-                description = null,
-                genre = null,
-                status = null,
-            )
-
+        viewModelScope.launch(Dispatchers.IO) {
             // KUN -->
-            customInfoEdits += getCustomMangaInfo.get(id) to mangaInfo
+            // Clearing the overrides is a real edit: bump so the empty custom-info block is uploaded and
+            // the restore path can remove the overrides on the other devices. The version trigger does
+            // not watch the user_* columns, so keep the value that was stored before the write.
+            val customInfoEdits = mutableListOf<Pair<MangaUserInfoUpdate?, MangaUserInfoUpdate>>()
             // KUN <--
-            setCustomMangaInfo.set(mangaInfo)
-        }
-        // KUN -->
-        // Clearing the overrides is a real edit: bump so the empty custom-info block is uploaded and
-        // the restore path can remove the overrides on the other devices.
-        if (customInfoEdits.isNotEmpty()) {
-            // The bump must survive leaving the screen right after the edit: the view model scope is
-            // cancelled then. The app-wide, non-cancellable launch still runs off the UI thread.
-            appScope.launchNonCancellable {
-                customInfoEdits.forEach { (before, after) ->
-                    syncStateBumper.bumpForCustomInfoEdit(after.id, before, after)
+            val updates = state.value.selectedManga.map { manga ->
+                val mangaInfo = MangaUserInfoUpdate(
+                    id = manga.id,
+                    title = null,
+                    author = null,
+                    artist = null,
+                    thumbnailUrl = null,
+                    description = null,
+                    genre = null,
+                    status = null,
+                )
+                // KUN -->
+                customInfoEdits += manga.toMangaUserInfoUpdate() to mangaInfo
+                // KUN <--
+                mangaInfo
+            }
+            setMangaUserInfo.setAll(updates)
+            // KUN -->
+            if (customInfoEdits.isNotEmpty()) {
+                // The bump must survive leaving the screen right after the edit: the view model scope is
+                // cancelled then. The app-wide, non-cancellable launch still runs off the UI thread.
+                appScope.launchNonCancellable {
+                    customInfoEdits.forEach { (before, after) ->
+                        syncStateBumper.bumpForCustomInfoEdit(after.id, before, after)
+                    }
                 }
             }
+            // KUN <--
+            clearSelection()
         }
-        // KUN <--
-        clearSelection()
     }
     // SY <--
 

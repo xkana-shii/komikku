@@ -136,6 +136,15 @@ class BackupManga(
             // KNS -->
             nextUpdate = (legacyNextUpdate.takeIf { it != 0L } ?: this@BackupManga.nextUpdate).toInstantOrNull(),
             // KNS <--
+            // SY -->
+            userTitle = this@BackupManga.customTitle,
+            userAuthor = this@BackupManga.customAuthor,
+            userArtist = this@BackupManga.customArtist,
+            userThumbnailUrl = this@BackupManga.customThumbnailUrl,
+            userDescription = this@BackupManga.customDescription,
+            userGenre = this@BackupManga.customGenre,
+            userStatus = this@BackupManga.customStatus.takeUnless { it == 0 }?.toLong(),
+            // SY <--
         )
     }
 

@@ -40,6 +40,9 @@ object DatabaseBindings {
                 remote_update_strategyAdapter = UpdateStrategyColumnAdapter,
                 remote_memoAdapter = MemoColumnAdapter,
                 user_favorite_atAdapter = InstantColumnAdapter,
+                // SY -->
+                user_genreAdapter = StringListColumnAdapter,
+                // SY <--
                 state_chapter_last_updateAdapter = InstantColumnAdapter,
                 state_chapter_next_updateAdapter = InstantColumnAdapter,
                 state_cover_last_modifiedAdapter = InstantColumnAdapter,

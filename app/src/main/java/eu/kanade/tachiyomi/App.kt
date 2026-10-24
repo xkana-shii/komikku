@@ -100,7 +100,6 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
@@ -139,8 +138,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     // KUN -->
     @Inject private lateinit var pagePreviewCache: PagePreviewCache
-
-    @Inject private lateinit var getCustomMangaInfo: GetCustomMangaInfo
 
     @Inject private lateinit var refreshMangaCover: Lazy<RefreshMangaCover>
     // KUN <--
@@ -187,7 +184,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         graph.inject(this)
         // KUN -->
-        GetCustomMangaInfo.setInstance(getCustomMangaInfo)
+        // Drop MyAnimeList tokens issued to a different OAuth client before any tracker work starts.
+        graph.trackerManager.myAnimeList.invalidateOAuthIfClientChanged()
         // KUN <--
         Injekt.importModule(injektMetroInteropModule)
         // KUN -->

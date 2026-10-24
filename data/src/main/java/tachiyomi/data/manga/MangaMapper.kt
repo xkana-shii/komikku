@@ -34,6 +34,15 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // SY -->
+        userTitle: String?,
+        userAuthor: String?,
+        userArtist: String?,
+        userThumbnailUrl: String?,
+        userDescription: String?,
+        userGenre: List<String>?,
+        userStatus: Long?,
+        // SY <--
         // KNS -->
         userBlacklistedChapters: List<String>,
         userScanlatorPriority: List<String>,
@@ -68,6 +77,15 @@ object MangaMapper {
         version = version,
         notes = userNotes,
         memo = remoteMemo,
+        // SY -->
+        userTitle = userTitle,
+        userAuthor = userAuthor,
+        userArtist = userArtist,
+        userThumbnailUrl = userThumbnailUrl,
+        userDescription = userDescription,
+        userGenre = userGenre,
+        userStatus = userStatus,
+        // SY <--
         // KNS -->
         blacklistedChapters = userBlacklistedChapters,
         scanlatorPriority = userScanlatorPriority,
@@ -102,6 +120,15 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // SY -->
+        userTitle: String?,
+        userAuthor: String?,
+        userArtist: String?,
+        userThumbnailUrl: String?,
+        userDescription: String?,
+        userGenre: List<String>?,
+        userStatus: Long?,
+        // SY <--
         // KNS -->
         userBlacklistedChapters: List<String>,
         userScanlatorPriority: List<String>,
@@ -145,6 +172,15 @@ object MangaMapper {
             version,
             isSyncing,
             favoriteModifiedAt,
+            // SY -->
+            userTitle,
+            userAuthor,
+            userArtist,
+            userThumbnailUrl,
+            userDescription,
+            userGenre,
+            userStatus,
+            // SY <--
             // KNS -->
             userBlacklistedChapters,
             userScanlatorPriority,
@@ -191,6 +227,15 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // SY -->
+        userTitle: String?,
+        userAuthor: String?,
+        userArtist: String?,
+        userThumbnailUrl: String?,
+        userDescription: String?,
+        userGenre: List<String>?,
+        userStatus: Long?,
+        // SY <--
         // KNS -->
         userBlacklistedChapters: List<String>,
         userScanlatorPriority: List<String>,
@@ -225,6 +270,15 @@ object MangaMapper {
             version,
             isSyncing,
             favoriteModifiedAt,
+            // SY -->
+            userTitle,
+            userAuthor,
+            userArtist,
+            userThumbnailUrl,
+            userDescription,
+            userGenre,
+            userStatus,
+            // SY <--
             // KNS -->
             userBlacklistedChapters,
             userScanlatorPriority,

@@ -377,7 +377,6 @@ class RestoreRepositoryHistoryTest {
         chapterRepository = chapterRepository,
         trackRepository = TrackRepositoryImpl(database),
         mangaMetadataRepository = mockk(relaxed = true),
-        customMangaRepository = mockk(relaxed = true),
     )
 
     private fun manga(version: Long, lastModifiedAt: Long) = Manga.create().copy(

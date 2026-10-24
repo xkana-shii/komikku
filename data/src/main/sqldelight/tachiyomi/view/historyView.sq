@@ -21,7 +21,11 @@ SELECT
     history.read_at AS readAt,
     history.read_duration AS readDuration,
     max_read.read_at AS maxReadAt,
-    max_read.chapter_id AS maxReadAtChapterId
+    max_read.chapter_id AS maxReadAtChapterId,
+    -- SY -->
+    manga.user_title AS userTitle,
+    manga.user_thumbnail_url AS userThumbnailUrl
+    -- SY <--
 FROM manga
 JOIN chapter
 ON manga.id = chapter.manga_id
@@ -78,7 +82,11 @@ CASE
 END AS readCountCalculated,
 -- KMK <--
 readAt,
-readDuration
+readDuration,
+-- SY -->
+userTitle,
+userThumbnailUrl
+-- SY <--
 FROM historyView
 WHERE historyView.readAt IS NOT NULL
 -- KMK -->
@@ -140,7 +148,11 @@ chapter.user_last_page_read AS lastPageRead,
 ) AS readCount,
 -- KMK <--
 history.read_at AS readAt,
-history.read_duration AS readDuration
+history.read_duration AS readDuration,
+-- SY -->
+manga.user_title AS userTitle,
+manga.user_thumbnail_url AS userThumbnailUrl
+-- SY <--
 FROM history
 JOIN manga
 ON manga.id = history.manga_id

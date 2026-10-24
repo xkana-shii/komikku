@@ -41,7 +41,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -90,7 +89,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -139,7 +137,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -189,7 +186,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -233,7 +229,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -293,7 +288,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -361,7 +355,6 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
