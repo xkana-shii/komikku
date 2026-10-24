@@ -75,7 +75,9 @@ data class MangaBakaRelationship(
 @Serializable
 data class MangaBakaCover(
     // KNS --> the original image, which metadata autofill prefers
+    // KUN --> Search responses may omit the unscaled cover; the nullable model accepts them.
     val raw: MangaBakaRawCover? = null,
+    // KUN <--
     // KNS <--
     val x250: MangaBakaScaledCover,
 )
@@ -91,13 +93,6 @@ data class MangaBakaRawCover(
 data class MangaBakaScaledCover(
     val x1: String?,
 )
-
-// SY -->
-@Serializable
-data class MangaBakaRawCover(
-    val url: String?,
-)
-// SY <--
 
 @Serializable
 data class MangaBakaPublishData(
