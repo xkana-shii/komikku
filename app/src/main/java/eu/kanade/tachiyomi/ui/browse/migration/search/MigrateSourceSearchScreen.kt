@@ -216,7 +216,7 @@ data class MigrateSourceSearchScreen(
                     startExpanded = viewModel.startExpanded,
                     onSave = {},
                     // KMK -->
-                    savedSearches = state.savedSearches,
+                    savedSearches = emptyList(),
                     onSavedSearch = { search ->
                         viewModel.onSavedSearch(search) {
                             context.toast(it)

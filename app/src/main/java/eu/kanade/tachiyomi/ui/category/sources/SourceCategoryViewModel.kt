@@ -14,13 +14,16 @@ import eu.kanade.domain.source.interactor.GetSourceCategories
 import eu.kanade.domain.source.interactor.RenameSourceCategory
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
+import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @ViewModelKey
@@ -32,24 +35,21 @@ class SourceCategoryViewModel(
     private val deleteSourceCategory: DeleteSourceCategory,
 ) : ViewModel() {
 
-    val state: StateFlow<SourceCategoryScreenState>
-        field = MutableStateFlow<SourceCategoryScreenState>(SourceCategoryScreenState.Loading)
-
     private val _events: Channel<SourceCategoryEvent> = Channel(Int.MAX_VALUE)
     val events = _events.receiveAsFlow()
 
-    init {
-        viewModelScope.launchIO {
-            getSourceCategories.subscribe()
-                .collectLatest { categories ->
-                    state.update {
-                        SourceCategoryScreenState.Success(
-                            categories = categories.toList(),
-                        )
-                    }
-                }
-        }
+    private val dialog = MutableStateFlow<SourceCategoryDialog?>(null)
+
+    val state: StateFlow<SourceCategoryScreenState> = combine(
+        getSourceCategories.subscribe(),
+        dialog,
+    ) { categories, dialog ->
+        SourceCategoryScreenState.Success(
+            categories = categories.toList(),
+            dialog = dialog,
+        )
     }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), SourceCategoryScreenState.Loading)
 
     /**
      * Creates and adds a new category to the database.
@@ -92,21 +92,11 @@ class SourceCategoryViewModel(
     }
 
     fun showDialog(dialog: SourceCategoryDialog) {
-        state.update {
-            when (it) {
-                SourceCategoryScreenState.Loading -> it
-                is SourceCategoryScreenState.Success -> it.copy(dialog = dialog)
-            }
-        }
+        this.dialog.value = dialog
     }
 
     fun dismissDialog() {
-        state.update {
-            when (it) {
-                SourceCategoryScreenState.Loading -> it
-                is SourceCategoryScreenState.Success -> it.copy(dialog = null)
-            }
-        }
+        this.dialog.value = null
     }
 }
 
