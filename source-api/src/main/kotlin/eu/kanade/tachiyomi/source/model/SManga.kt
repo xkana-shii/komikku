@@ -129,9 +129,6 @@ fun SManga.copy(
     thumbnail_url: String? = this.originalThumbnailUrl,
     updateStrategy: UpdateStrategy = this.update_strategy,
     initialized: Boolean = this.initialized,
-    // SY -->
-    updateStrategy: UpdateStrategy = this.update_strategy,
-    // SY <--
     // KMK -->
     memo: JsonObject = this.memo,
     // KMK <--

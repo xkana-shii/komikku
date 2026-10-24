@@ -21,7 +21,6 @@ import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.NamespaceSource
 import eu.kanade.tachiyomi.source.online.UrlImportableSource
 import eu.kanade.tachiyomi.util.asJsoup
-import exh.GalleryAdder
 import exh.metadata.metadata.HentaiNexusSearchMetadata
 import exh.metadata.metadata.base.RaisedTag
 import exh.source.DelegatedHttpSource
@@ -38,10 +37,9 @@ import java.util.Locale
 class HentaiNexus(
     @Assisted delegate: HttpSource,
     val context: Context,
-    override val getMangaId: MetadataSource.GetMangaId,
-    override val insertFlatMetadata: MetadataSource.InsertFlatMetadata,
-    override val getFlatMetadataById: MetadataSource.GetFlatMetadataById,
-    private val galleryAdder: GalleryAdder,
+    // KUN -->
+    // The metadata accessors come from MetadataSource's defaults (resolved from the graph).
+    // KUN <--
 ) :
     DelegatedHttpSource(delegate),
     MetadataSource<HentaiNexusSearchMetadata, Document>,
@@ -59,7 +57,7 @@ class HentaiNexus(
 
     // Support direct URL importing
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
-        return urlImportFetchSearchMangaSuspend(context, galleryAdder, query) {
+        return urlImportFetchSearchMangaSuspend(context, query) {
             super<DelegatedHttpSource>.getSearchManga(page, query, filters)
         }
     }

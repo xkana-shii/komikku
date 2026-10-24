@@ -19,7 +19,6 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.NamespaceSource
 import eu.kanade.tachiyomi.source.online.UrlImportableSource
-import exh.GalleryAdder
 import exh.metadata.metadata.HitomiSearchMetadata
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.metadata.metadata.base.RaisedTag
@@ -44,10 +43,9 @@ import java.util.Locale
 class Hitomi(
     @Assisted delegate: HttpSource,
     val context: Context,
-    override val getMangaId: MetadataSource.GetMangaId,
-    override val insertFlatMetadata: MetadataSource.InsertFlatMetadata,
-    override val getFlatMetadataById: MetadataSource.GetFlatMetadataById,
-    private val galleryAdder: GalleryAdder,
+    // KUN -->
+    // The metadata accessors come from MetadataSource's defaults (resolved from the graph).
+    // KUN <--
 ) :
     DelegatedHttpSource(delegate),
     MetadataSource<HitomiSearchMetadata, Response>,
@@ -63,7 +61,7 @@ class Hitomi(
     override fun newMetaInstance() = HitomiSearchMetadata()
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage =
-        urlImportFetchSearchMangaSuspend(context, galleryAdder, query) {
+        urlImportFetchSearchMangaSuspend(context, query) {
             super<DelegatedHttpSource>.getSearchManga(page, query, filters)
         }.let {
             MangasPage(

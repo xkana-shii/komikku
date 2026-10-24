@@ -60,7 +60,7 @@ fun HitomiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = genre?.second?.let { res -> stringResource(res) } ?: meta.genre ?: unknown,
+                text = genre?.second ?: meta.genre ?: unknown,
                 color = genre?.first?.let { color -> Color(genreTextColor(color)) } ?: Color.Unspecified,
                 modifier = Modifier
                     .background(

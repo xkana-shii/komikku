@@ -65,7 +65,7 @@ fun NineHentaiDescription(state: State.Success, openMetadataViewer: () -> Unit) 
         ) {
             category?.let {
                 Text(
-                    text = genre?.second?.let { res -> stringResource(res) } ?: it,
+                    text = genre?.second ?: it,
                     color = genre?.first?.let { color -> Color(genreTextColor(color)) } ?: Color.Unspecified,
                     modifier = Modifier
                         .background(
