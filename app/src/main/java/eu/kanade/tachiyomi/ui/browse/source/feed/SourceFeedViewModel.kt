@@ -45,12 +45,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
+import tachiyomi.core.common.util.lang.SubscriberGate
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
@@ -72,6 +75,7 @@ import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.source.local.isLocal
 import xyz.nulldev.ts.api.http.serializer.FilterSerializer
+import kotlin.time.Duration.Companion.seconds
 import tachiyomi.domain.manga.model.Manga as DomainManga
 
 @AssistedInject
@@ -105,10 +109,15 @@ class SourceFeedViewModel(
         fun create(sourceId: Long): SourceFeedViewModel
     }
 
-    val state: StateFlow<SourceFeedState>
-        field = MutableStateFlow<SourceFeedState>(SourceFeedState())
+    private val subscriberGate = SubscriberGate()
 
-    private val source: Source? get() = state.value.source
+    private val mutableState = MutableStateFlow<SourceFeedState>(SourceFeedState())
+
+    // Keeps the source feed while it's hidden, but holds back database updates until it's shown again
+    val state: StateFlow<SourceFeedState> = mutableState
+        .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), SourceFeedState())
+
+    private val source: Source? get() = mutableState.value.source
 
     val sourceIsMangaDex = sourceId in mangaDexSourceIds
 
@@ -129,7 +138,7 @@ class SourceFeedViewModel(
     init {
         viewModelScope.launchIO {
             val source = sourceManager.getOrStub(sourceId)
-            state.update { it.copy(source = source) }
+            mutableState.update { it.copy(source = source) }
 
             setFilters(source.getFilterList())
 
@@ -139,7 +148,7 @@ class SourceFeedViewModel(
             // KNS --> Observe effective configurations and reload only affected source-feed rows.
             observeSavedSearches.resolve(getFeedSavedSearchBySourceId.subscribe(source.id))
                 .onEach { resolvedFeeds ->
-                    val previousItems = state.value.items.associateBy(SourceFeedUI::id)
+                    val previousItems = mutableState.value.items.associateBy(SourceFeedUI::id)
                     val items = buildList {
                         if (source.supportsLatest) {
                             add(SourceFeedUI.Latest(previousItems[-1]?.results))
@@ -169,14 +178,14 @@ class SourceFeedViewModel(
                         feedJobs.remove(removedId)?.cancel()
                         latestFeedResults.forget(removedId)
                     }
-                    state.update { state ->
+                    mutableState.update { state ->
                         state.copy(
                             items = items,
                         )
                     }
                     getFeed(itemsToRefresh)
                 }
-                .launchIn(viewModelScope)
+                .launchIn(viewModelScope + subscriberGate)
             // KNS <--
             // KMK <--
         }
@@ -213,7 +222,7 @@ class SourceFeedViewModel(
     // KMK <--
 
     fun setFilters(filters: FilterList) {
-        state.update { it.copy(filters = filters) }
+        mutableState.update { it.copy(filters = filters) }
     }
 
     private suspend fun hasTooManyFeeds(): Boolean {
@@ -300,7 +309,7 @@ class SourceFeedViewModel(
                     // KMK <--
                 }
 
-                state.update { state ->
+                mutableState.update { state ->
                     val activeItem = state.items.firstOrNull { it.id == request.feedId }
                     val activeConfiguration = activeItem?.let {
                         FeedRequestConfiguration(
@@ -355,7 +364,7 @@ class SourceFeedViewModel(
     private fun reloadSavedSearches() {
         viewModelScope.launchIO {
             val searches = loadSearches()
-            state.update { it.copy(savedSearches = searches) }
+            mutableState.update { it.copy(savedSearches = searches) }
         }
     }
     // KMK <--
@@ -370,17 +379,17 @@ class SourceFeedViewModel(
     fun onFilter(onBrowseClick: (query: String?, filters: String?) -> Unit) {
         viewModelScope.launchIO {
             val source = source ?: return@launchIO
-            val allDefault = state.value.filters == source.getFilterList()
+            val allDefault = mutableState.value.filters == source.getFilterList()
             dismissDialog()
             if (allDefault) {
                 onBrowseClick(
-                    state.value.searchQuery?.nullIfBlank(),
+                    mutableState.value.searchQuery?.nullIfBlank(),
                     null,
                 )
             } else {
                 onBrowseClick(
-                    state.value.searchQuery?.nullIfBlank(),
-                    Json.encodeToString(filterSerializer.serialize(state.value.filters)),
+                    mutableState.value.searchQuery?.nullIfBlank(),
+                    Json.encodeToString(filterSerializer.serialize(mutableState.value.filters)),
                 )
             }
         }
@@ -402,7 +411,7 @@ class SourceFeedViewModel(
             val search = getExhSavedSearch.awaitOne(loadedSearch.id, source::getFilterList) ?: loadedSearch
             // KMK <--
 
-            if (search.filterList == null && state.value.filters.isNotEmpty()) {
+            if (search.filterList == null && mutableState.value.filters.isNotEmpty()) {
                 withUIContext {
                     onToast(SYMR.strings.save_search_invalid)
                 }
@@ -414,7 +423,7 @@ class SourceFeedViewModel(
 
             if (!allDefault) {
                 onBrowseClick(
-                    state.value.searchQuery?.nullIfBlank(),
+                    mutableState.value.searchQuery?.nullIfBlank(),
                     search.id,
                 )
             }
@@ -446,15 +455,15 @@ class SourceFeedViewModel(
     }
 
     fun search(query: String?) {
-        state.update { it.copy(searchQuery = query) }
+        mutableState.update { it.copy(searchQuery = query) }
     }
 
     fun openFilterSheet() {
-        state.update { it.copy(dialog = Dialog.Filter) }
+        mutableState.update { it.copy(dialog = Dialog.Filter) }
     }
 
     fun openDeleteFeed(feed: FeedSavedSearch) {
-        state.update { it.copy(dialog = Dialog.DeleteFeed(feed)) }
+        mutableState.update { it.copy(dialog = Dialog.DeleteFeed(feed)) }
     }
 
     // KMK -->
@@ -462,7 +471,7 @@ class SourceFeedViewModel(
         feed: SourceFeedUI.SourceSavedSearch,
     ) {
         viewModelScope.launchIO {
-            state.update { state ->
+            mutableState.update { state ->
                 state.copy(
                     dialog = Dialog.FeedActions(
                         feedItem = feed,
@@ -473,8 +482,8 @@ class SourceFeedViewModel(
     }
 
     fun showDialog(dialog: Dialog) {
-        if (!state.value.isLoading) {
-            state.update {
+        if (!mutableState.value.isLoading) {
+            mutableState.update {
                 it.copy(dialog = dialog)
             }
         }
@@ -482,11 +491,11 @@ class SourceFeedViewModel(
     // KMK <--
 
     private fun openAddFeed(feedId: Long, name: String) {
-        state.update { it.copy(dialog = Dialog.AddFeed(feedId, name)) }
+        mutableState.update { it.copy(dialog = Dialog.AddFeed(feedId, name)) }
     }
 
     fun dismissDialog() {
-        state.update { it.copy(dialog = null) }
+        mutableState.update { it.copy(dialog = null) }
     }
 
     sealed class Dialog {
