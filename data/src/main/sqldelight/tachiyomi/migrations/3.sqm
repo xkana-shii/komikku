@@ -10,7 +10,11 @@ CREATE TABLE merged(
     merge_url TEXT NOT NULL,
     manga_id INTEGER,
     manga_url TEXT NOT NULL,
-    COL_MANGA_SOURCE INTEGER NOT NULL,
+    -- KUN -->
+    -- Migration 13 copies this column as manga_source, so a database that really ran this
+    -- migration needs the column to carry that name. Ported from TachiyomiSY cf3f4eddbf.
+    manga_source INTEGER NOT NULL,
+    -- KUN <--
     FOREIGN KEY(manga_id) REFERENCES mangas (_id)
     ON DELETE SET NULL,
     FOREIGN KEY(merge_id) REFERENCES mangas (_id)
