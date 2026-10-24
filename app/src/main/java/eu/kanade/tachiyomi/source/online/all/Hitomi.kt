@@ -61,17 +61,20 @@ class Hitomi(
     override val metaClass = HitomiSearchMetadata::class
     override fun newMetaInstance() = HitomiSearchMetadata()
 
-    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage =
-        // KUN -->: the helper resolves the gallery adder from the app graph
-        urlImportFetchSearchMangaSuspend(context, query) {
-            // KUN <--
+    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
+        // KUN -->
+        // SY passes the gallery adder in; this fork's helper resolves it from the app graph.
+        val mangasPage = urlImportFetchSearchMangaSuspend(context, query) {
             super<DelegatedHttpSource>.getSearchManga(page, query, filters)
-        }.let {
+        }
+        // KUN <--
+        return mangasPage.let {
             MangasPage(
                 it.mangas.onEach { it.initialized = false },
                 it.hasNextPage,
             )
         }
+    }
 
     override suspend fun getPopularManga(page: Int): MangasPage = super.getPopularManga(page).let {
         MangasPage(

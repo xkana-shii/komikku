@@ -4,6 +4,7 @@ import android.content.Context
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject
+import eu.kanade.domain.sync.SyncStateBumper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -25,6 +26,11 @@ import java.io.File
 class CustomInfoJsonToDbMigration(
     private val context: Context,
     private val mangaRepository: MangaRepository,
+    // KUN -->
+    // Imported overrides are a local edit: without the bump the payload would go out with an
+    // unchanged version and lose the server's version-first merge.
+    private val syncStateBumper: SyncStateBumper,
+    // KUN <--
 ) : Migration {
     override val version: Float = 84f
 
@@ -54,6 +60,9 @@ class CustomInfoJsonToDbMigration(
             }
             if (!updates.isNullOrEmpty()) {
                 mangaRepository.updateUserInfoAll(updates)
+                // KUN -->
+                updates.forEach { syncStateBumper.bumpForCustomInfoEdit(it.id, null, it) }
+                // KUN <--
             }
             editJson.delete()
         }

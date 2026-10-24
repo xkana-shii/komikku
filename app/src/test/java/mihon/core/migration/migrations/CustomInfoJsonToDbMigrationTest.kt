@@ -2,6 +2,7 @@
 package mihon.core.migration.migrations
 
 import android.content.Context
+import eu.kanade.domain.sync.SyncStateBumper
 import io.kotest.matchers.shouldBe
 import io.mockk.coVerify
 import io.mockk.every
@@ -17,6 +18,7 @@ import java.nio.file.Path
 class CustomInfoJsonToDbMigrationTest {
 
     private val mangaRepository = mockk<MangaRepository>(relaxed = true)
+    private val syncStateBumper = mockk<SyncStateBumper>(relaxed = true)
     private val context = mockk<Context>()
 
     /**
@@ -26,7 +28,7 @@ class CustomInfoJsonToDbMigrationTest {
      */
     private fun migrationIn(dir: Path): CustomInfoJsonToDbMigration {
         every { context.getExternalFilesDir(null) } returns dir.toFile()
-        return CustomInfoJsonToDbMigration(context, mangaRepository)
+        return CustomInfoJsonToDbMigration(context, mangaRepository, syncStateBumper)
     }
 
     private fun newDir(): Path = Files.createTempDirectory("edits-json-migration")
@@ -74,6 +76,10 @@ class CustomInfoJsonToDbMigrationTest {
                     status = null,
                 ),
             )
+            // Imported overrides are a local edit: each one must bump the sync version, or the
+            // upload goes out with an unchanged version and loses the server's merge.
+            coVerify(exactly = 1) { syncStateBumper.bumpForCustomInfoEdit(1L, null, any()) }
+            coVerify(exactly = 1) { syncStateBumper.bumpForCustomInfoEdit(2L, null, any()) }
             Files.exists(dir.resolve("edits.json")) shouldBe false
         }
     }

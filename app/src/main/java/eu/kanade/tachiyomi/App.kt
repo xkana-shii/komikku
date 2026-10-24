@@ -306,7 +306,14 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         scope.launch {
             migrations.filterIsInstance<CustomInfoJsonToDbMigration>()
                 .firstOrNull()
-                ?.invoke(MigrationContext(dryrun = false, previousVersion = BuildConfig.VERSION_CODE))
+                ?.invoke(
+                    MigrationContext(
+                        dryrun = false,
+                        previousVersion = preferenceStore
+                            .getInt(Preference.appStateKey("eh_last_version_code"), 0)
+                            .get(),
+                    ),
+                )
         }
     }
     // KUN <--

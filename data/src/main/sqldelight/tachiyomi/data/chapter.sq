@@ -245,9 +245,10 @@ VALUES (
     :remoteDateUpload, :remoteOrder, :remoteMemo, :userRead, :userBookmark,
     :userLastPageRead, :stateDateFetch,
     -- KUN -->
-    -- Only a locally discovered chapter (isSyncing = 0) gets a timestamp here. A restore inserts
-    -- the payload's authoritative value, so a restored chapter must not look edited now: it would
-    -- make the next delta re-upload the whole restored library.
+    -- A sync restore inserts the payload's authoritative value, so its chapters must not look edited
+    -- now: that would make the next delta re-upload the whole restored library. Every other insert
+    -- (a library update's new chapters, and a manual backup restore, whose entries are local content
+    -- from now on) gets a timestamp when the caller has none.
     CASE WHEN :lastModifiedAt = 0 AND :isSyncing = 0 THEN strftime('%s', 'now') ELSE :lastModifiedAt END,
     -- KUN <--
     :version, :isSyncing,
