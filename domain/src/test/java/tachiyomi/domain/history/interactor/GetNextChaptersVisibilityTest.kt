@@ -7,12 +7,14 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
+import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.service.ChapterVisibility
 import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
+import exh.source.MERGED_SOURCE_ID
 
 // KNS -->
 /** features.md § 13.2 and acceptance scenario 10: continuing from a hidden chapter. */
@@ -58,15 +60,36 @@ class GetNextChaptersVisibilityTest {
         next.await(manga.id, onlyUnread = false).map(Chapter::id) shouldBe listOf(1L, 3L, 4L)
     }
 
+    @Test
+    fun `merged entry continues with the next visible unread release`() = runBlocking<Unit> {
+        val blacklisted = chapter(10, 1.0, scanlator = "A")
+        val preferred = chapter(11, 1.0, scanlator = "B")
+        val sameScanlatorUpload = chapter(12, 1.0, scanlator = "B").copy(name = "Chapter 1 extra")
+        val hiddenDuplicate = chapter(13, 1.0, scanlator = "C")
+        val chapterTwo = chapter(14, 2.0, scanlator = "C")
+        val manga = manga(
+            source = MERGED_SOURCE_ID,
+            blacklist = listOf(chapterUrlBlacklistKey(blacklisted.url)),
+            priority = listOf("A", "B", "C"),
+            smartMerge = true,
+        )
+
+        getNextChapters(manga, listOf(blacklisted, preferred, sameScanlatorUpload, hiddenDuplicate, chapterTwo))
+            .await(manga.id, onlyUnread = false)
+            .map(Chapter::id) shouldBe listOf(preferred.id, sameScanlatorUpload.id, chapterTwo.id)
+    }
+
     private fun getNextChapters(manga: Manga, chapters: List<Chapter>): GetNextChapters {
         val getChapters = mockk<GetChaptersByMangaId>()
         coEvery { getChapters.await(manga.id, any()) } returns chapters
+        val getMergedChapters = mockk<GetMergedChaptersByMangaId>()
+        coEvery { getMergedChapters.await(manga.id, any(), any()) } returns chapters
         val getManga = mockk<GetManga>()
         coEvery { getManga.await(manga.id) } returns manga
         val store = InMemoryPreferenceStore()
         return GetNextChapters(
             getChaptersByMangaId = getChapters,
-            getMergedChaptersByMangaId = mockk(),
+            getMergedChaptersByMangaId = getMergedChapters,
             getManga = getManga,
             historyRepository = mockk(),
             chapterVisibility = ChapterVisibility(LibraryPreferences(store)),
@@ -74,12 +97,13 @@ class GetNextChaptersVisibilityTest {
     }
 
     private fun manga(
+        source: Long = 1,
         blacklist: List<String> = emptyList(),
         priority: List<String> = emptyList(),
         smartMerge: Boolean? = null,
     ) = Manga.create().copy(
         id = 1,
-        source = 1,
+        source = source,
         // Sort by source order ascending = chapter number order in this fixture.
         chapterFlags = Manga.CHAPTER_SORTING_NUMBER,
         blacklistedChapters = blacklist,
