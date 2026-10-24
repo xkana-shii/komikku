@@ -17,6 +17,10 @@ const val HBROWSE_SOURCE_ID = 1401584337232758222L
 // SY -->
 const val NINEHENTAI_SOURCE_ID = 7689490563697355048L
 const val HENTAINEXUS_SOURCE_ID = 7719798645438596394L
+// KUN -->
+// The pre-delegation in-app Hitomi source id, migrated on restore.
+const val HITOMI_OLD_ID = 6910L
+// KUN <--
 // SY <--
 const val MERGED_SOURCE_ID = LEWD_SOURCE_SERIES + 69
 

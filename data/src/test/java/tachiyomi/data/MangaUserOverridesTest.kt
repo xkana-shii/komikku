@@ -5,6 +5,7 @@ import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.data.history.HistoryRepositoryImpl
 import tachiyomi.data.manga.MangaRepositoryImpl
 import tachiyomi.data.updates.UpdatesRepositoryImpl
+import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import kotlin.time.Instant
 
@@ -119,6 +121,49 @@ class MangaUserOverridesTest {
                 update.mangaTitle shouldBe "Edited title"
                 update.ogMangaTitle shouldBe "Source title"
                 update.coverData.url shouldBe "https://edited.example/cover.jpg"
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `a source refresh moves the source values and keeps the overrides`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val repository = MangaRepositoryImpl(database)
+                driver.insertManga()
+                repository.updateUserInfoAll(listOf(overrides))
+
+                // What a delegated source's details fetch writes (`awaitUpdateFromSource`).
+                repository.updateRemote(
+                    MangaRemoteUpdate(
+                        id = 1L,
+                        title = "New source title",
+                        author = "New source author",
+                        artist = "New source artist",
+                        description = "New source description",
+                        genre = listOf("New genre"),
+                        status = 1L,
+                        thumbnailUrl = "https://source.example/new.jpg",
+                        updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
+                        memo = kotlinx.serialization.json.JsonObject(emptyMap()),
+                        initialized = true,
+                        coverLastModified = null,
+                    ),
+                )
+
+                val manga = repository.getMangaById(1L)
+                // The edit still wins in the UI...
+                manga.title shouldBe "Edited title"
+                manga.thumbnailUrl shouldBe "https://edited.example/cover.jpg"
+                manga.genre shouldBe listOf("Action", "Drama")
+                // ...while the source values behind it moved.
+                manga.ogTitle shouldBe "New source title"
+                manga.ogThumbnailUrl shouldBe "https://source.example/new.jpg"
+                manga.ogGenre shouldBe listOf("New genre")
             } finally {
                 driver.close()
             }
