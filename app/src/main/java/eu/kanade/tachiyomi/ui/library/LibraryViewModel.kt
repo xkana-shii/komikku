@@ -1303,6 +1303,11 @@ class LibraryViewModel(
         )
     }
     // KMK <--
+    // KUN -->
+    // Library merging lives in [smartSearchMerge] below: Komikku shipped that action before this
+    // upstream commit existed (it says "Partially taken from Komikku"), so the SY copy of the
+    // action and its LibraryMergeResult are not ported — they would add a second merge button.
+    // KUN <--
 
     private fun List<Chapter>.filterNotQueuedOrDownloaded(manga: Manga): List<Chapter> {
         val queuedDownloads = downloadManager.getQueuedDownloadsByChapterId()

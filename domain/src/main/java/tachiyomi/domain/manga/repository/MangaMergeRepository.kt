@@ -30,6 +30,13 @@ interface MangaMergeRepository {
 
     suspend fun insertAll(references: List<MergedMangaReference>)
 
+    suspend fun applyMerge(
+        staleMangaId: Long?,
+        mergedManga: Manga,
+        categoryIds: List<Long>,
+        references: List<MergedMangaReference>,
+    ): Manga
+
     suspend fun deleteById(id: Long)
 
     suspend fun deleteByMergeId(mergeId: Long)

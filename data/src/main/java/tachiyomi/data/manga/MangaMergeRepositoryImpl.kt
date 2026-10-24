@@ -7,6 +7,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
@@ -174,6 +175,83 @@ class MangaMergeRepositoryImpl(
                 database.mangaQueries.bumpSyncVersion(it)
             }
             // KUN <--
+        }
+    }
+
+    override suspend fun applyMerge(
+        staleMangaId: Long?,
+        mergedManga: Manga,
+        categoryIds: List<Long>,
+        references: List<MergedMangaReference>,
+    ): Manga {
+        return database.transactionWithResult {
+            if (staleMangaId != null) {
+                database.mergedQueries.deleteByMergeId(staleMangaId)
+                database.mangaQueries.deleteById(id = staleMangaId)
+            }
+
+            val inserted = database.mangaQueries.insertNetworkManga(
+                sourceId = mergedManga.source,
+                remoteUrl = mergedManga.url,
+                remoteArtist = mergedManga.ogArtist,
+                remoteAuthor = mergedManga.ogAuthor,
+                remoteDescription = mergedManga.ogDescription,
+                remoteGenre = mergedManga.ogGenre,
+                remoteTitle = mergedManga.ogTitle,
+                remoteStatus = mergedManga.ogStatus,
+                remoteCover = mergedManga.ogThumbnailUrl,
+                // KUN -->
+                // The fork's model keeps the favourite flag and its date apart.
+                userFavoriteAt = if (mergedManga.favorite) mergedManga.dateAdded else null,
+                // KUN <--
+                stateChapterLastUpdate = mergedManga.lastUpdate,
+                stateChapterNextUpdate = mergedManga.nextUpdate,
+                stateChapterFetchInterval = mergedManga.fetchInterval.toLong(),
+                stateInitialized = mergedManga.initialized,
+                userReaderFlags = mergedManga.viewerFlags,
+                userChapterFlags = mergedManga.chapterFlags,
+                stateCoverLastModified = mergedManga.coverLastModified,
+                remoteUpdateStrategy = mergedManga.updateStrategy,
+                remoteMemo = mergedManga.memo,
+                updateTitle = mergedManga.ogTitle.isNotBlank(),
+                updateCover = !mergedManga.ogThumbnailUrl.isNullOrBlank(),
+                updateDetails = mergedManga.initialized,
+                // KUN -->
+                // The fork's insert path can refresh an existing non-library row; applyMerge builds
+                // the entry from a source result, so that is what the old networkToLocalManga call did.
+                updateInfo = true,
+                // KUN <--
+                mapper = MangaMapper::mapManga,
+            ).awaitAsOne()
+
+            database.manga_categoryQueries.deleteMangaCategoryByMangaId(inserted.id)
+            categoryIds.forEach { categoryId ->
+                database.manga_categoryQueries.insert(mangaId = inserted.id, categoryId = categoryId)
+            }
+
+            references.forEach { reference ->
+                val mangaId = if (reference.mangaSourceId == MERGED_SOURCE_ID) inserted.id else reference.mangaId
+                database.mergedQueries.insert(
+                    infoManga = reference.isInfoManga,
+                    getChapterUpdates = reference.getChapterUpdates,
+                    chapterSortMode = reference.chapterSortMode.toLong(),
+                    chapterPriority = reference.chapterPriority.toLong(),
+                    downloadChapters = reference.downloadChapters,
+                    mergeId = inserted.id,
+                    mergeUrl = reference.mergeUrl,
+                    mangaId = mangaId,
+                    mangaUrl = reference.mangaUrl,
+                    mangaSource = reference.mangaSourceId,
+                )
+            }
+
+            // KUN -->
+            // The references live in `merged`, not in the manga row, so no trigger bumps the merge
+            // parent. Do it explicitly or the change is never uploaded by the delta sync.
+            database.mangaQueries.bumpSyncVersion(inserted.id)
+            // KUN <--
+
+            inserted
         }
     }
 

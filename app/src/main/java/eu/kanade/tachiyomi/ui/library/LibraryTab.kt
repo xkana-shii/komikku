@@ -280,6 +280,11 @@ data object LibraryTab : Tab {
                     onClickCollectRecommendations = viewModel::showRecommendationSearchDialog.takeIf { state.selection.size > 1 },
                     onClickAddToMangaDex = viewModel::syncMangaToDex.takeIf { state.showAddToMangadex },
                     onClickResetInfo = viewModel::resetInfo.takeIf { state.showResetInfo },
+                    // KUN -->
+                    // This commit also added an `onClickMerge` overflow action, but the library
+                    // already offers Komikku's merge in the bottom bar (`onMergeClicked` above),
+                    // which is where this SY action came from. A second entry point is not ported.
+                    // KUN <--
                     // SY <--
                 )
             },
@@ -422,6 +427,7 @@ data object LibraryTab : Tab {
                     },
                 )
             }
+
             // SY <--
             null -> {}
         }

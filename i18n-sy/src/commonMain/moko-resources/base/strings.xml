@@ -393,6 +393,7 @@
     <string name="merge_unknown_entry">Unknown entry ID: %1$d</string>
     <string name="merged_already">This entry is already merged with the current entry!</string>
     <string name="merge_duplicate">This merged entry is a duplicate!</string>
+    <string name="remove_merged_entries">Remove entries from the library</string>
 
     <!-- Entry Info Edit -->
     <string name="reset_tags">Reset Tags</string>

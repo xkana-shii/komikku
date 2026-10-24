@@ -1000,7 +1000,11 @@ class MangaViewModel(
     }
 
     suspend fun smartSearchMerge(manga: Manga, originalMangaId: Long): Manga {
-        return smartSearchMerge.smartSearchMerge(manga, originalMangaId)
+        // KUN -->
+        // Delegates to the SY interactor; `strict` keeps the single-entry path throwing on a
+        // no-op merge, which is what the inline implementation it replaces did.
+        // KUN <--
+        return smartSearchMerge.smartSearchMerge(manga, originalMangaId, strict = true)
     }
     // KMK <--
 
