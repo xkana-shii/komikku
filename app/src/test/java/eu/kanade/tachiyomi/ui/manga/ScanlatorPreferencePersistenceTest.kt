@@ -5,6 +5,7 @@ import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesDraft.BlacklistItem
 import eu.kanade.presentation.manga.components.ScanlatorPreferencesEditor
+import eu.kanade.presentation.manga.components.moveScanlatorPriority
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -274,6 +275,33 @@ class ScanlatorPreferencePersistenceTest {
         startDawn()
         dialog { it.edit { draft -> draft.move(0, 5) } }
         reopen().order shouldBe listOf("desire scans", "Kaizen", "Myth Toons", "Paradise scans", "Unknown", "kaoru")
+    }
+
+    @Test
+    fun `rapid drag moves are queued before release animation and survive immediate close`() {
+        startDawn()
+        dialog { editor ->
+            // The lazy reorder callback fires while the handle crosses each row, before its release
+            // animation. Deliberately do not simulate an onSettle callback after these moves.
+            editor.edit { draft ->
+                draft.copy(order = moveScanlatorPriority(draft.order, "kaoru", "desire scans"))
+            }
+            editor.edit { draft ->
+                draft.copy(order = moveScanlatorPriority(draft.order, "kaoru", "Kaizen"))
+            }
+            editor.edit { draft ->
+                draft.copy(order = moveScanlatorPriority(draft.order, "kaoru", "Paradise scans"))
+            }
+        }
+        reopen().order shouldBe listOf("desire scans", "Kaizen", "Myth Toons", "Paradise scans", "kaoru", "Unknown")
+    }
+
+    @Test
+    fun `drag moves resolve stable names and ignore rows no longer present`() {
+        moveScanlatorPriority(dawn, "kaoru", "Kaizen") shouldBe
+            listOf("desire scans", "Kaizen", "kaoru", "Myth Toons", "Paradise scans", "Unknown")
+        moveScanlatorPriority(dawn, "gone", "Kaizen") shouldBe dawn
+        moveScanlatorPriority(dawn, "kaoru", "gone") shouldBe dawn
     }
 
     @Test
