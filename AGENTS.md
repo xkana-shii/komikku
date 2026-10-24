@@ -201,6 +201,7 @@ Version catalogs in `gradle/`: `libs.versions.toml`, `kotlinx.versions.toml`, `a
 | `i18n/` / `i18n-sy/` / `i18n-kmk/` | Strings → `MR` / `SYMR` / `KMR` |
 | `flagkit/` | Country-flag drawables |
 | `icons:material-symbols/`, `icons:custom-material-symbols/`, `icons:simple-icons/` | Generated icon packs |
+| `icons-sy/` | Generated TachiyomiSY icon packs (`SYMaterialSymbols`, `SYCustomMaterialSymbols`, `SYBrands`); keep source imports intact |
 | `telemetry/` | Firebase/Crashlytics (noop unless telemetry is compiled in; inert for `app.komikku.kns`) |
 | `baseline-profile/` | Baseline profile and startup benchmark generation |
 | `buildSrc/` | Convention plugins and build logic |
@@ -259,8 +260,9 @@ columns) and keep SyncYomi's `version`/`is_syncing`/`last_modified_at` columns a
 4. `./gradlew :data:generateSqlDelightInterface :data:verifyDebugDatabaseMigration` and add a migration
    test in `data/src/test/java/tachiyomi/data/` (see `MigrationTest`, `FreshKomikkuInstallMigrationTest`).
 
-The schema version is the highest migration number + 1 (currently 59; `58.sqm` recreates
-`updatesView` with the bookmark color; `57.sqm` holds the KNS
+The schema version is the highest migration number + 1 (currently 61; `58.sqm` recreates
+`updatesView` with the bookmark color, `59.sqm` updates merged-entry views, and `60.sqm` moves
+edited manga details onto the row; `57.sqm` holds the KNS
 columns). The previous personal `main` used an unrelated migration lineage up to version 57; such a
 database is converted on first open by `tachiyomi.data.compat.OldForkDatabaseConverter` (hooked in
 `mihon/app/di/OldForkDatabaseGate.kt`). Any new table or column needs no converter change unless an
@@ -459,6 +461,9 @@ main upstream `mihon/main`, additional `tachiyomiSY/master`, `komikku/master` (d
 
 - **Gradle OOM** – the daemon uses `-Xmx4g` (`gradle.properties`); run `./gradlew --stop` and retry.
 - **Spotless failures** – run `spotlessApply`, then `spotlessCheck`.
+- **App migrations do not run on upgrade** – this fork pins `versionCode` at 83, so `Migrator` skips
+  later version-gated migrations. Any migration that prevents data loss must also run from `App.onCreate`
+  behind its own one-shot guard; `importLegacyCustomInfoOnce()` is the reference implementation.
 - **SQLDelight errors** – run `./gradlew :data:generateSqlDelightInterface` after schema changes.
 - **Missing `google-services.json` / `client_secrets.json`** – not needed unless telemetry is compiled in
   (`-Pdist=ci|github` without `-Pinclude-telemetry=false`) or Google Drive backup is used.
