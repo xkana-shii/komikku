@@ -44,9 +44,7 @@ private fun isHentaiSource(source: String): Boolean {
         source.contains("ninehentai", true) ||
         source.contains("pururin", true) ||
         source.contains("simply hentai", true) ||
-        source.contains("tsumino", true) ||
         source.contains("8muses", true) ||
-        source.contains("hbrowse", true) ||
         source.contains("nhentai", true) ||
         source.contains("erofus", true) ||
         source.contains("luscious", true) ||

@@ -8,13 +8,9 @@ import exh.source.EH_OLD_ID
 import exh.source.EH_SOURCE_ID
 import exh.source.EXH_OLD_ID
 import exh.source.EXH_SOURCE_ID
-import exh.source.HBROWSE_OLD_ID
-import exh.source.HBROWSE_SOURCE_ID
 import exh.source.HITOMI_OLD_ID
 import exh.source.NHENTAI_OLD_ID
 import exh.source.NHENTAI_SOURCE_ID
-import exh.source.TSUMINO_OLD_ID
-import exh.source.TSUMINO_SOURCE_ID
 import tachiyomi.domain.manga.model.Manga
 import java.net.URI
 import java.net.URISyntaxException
@@ -32,20 +28,6 @@ object EXHMigrations {
                 source = NHENTAI_SOURCE_ID,
                 // Migrate nhentai URLs
                 url = getUrlWithoutDomain(newManga.url),
-            )
-        }
-
-        // Migrate Tsumino source IDs
-        if (newManga.source == TSUMINO_OLD_ID) {
-            newManga = newManga.copy(
-                source = TSUMINO_SOURCE_ID,
-            )
-        }
-
-        if (newManga.source == HBROWSE_OLD_ID) {
-            newManga = newManga.copy(
-                source = HBROWSE_SOURCE_ID,
-                url = newManga.url + "/c00001/",
             )
         }
 
@@ -84,12 +66,6 @@ object EXHMigrations {
             NHENTAI_OLD_ID -> mergeReference.copy(
                 mangaSourceId = NHENTAI_SOURCE_ID,
             )
-            TSUMINO_OLD_ID -> mergeReference.copy(
-                mangaSourceId = TSUMINO_SOURCE_ID,
-            )
-            HBROWSE_OLD_ID -> mergeReference.copy(
-                mangaSourceId = HBROWSE_SOURCE_ID,
-            )
             EH_OLD_ID -> mergeReference.copy(
                 mangaSourceId = EH_SOURCE_ID,
             )
@@ -112,12 +88,6 @@ object EXHMigrations {
         return when (savedSearch.source) {
             NHENTAI_OLD_ID -> savedSearch.copy(
                 source = NHENTAI_SOURCE_ID,
-            )
-            TSUMINO_OLD_ID -> savedSearch.copy(
-                source = TSUMINO_SOURCE_ID,
-            )
-            HBROWSE_OLD_ID -> savedSearch.copy(
-                source = HBROWSE_SOURCE_ID,
             )
             EH_OLD_ID -> savedSearch.copy(
                 source = EH_SOURCE_ID,
@@ -142,12 +112,6 @@ object EXHMigrations {
             NHENTAI_OLD_ID -> feed.copy(
                 source = NHENTAI_SOURCE_ID,
             )
-            TSUMINO_OLD_ID -> feed.copy(
-                source = TSUMINO_SOURCE_ID,
-            )
-            HBROWSE_OLD_ID -> feed.copy(
-                source = HBROWSE_SOURCE_ID,
-            )
             EH_OLD_ID -> feed.copy(
                 source = EH_SOURCE_ID,
             )
@@ -171,14 +135,6 @@ object EXHMigrations {
         if (NHENTAI_OLD_ID.toString() in newSourceIds) {
             newSourceIds = newSourceIds.minus(NHENTAI_OLD_ID.toString())
                 .plus(NHENTAI_SOURCE_ID.toString())
-        }
-        if (TSUMINO_OLD_ID.toString() in newSourceIds) {
-            newSourceIds = newSourceIds.minus(TSUMINO_OLD_ID.toString())
-                .plus(TSUMINO_SOURCE_ID.toString())
-        }
-        if (HBROWSE_OLD_ID.toString() in newSourceIds) {
-            newSourceIds = newSourceIds.minus(HBROWSE_OLD_ID.toString())
-                .plus(HBROWSE_SOURCE_ID.toString())
         }
         if (EH_OLD_ID.toString() in newSourceIds) {
             newSourceIds = newSourceIds.minus(EH_OLD_ID.toString())
