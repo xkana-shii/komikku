@@ -468,28 +468,47 @@ sealed class FavoritesSyncStatus {
 
     @Serializable
     sealed class Processing : FavoritesSyncStatus() {
+        @Serializable
         data object VerifyingLibrary : Processing()
+
+        @Serializable
         data object DownloadingFavorites : Processing()
+
+        @Serializable
         data object CalculatingRemoteChanges : Processing()
+
+        @Serializable
         data object CalculatingLocalChanges : Processing()
+
+        @Serializable
         data object SyncingCategoryNames : Processing()
+
+        @Serializable
         data class RemovingRemoteGalleries(val galleryCount: Int) : Processing()
+
+        @Serializable
         data class AddingGalleryToRemote(
             val index: Int,
             val total: Int,
             val isThrottling: Boolean,
             val title: String,
         ) : Processing()
+
+        @Serializable
         data class RemovingGalleryFromLocal(
             val index: Int,
             val total: Int,
         ) : Processing()
+
+        @Serializable
         data class AddingGalleryToLocal(
             val index: Int,
             val total: Int,
             val isThrottling: Boolean,
             val title: String,
         ) : Processing()
+
+        @Serializable
         data object CleaningUp : Processing()
     }
 
