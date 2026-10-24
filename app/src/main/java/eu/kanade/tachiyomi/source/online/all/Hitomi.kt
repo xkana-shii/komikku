@@ -250,6 +250,9 @@ class Hitomi(
 
     override val matchingHosts = listOf(
         "hitomi.la",
+        // KUN -->: the manifest also claims the www host
+        "www.hitomi.la",
+        // KUN <--
     )
 
     override suspend fun mapUrlToMangaUrl(uri: Uri): String? {

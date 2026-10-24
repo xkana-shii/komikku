@@ -155,7 +155,6 @@ enum class TrackStatus(val int: Int, val res: StringResource) {
                         else -> null
                     }
                 }
-                // KUN <--
                 trackerManager.comick.id -> {
                     when (status) {
                         Comick.READING -> READING
@@ -166,6 +165,7 @@ enum class TrackStatus(val int: Int, val res: StringResource) {
                         else -> null
                     }
                 }
+                // KUN <--
                 else -> null
             }
         }
