@@ -1402,3 +1402,19 @@ keep / what is missing / persistence, backup, sync) · **Tests** · **Commit**.
 - **Preserved behavior:** The WebGPU v53 renderer, Reader automation, page navigation, Smart Scanlator Merge, individual chapter blacklist behavior, tracking and rereading fixes, and existing feed identities are intended to remain unchanged.
 
 - **Status:** DONE-UNVERIFIED — implementation reported, automated validation and device verification pending. Update the status and test results after successful validation.
+
+### Batch 25 — reliable Smart Scanlator Merge preference edits
+
+- **Priority drag:** `ScanlatorPreferencesDialog` now uses the reorder library's lazy-list callback instead of
+  `ReorderableColumn.onSettle`. Each crossed scanlator row updates the draft and submits its priority change before
+  the drop animation, so a rapid release and immediate dialog close cannot cancel the only persistence callback.
+  Stable scanlator names, rather than transient row indices, resolve each move.
+- **Persistence:** the existing `ScanlatorPreferenceWriter` remains the sole app-scoped ordered writer for
+  Global/Enabled/Disabled, priority, exclusion, range and blacklist changes; no Save or Apply action was added.
+  Remote metadata refreshes continue to use `MangaRemoteUpdate`, which does not write the fork-owned priority column.
+- **Regression coverage:** `ScanlatorPreferencePersistenceTest` covers multiple drag moves submitted before any drop
+  settle callback and then an immediate close; `ScanlatorSettingsPersistenceTest` performs an actual remote metadata
+  update after saving an ordered priority and verifies that order remains intact.
+- **Validation:** `spotlessApply`, focused app/data persistence tests, `spotlessCheck`, `assembleDebug` and
+  `testDebugUnitTest` exit 0. Drag interaction and dialog layout with long scanlator lists remain for device
+  verification.

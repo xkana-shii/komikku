@@ -4,7 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,7 +32,6 @@ import androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvide
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,7 +60,8 @@ import mihon.icons.materialsymbols.roundedfilled.CheckBox
 import mihon.icons.materialsymbols.roundedfilled.CheckCircle
 import mihon.icons.materialsymbols.roundedfilled.Visibility
 import mihon.icons.materialsymbols.roundedfilled.VisibilityOff
-import sh.calvin.reorderable.ReorderableColumn
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ScanlatorCoverage
 import tachiyomi.domain.chapter.model.scanlatorCoverage
@@ -71,7 +75,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 /**
  * Per-manga scanlator preferences and chapter blacklist in one dialog with two modes, switched with
  * the icon in the title. Both modes edit one [ScanlatorPreferencesDraft]; every edit is handed to
- * [onChanges] as it happens (a drag once it is dropped), so there is no Save step and closing the
+ * [onChanges] as it happens (a drag as it crosses a row), so there is no Save step and closing the
  * dialog keeps everything.
  */
 @Composable
@@ -155,13 +159,28 @@ private fun ScanlatorPreferencesContent(
     if (draft.order.isEmpty()) {
         Text(stringResource(MR.strings.no_scanlators_found), modifier = Modifier.padding(vertical = 8.dp))
     } else {
-        ReorderableColumn(
-            list = draft.order,
-            onSettle = { from, to -> onDraftChange { it.move(from, to) } },
-            modifier = Modifier.padding(top = 4.dp),
-        ) { _, scanlator, isDragging ->
-            key(scanlator) {
-                ReorderableItem {
+        // KNS -->
+        // ReorderableColumn reports only after its drop animation completes. Dismissing the dialog
+        // while that animation is still running cancels the callback, losing a quick drag. The lazy
+        // list reports each crossed row immediately, so the editor and its app-scoped writer own the
+        // order before the user can release or close the dialog.
+        val priorityListState = rememberLazyListState()
+        val reorderableState = rememberReorderableLazyListState(priorityListState) { from, to ->
+            val movedOrder = moveScanlatorPriority(
+                order = draft.order,
+                fromScanlator = from.key as? String ?: return@rememberReorderableLazyListState,
+                toScanlator = to.key as? String ?: return@rememberReorderableLazyListState,
+            )
+            if (movedOrder != draft.order) onDraftChange { it.copy(order = movedOrder) }
+        }
+        LazyColumn(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .heightIn(max = 320.dp),
+            state = priorityListState,
+        ) {
+            items(items = draft.order, key = { it }) { scanlator ->
+                ReorderableItem(reorderableState, scanlator) { isDragging ->
                     val excluded = draft.isExcluded(scanlator)
                     Surface(
                         shape = MaterialTheme.shapes.small,
@@ -209,10 +228,25 @@ private fun ScanlatorPreferencesContent(
                 }
             }
         }
+        // KNS <--
     }
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
     ScanlatorRangeRules(draft = draft, onDraftChange = onDraftChange)
 }
+
+// KNS -->
+/** Applies one immediate lazy-list drag move, using stable scanlator names rather than stale indices. */
+internal fun moveScanlatorPriority(
+    order: List<String>,
+    fromScanlator: String,
+    toScanlator: String,
+): List<String> {
+    val fromIndex = order.indexOf(fromScanlator)
+    val toIndex = order.indexOf(toScanlator)
+    if (fromIndex == -1 || toIndex == -1 || fromIndex == toIndex) return order
+    return order.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+}
+// KNS <--
 
 /** A scanlator's chapter count and the chapter numbers it covers, as the old `main` showed them. */
 @Composable

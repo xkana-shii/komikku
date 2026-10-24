@@ -4,10 +4,13 @@ import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Test
 import tachiyomi.data.manga.MangaRepositoryImpl
+import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
 import kotlin.time.Instant
 
@@ -51,6 +54,30 @@ class ScanlatorSettingsPersistenceTest {
         manga.smartMergeOverride shouldBe null
         manga.scanlatorPriority shouldBe listOf("Kaizen", "bloomingdale", "desire scans")
         manga.scanlatorRangeRules shouldBe listOf("6.0:8.0:desire scans")
+    }
+
+    @Test
+    fun `remote manga refresh keeps the manually ordered scanlator priority`() = withRepository { repository ->
+        repository.update(MangaUpdate(1) { scanlatorPriority = listOf("Kaizen", "bloomingdale", "desire scans") })
+
+        repository.updateRemote(
+            MangaRemoteUpdate(
+                id = 1,
+                title = "Refreshed title",
+                author = "Refreshed author",
+                artist = "Refreshed artist",
+                description = "Refreshed description",
+                genre = listOf("Action"),
+                status = 1,
+                thumbnailUrl = "https://new.example/cover.jpg",
+                updateStrategy = UpdateStrategy.ALWAYS_UPDATE,
+                memo = JsonObject(emptyMap()),
+                initialized = true,
+                coverLastModified = Instant.fromEpochMilliseconds(6_000),
+            ),
+        ) shouldBe true
+
+        repository.getMangaById(1).scanlatorPriority shouldBe listOf("Kaizen", "bloomingdale", "desire scans")
     }
 
     @Test
