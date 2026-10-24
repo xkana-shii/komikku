@@ -45,7 +45,11 @@ class RestoreRepositoryChapterTombstoneTest {
                 )
 
                 driver.insertManga()
-                chapterRepository.addAll(listOf(chapter("/c1"), chapter("/c2")))
+                // Stored before the upload snapshot (1_000); the insert query stamps a missing
+                // last_modified_at itself, so a chapter that predates the snapshot says so explicitly.
+                chapterRepository.addAll(
+                    listOf(chapter("/c1", lastModifiedAt = 500L), chapter("/c2", lastModifiedAt = 500L)),
+                )
 
                 repository.restoreManga(
                     entries = listOf(
@@ -90,7 +94,11 @@ class RestoreRepositoryChapterTombstoneTest {
                 )
 
                 driver.insertManga()
-                chapterRepository.addAll(listOf(chapter("/c1"), chapter("/c2")))
+                // Stored before the upload snapshot (1_000); the insert query stamps a missing
+                // last_modified_at itself, so a chapter that predates the snapshot says so explicitly.
+                chapterRepository.addAll(
+                    listOf(chapter("/c1", lastModifiedAt = 500L), chapter("/c2", lastModifiedAt = 500L)),
+                )
 
                 repository.restoreManga(
                     entries = listOf(
@@ -137,7 +145,7 @@ class RestoreRepositoryChapterTombstoneTest {
                 driver.insertManga()
                 chapterRepository.addAll(
                     listOf(
-                        chapter("/c1"),
+                        chapter("/c1", lastModifiedAt = 500L),
                         // Added by a library update after the sync snapshot; not tombstoned.
                         chapter("/c2", lastModifiedAt = 2_000L),
                     ),

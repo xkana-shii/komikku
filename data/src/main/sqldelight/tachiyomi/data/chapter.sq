@@ -243,7 +243,11 @@ INSERT INTO chapter(
 VALUES (
     :mangaId, :remoteUrl, :remoteName, :remoteScanlator, :remoteChapterNumber,
     :remoteDateUpload, :remoteOrder, :remoteMemo, :userRead, :userBookmark,
-    :userLastPageRead, :stateDateFetch, :lastModifiedAt, :version, :isSyncing,
+    :userLastPageRead, :stateDateFetch,
+    -- KUN -->
+    CASE WHEN :lastModifiedAt = 0 THEN strftime('%s', 'now') ELSE :lastModifiedAt END,
+    -- KUN <--
+    :version, :isSyncing,
     -- KNS -->
     :userBookmarkColor
     -- KNS <--
