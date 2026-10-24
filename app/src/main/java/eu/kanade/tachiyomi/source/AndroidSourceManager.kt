@@ -158,11 +158,11 @@ class AndroidSourceManager(
                 // KMK -->
                 DELEGATED_SOURCES.firstOrNull { delegated ->
                     sourceQName == delegated.originalSourceQualifiedClassName ||
-                        (delegated.factory && sourceQName.startsWith(delegated.originalSourceQualifiedClassName))
+                        (delegated.factory && sourceQName.startsWith(delegated.originalSourceQualifiedClassName)) ||
+                        // SY -->
+                        id == delegated.sourceId
+                    // SY <--
                 }
-                // KMK <--
-            } else {
-                null
             }
             val newSource = if (this is HttpSource && delegate != null) {
                 xLogD("Delegating source: %s -> %s!", sourceQName, delegate.newSourceClass.qualifiedName)
@@ -375,6 +375,7 @@ class AndroidSourceManager(
                 createSource = ::Lanraragi,
                 // KUN <--
             ),
+            ),
             DelegatedSource(
                 "NineHentai",
                 NINEHENTAI_SOURCE_ID,
@@ -394,12 +395,6 @@ class AndroidSourceManager(
                 // KUN <--
             ),
         )
-
-        // Keiyoushi extensions are obfuscated and all share the generated entry point class name,
-        // so sources with a fixed id are also matched by it
-        private val DELEGATED_SOURCES_BY_ID = DELEGATED_SOURCES.values
-            .filterNot { it.factory }
-            .associateBy { it.sourceId }
 
         val currentDelegatedSources: MutableMap<Long, DelegatedSource> =
             ListenMutableMap(mutableMapOf(), ::handleSourceLibrary)

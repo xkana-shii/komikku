@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.graphics.toColorInt
 import exh.metadata.metadata.base.RaisedTag
-import exh.source.PURURIN_SOURCE_ID
+import exh.source.pururinSourceIds
 import exh.source.TSUMINO_SOURCE_ID
 import exh.source.eHentaiSourceIds
 import exh.source.lanraragiSourceIds
@@ -29,7 +29,7 @@ object SourceTagsUtil {
             sourceId in eHentaiSourceIds ||
             sourceId in nHentaiSourceIds ||
             sourceId in mangaDexSourceIds ||
-            sourceId == PURURIN_SOURCE_ID ||
+            sourceId in pururinSourceIds ||
             sourceId == TSUMINO_SOURCE_ID ||
             sourceId in lanraragiSourceIds
         ) {
@@ -42,7 +42,7 @@ object SourceTagsUtil {
                 when (sourceId) {
                     in nHentaiSourceIds -> wrapTagNHentai(parsed.namespace!!, parsed.name.substringBefore('|').trim())
                     in mangaDexSourceIds -> parsed.name
-                    PURURIN_SOURCE_ID -> parsed.name.substringBefore('|').trim()
+                    in pururinSourceIds -> parsed.name.substringBefore('|').trim()
                     TSUMINO_SOURCE_ID -> wrapTagTsumino(parsed.namespace!!, parsed.name.substringBefore('|').trim())
                     else -> wrapTag(parsed.namespace!!, parsed.name.substringBefore('|').trim())
                 }

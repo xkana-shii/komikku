@@ -62,6 +62,11 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     NamespaceSource {
     override val lang: String = delegate.lang
 
+    @AssistedFactory
+    fun interface Factory {
+        fun create(delegate: HttpSource): MangaDex
+    }
+
     private val mdLang by lazy {
         MdLang.fromExt(lang) ?: MdLang.ENGLISH
     }
