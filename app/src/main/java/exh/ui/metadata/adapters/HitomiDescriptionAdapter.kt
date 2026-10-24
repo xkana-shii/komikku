@@ -54,20 +54,26 @@ fun HitomiDescription(state: State.Success, openMetadataViewer: () -> Unit) {
                     icon = SYMaterialSymbols.RoundedFilled.MenuBook,
                 )
             }
-            fact {
-                val whenPosted = remember(meta.uploadDate) {
-                    MetadataUtil.EX_DATE_FORMAT.format(
-                        ZonedDateTime.ofInstant(
-                            Instant.fromEpochSeconds(meta.uploadDate ?: 0).toJavaInstant(),
-                            ZoneId.systemDefault(),
-                        ),
+            // KUN -->
+            // An unknown upload date has no meaningful placeholder, so drop the fact entirely
+            // instead of rendering 1970.
+            meta.uploadDate?.let { uploadedAt ->
+                fact {
+                    val whenPosted = remember(uploadedAt) {
+                        MetadataUtil.EX_DATE_FORMAT.format(
+                            ZonedDateTime.ofInstant(
+                                Instant.fromEpochSeconds(uploadedAt).toJavaInstant(),
+                                ZoneId.systemDefault(),
+                            ),
+                        )
+                    }
+                    MetadataText(
+                        text = whenPosted,
+                        icon = MaterialSymbols.Rounded.CalendarMonth,
                     )
                 }
-                MetadataText(
-                    text = whenPosted,
-                    icon = MaterialSymbols.Rounded.CalendarMonth,
-                )
             }
+            // KUN <--
         }
 
         meta.uploader?.takeIf { it.isNotEmpty() }?.let { uploader ->
