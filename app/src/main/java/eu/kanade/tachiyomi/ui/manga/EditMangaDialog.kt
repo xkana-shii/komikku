@@ -41,6 +41,7 @@ import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,6 +86,7 @@ import tachiyomi.source.local.isLocal
 @Composable
 fun EditMangaDialog(
     manga: Manga,
+    coverManga: Manga?,
     // KMK -->
     coverRatio: MutableFloatState,
     // KMK <--
@@ -99,6 +101,8 @@ fun EditMangaDialog(
         tags: List<String>?,
         status: Long?,
     ) -> Unit,
+    onCoverClick: () -> Unit,
+    onResetCoverClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -121,7 +125,7 @@ fun EditMangaDialog(
     )
     val tags = remember { manga.genre.orEmpty().dropBlank().toMutableStateList() }
     var statusIndex by remember {
-        mutableStateOf(if (manga.status != manga.ogStatus) manga.status.toStatusIndex() else 0)
+        mutableIntStateOf(if (manga.status != manga.ogStatus) manga.status.toStatusIndex() else 0)
     }
 
     var showAddTagsDialog by remember { mutableStateOf(false) }
@@ -174,6 +178,7 @@ fun EditMangaDialog(
                     thumbnailUrl.clearText()
                     description.clearText()
                     resetTags()
+                    onResetCoverClick()
                 },
             )
 
@@ -190,16 +195,18 @@ fun EditMangaDialog(
                     val usePanoramaCover by context.appGraph.uiPreferences.usePanoramaCoverAlways.collectAsState()
                     if (usePanoramaCover && coverRatio.floatValue <= RatioSwitchToPanorama) {
                         MangaCover.Panorama(
-                            data = manga,
+                            data = coverManga ?: manga,
                             modifier = Modifier.width(114.dp),
                             shape = RoundedCornerShape(6.dp),
+                            onClick = onCoverClick,
                         )
                     } else {
                         // KMK <--
                         MangaCover.Book(
-                            data = manga,
+                            data = coverManga ?: manga,
                             modifier = Modifier.width(76.dp),
                             shape = RoundedCornerShape(6.dp),
+                            onClick = onCoverClick,
                         )
                         // KMK -->
                     }

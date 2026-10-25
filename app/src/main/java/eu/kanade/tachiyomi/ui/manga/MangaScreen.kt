@@ -658,14 +658,26 @@ class MangaScreen(
             }
             // SY -->
             is MangaViewModel.Dialog.EditMangaInfo -> {
+                val coverVm =
+                    assistedMetroViewModel<MangaCoverViewModel, MangaCoverViewModel.Factory> {
+                        create(mangaId = mangaId)
+                    }
+                val coverManga by coverVm.state.collectAsStateWithLifecycle()
+                val getContent = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+                    if (it == null) return@rememberLauncherForActivityResult
+                    coverVm.editCover(context, it)
+                }
                 EditMangaDialog(
                     manga = dialog.manga,
+                    coverManga = coverManga,
                     // KMK -->
                     coverRatio = coverRatio,
                     // KMK <--
                     sourceName = successState.source.getNameForMangaInfo(),
                     onDismissRequest = viewModel::dismissDialog,
                     onPositiveClick = viewModel::updateMangaInfo,
+                    onCoverClick = { getContent.launch("image/*") },
+                    onResetCoverClick = { coverVm.deleteCustomCover(context) },
                 )
             }
             MangaViewModel.Dialog.EditMergedSettings -> {
