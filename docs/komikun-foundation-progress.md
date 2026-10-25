@@ -257,6 +257,30 @@ Until an explicit old-lineage migration is implemented and tested:
    recognises the old lineage (user_version 57 + its tables) and converts it into the foundation
    schema after the corresponding features exist; or ship under a new application id.
 
+## Historical Database Migration Repairs
+
+Two previously released migrations were modified, which is normally avoided. They are intentional
+compatibility repairs: the failures happen before any later migration can run, so a new migration
+cannot fix them.
+
+- `3.sqm`: the `merged` table's source column is named `manga_source` (it was
+  `COL_MANGA_SOURCE`), matching what migration 13 reads.
+- `49.sqm`: `DROP TABLE IF EXISTS history_temp;` runs before `history` is renamed, removing the
+  stale table migration 14 leaves behind.
+
+Installations already past these migration versions never rerun the modified files, so their
+databases are unaffected.
+
+Provenance: TachiyomiSY `cf3f4eddbf`; local integration `12883ac684`; Komi-kun PR #70.
+
+Verification:
+- Both original failures were reproduced with minimal SQLite fixtures.
+- Both corrected migrations passed those reproductions.
+- `:data:verifyDebugDatabaseMigration` succeeded.
+- The full unit-test suite passed: 785 tests, 0 failures.
+
+Remaining limitation: full end-to-end upgrades from historical production database snapshots were
+not performed.
 ## Validation
 
 Environment limits of the session that built this branch: Maven Central, Google Maven,
