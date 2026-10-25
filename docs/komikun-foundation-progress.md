@@ -10,6 +10,24 @@ Komi-kun functional/architectural changes (Komi-kun wins on conflicts), while ke
 repository's identity, signing, release infrastructure and secrets. Personal features are **not**
 migrated from the old `main`; they will be re-implemented one by one from `features.md`.
 
+## Komi-kun PR #70 follow-up integration (2026-10-25)
+
+The interrupted Komi-kun PR #70 import was completed locally on
+`codex/cherry-pick-komikun-sy-70`, from PR base `dbbab31e442d5fe4e8a7e5dd483d35592f31e516` through
+head `a54e5079b11675b75d8c60cb2bdf405eade2daec`. All 47 pre-squash commits were applied in
+chronological order with `git cherry-pick -x`; the three merge commits were kept as verified,
+provenance-only empty picks because their effective changes had already been applied by their
+parents. The later tracking-log (`23afd600b6`) and restored-stub source-name (`45c51d699f`) fixes
+were also ported with provenance.
+
+The port brings the PR's delegated-source, reader, Compose metadata/download, source-feed lifecycle,
+SyncYomi and SY icon work without replacing this fork's application identity, backup selection,
+chapter visibility, bookmark-color or source-setting behavior. Where migration numbers conflicted
+with the fork's released 57/58 migrations, new migrations 59 and 60 were added instead; schema
+version 61 includes user-edit metadata columns and rebuilt views that retain bookmark colors and
+all merged members. Validation results belong in the current integration task record rather than
+being inferred from this checkpoint.
+
 ## Pinned revisions
 
 | What | Ref | SHA |

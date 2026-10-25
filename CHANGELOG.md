@@ -12,6 +12,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 ### Added
+- Ported Komi-kun/TachiyomiSY PR #70's delegated-source and reader work: LANraragi metadata,
+  NineHentai and HentaiNexus support, delegated Hitomi with previews, source feed-tab integration,
+  high-quality wide-page handling, and the SY icon modules. The fork's app identity and existing
+  source settings remain intact.
 - Settings → Library → Excluded sources is back from the previous personal fork (same key and stored source names): library update runs, scheduled or started by hand, skip entries from the chosen sources, alongside category intervals, update restrictions and the category scope. Names excluded earlier stay listed even when that source is no longer installed, so they can be cleared. Refreshing a single entry is not affected.
 - Settings → Downloads → Trigger chapter rename is back (same key, on by default) and works again: when a source renames a chapter that is downloaded, its download folder is renamed to match only while it is on. The previous fork kept the switch after its effect had been removed; now it controls the existing rename.
 - E-Hentai/ExHentai → Remove special characters from titles is back (key `use_clean_title`, on by default as before): gallery titles fetched from E-Hentai/ExHentai, in search results and gallery details, have their [bracketed], (parenthesised) and {braced} tags removed. Other sources and custom titles are untouched; entries already in the library change on their next metadata refresh.
@@ -19,6 +23,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Settings → Library → Automatically refresh opened manga is back from the previous personal fork (same saved keys, off by default): opening an entry that is already set up refreshes its details and chapters once, in the background, while the stored details show; the chapters are not downloaded. With it on, "Also reset chapter flags to default" appears and, separately, resets the entry's chapter sort and filters to the defaults when it is opened.
 
 ### Fixed
+- Merged chapter continuation now applies the fork's blacklist and Smart Scanlator Merge visibility
+  rules before choosing the next chapter, while retaining the preferred scanlator where applicable.
+- Restores preserve authoritative chapter timestamps and bookmarked-color state, restored stub
+  sources display their saved names, and MangaBaka accepts search results without an unscaled cover.
+- Source feeds avoid collecting while offscreen and discard superseded search work; metadata and
+  chapter changes from the port keep the fork's existing selective-backup, restore and sync behavior.
 - Scanlator-priority drags are committed as a row is crossed rather than after the drop animation. Releasing
   quickly and immediately closing Scanlator preferences can no longer lose the new order. Remote manga refreshes
   continue to leave the manually saved priority untouched.
@@ -38,6 +48,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Feeds now invalidate their active search configuration when a referenced saved search is overwritten, updating results without restarting the app. Search requests retain the source, query, filters and generation used to start them, so results from an outdated request cannot replace those produced by the updated saved search.
 
 ### Changed
+- Manga metadata overrides (title, author, artist, cover, description, genres and status) are now
+  stored in the manga row and used throughout the app. Legacy `edits.json` data imports into those
+  fields; backups retain their legacy next-update fallback.
 - Sync (from Komi-kun): clearing every custom title/author/cover/description override and editing a merged entry's references now sync. A winning sync replaces the stored overrides exactly (an all-empty set clears them) and reconciles the merge's references (new ones added, missing ones removed); manual restores and losing payloads only add, as before. History resets, custom-info edits and reference edits mark the entry for the next delta sync.
 - Sync (from Komi-kun): a new, default-off setting under Data → Sync makes the synced pinned sources replace this device's pins, so un-pinning on one device propagates. The setting itself stays on the device and is never synced or restored; manual backup restores keep merging pins as before.
 - The reader's top area is laid out as in the previous personal fork in both the classic and the High Quality reader: the top bar holds the title and the overflow menu, and a row under it holds Bookmark (a tap toggles it, a long press opens the bookmark color menu), Retry all and Boost page. The collapsible E-Hentai tools panel with its own autoscroll switch, interval field and help buttons is gone; reader automation has its own controls.
@@ -62,6 +75,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Bookmark-color filters now use the same Bookmarked row and Edit-button tri-state editor as category filters in Library, Updates and each manga's chapter settings. Colors can be included, excluded or ignored independently; existing saved Library and per-manga selections are retained as included colors. Color filtering only refines the Bookmarked state, so disabled and Not bookmarked filters keep their prior behavior.
 
 ### Other
+- Integrated the 47 chronological commits from Komi-kun PR #70, plus its subsequent tracking-log
+  refresh and restored-stub-source-name fixes, using `git cherry-pick -x` on the local integration
+  branch. The three PR merge commits are retained as verified, provenance-only empty picks.
+- Database migrations 59 and 60 reconcile PR #70 with the fork's released migrations: refreshed
+  library/update/history views retain bookmark colors and merged members, and user-edit metadata
+  columns are added. The schema version is now 61.
 - Backup format: two new manga fields from Komi-kun (`customInfoIncluded` = 10000, `mergedMangaReferencesIncluded` = 10001) in its reserved 10000–10999 block. Older backups decode unchanged (both fields absent → add-only restore). A test now also pins this fork's shipped numbers (manga 614–616, 618, 620; chapter 14–15), and new fork fields use 20000–20999.
 - Rebuilt the fork's foundation on official Komikku `master` (`1656575e8f`) with Komi-kun's architecture (`2c6743696d`): Metro DI, AndroidX ViewModels, async SQLDelight on the AndroidX bundled driver with the Mihon schema rework, SyncYomi v2, the WebGPU reader and the Mihon/TachiyomiSY backlog Komi-kun ported. Keeps the `app.komikku.kns` identity, signing and release workflows. Personal features from the previous `main` are re-implemented separately (`features.md`); see `docs/komikun-foundation-progress.md`.
 - Fixed the database upgrade of fresh-installed Komikku databases through migration 49 (`mangas_categories.last_modified_at` missing).

@@ -1,5 +1,6 @@
 package tachiyomi.domain.history.interactor
 
+import exh.source.MERGED_SOURCE_ID
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -14,7 +15,6 @@ import tachiyomi.domain.chapter.service.chapterUrlBlacklistKey
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
-import exh.source.MERGED_SOURCE_ID
 
 // KNS -->
 /** features.md § 13.2 and acceptance scenario 10: continuing from a hidden chapter. */
