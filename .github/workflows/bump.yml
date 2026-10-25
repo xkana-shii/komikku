@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: spotless-bump-and-tag
@@ -12,11 +13,369 @@ concurrency:
 
 jobs:
   spotless_bump_and_tag:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Clean unused stable and preview tags
+        env:
+          BOT_PAT: ${{ secrets.BOT_PAT }}
+          API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import re
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          source_repo = os.environ["REPOSITORY"]
+          preview_repo = "xkana-shii/komikku-preview"
+          token = os.environ.get("BOT_PAT", "")
+          base = os.environ["API_URL"].rstrip("/")
+          now = time.time()
+          grace = 24 * 3600
+          lookback = 30 * 86400
+
+          if not token:
+              raise SystemExit(
+                  "BOT_PAT is required to check both repositories safely"
+              )
+
+          def api(repo, path, method="GET", missing_ok=False):
+              req = urllib.request.Request(
+                  f"{base}/repos/{repo}{path}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "komikku-tag-safety-cleanup",
+                  },
+                  method=method,
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      content = response.read()
+                      return json.loads(content) if content else None
+              except urllib.error.HTTPError as error:
+                  if missing_ok and error.code == 404:
+                      return None
+                  raise RuntimeError(
+                      f"Cannot verify {repo}{path}: HTTP {error.code}; "
+                      "refusing cleanup"
+                  ) from error
+
+          def git(*args):
+              return subprocess.check_output(
+                  ["git", *args],
+                  text=True,
+                  stderr=subprocess.DEVNULL,
+              ).strip()
+
+          def stamp(iso):
+              return datetime.datetime.fromisoformat(
+                  iso.replace("Z", "+00:00")
+              ).timestamp()
+
+          def releases_for(repo):
+              tags = set()
+              page = 1
+              while True:
+                  values = api(
+                      repo,
+                      f"/releases?per_page=100&page={page}",
+                  )
+                  if not isinstance(values, list):
+                      raise RuntimeError(
+                          f"Cannot list releases in {repo}"
+                      )
+                  tags.update(item["tag_name"] for item in values)
+                  if len(values) < 100:
+                      return tags
+                  page += 1
+
+          # Load releases from BOTH repositories before deleting anything.
+          # Authenticated access must include drafts and prereleases.
+          protected_main = releases_for(source_repo)
+          protected_preview = releases_for(preview_repo)
+
+          def has_release(repo, tag):
+              encoded = urllib.parse.quote(tag, safe="")
+              return api(
+                  repo,
+                  f"/releases/tags/{encoded}",
+                  missing_ok=True,
+              ) is not None
+
+          def workflow_runs(repo, workflow, sha):
+              encoded = urllib.parse.quote(sha, safe="")
+              response = api(
+                  repo,
+                  f"/actions/workflows/{workflow}/runs"
+                  f"?head_sha={encoded}&per_page=100",
+              )
+              if (
+                  not isinstance(response, dict)
+                  or not isinstance(response.get("workflow_runs"), list)
+              ):
+                  raise RuntimeError(
+                      f"Unable to inspect {repo}/{workflow}"
+                  )
+
+              runs = response["workflow_runs"]
+              if response.get("total_count", len(runs)) > len(runs):
+                  raise RuntimeError(
+                      f"Incomplete build history for {sha}"
+                  )
+              return runs
+
+          # Preview builds use the preview repository's workflow SHA,
+          # not necessarily the source tag SHA.
+          # Therefore check active preview builds globally.
+          preview_active = False
+          for state in (
+              "queued",
+              "in_progress",
+              "waiting",
+              "pending",
+              "requested",
+          ):
+              result = api(
+                  preview_repo,
+                  "/actions/workflows/build_app.yml/runs"
+                  f"?status={state}&per_page=1",
+              )
+              if (
+                  not isinstance(result, dict)
+                  or "total_count" not in result
+              ):
+                  raise RuntimeError(
+                      "Preview build status could not be verified"
+                  )
+              if result["total_count"]:
+                  preview_active = True
+
+          all_tags = git(
+              "for-each-ref",
+              "--format=%(refname:short)",
+              "refs/tags",
+          ).splitlines()
+
+          deleted = 0
+          kept = 0
+
+          for tag in all_tags:
+              stable = re.fullmatch(
+                  r"v\d+\.\d+\.\d+", tag
+              ) is not None
+
+              preview = re.fullmatch(
+                  r"r\d+", tag
+              ) is not None
+
+              if not stable and not preview:
+                  continue
+
+              # Protect releases in either repository.
+              if (
+                  tag in protected_main
+                  or tag in protected_preview
+              ):
+                  print(
+                      f"KEEP {tag}: associated GitHub Release exists"
+                  )
+                  kept += 1
+                  continue
+
+              if preview and preview_active:
+                  print(
+                      f"KEEP {tag}: preview release workflow is active"
+                  )
+                  kept += 1
+                  continue
+
+              try:
+                  sha = git(
+                      "rev-parse",
+                      f"refs/tags/{tag}^{{commit}}",
+                  )
+
+                  details = git(
+                      "show",
+                      "-s",
+                      "--format=%an%x1f%cn%x1f%s%x1f%ct",
+                      sha,
+                  ).split("\x1f")
+
+                  author, committer, subject, date_str = details
+                  age = now - int(date_str)
+
+                  if not grace <= age <= lookback:
+                      continue
+
+                  if stable:
+                      # Prove the tag came from the bump workflow.
+                      version_file = git(
+                          "show",
+                          f"{tag}:app/build.gradle.kts",
+                      )
+
+                      version = re.search(
+                          r'^\s*versionName\s*=\s*"([^"]+)"',
+                          version_file,
+                          re.MULTILINE,
+                      )
+
+                      if (
+                          author != "github-actions[bot]"
+                          or committer != "github-actions[bot]"
+                          or subject != "chore: bump version"
+                          or not version
+                          or tag != "v" + version.group(1)
+                      ):
+                          continue
+
+                  else:
+                      # Source-side preview tags use r<commit-count>.
+                      if int(tag[1:]) != int(
+                          git("rev-list", "--count", sha)
+                      ):
+                          continue
+
+                      if subprocess.run(
+                          [
+                              "git",
+                              "merge-base",
+                              "--is-ancestor",
+                              sha,
+                              "origin/main",
+                          ],
+                          capture_output=True,
+                      ).returncode != 0:
+                          continue
+
+              except (
+                  ValueError,
+                  subprocess.CalledProcessError,
+              ):
+                  continue
+
+              build_files = (
+                  ["build_release.yml"]
+                  if stable
+                  else [
+                      "build_dispatch_preview.yml",
+                      "build_nightly.yml",
+                  ]
+              )
+
+              runs = []
+              for build_file in build_files:
+                  runs.extend(
+                      workflow_runs(
+                          source_repo,
+                          build_file,
+                          sha,
+                      )
+                  )
+
+              # Protect active, successful or ambiguous builds.
+              if any(
+                  run.get("status") != "completed"
+                  for run in runs
+              ):
+                  print(
+                      f"KEEP {tag}: associated build is active"
+                  )
+                  kept += 1
+                  continue
+
+              if any(
+                  run.get("conclusion") not in (
+                      "failure",
+                      "cancelled",
+                      "timed_out",
+                  )
+                  for run in runs
+              ):
+                  print(
+                      f"KEEP {tag}: successful or ambiguous build result"
+                  )
+                  kept += 1
+                  continue
+
+              if any(
+                  not run.get("updated_at")
+                  or now - stamp(run["updated_at"]) < grace
+                  for run in runs
+              ):
+                  print(
+                      f"KEEP {tag}: recent build activity"
+                  )
+                  kept += 1
+                  continue
+
+              # Double-check BOTH release repositories before deletion.
+              if (
+                  has_release(source_repo, tag)
+                  or has_release(preview_repo, tag)
+              ):
+                  print(
+                      f"KEEP {tag}: associated GitHub Release appeared"
+                  )
+                  kept += 1
+                  continue
+
+              encoded_ref = urllib.parse.quote(tag, safe="")
+
+              live = api(
+                  source_repo,
+                  f"/git/ref/tags/{encoded_ref}",
+                  missing_ok=True,
+              )
+
+              if (
+                  not live
+                  or live.get("object", {}).get("type") != "commit"
+              ):
+                  continue
+
+              if live["object"]["sha"] != sha:
+                  print(
+                      f"KEEP {tag}: remote tag reference changed"
+                  )
+                  kept += 1
+                  continue
+
+              # Delete only from the main Komikku repository.
+              api(
+                  source_repo,
+                  f"/git/refs/tags/{encoded_ref}",
+                  method="DELETE",
+              )
+
+              deleted += 1
+              print(
+                  f"DELETED unused source-repository tag {tag}"
+              )
+
+          print(
+              f"Cleanup complete: deleted={deleted}, "
+              f"protected/kept={kept}"
+          )
+          print(
+              "Preview releases were checked. "
+              "No komikku-preview tags were deleted."
+          )
+          PY
 
       - uses: actions/setup-java@v4
         with:
