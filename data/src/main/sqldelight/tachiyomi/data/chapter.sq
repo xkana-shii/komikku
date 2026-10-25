@@ -150,38 +150,90 @@ AND remote_url = :remoteUrl
 LIMIT 1;
 
 -- SY -->
-getMergedChaptersByMangaId:
-SELECT C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.remote_chapter_number,
-    C.remote_date_upload, C.remote_order, C.remote_memo, C.user_read, C.user_bookmark,
-    C.user_last_page_read, C.state_date_fetch, C.last_modified_at, C.version, C.is_syncing,
-    -- KNS -->
-    C.user_bookmark_color
+-- Returns the chapters a merged entry shows, deduped per its sort mode
+-- (MergedMangaReference.CHAPTER_SORT_*).
+-- KUN -->
+-- The fork's sort-mode numbering differs from upstream's (PRIORITY is 1, not 2), and the bookmark
+-- flags filter is kept.
+-- KUN <--
+getDedupedMergedChapters:
+WITH refs AS (
+    SELECT manga_id, chapter_priority
+    FROM merged
+    WHERE merge_id = :mangaId
+),
+base AS (
+    SELECT
+        C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator,
+        C.remote_chapter_number, C.remote_date_upload, C.remote_order, C.remote_memo,
+        C.user_read, C.user_bookmark, C.user_last_page_read, C.state_date_fetch,
+        C.last_modified_at, C.version, C.is_syncing,
+        -- KNS -->
+        C.user_bookmark_color,
+        -- KNS <--
+        R.chapter_priority
+    FROM chapter C
+    JOIN refs R
+    ON R.manga_id = C.manga_id
+    -- KNS --> a merge's excluded scanlators are stored on the merge entry itself, as before
+    LEFT JOIN excluded_scanlator ES
+    ON ES.manga_id = :mangaId
+    AND C.remote_scanlator = ES.scanlator
     -- KNS <--
-FROM (
-    SELECT manga_id, merge_id FROM merged WHERE merge_id = :mangaId
-) AS M
-JOIN chapter C
-ON C.manga_id = M.manga_id
-LEFT JOIN excluded_scanlator ES
-ON M.merge_id = ES.manga_id
-AND C.remote_scanlator = ES.scanlator
--- KMK -->
-JOIN manga MA ON MA.id = :mangaId
--- KMK <--
-WHERE M.merge_id = :mangaId
-AND (
-    :applyFilter = 0
     -- KMK -->
-    OR (
-        ES.scanlator IS NULL
-        AND ((MA.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
-        AND ((MA.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
-    )
+    JOIN manga MA ON MA.id = :mangaId
     -- KMK <--
+    WHERE (
+        :applyFilter = 0
+        -- KMK -->
+        OR (
+            ES.scanlator IS NULL
+            AND ((MA.user_chapter_flags & :bookmarkUnmask) = 0 OR C.user_bookmark = 0)
+            AND ((MA.user_chapter_flags & :bookmarkMask) = 0 OR C.user_bookmark = 1)
+        )
+        -- KMK <--
+    )
 )
--- KMK -->
-ORDER BY C.manga_id, C.remote_order;
--- KMK <--
+SELECT
+    B.id, B.manga_id, B.remote_url, B.remote_name, B.remote_scanlator,
+    B.remote_chapter_number, B.remote_date_upload, B.remote_order, B.remote_memo,
+    B.user_read, B.user_bookmark, B.user_last_page_read, B.state_date_fetch,
+    B.last_modified_at, B.version, B.is_syncing,
+    -- KNS -->
+    B.user_bookmark_color
+    -- KNS <--
+FROM base B
+WHERE :sortMode = 0
+OR (:sortMode = 1 AND (
+    B.remote_chapter_number < 0
+    OR NOT EXISTS (
+        SELECT 1
+        FROM base B2
+        WHERE B2.remote_chapter_number = B.remote_chapter_number
+        AND B2.manga_id != B.manga_id
+        AND (
+            B2.chapter_priority < B.chapter_priority
+            OR (B2.chapter_priority = B.chapter_priority AND B2.manga_id < B.manga_id)
+        )
+    )
+))
+OR (:sortMode = 2 AND B.manga_id = (
+    SELECT B2.manga_id
+    FROM base B2
+    GROUP BY B2.manga_id
+    ORDER BY COUNT(*) DESC, B2.manga_id
+    LIMIT 1
+))
+OR (:sortMode = 3 AND B.manga_id = (
+    SELECT B2.manga_id
+    FROM base B2
+    WHERE B2.remote_chapter_number >= 0
+    GROUP BY B2.manga_id
+    ORDER BY MAX(B2.remote_chapter_number) DESC, B2.manga_id
+    LIMIT 1
+))
+-- chapter_priority first so PRIORITY mode comes back interleaved by source priority
+ORDER BY B.chapter_priority, B.manga_id, B.remote_order;
 
 getScanlatorsByMergeId:
 SELECT DISTINCT remote_scanlator

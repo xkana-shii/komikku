@@ -288,10 +288,15 @@ class ChapterRepositoryImpl(
             .awaitAsList()
     }
 
-    override suspend fun getMergedChapterByMangaId(mangaId: Long, applyFilter: Boolean): List<Chapter> {
+    override suspend fun getDedupedMergedChapters(
+        mangaId: Long,
+        sortMode: Int,
+        applyFilter: Boolean,
+    ): List<Chapter> {
         return database.chapterQueries
-            .getMergedChaptersByMangaId(
+            .getDedupedMergedChapters(
                 mangaId,
+                sortMode.toLong(),
                 applyFilter.toLong(),
                 // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
@@ -302,13 +307,15 @@ class ChapterRepositoryImpl(
             .awaitAsList()
     }
 
-    override suspend fun getMergedChapterByMangaIdAsFlow(
+    override suspend fun getDedupedMergedChaptersAsFlow(
         mangaId: Long,
+        sortMode: Int,
         applyFilter: Boolean,
     ): Flow<List<Chapter>> {
         return database.chapterQueries
-            .getMergedChaptersByMangaId(
+            .getDedupedMergedChapters(
                 mangaId,
+                sortMode.toLong(),
                 applyFilter.toLong(),
                 // KMK -->
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,

@@ -52,10 +52,15 @@ interface ChapterRepository {
     // SY -->
     suspend fun getChapterByUrl(url: String): List<Chapter>
 
-    suspend fun getMergedChapterByMangaId(mangaId: Long, applyFilter: Boolean = false): List<Chapter>
-
-    suspend fun getMergedChapterByMangaIdAsFlow(
+    suspend fun getDedupedMergedChapters(
         mangaId: Long,
+        sortMode: Int,
+        applyFilter: Boolean = false,
+    ): List<Chapter>
+
+    suspend fun getDedupedMergedChaptersAsFlow(
+        mangaId: Long,
+        sortMode: Int,
         applyFilter: Boolean = false,
     ): Flow<List<Chapter>>
 
