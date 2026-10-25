@@ -137,11 +137,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE id = :id;
 
@@ -159,11 +159,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE source_id = :sourceId
 AND remote_url = :remoteUrl
@@ -177,11 +177,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE user_favorite_at IS NOT NULL;
 
@@ -193,11 +193,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE user_favorite_at IS NULL
 AND EXISTS (
@@ -215,11 +215,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga;
 
 getAllMangaSourceAndUrl:
@@ -240,11 +240,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 -- KUN -->
 WHERE favorite_modified_at IS NOT NULL OR user_favorite_at IS NOT NULL;
@@ -274,11 +274,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE user_favorite_at IS NOT NULL
 AND source_id = :sourceId;
@@ -303,11 +303,11 @@ SELECT
     M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.last_modified_at, M.version, M.is_syncing,
     M.favorite_modified_at,
-    M.user_title, M.user_author, M.user_artist, M.user_thumbnail_url, M.user_description, M.user_genre, M.user_status,
     -- KNS -->
     M.user_blacklisted_chapters, M.user_scanlator_priority, M.user_scanlator_range_rules,
     M.user_smart_merge_override,
     -- KNS <--
+    M.user_title, M.user_author, M.user_artist, M.user_thumbnail_url, M.user_description, M.user_genre, M.user_status,
     (
         SELECT count(*)
         FROM chapter C
@@ -334,11 +334,11 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
-    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
     -- KNS -->
     user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-    user_smart_merge_override
+    user_smart_merge_override,
     -- KNS <--
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE state_chapter_next_update >= :startOfDay
 AND user_favorite_at IS NOT NULL
@@ -660,11 +660,11 @@ insertNetworkManga {
         state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
         state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
         favorite_modified_at,
-        user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status,
         -- KNS -->
         user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
-        user_smart_merge_override
+        user_smart_merge_override,
         -- KNS <--
+        user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
     FROM manga
     WHERE source_id = :sourceId
     AND remote_url = :remoteUrl;

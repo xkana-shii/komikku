@@ -34,6 +34,12 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // KNS -->
+        userBlacklistedChapters: List<String>,
+        userScanlatorPriority: List<String>,
+        userScanlatorRangeRules: List<String>,
+        userSmartMergeOverride: Boolean?,
+        // KNS <--
         // SY -->
         userTitle: String?,
         userAuthor: String?,
@@ -43,12 +49,6 @@ object MangaMapper {
         userGenre: List<String>?,
         userStatus: Long?,
         // SY <--
-        // KNS -->
-        userBlacklistedChapters: List<String>,
-        userScanlatorPriority: List<String>,
-        userScanlatorRangeRules: List<String>,
-        userSmartMergeOverride: Boolean?,
-        // KNS <--
     ): Manga = Manga(
         id = id,
         source = sourceId,
@@ -120,6 +120,12 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // KNS -->
+        userBlacklistedChapters: List<String>,
+        userScanlatorPriority: List<String>,
+        userScanlatorRangeRules: List<String>,
+        userSmartMergeOverride: Boolean?,
+        // KNS <--
         // SY -->
         userTitle: String?,
         userAuthor: String?,
@@ -129,12 +135,6 @@ object MangaMapper {
         userGenre: List<String>?,
         userStatus: Long?,
         // SY <--
-        // KNS -->
-        userBlacklistedChapters: List<String>,
-        userScanlatorPriority: List<String>,
-        userScanlatorRangeRules: List<String>,
-        userSmartMergeOverride: Boolean?,
-        // KNS <--
         totalCount: Long,
         readCount: Double,
         latestUpload: Instant?,
@@ -172,6 +172,12 @@ object MangaMapper {
             version,
             isSyncing,
             favoriteModifiedAt,
+            // KNS -->
+            userBlacklistedChapters,
+            userScanlatorPriority,
+            userScanlatorRangeRules,
+            userSmartMergeOverride,
+            // KNS <--
             // SY -->
             userTitle,
             userAuthor,
@@ -181,12 +187,6 @@ object MangaMapper {
             userGenre,
             userStatus,
             // SY <--
-            // KNS -->
-            userBlacklistedChapters,
-            userScanlatorPriority,
-            userScanlatorRangeRules,
-            userSmartMergeOverride,
-            // KNS <--
         ),
         categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
@@ -227,6 +227,12 @@ object MangaMapper {
         version: Long,
         isSyncing: Long,
         favoriteModifiedAt: Long?,
+        // KNS -->
+        userBlacklistedChapters: List<String>,
+        userScanlatorPriority: List<String>,
+        userScanlatorRangeRules: List<String>,
+        userSmartMergeOverride: Boolean?,
+        // KNS <--
         // SY -->
         userTitle: String?,
         userAuthor: String?,
@@ -236,12 +242,6 @@ object MangaMapper {
         userGenre: List<String>?,
         userStatus: Long?,
         // SY <--
-        // KNS -->
-        userBlacklistedChapters: List<String>,
-        userScanlatorPriority: List<String>,
-        userScanlatorRangeRules: List<String>,
-        userSmartMergeOverride: Boolean?,
-        // KNS <--
         totalCount: Long,
     ): MangaWithChapterCount = MangaWithChapterCount(
         manga = mapManga(
@@ -270,6 +270,12 @@ object MangaMapper {
             version,
             isSyncing,
             favoriteModifiedAt,
+            // KNS -->
+            userBlacklistedChapters,
+            userScanlatorPriority,
+            userScanlatorRangeRules,
+            userSmartMergeOverride,
+            // KNS <--
             // SY -->
             userTitle,
             userAuthor,
@@ -279,12 +285,6 @@ object MangaMapper {
             userGenre,
             userStatus,
             // SY <--
-            // KNS -->
-            userBlacklistedChapters,
-            userScanlatorPriority,
-            userScanlatorRangeRules,
-            userSmartMergeOverride,
-            // KNS <--
         ),
         chapterCount = totalCount,
     )

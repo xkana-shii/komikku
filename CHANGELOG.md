@@ -83,7 +83,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Database migrations 59 and 60 reconcile PR #70 with the fork's released migrations: refreshed
   library/update/history views retain bookmark colors and merged members, and user-edit metadata
   columns are added. The fresh schema now matches the released-column order from upgrades; the
-  schema version is 61.
+  generated SQLDelight projections use that same order, and the schema version is 61.
 - Backup format: two new manga fields from Komi-kun (`customInfoIncluded` = 10000, `mergedMangaReferencesIncluded` = 10001) in its reserved 10000–10999 block. Older backups decode unchanged (both fields absent → add-only restore). A test now also pins this fork's shipped numbers (manga 614–616, 618, 620; chapter 14–15), and new fork fields use 20000–20999.
 - Rebuilt the fork's foundation on official Komikku `master` (`1656575e8f`) with Komi-kun's architecture (`2c6743696d`): Metro DI, AndroidX ViewModels, async SQLDelight on the AndroidX bundled driver with the Mihon schema rework, SyncYomi v2, the WebGPU reader and the Mihon/TachiyomiSY backlog Komi-kun ported. Keeps the `app.komikku.kns` identity, signing and release workflows. Personal features from the previous `main` are re-implemented separately (`features.md`); see `docs/komikun-foundation-progress.md`.
 - Fixed the database upgrade of fresh-installed Komikku databases through migration 49 (`mangas_categories.last_modified_at` missing).

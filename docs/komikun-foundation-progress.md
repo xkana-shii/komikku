@@ -37,6 +37,8 @@ which is where the current source's searches are exposed.
 Migration verification also confirmed that a fresh database must preserve the historical order of
 the fork's migration-57 columns before the later edited-metadata columns from migration 60. The
 fresh SQLDelight schema is ordered accordingly so it is byte-for-byte equivalent to an upgrade.
+Its explicit projections and Kotlin mappers use the same order, keeping the generated query APIs
+consistent with `manga.*` and library views.
 
 ## Pinned revisions
 
