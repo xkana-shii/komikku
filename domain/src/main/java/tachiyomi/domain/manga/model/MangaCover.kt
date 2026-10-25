@@ -1,5 +1,6 @@
 package tachiyomi.domain.manga.model
 
+import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Instant
 
@@ -12,12 +13,21 @@ data class MangaCover(
     val isMangaFavorite: Boolean,
     // SY -->
     val ogUrl: String?,
-    val userThumbnailUrl: String? = null,
     // SY <--
     val lastModified: Instant?,
 ) {
     // SY -->
-    val url: String? = userThumbnailUrl ?: ogUrl
+    // KUN -->
+    // Lazy so the bridge is resolved on first access rather than at construction.
+    private val customThumbnailUrl by lazy {
+        if (isMangaFavorite) {
+            getCustomMangaInfo?.get(mangaId)?.thumbnailUrl
+        } else {
+            null
+        }
+    }
+    // KUN <--
+    val url: String? by lazy { customThumbnailUrl ?: ogUrl }
     // SY <--
 
     // KMK -->
@@ -81,6 +91,11 @@ data class MangaCover(
 
         var coverRatioMap = ConcurrentHashMap<Long, Float>()
         // KMK <--
+
+        // SY -->
+        private val getCustomMangaInfo: GetCustomMangaInfo?
+            get() = GetCustomMangaInfo.getInstanceOrNull()
+        // SY <--
     }
 }
 
@@ -89,12 +104,7 @@ fun Manga.asMangaCover(): MangaCover {
         mangaId = id,
         sourceId = source,
         isMangaFavorite = favorite,
-        // KUN -->
-        // ogUrl must stay the source cover: the history/updates rows build the same model with the
-        // two fields split, and a consumer that reads ogUrl as "the source cover" must agree.
-        ogUrl = ogThumbnailUrl,
-        userThumbnailUrl = userThumbnailUrl,
-        // KUN <--
+        ogUrl = thumbnailUrl,
         lastModified = coverLastModified,
     )
 }

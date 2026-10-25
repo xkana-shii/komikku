@@ -434,6 +434,7 @@ class RestoreRepositoryMergedReferencesTest {
         chapterRepository = ChapterRepositoryImpl(database),
         trackRepository = TrackRepositoryImpl(database),
         mangaMetadataRepository = mockk(relaxed = true),
+        customMangaRepository = mockk(relaxed = true),
     )
 
     private suspend fun references(database: Database, mergeId: Long) = database.mergedQueries

@@ -196,8 +196,7 @@ class PagerPageHolder(
             // Splitting, merging and sampling the background decode the image, which is CPU work
             val (source, isAnimated, background) = withContext(Dispatchers.Default) {
                 // SY -->
-                // A single page can still need rotating when it's wide
-                val source = if (viewer.config.dualPageSplit || (viewer.config.dualPageRotateToFit && buffer2 == null)) {
+                val source = if (viewer.config.dualPageSplit) {
                     process(item.first, buffer)
                 } else {
                     mergePages(buffer, buffer2)

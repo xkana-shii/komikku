@@ -371,7 +371,6 @@ fun ExpandableMangaDescription(
     // SY -->
     searchMetadataChips: SearchMetadataChips?,
     doSearch: (query: String, global: Boolean) -> Unit,
-    hideEmptyDescription: Boolean = false,
     // SY <--
     modifier: Modifier = Modifier,
 ) {
@@ -380,34 +379,22 @@ fun ExpandableMangaDescription(
     val pureDarkMode = uiPreferences.themeDarkAmoled.get()
     // KMK <--
     Column(modifier = modifier) {
-        // SY -->
-        val (expandedState, onExpanded) = rememberSaveable {
+        val (expanded, onExpanded) = rememberSaveable {
             mutableStateOf(defaultExpandState)
         }
-        // Sources with a metadata panel don't need the placeholder, and without the summary there is
-        // nothing to collapse the tags with
-        val showSummary = !hideEmptyDescription || !description.isNullOrBlank() || notes.isNotBlank()
-        val expanded = expandedState || !showSummary
-        // SY <--
         val desc =
             description.takeIf { !it.isNullOrBlank() } ?: stringResource(MR.strings.description_placeholder)
 
-        // SY -->
-        if (showSummary) {
-            // SY <--
-            MangaSummary(
-                description = desc,
-                expanded = expanded,
-                notes = notes,
-                onEditNotesClicked = onEditNotes,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .padding(horizontal = 16.dp)
-                    .clickableNoIndication { onExpanded(!expanded) },
-            )
-            // SY -->
-        }
-        // SY <--
+        MangaSummary(
+            description = desc,
+            expanded = expanded,
+            notes = notes,
+            onEditNotesClicked = onEditNotes,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .padding(horizontal = 16.dp)
+                .clickableNoIndication { onExpanded(!expanded) },
+        )
         val tags = tagsProvider()
         if (!tags.isNullOrEmpty()) {
             Box(

@@ -43,12 +43,15 @@ class PururinSearchMetadata : RaisedSearchMetadata() {
 
         val genres = tagsToGenreString()
 
+        val description = null
+
         return manga.copy(
             url = key ?: manga.url,
             title = title ?: manga.title,
             thumbnail_url = cover ?: manga.thumbnail_url,
             artist = artist,
             genre = genres,
+            description = description,
         )
     }
 

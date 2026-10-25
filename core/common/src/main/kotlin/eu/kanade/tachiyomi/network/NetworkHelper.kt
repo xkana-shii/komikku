@@ -74,10 +74,6 @@ open /* SY <-- */ class NetworkHelper(
             // KMK <--
             val httpLoggingInterceptor = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.HEADERS
-                if (preferences.redactSensitiveHeaders.get()) {
-                    redactHeader("Authorization")
-                    redactHeader("Auth")
-                }
             }
             builder.addNetworkInterceptor(httpLoggingInterceptor)
         }

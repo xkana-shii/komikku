@@ -80,7 +80,6 @@ import exh.log.XLogLogcatLogger
 import exh.log.xLogD
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -94,16 +93,14 @@ import mihon.app.di.injekt.MetroInteropModule
 import mihon.core.metro.AppCoroutineScope
 import mihon.core.metro.GraphProvider
 import mihon.core.migration.Migration
-import mihon.core.migration.MigrationContext
 import mihon.core.migration.Migrator
-import mihon.core.migration.migrations.CustomInfoJsonToDbMigration
-import mihon.core.migration.nextMigrationTarget
 import mihon.telemetry.TelemetryConfig
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
@@ -112,7 +109,6 @@ import timber.log.Timber
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.InjektScope
 import uy.kohesive.injekt.api.get
-import java.io.File
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -143,6 +139,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     // KUN -->
     @Inject private lateinit var pagePreviewCache: PagePreviewCache
+
+    @Inject private lateinit var getCustomMangaInfo: GetCustomMangaInfo
 
     @Inject private lateinit var refreshMangaCover: Lazy<RefreshMangaCover>
     // KUN <--
@@ -188,9 +186,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Injekt = InjektScope(MetroInjektRegistrar(application = this, graphProvider = this))
 
         graph.inject(this)
-        // KNS --> This fork retains its own MyAnimeList OAuth client; the imported invalidation
-        // helper is not part of this tracker implementation.
-        // KNS <--
+        // KUN -->
+        GetCustomMangaInfo.setInstance(getCustomMangaInfo)
+        // KUN <--
         Injekt.importModule(injektMetroInteropModule)
         // KUN -->
         Injekt.importModule(kmkMetroInteropModule)
@@ -284,83 +282,29 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (!WorkManager.isInitialized()) {
             WorkManager.initialize(this, Configuration.Builder().build())
         }
-        initializeMigrator()
-
-        // KUN -->
-        // The legacy edits.json import is a migration, but the migration framework folds a failure
-        // into the previous chain result, so a failed write would be recorded as done while the file
-        // (and the user's edits) are still there and nothing reads them any more. Run it once more
-        // after the migrator, while the file exists.
-        val legacyImport = scope.async {
-            Migrator.await()
-            importLegacyCustomInfoIfNeeded()
-        }
-        // KUN <--
-
         val syncPreferences: SyncPreferences = Injekt.get()
         val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
         if (syncPreferences.isSyncEnabled() && syncTriggerOpt.syncOnAppStart) {
-            scope.launch {
-                // KUN -->
-                // A sync started before the import would upload the pre-import state (and could even
-                // clear a peer's overrides), so both the migration and the import must land first.
-                legacyImport.await()
-                // KUN <--
-                SyncDataJob.startNow(this@App)
-            }
+            scope.launch { SyncDataJob.startNow(this@App) }
         }
-    }
 
-    // KUN -->
-    private suspend fun importLegacyCustomInfoIfNeeded() {
-        if (!File(getExternalFilesDir(null), "edits.json").exists()) return
-        val migration = migrations.filterIsInstance<CustomInfoJsonToDbMigration>().firstOrNull() ?: return
-        runCatching {
-            migration.invoke(
-                MigrationContext(
-                    dryrun = false,
-                    previousVersion = preferenceStore
-                        .getInt(Preference.appStateKey("eh_last_migration_version"), 0)
-                        .get(),
-                ),
-            )
-        }.onFailure {
-            // Keep the file: the next start tries again.
-            logcat(LogPriority.ERROR, it) { "Importing the legacy manga edits failed" }
-        }
+        initializeMigrator()
     }
-    // KUN <--
 
     private fun initializeMigrator() {
         // SY -->
-        val legacyVersionCode = preferenceStore.getInt(Preference.appStateKey("eh_last_version_code"), 0)
+        val preference = preferenceStore.getInt(Preference.appStateKey("eh_last_version_code"), 0)
         // SY <--
-        // KUN -->
-        // `versionCode` is pinned at 83 in this fork, so passing it as the target made
-        // `MigrationStrategyFactory` short-circuit every migration added afterwards (`old >= new`).
-        // Track the highest *applied migration version* instead, seeded from the stored version code
-        // so builds that already ran migrations keep their history. Each migration then runs exactly
-        // once, whatever the app version code does.
-        val applied = preferenceStore.getInt(
-            Preference.appStateKey("eh_last_migration_version"),
-            legacyVersionCode.get(),
-        )
-        val target = nextMigrationTarget(applied.get(), migrations)
-        // KUN <--
         logcat {
-            "Migration from ${applied.get()} to $target with ${migrations.size} migration(s)"
+            "Migration from ${preference.get()} to ${BuildConfig.VERSION_CODE} with ${migrations.size} migration(s)"
         }
         Migrator.initialize(
-            old = applied.get(),
-            // KUN -->
-            new = target,
-            // KUN <--
+            old = preference.get(),
+            new = BuildConfig.VERSION_CODE,
             migrations = migrations.toList(),
             onMigrationComplete = {
-                // KUN -->
-                logcat { "Updating last migration version to $target" }
-                applied.set(target)
-                // KUN <--
+                logcat { "Updating last version to ${BuildConfig.VERSION_CODE}" }
+                preference.set(BuildConfig.VERSION_CODE)
             },
         )
     }

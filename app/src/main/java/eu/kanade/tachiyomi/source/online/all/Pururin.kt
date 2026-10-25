@@ -64,10 +64,6 @@ class Pururin(delegate: HttpSource, val context: Context) :
         }
     }
 
-    // SY -->
-    override val overridesMangaDetails = true
-    // SY <--
-
     @Deprecated("Use the combined suspend API instead", replaceWith = ReplaceWith("getMangaUpdate"))
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return runAsObservable {
@@ -77,7 +73,8 @@ class Pururin(delegate: HttpSource, val context: Context) :
     }
 
     override suspend fun parseIntoMetadata(metadata: PururinSearchMetadata, input: Document) {
-        val parsedSelfLink = input.selectFirst("meta[property=og:url]")!!.attr("content").toUri().pathSegments
+        val selfLink = input.select("[itemprop=name]").last()!!.parent()
+        val parsedSelfLink = selfLink!!.attr("href").toUri().pathSegments
 
         with(metadata) {
             prId = parsedSelfLink[parsedSelfLink.lastIndex - 1].toInt()
@@ -87,10 +84,10 @@ class Pururin(delegate: HttpSource, val context: Context) :
             title = contentWrapper!!.selectFirst(".title h1")!!.text()
             altTitle = contentWrapper.selectFirst(".alt-title")?.text()
 
-            thumbnailUrl = input.selectFirst(".cover-wrapper img")!!.absUrl("src")
+            thumbnailUrl = "https:" + input.selectFirst(".cover-wrapper v-lazy-image")!!.attr("src")
 
             tags.clear()
-            contentWrapper.select(".table-info > tbody > tr").forEach { ele ->
+            contentWrapper.select(".table-gallery-info > tbody > tr").forEach { ele ->
                 val key = ele.child(0).text().lowercase()
                 val value = ele.child(1)
                 when (key) {
@@ -106,7 +103,7 @@ class Pururin(delegate: HttpSource, val context: Context) :
                     }
                     "uploader" -> {
                         uploaderDisp = value.text()
-                        uploader = value.selectFirst("a")!!.attr("href").toUri().lastPathSegment
+                        uploader = value.child(0).attr("href").toUri().lastPathSegment
                     }
                     else -> {
                         value.select("a").forEach { link ->

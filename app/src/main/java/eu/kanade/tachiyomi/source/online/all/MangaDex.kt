@@ -206,11 +206,6 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     }
     // KMK <--
 
-    // SY -->
-    override val overridesMangaDetails = true
-    override val overridesChapterList = true
-    // SY <--
-
     @Deprecated("Use the combined suspend API instead", replaceWith = ReplaceWith("getMangaUpdate"))
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return mangaHandler.fetchMangaDetailsObservable(

@@ -79,22 +79,6 @@ class MigrationTest {
                 driver.viewExists("updatesView") shouldBe true
                 driver.viewExists("libraryUpdateErrorView") shouldBe true
 
-                // The user's edited details live on the manga row (SY 992d7972f7)
-                driver.columnCount("manga", "user_title") shouldBe 1
-                driver.columnCount("manga", "user_author") shouldBe 1
-                driver.columnCount("manga", "user_artist") shouldBe 1
-                driver.columnCount("manga", "user_thumbnail_url") shouldBe 1
-                driver.columnCount("manga", "user_description") shouldBe 1
-                driver.columnCount("manga", "user_genre") shouldBe 1
-                driver.columnCount("manga", "user_status") shouldBe 1
-
-                // The explicitly-columned views were recreated with the new columns
-                driver.columnCount("updatesView", "userTitle") shouldBe 1
-                driver.columnCount("updatesView", "userThumbnailUrl") shouldBe 1
-                driver.columnCount("historyView", "userTitle") shouldBe 1
-                driver.columnCount("historyView", "userThumbnailUrl") shouldBe 1
-                driver.columnCount("libraryView", "user_title") shouldBe 1
-
                 // Manga rows survive (the triplicate group merged into the favorite entry, Manga B kept)
                 driver.scalarLong("SELECT count(*) FROM manga") shouldBe 2
                 driver.scalarLong("SELECT user_favorite_at FROM manga WHERE id = 1") shouldBe 1000
@@ -187,16 +171,6 @@ class MigrationTest {
 
                 // An unrelated update keeps the version unchanged.
                 driver.execute(null, "UPDATE manga SET remote_title = 'renamed' WHERE id = 1", 0).await()
-                (driver.scalarLong("SELECT version FROM manga WHERE id = 1") ?: 0) shouldBe 5
-
-                // The upgraded rows can hold the user's edited details, and the recreated views
-                // expose them next to the source values.
-                driver.execute(null, "UPDATE manga SET user_title = 'Edited' WHERE id = 1", 0).await()
-                driver.scalarString("SELECT user_title FROM manga WHERE id = 1") shouldBe "Edited"
-                driver.scalarString("SELECT remote_title FROM manga WHERE id = 1") shouldBe "renamed"
-                driver.scalarString("SELECT userTitle FROM historyView WHERE mangaId = 1 LIMIT 1") shouldBe
-                    "Edited"
-                // A custom-info edit is not a whole-row edit: the version must not move.
                 (driver.scalarLong("SELECT version FROM manga WHERE id = 1") ?: 0) shouldBe 5
             } finally {
                 driver.close()

@@ -90,10 +90,7 @@ internal fun BrowseSourceListItem(
             mangaId = manga.id,
             sourceId = manga.source,
             isMangaFavorite = manga.favorite,
-            // KUN -->
-            ogUrl = manga.ogThumbnailUrl,
-            userThumbnailUrl = manga.userThumbnailUrl,
-            // KUN <--
+            ogUrl = manga.thumbnailUrl,
             lastModified = manga.coverLastModified,
         ),
         // KMK -->

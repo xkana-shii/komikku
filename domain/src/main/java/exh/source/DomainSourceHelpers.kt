@@ -9,19 +9,16 @@ import tachiyomi.domain.manga.model.Manga
 // Used to speed up isLewdSource
 var metadataDelegatedSourceIds: List<Long> = emptyList()
 
-var nHentaiSourceIds: Set<Long> = emptySet()
+var nHentaiSourceIds: List<Long> = emptyList()
 
-var hitomiSourceIds: Set<Long> = emptySet()
+var lanraragiSourceIds: List<Long> = emptyList()
 
-var pururinSourceIds: Set<Long> = emptySet()
-
-var lanraragiSourceIds: Set<Long> = emptySet()
-
-var mangaDexSourceIds: Set<Long> = emptySet()
+var mangaDexSourceIds: List<Long> = emptyList()
 
 var LIBRARY_UPDATE_EXCLUDED_SOURCES = listOf(
     EH_SOURCE_ID,
     EXH_SOURCE_ID,
+    PURURIN_SOURCE_ID,
 )
 
 // This method MUST be fast!

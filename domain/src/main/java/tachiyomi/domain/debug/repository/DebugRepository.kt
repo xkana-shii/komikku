@@ -17,5 +17,5 @@ interface DebugRepository {
     suspend fun resetReaderViewerForAllManga()
 
     /** Moves every library manga of a language-specific NHentai source to [newSourceId]. */
-    suspend fun migrateAllNhentaiToOtherLang(newSourceId: Long, oldSourceIds: Set<Long>)
+    suspend fun migrateAllNhentaiToOtherLang(newSourceId: Long, oldSourceIds: List<Long>)
 }

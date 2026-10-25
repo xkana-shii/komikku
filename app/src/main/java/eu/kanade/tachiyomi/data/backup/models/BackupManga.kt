@@ -6,6 +6,8 @@ import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
 import mihon.core.common.extensions.toInstantOrNull
 import mihon.core.common.extensions.toJsonObject
+import tachiyomi.domain.backup.model.RestoredForkState
+import tachiyomi.domain.chapter.service.legacyFillermarkBlacklistKeys
 import tachiyomi.domain.manga.model.Manga
 
 @Suppress("DEPRECATION")
@@ -52,15 +54,21 @@ class BackupManga(
 
     @ProtoNumber(113) var nextUpdate: Long = 0,
 
-    // KNS --> Previous fork backups used 114 for next update while 113 held a now-retired value.
+    // KNS --> read only: the previous personal fork wrote its last-update time at 113 and the next update
+    // at 114. A backup with 114 set is one of its backups, so 114 is the next update and 113 is not.
     @ProtoNumber(114) var legacyNextUpdate: Long = 0,
     // KNS <--
 
     // KNS -->
+    // 614–620 keep the previous personal fork's numbers so its backups restore (613 categoryIds and
+    // 617, used by Houri, are not used here).
     @ProtoNumber(614) var scanlatorPriority: List<String> = emptyList(),
     @ProtoNumber(615) var blacklistedChapters: List<String> = emptyList(),
     @ProtoNumber(616) var scanlatorRangeRules: List<String> = emptyList(),
+    /** "enabled" / "disabled" / "global"; null = a payload without this setting. */
     @ProtoNumber(618) var smartScanlatorMergeOverride: String? = null,
+    // 619 hideBlacklistedChapters (a per-manga view toggle) is not restored.
+    /** Repeated fields cannot tell "unset" from "empty": this states that 614–616 are authoritative. */
     @ProtoNumber(620) var scanlatorSettingsPresent: Boolean = false,
     // KNS <--
 
@@ -128,29 +136,22 @@ class BackupManga(
             // KNS -->
             nextUpdate = (legacyNextUpdate.takeIf { it != 0L } ?: this@BackupManga.nextUpdate).toInstantOrNull(),
             // KNS <--
-            // SY -->
-            userTitle = this@BackupManga.customTitle,
-            userAuthor = this@BackupManga.customAuthor,
-            userArtist = this@BackupManga.customArtist,
-            userThumbnailUrl = this@BackupManga.customThumbnailUrl,
-            userDescription = this@BackupManga.customDescription,
-            userGenre = this@BackupManga.customGenre,
-            userStatus = this@BackupManga.customStatus.takeUnless { it == 0 }?.toLong(),
-            // SY <--
         )
     }
 
     // KNS -->
-    fun getForkState(): tachiyomi.domain.backup.model.RestoredForkState? {
-        val fillermarkKeys = tachiyomi.domain.chapter.service.legacyFillermarkBlacklistKeys(
-            chapters.filter { it.fillermark }.map { it.url },
-        )
+    /**
+     * The fork-owned state of this entry. Legacy Fillermarks of old-fork backups become exact chapter
+     * blacklist entries, as the old fork's own migration did.
+     */
+    fun getForkState(): RestoredForkState? {
+        val fillermarkKeys = legacyFillermarkBlacklistKeys(chapters.filter { it.fillermark }.map { it.url })
         val blacklist = (blacklistedChapters + fillermarkKeys).distinct()
         val scanlatorPresent = scanlatorSettingsPresent || scanlatorPriority.isNotEmpty() ||
             scanlatorRangeRules.isNotEmpty() || blacklist.isNotEmpty()
         val override = smartScanlatorMergeOverride
         if (!scanlatorPresent && override == null) return null
-        return tachiyomi.domain.backup.model.RestoredForkState(
+        return RestoredForkState(
             scanlatorSettingsPresent = scanlatorPresent,
             blacklistedChapters = blacklist,
             scanlatorPriority = scanlatorPriority,

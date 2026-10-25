@@ -40,15 +40,6 @@ object MangaMapper {
         userScanlatorRangeRules: List<String>,
         userSmartMergeOverride: Boolean?,
         // KNS <--
-        // SY -->
-        userTitle: String?,
-        userAuthor: String?,
-        userArtist: String?,
-        userThumbnailUrl: String?,
-        userDescription: String?,
-        userGenre: List<String>?,
-        userStatus: Long?,
-        // SY <--
     ): Manga = Manga(
         id = id,
         source = sourceId,
@@ -83,15 +74,6 @@ object MangaMapper {
         scanlatorRangeRules = userScanlatorRangeRules,
         smartMergeOverride = userSmartMergeOverride,
         // KNS <--
-        // SY -->
-        userTitle = userTitle,
-        userAuthor = userAuthor,
-        userArtist = userArtist,
-        userThumbnailUrl = userThumbnailUrl,
-        userDescription = userDescription,
-        userGenre = userGenre,
-        userStatus = userStatus,
-        // SY <--
     )
 
     fun mapLibraryManga(
@@ -126,15 +108,6 @@ object MangaMapper {
         userScanlatorRangeRules: List<String>,
         userSmartMergeOverride: Boolean?,
         // KNS <--
-        // SY -->
-        userTitle: String?,
-        userAuthor: String?,
-        userArtist: String?,
-        userThumbnailUrl: String?,
-        userDescription: String?,
-        userGenre: List<String>?,
-        userStatus: Long?,
-        // SY <--
         totalCount: Long,
         readCount: Double,
         latestUpload: Instant?,
@@ -178,15 +151,6 @@ object MangaMapper {
             userScanlatorRangeRules,
             userSmartMergeOverride,
             // KNS <--
-            // SY -->
-            userTitle,
-            userAuthor,
-            userArtist,
-            userThumbnailUrl,
-            userDescription,
-            userGenre,
-            userStatus,
-            // SY <--
         ),
         categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
@@ -233,15 +197,6 @@ object MangaMapper {
         userScanlatorRangeRules: List<String>,
         userSmartMergeOverride: Boolean?,
         // KNS <--
-        // SY -->
-        userTitle: String?,
-        userAuthor: String?,
-        userArtist: String?,
-        userThumbnailUrl: String?,
-        userDescription: String?,
-        userGenre: List<String>?,
-        userStatus: Long?,
-        // SY <--
         totalCount: Long,
     ): MangaWithChapterCount = MangaWithChapterCount(
         manga = mapManga(
@@ -276,15 +231,6 @@ object MangaMapper {
             userScanlatorRangeRules,
             userSmartMergeOverride,
             // KNS <--
-            // SY -->
-            userTitle,
-            userAuthor,
-            userArtist,
-            userThumbnailUrl,
-            userDescription,
-            userGenre,
-            userStatus,
-            // SY <--
         ),
         chapterCount = totalCount,
     )

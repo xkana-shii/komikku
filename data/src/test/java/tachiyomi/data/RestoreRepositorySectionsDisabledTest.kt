@@ -7,9 +7,8 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.shouldBe
-import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.spyk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Test
@@ -20,8 +19,10 @@ import tachiyomi.data.track.TrackRepositoryImpl
 import tachiyomi.domain.backup.model.RestoredHistory
 import tachiyomi.domain.backup.model.RestoredManga
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.toMangaUpdate
+import tachiyomi.domain.manga.repository.CustomMangaRepository
 import tachiyomi.domain.track.model.Track
 import kotlin.time.Instant
 
@@ -126,26 +127,26 @@ class RestoreRepositorySectionsDisabledTest {
             val driver = newDriver()
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
-                val mangaRepository = spyk(MangaRepositoryImpl(database))
+                val mangaRepository = MangaRepositoryImpl(database)
+                val customMangaRepository = mockk<CustomMangaRepository>(relaxed = true)
                 val repository = RestoreRepositoryImpl(
                     database = database,
                     mangaRepository = mangaRepository,
                     chapterRepository = ChapterRepositoryImpl(database),
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = customMangaRepository,
                 )
-                driver.insertManga(version = 5L, lastModifiedAt = 10L, userTitle = "Stored")
+                driver.insertManga(version = 5L, lastModifiedAt = 10L)
 
                 restore(
                     repository = repository,
                     isSync = true,
                     restoreCustomInfo = false,
-                    userTitle = "Custom",
+                    customMangaInfo = CustomMangaInfo(id = 0L, title = "Custom"),
                 )
 
-                // The row keeps what it had, and the disabled section never writes at all.
-                mangaRepository.getMangaById(1L).userTitle shouldBe "Stored"
-                coVerify(exactly = 0) { mangaRepository.updateUserInfoAll(any()) }
+                verify(exactly = 0) { customMangaRepository.set(any()) }
             } finally {
                 driver.close()
             }
@@ -158,15 +159,17 @@ class RestoreRepositorySectionsDisabledTest {
             val driver = newDriver()
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
-                val mangaRepository = spyk(MangaRepositoryImpl(database))
+                val mangaRepository = MangaRepositoryImpl(database)
                 val chapterRepository = ChapterRepositoryImpl(database)
                 val trackRepository = TrackRepositoryImpl(database)
+                val customMangaRepository = mockk<CustomMangaRepository>(relaxed = true)
                 val repository = RestoreRepositoryImpl(
                     database = database,
                     mangaRepository = mangaRepository,
                     chapterRepository = chapterRepository,
                     trackRepository = trackRepository,
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = customMangaRepository,
                 )
                 driver.insertManga(version = 5L, lastModifiedAt = 10L)
                 val chapters = chapterRepository.addAll(listOf(chapter("/c1"), chapter("/c2")))
@@ -189,7 +192,7 @@ class RestoreRepositorySectionsDisabledTest {
                     ),
                     history = listOf(RestoredHistory("/c1", Instant.fromEpochMilliseconds(9_000), 200L)),
                     removeMissingChaptersBefore = 1_000L,
-                    userTitle = "Custom",
+                    customMangaInfo = CustomMangaInfo(id = 0L, title = "Custom"),
                 )
 
                 trackRepository.getTracksByMangaId(1L) shouldBe tracksBefore
@@ -197,7 +200,7 @@ class RestoreRepositorySectionsDisabledTest {
                 history.single().chapter_id shouldBe chapters[0].id
                 history.single().read_at shouldBe Instant.fromEpochMilliseconds(5_000)
                 history.single().read_duration shouldBe 100L
-                coVerify(exactly = 0) { mangaRepository.updateUserInfoAll(any()) }
+                verify(exactly = 0) { customMangaRepository.set(any()) }
                 mangaRepository.getMangaByUrlAndSourceId("/manga/1", 1L)!!.version shouldBe 5L
             } finally {
                 driver.close()
@@ -215,17 +218,18 @@ class RestoreRepositorySectionsDisabledTest {
         tracks: List<Track> = emptyList(),
         history: List<RestoredHistory> = emptyList(),
         removeMissingChaptersBefore: Long? = null,
-        userTitle: String? = null,
+        customMangaInfo: CustomMangaInfo? = null,
     ) {
         repository.restoreManga(
             entries = listOf(
                 RestoredManga(
-                    manga = manga(userTitle = userTitle),
+                    manga = manga(),
                     chapters = chapters,
                     categoryIds = null,
                     history = history,
                     tracks = tracks,
                     excludedScanlators = emptyList(),
+                    customMangaInfo = customMangaInfo,
                 ),
             ),
             isSync = isSync,
@@ -249,13 +253,10 @@ class RestoreRepositorySectionsDisabledTest {
         chapterRepository = chapterRepository,
         trackRepository = trackRepository,
         mangaMetadataRepository = mockk(relaxed = true),
+        customMangaRepository = mockk(relaxed = true),
     )
 
-    private fun manga(
-        version: Long = 5L,
-        lastModifiedAt: Long = 10L,
-        userTitle: String? = null,
-    ) = Manga.create().copy(
+    private fun manga(version: Long = 5L, lastModifiedAt: Long = 10L) = Manga.create().copy(
         id = 1L,
         source = 1L,
         favorite = true,
@@ -275,7 +276,6 @@ class RestoreRepositorySectionsDisabledTest {
         version = version,
         notes = "",
         memo = JsonObject(emptyMap()),
-        userTitle = userTitle,
     )
 
     private fun chapter(url: String) = Chapter.create().copy(
@@ -316,12 +316,7 @@ class RestoreRepositorySectionsDisabledTest {
         }
     }
 
-    private suspend fun SqlDriver.insertManga(
-        version: Long,
-        lastModifiedAt: Long,
-        userTitle: String? = null,
-    ) {
-        val title = userTitle?.let { "'$it'" } ?: "NULL"
+    private suspend fun SqlDriver.insertManga(version: Long, lastModifiedAt: Long) {
         execute(
             null,
             """
@@ -330,13 +325,13 @@ class RestoreRepositorySectionsDisabledTest {
                 remote_memo, user_notes, user_reader_flags, user_chapter_flags,
                 state_chapter_fetch_interval, state_initialized, remote_cover,
                 state_cover_last_modified, last_modified_at, version, is_syncing,
-                user_favorite_at, favorite_modified_at, user_title
+                user_favorite_at, favorite_modified_at
             ) VALUES (
                 1, 1, '/manga/1', 'Title', 0, 0,
                 '{}', '', 0, 0,
                 0, 1, 'https://example.com/cover.jpg',
                 123, $lastModifiedAt, $version, 0,
-                1000, 500, $title
+                1000, 500
             )
             """.trimIndent(),
             0,

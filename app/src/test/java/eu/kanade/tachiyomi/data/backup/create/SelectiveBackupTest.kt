@@ -187,6 +187,7 @@ class SelectiveBackupTest {
             trackRepository = mockk(relaxed = true),
             mangaMergeRepository = mockk(relaxed = true),
             sourceManager = mockk<SourceManager>().also { coEvery { it.get(any<Long>()) } returns null },
+            getCustomMangaInfo = mockk(relaxed = true),
             getFlatMetadataById = mockk(relaxed = true),
         )
         val options = options(setOf(2L, 4L))

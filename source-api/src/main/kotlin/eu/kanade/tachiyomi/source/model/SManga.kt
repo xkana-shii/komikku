@@ -3,7 +3,6 @@
 package eu.kanade.tachiyomi.source.model
 
 import kotlinx.serialization.json.JsonObject
-import mihon.core.common.extensions.EMPTY
 import java.io.Serializable
 
 interface SManga : Serializable {
@@ -95,9 +94,7 @@ interface SManga : Serializable {
             genre: String? = null,
             status: Int = 0,
             thumbnail_url: String? = null,
-            updateStrategy: UpdateStrategy = UpdateStrategy.ALWAYS_UPDATE,
             initialized: Boolean = false,
-            memo: JsonObject = JsonObject.EMPTY,
         ): SManga {
             return create().also {
                 it.url = url
@@ -108,9 +105,7 @@ interface SManga : Serializable {
                 it.genre = genre
                 it.status = status
                 it.thumbnail_url = thumbnail_url
-                it.update_strategy = updateStrategy
                 it.initialized = initialized
-                it.memo = memo
             }
         }
         // SY <--
@@ -127,7 +122,6 @@ fun SManga.copy(
     genre: String? = this.originalGenre,
     status: Int = this.status,
     thumbnail_url: String? = this.originalThumbnailUrl,
-    updateStrategy: UpdateStrategy = this.update_strategy,
     initialized: Boolean = this.initialized,
     // KMK -->
     memo: JsonObject = this.memo,
@@ -142,9 +136,6 @@ fun SManga.copy(
     it.status = status
     it.thumbnail_url = thumbnail_url
     it.initialized = initialized
-    // SY -->
-    it.update_strategy = updateStrategy
-    // SY <--
     // KMK -->
     it.memo = memo
     // KMK <--

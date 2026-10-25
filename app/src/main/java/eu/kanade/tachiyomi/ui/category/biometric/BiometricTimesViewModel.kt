@@ -12,17 +12,14 @@ import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import tachiyomi.core.common.preference.plusAssign
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
-import kotlin.time.Duration.Companion.seconds
 
 @Inject
 @ViewModelKey
@@ -32,25 +29,28 @@ class BiometricTimesViewModel(
     private val context: Context,
 ) : ViewModel() {
 
+    val state: StateFlow<BiometricTimesScreenState>
+        field = MutableStateFlow<BiometricTimesScreenState>(BiometricTimesScreenState.Loading)
+
     private val _events: Channel<BiometricTimesEvent> = Channel(Int.MAX_VALUE)
     val events = _events.receiveAsFlow()
 
-    private val dialog = MutableStateFlow<BiometricTimesDialog?>(null)
-
-    val state: StateFlow<BiometricTimesScreenState> = combine(
-        // todo usecase
-        preferences.authenticatorTimeRanges.changes(),
-        dialog,
-    ) { times, dialog ->
-        BiometricTimesScreenState.Success(
-            timeRanges = times.toList()
-                .mapNotNull(TimeRange::fromPreferenceString)
-                .map { TimeRangeItem(it, it.getFormattedString(context)) }
-                .toList(),
-            dialog = dialog,
-        )
+    init {
+        viewModelScope.launchIO {
+            // todo usecase
+            preferences.authenticatorTimeRanges.changes()
+                .collectLatest { times ->
+                    state.update {
+                        BiometricTimesScreenState.Success(
+                            timeRanges = times.toList()
+                                .mapNotNull(TimeRange::fromPreferenceString)
+                                .map { TimeRangeItem(it, it.getFormattedString(context)) }
+                                .toList(),
+                        )
+                    }
+                }
+        }
     }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), BiometricTimesScreenState.Loading)
 
     /**
      * Creates and adds a new category to the database.
@@ -94,11 +94,21 @@ class BiometricTimesViewModel(
     }
 
     fun showDialog(dialog: BiometricTimesDialog) {
-        this.dialog.value = dialog
+        state.update {
+            when (it) {
+                BiometricTimesScreenState.Loading -> it
+                is BiometricTimesScreenState.Success -> it.copy(dialog = dialog)
+            }
+        }
     }
 
     fun dismissDialog() {
-        this.dialog.value = null
+        state.update {
+            when (it) {
+                BiometricTimesScreenState.Loading -> it
+                is BiometricTimesScreenState.Success -> it.copy(dialog = null)
+            }
+        }
     }
 }
 

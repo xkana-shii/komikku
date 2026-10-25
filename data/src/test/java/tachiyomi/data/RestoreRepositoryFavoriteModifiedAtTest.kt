@@ -177,6 +177,7 @@ class RestoreRepositoryFavoriteModifiedAtTest {
             chapterRepository = ChapterRepositoryImpl(database),
             trackRepository = TrackRepositoryImpl(database),
             mangaMetadataRepository = mockk(relaxed = true),
+            customMangaRepository = mockk(relaxed = true),
         )
 
     private fun restoredManga(manga: Manga) = RestoredManga(

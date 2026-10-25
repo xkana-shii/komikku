@@ -113,9 +113,6 @@ data class BrowseSourceScreen(
             )
         }
         val state by viewModel.state.collectAsState()
-        // SY -->
-        val savedSearches by viewModel.savedSearches.collectAsState()
-        // SY <--
 
         val navigator = LocalNavigator.currentOrThrow
         val navigateUp: () -> Unit = {
@@ -315,7 +312,7 @@ data class BrowseSourceScreen(
                             )
                         }
                         // KMK -->
-                        savedSearches.forEach { savedSearch ->
+                        state.savedSearches.forEach { savedSearch ->
                             FilterChip(
                                 selected = state.listing is Listing.Search &&
                                     (state.listing as Listing.Search).savedSearchId == savedSearch.id,
@@ -408,7 +405,7 @@ data class BrowseSourceScreen(
                     // SY -->
                     startExpanded = viewModel.startExpanded,
                     onSave = viewModel::onSaveSearch,
-                    savedSearches = savedSearches,
+                    savedSearches = state.savedSearches,
                     onSavedSearch = { search ->
                         viewModel.onSavedSearch(search) {
                             context.toast(it)

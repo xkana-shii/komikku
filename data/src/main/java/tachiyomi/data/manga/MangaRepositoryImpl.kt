@@ -27,7 +27,6 @@ import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
-import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.repository.MangaRepository
 import kotlin.time.Clock
@@ -360,40 +359,6 @@ class MangaRepositoryImpl(
         return database.libraryViewQueries
             .readMangaNonLibrary(MangaMapper::mapLibraryManga)
             .awaitAsList()
-    }
-
-    override suspend fun updateUserInfo(
-        mangaId: Long,
-        title: String?,
-        author: String?,
-        artist: String?,
-        thumbnailUrl: String?,
-        description: String?,
-        genre: List<String>?,
-        status: Long?,
-    ) {
-        updateUserInfoAll(
-            listOf(
-                MangaUserInfoUpdate(mangaId, title, author, artist, thumbnailUrl, description, genre, status),
-            ),
-        )
-    }
-
-    override suspend fun updateUserInfoAll(updates: List<MangaUserInfoUpdate>) {
-        database.transaction {
-            updates.forEach { update ->
-                database.mangaQueries.updateUserInfo(
-                    userTitle = update.title,
-                    userAuthor = update.author,
-                    userArtist = update.artist,
-                    userThumbnailUrl = update.thumbnailUrl,
-                    userDescription = update.description,
-                    userGenre = update.genre,
-                    userStatus = update.status,
-                    id = update.id,
-                )
-            }
-        }
     }
     // SY <--
 }

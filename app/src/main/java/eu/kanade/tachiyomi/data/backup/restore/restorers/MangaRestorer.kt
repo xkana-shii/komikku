@@ -13,6 +13,7 @@ import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.service.CategoryTree
 import tachiyomi.domain.manga.interactor.FetchInterval
+import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import kotlin.time.Clock
 
@@ -132,6 +133,7 @@ class MangaRestorer(
                 mergedMangaReferencesIncluded = backupManga.mergedMangaReferencesIncluded,
                 // KUN <--
                 flatMetadata = backupManga.flatMetadata?.getFlatMetadata(mangaId = 0L),
+                customMangaInfo = backupManga.getCustomMangaInfo(),
                 // KUN -->
                 customInfoIncluded = backupManga.customInfoIncluded,
                 // KUN <--
@@ -166,4 +168,35 @@ class MangaRestorer(
         restoreRepository.updateManga(manga, isSync)
     }
     // KMK/SY <--
+
+    // SY -->
+    private fun BackupManga.getCustomMangaInfo(): CustomMangaInfo? {
+        if (customTitle != null ||
+            customArtist != null ||
+            customAuthor != null ||
+            customThumbnailUrl != null ||
+            customDescription != null ||
+            customGenre != null ||
+            customStatus != 0
+        ) {
+            return CustomMangaInfo(
+                id = 0L,
+                title = customTitle,
+                author = customAuthor,
+                artist = customArtist,
+                thumbnailUrl = customThumbnailUrl,
+                description = customDescription,
+                genre = customGenre,
+                status = customStatus.takeUnless { it == 0 }?.toLong(),
+            )
+        }
+        // KUN -->
+        // The sender included the custom-info section but every override is empty: that is an
+        // explicit clear, not "unknown". Return the all-null value so the restore can remove the
+        // stored entry; the repository only acts on it when the payload owns the manga.
+        if (customInfoIncluded == true) return CustomMangaInfo(id = 0L, title = null)
+        // KUN <--
+        return null
+    }
+    // SY <--
 }

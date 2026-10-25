@@ -7,12 +7,12 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.InMemoryPreferenceStore.InMemoryPreference
-import tachiyomi.domain.manga.model.MangaUserInfoUpdate
+import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.repository.MangaRepository
 
 /**
- * The bump is what makes a change the version trigger cannot see (a history reset, a custom-info
- * edit of the user_* columns) reach the other devices through the version-based delta. It must stay off when the sync service is
+ * The bump is what makes a change stored outside the manga row (history reset, custom-info edit)
+ * reach the other devices through the version-based delta. It must stay off when the sync service is
  * disabled or the matching "choose what to sync" section is off: bumping then would upload that
  * section's local copy, which a disabled section must leave alone.
  */
@@ -64,7 +64,7 @@ class SyncStateBumperTest {
             bumper(syncService = SYNCYOMI).bumpForCustomInfoEdit(
                 mangaId = 1L,
                 before = null,
-                after = userInfo(title = "Custom"),
+                after = CustomMangaInfo(id = 1L, title = "Custom"),
             )
 
             coVerify(exactly = 1) { mangaRepository.bumpSyncVersion(1L) }
@@ -76,8 +76,8 @@ class SyncStateBumperTest {
         runBlocking {
             bumper(syncService = SYNCYOMI).bumpForCustomInfoEdit(
                 mangaId = 1L,
-                before = userInfo(title = "Custom"),
-                after = userInfo(title = null),
+                before = CustomMangaInfo(id = 1L, title = "Custom"),
+                after = CustomMangaInfo(id = 1L, title = null),
             )
 
             coVerify(exactly = 1) { mangaRepository.bumpSyncVersion(1L) }
@@ -89,8 +89,8 @@ class SyncStateBumperTest {
         runBlocking {
             bumper(syncService = SYNCYOMI).bumpForCustomInfoEdit(
                 mangaId = 1L,
-                before = userInfo(title = "Custom"),
-                after = userInfo(title = "Custom"),
+                before = CustomMangaInfo(id = 1L, title = "Custom"),
+                after = CustomMangaInfo(id = 1L, title = "Custom"),
             )
 
             coVerify(exactly = 0) { mangaRepository.bumpSyncVersion(any()) }
@@ -105,7 +105,7 @@ class SyncStateBumperTest {
             bumper.bumpForCustomInfoEdit(
                 mangaId = 1L,
                 before = null,
-                after = userInfo(title = "  ", status = 0L),
+                after = CustomMangaInfo(id = 1L, title = "  ", status = 0L),
             )
 
             coVerify(exactly = 0) { mangaRepository.bumpSyncVersion(any()) }
@@ -118,7 +118,7 @@ class SyncStateBumperTest {
             bumper(syncService = SYNCYOMI, customInfo = false).bumpForCustomInfoEdit(
                 mangaId = 1L,
                 before = null,
-                after = userInfo(title = "Custom"),
+                after = CustomMangaInfo(id = 1L, title = "Custom"),
             )
 
             coVerify(exactly = 0) { mangaRepository.bumpSyncVersion(any()) }
@@ -131,23 +131,12 @@ class SyncStateBumperTest {
             bumper(syncService = 0).bumpForCustomInfoEdit(
                 mangaId = 1L,
                 before = null,
-                after = userInfo(title = "Custom"),
+                after = CustomMangaInfo(id = 1L, title = "Custom"),
             )
 
             coVerify(exactly = 0) { mangaRepository.bumpSyncVersion(any()) }
         }
     }
-
-    private fun userInfo(title: String? = null, status: Long? = null) = MangaUserInfoUpdate(
-        id = 1L,
-        title = title,
-        author = null,
-        artist = null,
-        thumbnailUrl = null,
-        description = null,
-        genre = null,
-        status = status,
-    )
 
     private fun bumper(
         syncService: Int,

@@ -53,7 +53,6 @@ import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -175,13 +174,6 @@ open class BrowseSourceViewModel(
     val startExpanded by uiPreferences.expandFilters.asState(viewModelScope)
 
     private val filterSerializer = FilterSerializer()
-
-    val savedSearches: StateFlow<List<EXHSavedSearch>> = state.map { it.source }
-        .filterNotNull()
-        .distinctUntilChanged()
-        .flatMapLatest { source -> getExhSavedSearch.subscribe(source.id, source::getFilterList) }
-        .map { it.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name)) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), emptyList())
     // SY <--
 
     // KMK -->
@@ -232,6 +224,12 @@ open class BrowseSourceViewModel(
                 }
             }
 
+            getExhSavedSearch.subscribe(source.id, source::getFilterList)
+                .map { it.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name)) }
+                .onEach { savedSearches ->
+                    state.update { it.copy(savedSearches = savedSearches.toList()) }
+                }
+                .launchIn(viewModelScope)
             // SY <--
         }
 
@@ -327,6 +325,7 @@ open class BrowseSourceViewModel(
     fun resetFilters() {
         // KMK -->
         setFilters(source?.getFilterList() ?: FilterList())
+        reloadSavedSearches()
         // KMK <--
     }
 
@@ -589,17 +588,31 @@ open class BrowseSourceViewModel(
         val toolbarQuery: String? = null,
         val dialog: Dialog? = null,
         // SY -->
+        val savedSearches: List<EXHSavedSearch> = listOf(),
         val filterable: Boolean = true,
         // SY <--
     ) {
         val isUserQuery get() = listing is Listing.Search && !listing.query.isNullOrEmpty()
     }
 
+    // KMK -->
+    private fun reloadSavedSearches() {
+        viewModelScope.launchIO {
+            val source = source ?: return@launchIO
+            getExhSavedSearch.await(source.id, source::getFilterList)
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name))
+                .let { savedSearches ->
+                    state.update { it.copy(savedSearches = savedSearches.toList()) }
+                }
+        }
+    }
+    // KMK <--
+
     // EXH -->
     /** Show a dialog to enter name for new saved search */
     fun onSaveSearch() {
         viewModelScope.launchIO {
-            val names = savedSearches.value.map { it.name }.toList()
+            val names = state.value.savedSearches.map { it.name }.toList()
             state.update { it.copy(dialog = Dialog.CreateSavedSearch(names)) }
         }
     }
@@ -669,7 +682,7 @@ open class BrowseSourceViewModel(
             val filterList = state.value.filters.ifEmpty { source.getFilterList() }
             // KNS --> saving under an existing name replaces that saved search (the dialog asked first),
             // keeping its id so feeds built on it follow, instead of adding a second one
-            val existing = UpdateSavedSearch.existingFor(name, savedSearches.value) { it.name }
+            val existing = UpdateSavedSearch.existingFor(name, state.value.savedSearches) { it.name }
             val savedSearch = SavedSearch(
                 id = existing?.id ?: -1,
                 source = source.id,

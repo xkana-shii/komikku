@@ -12,18 +12,6 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 ### Added
-- Imported Komi-kun's #70 TachiyomiSY/Mihon sync: delegated Hitomi, NineHentai and HentaiNexus sources; Compose metadata descriptions and tracker metadata autofill; the Compose download queue; merged-entry library/update corrections; and subscriber-aware feed update handling.
-
-### Changed
-- Edited manga details now live in the database rather than `edits.json`. Existing edits are imported once at startup, and later edits participate in normal backup and SyncYomi updates.
-
-### Fixed
-- Merged entries now count chapters and show updates from every member instead of an arbitrary grouped member. Existing databases receive the same view definitions as fresh installs.
-
-### Other
-- Database migrations 59 and 60 append the Komi-kun merge-view and edited-manga schema changes after the fork-owned migrations 57 and 58; bookmark colors and scanlator state remain intact.
-
-### Added
 - Settings → Library → Excluded sources is back from the previous personal fork (same key and stored source names): library update runs, scheduled or started by hand, skip entries from the chosen sources, alongside category intervals, update restrictions and the category scope. Names excluded earlier stay listed even when that source is no longer installed, so they can be cleared. Refreshing a single entry is not affected.
 - Settings → Downloads → Trigger chapter rename is back (same key, on by default) and works again: when a source renames a chapter that is downloaded, its download folder is renamed to match only while it is on. The previous fork kept the switch after its effect had been removed; now it controls the existing rename.
 - E-Hentai/ExHentai → Remove special characters from titles is back (key `use_clean_title`, on by default as before): gallery titles fetched from E-Hentai/ExHentai, in search results and gallery details, have their [bracketed], (parenthesised) and {braced} tags removed. Other sources and custom titles are untouched; entries already in the library change on their next metadata refresh.

@@ -42,6 +42,7 @@ class RestoreRepositoryForkStateTest {
         chapterRepository = chapterRepository,
         trackRepository = TrackRepositoryImpl(database),
         mangaMetadataRepository = mockk(relaxed = true),
+        customMangaRepository = mockk(relaxed = true),
     )
 
     init {

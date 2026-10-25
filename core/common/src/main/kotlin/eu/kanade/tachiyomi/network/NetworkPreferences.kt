@@ -17,11 +17,6 @@ class NetworkPreferences(
         return preferenceStore.getBoolean("verbose_logging", verboseLogging)
     } KMK <-- */
 
-    val redactSensitiveHeaders: Preference<Boolean> = preferenceStore.getBoolean(
-        "redact_sensitive_headers",
-        true,
-    )
-
     val dohProvider: Preference<Int> = preferenceStore.getInt("doh_provider", -1)
 
     val defaultUserAgent: Preference<String> = preferenceStore.getString(

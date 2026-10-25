@@ -36,17 +36,12 @@ object HistoryMapper {
         // KMK <--
         readAt: Instant?,
         readDuration: Long,
-        // SY -->
-        userTitle: String?,
-        userThumbnailUrl: String?,
-        // SY <--
     ): HistoryWithRelations = HistoryWithRelations(
         id = historyId,
         chapterId = chapterId,
         mangaId = mangaId,
         // SY -->
         ogTitle = title,
-        userTitle = userTitle,
         // SY <--
         chapterNumber = chapterNumber,
         // KMK -->
@@ -62,7 +57,6 @@ object HistoryMapper {
             sourceId = sourceId,
             isMangaFavorite = isFavorite,
             ogUrl = thumbnailUrl,
-            userThumbnailUrl = userThumbnailUrl,
             lastModified = coverLastModified,
         ),
     )

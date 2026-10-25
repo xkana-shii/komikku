@@ -24,11 +24,11 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.model.History
+import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
-import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
-import tachiyomi.domain.manga.model.toMangaUserInfoUpdate
+import tachiyomi.domain.manga.repository.CustomMangaRepository
 import tachiyomi.domain.manga.repository.MangaMetadataRepository
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.track.model.Track
@@ -46,6 +46,7 @@ class RestoreRepositoryImpl(
     private val trackRepository: TrackRepository,
     // SY -->
     private val mangaMetadataRepository: MangaMetadataRepository,
+    private val customMangaRepository: CustomMangaRepository,
     // SY <--
 ) : RestoreRepository {
 
@@ -186,10 +187,7 @@ class RestoreRepositoryImpl(
         entry.flatMetadata?.let { restoreFlatMetadata(manga.id, it) }
         // KUN -->
         if (restoreCustomInfo) {
-            val incoming = entry.manga.toMangaUserInfoUpdate().copy(id = manga.id)
-            // The overrides as they were before this entry's row was written, so the merge compares
-            // against what the user had rather than against what the payload just brought in.
-            val stored = dbManga?.toMangaUserInfoUpdate()
+            val incomingCustomInfo = entry.customMangaInfo?.copy(id = manga.id)
             // A marker means the sender's payload carries the complete override set, including the
             // empty one that means "cleared". Only then may the receiver replace instead of merge,
             // and a sync payload must still win the version comparison: a stale payload must never
@@ -198,17 +196,19 @@ class RestoreRepositoryImpl(
             val replaceOverrides = entry.customInfoIncluded == true &&
                 (!isSync || incomingIsNewerOrEqual)
             if (replaceOverrides) {
-                // Writing every column, NULLs included, is exactly the "clear every override" write
-                // an all-null payload asks for. A marked-but-unchanged entry is the common case
-                // (every synced manga carries the marker), so skip the write unless the normalized
-                // value actually differs from what is stored.
-                if (incoming.normalized() != stored.normalized()) {
-                    mangaRepository.updateUserInfoAll(listOf(incoming.normalizedOrCleared()))
+                // `CustomMangaRepository.set` removes an entry whose overrides are all null, so the
+                // all-null value here is exactly the "clear the file entry" write.
+                val incomingValue = incomingCustomInfo ?: CustomMangaInfo(id = manga.id, title = null)
+                // `set` deletes and rewrites the whole edits.json. A marked-but-unchanged entry is the
+                // common case (every synced manga carries the marker), so skip the rewrite unless the
+                // normalized value actually differs from what is stored.
+                if (incomingValue.normalized(manga.id) != customMangaRepository.get(manga.id).normalized(manga.id)) {
+                    customMangaRepository.set(incomingValue)
                 }
             } else if (incomingIsNewerOrEqual) {
                 // A legacy/unmarked payload is partial, not authoritative: merge field by field with
                 // what is stored, so omitting a field never drops a local override.
-                mergeEditedInfo(stored, incoming)
+                mergeEditedInfo(manga.id, incomingCustomInfo)
             }
         }
         // KUN <--
@@ -1107,16 +1107,18 @@ class RestoreRepositoryImpl(
 
     // KUN -->
     /**
-     * Field-by-field merge for a legacy/unmarked payload. An explicit write replaces the whole
-     * override set, so writing the incoming value directly would drop every local override the
-     * payload omitted (it may have been produced by a client that never synced custom info). A null
-     * incoming field keeps the local one, including the genre list.
+     * Field-by-field merge for a legacy/unmarked payload. `CustomMangaRepository.set` replaces the
+     * whole entry, so writing the incoming value directly would drop every local override the payload
+     * omitted (it may have been produced by a client that never synced custom info). A null incoming
+     * field keeps the local one, including the genre list.
      */
-    private suspend fun mergeEditedInfo(stored: MangaUserInfoUpdate?, incoming: MangaUserInfoUpdate) {
+    private fun mergeEditedInfo(mangaId: Long, incoming: CustomMangaInfo?) {
+        incoming ?: return
         // An all-null value from an unmarked payload says nothing: it must not clear anything.
         if (!incoming.hasOverrides()) return
-        val merged = MangaUserInfoUpdate(
-            id = incoming.id,
+        val stored = customMangaRepository.get(mangaId)
+        val merged = CustomMangaInfo(
+            id = mangaId,
             title = incoming.title ?: stored?.title,
             author = incoming.author ?: stored?.author,
             artist = incoming.artist ?: stored?.artist,
@@ -1125,14 +1127,16 @@ class RestoreRepositoryImpl(
             genre = incoming.genre ?: stored?.genre,
             status = incoming.status ?: stored?.status,
         )
-        // Skip a merge that reproduces the stored value.
-        if (merged.normalized() != stored.normalized()) {
-            mangaRepository.updateUserInfoAll(listOf(merged.normalizedOrCleared()))
+        // `set` rewrites the whole edits.json; skip a merge that reproduces the stored value.
+        if (merged.normalized(mangaId) != stored.normalized(mangaId)) {
+            customMangaRepository.set(merged)
         }
     }
+    // KUN <--
 
-    /** Whether the value overrides anything at all. */
-    private fun MangaUserInfoUpdate.hasOverrides(): Boolean =
+    // KUN -->
+    /** Mirrors `CustomMangaRepository.set`, which treats an all-null value as "remove the entry". */
+    private fun CustomMangaInfo.hasOverrides(): Boolean =
         title != null ||
             author != null ||
             artist != null ||
@@ -1142,32 +1146,18 @@ class RestoreRepositoryImpl(
             status != null
 
     /**
-     * Value identity for an override write: a blank title and a zero status are not overrides, and a
-     * value with no override at all is the same as no stored value.
+     * Value identity for a custom-info write: a blank title and a zero status do not count as
+     * overrides, and an entry with no override at all is the same as no stored entry.
      */
-    private fun MangaUserInfoUpdate?.normalized(): MangaUserInfoUpdate? {
+    private fun CustomMangaInfo?.normalized(mangaId: Long): CustomMangaInfo? {
         val info = this ?: return null
         val normalized = info.copy(
+            id = mangaId,
             title = info.title?.takeUnless { it.isBlank() },
             status = info.status?.takeUnless { it == 0L },
         )
         return normalized.takeIf { it.hasOverrides() }
     }
-
-    /**
-     * The value written back: the normalized override set, or the all-null value that clears every
-     * column when the payload asked to remove the overrides.
-     */
-    private fun MangaUserInfoUpdate.normalizedOrCleared(): MangaUserInfoUpdate =
-        normalized() ?: copy(
-            title = null,
-            author = null,
-            artist = null,
-            thumbnailUrl = null,
-            description = null,
-            genre = null,
-            status = null,
-        )
     // KUN <--
     // SY <--
 }

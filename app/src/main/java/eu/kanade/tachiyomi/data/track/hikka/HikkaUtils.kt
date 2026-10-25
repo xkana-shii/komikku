@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.data.track.hikka
 
 import eu.kanade.tachiyomi.data.database.models.Track
-import eu.kanade.tachiyomi.data.track.hikka.dto.HKAuthor
 import java.util.UUID
 
 internal fun Track.toApiStatus() = when (status) {
@@ -27,10 +26,3 @@ internal fun stringToNumber(input: String): Long {
     val uuid = UUID.nameUUIDFromBytes(input.toByteArray())
     return uuid.mostSignificantBits and Long.MAX_VALUE
 }
-
-// SY -->
-fun List<HKAuthor>.getNamesByRole(roleSlug: String): String =
-    this.filter { author -> author.roles.any { role -> role.slug == roleSlug } }
-        .mapNotNull { author -> with(author.person) { nameUa ?: nameEn ?: nameNative } }
-        .joinToString(separator = ", ")
-// SY <--

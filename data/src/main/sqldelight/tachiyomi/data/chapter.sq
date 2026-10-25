@@ -194,7 +194,7 @@ ON chapter.manga_id = M.manga_id;
 
 -- KNS -->
 -- The bookmark colors used by each manga's bookmarked chapters; a merged entry also gets its
--- members' colors. Feeds the library bookmark-color filter.
+-- members' colors. Feeds the library's bookmark-color filter.
 getBookmarkColorsByManga:
 SELECT manga_id, user_bookmark_color
 FROM chapter
@@ -243,15 +243,7 @@ INSERT INTO chapter(
 VALUES (
     :mangaId, :remoteUrl, :remoteName, :remoteScanlator, :remoteChapterNumber,
     :remoteDateUpload, :remoteOrder, :remoteMemo, :userRead, :userBookmark,
-    :userLastPageRead, :stateDateFetch,
-    -- KUN -->
-    -- A sync restore inserts the payload's authoritative value, so its chapters must not look edited
-    -- now: that would make the next delta re-upload the whole restored library. Every other insert
-    -- (a library update's new chapters, and a manual backup restore, whose entries are local content
-    -- from now on) gets a timestamp when the caller has none.
-    CASE WHEN :lastModifiedAt = 0 AND :isSyncing = 0 THEN strftime('%s', 'now') ELSE :lastModifiedAt END,
-    -- KUN <--
-    :version, :isSyncing,
+    :userLastPageRead, :stateDateFetch, :lastModifiedAt, :version, :isSyncing,
     -- KNS -->
     :userBookmarkColor
     -- KNS <--

@@ -4,10 +4,12 @@ import android.annotation.SuppressLint
 import androidx.compose.runtime.Immutable
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.TriState
+import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import java.io.ObjectStreamException
 import kotlin.time.Instant
 import java.io.Serializable as JavaSerializable
@@ -53,38 +55,41 @@ data class Manga(
     /** Per-manga Smart Scanlator Merge override; null follows the global setting. */
     val smartMergeOverride: Boolean? = null,
     // KNS <--
-    // SY -->
-    val userTitle: String? = null,
-    val userAuthor: String? = null,
-    val userArtist: String? = null,
-    val userThumbnailUrl: String? = null,
-    val userDescription: String? = null,
-    val userGenre: List<String>? = null,
-    val userStatus: Long? = null,
-    // SY <--
 ) : JavaSerializable {
 
     // SY -->
+    /* KMK --> */ @Transient /* KMK <-- */
+    // KUN -->
+    // Lazy so the bridge is resolved on first access rather than at construction.
+    private val customMangaInfo by lazy {
+        if (favorite) {
+            getCustomMangaInfo?.get(id)
+        } else {
+            null
+        }
+    }
+    // KUN <--
+
     val title: String
-        get() = userTitle ?: ogTitle
+        get() = customMangaInfo?.title ?: ogTitle
 
     val author: String?
-        get() = userAuthor ?: ogAuthor
+        get() = customMangaInfo?.author ?: ogAuthor
 
     val artist: String?
-        get() = userArtist ?: ogArtist
+        get() = customMangaInfo?.artist ?: ogArtist
 
     val thumbnailUrl: String?
-        get() = userThumbnailUrl ?: ogThumbnailUrl
+        get() = customMangaInfo?.thumbnailUrl ?: ogThumbnailUrl
 
     val description: String?
-        get() = userDescription ?: ogDescription
+        get() = customMangaInfo?.description ?: ogDescription
 
     val genre: List<String>?
-        get() = userGenre ?: ogGenre
+        get() = customMangaInfo?.genre ?: ogGenre
 
     val status: Long
-        get() = userStatus ?: ogStatus
+        get() = customMangaInfo?.status ?: ogStatus
     // SY <--
 
     val expectedNextUpdate: Instant?
@@ -193,6 +198,11 @@ data class Manga(
             notes = "",
             memo = JsonObject.EMPTY,
         )
+
+        // SY -->
+        private val getCustomMangaInfo: GetCustomMangaInfo?
+            get() = GetCustomMangaInfo.getInstanceOrNull()
+        // SY <--
     }
 
     @Throws(ObjectStreamException::class)

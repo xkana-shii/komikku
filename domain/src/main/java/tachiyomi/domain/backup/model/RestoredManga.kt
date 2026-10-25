@@ -2,6 +2,7 @@ package tachiyomi.domain.backup.model
 
 import exh.metadata.metadata.base.FlatMetadata
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.track.model.Track
@@ -19,6 +20,7 @@ data class RestoredManga(
     // KMK/SY -->
     val mergedMangaReferences: List<MergedMangaReference> = emptyList(),
     val flatMetadata: FlatMetadata? = null,
+    val customMangaInfo: CustomMangaInfo? = null,
     // KMK/SY <--
     // KNS -->
     /** The fork-owned per-manga state of the payload; null when it carries none of it. */
@@ -26,8 +28,8 @@ data class RestoredManga(
     // KNS <--
     // KUN -->
     /**
-     * Whether the payload carried the custom-info section at all. `true` with every override of
-     * [manga] null means the user cleared every override and a winning restore may remove them
+     * Whether the payload carried the custom-info section at all. `true` with an all-null
+     * [customMangaInfo] means the user cleared every override and a winning restore may remove them
      * locally; `null`/`false` only allows merging the non-null overrides.
      */
     val customInfoIncluded: Boolean? = null,

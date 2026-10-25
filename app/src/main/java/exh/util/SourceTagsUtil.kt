@@ -9,13 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.graphics.toColorInt
 import exh.metadata.metadata.base.RaisedTag
+import exh.source.PURURIN_SOURCE_ID
 import exh.source.TSUMINO_SOURCE_ID
 import exh.source.eHentaiSourceIds
-import exh.source.hitomiSourceIds
 import exh.source.lanraragiSourceIds
 import exh.source.mangaDexSourceIds
 import exh.source.nHentaiSourceIds
-import exh.source.pururinSourceIds
 import tachiyomi.presentation.core.icons.FlagEmoji.Companion.getEmojiLangFlag
 import java.util.Locale
 
@@ -29,9 +28,8 @@ object SourceTagsUtil {
         return if (
             sourceId in eHentaiSourceIds ||
             sourceId in nHentaiSourceIds ||
-            sourceId in hitomiSourceIds ||
             sourceId in mangaDexSourceIds ||
-            sourceId in pururinSourceIds ||
+            sourceId == PURURIN_SOURCE_ID ||
             sourceId == TSUMINO_SOURCE_ID ||
             sourceId in lanraragiSourceIds
         ) {
@@ -43,9 +41,8 @@ object SourceTagsUtil {
             if (parsed?.namespace != null) {
                 when (sourceId) {
                     in nHentaiSourceIds -> wrapTagNHentai(parsed.namespace!!, parsed.name.substringBefore('|').trim())
-                    in hitomiSourceIds -> wrapTagHitomi(parsed.namespace!!, parsed.name.substringBefore('|').trim())
                     in mangaDexSourceIds -> parsed.name
-                    in pururinSourceIds -> parsed.name.substringBefore('|').trim()
+                    PURURIN_SOURCE_ID -> parsed.name.substringBefore('|').trim()
                     TSUMINO_SOURCE_ID -> wrapTagTsumino(parsed.namespace!!, parsed.name.substringBefore('|').trim())
                     else -> wrapTag(parsed.namespace!!, parsed.name.substringBefore('|').trim())
                 }
@@ -61,12 +58,6 @@ object SourceTagsUtil {
         "$namespace:\"$tag$\""
     } else {
         "$namespace:$tag$"
-    }
-
-    private fun wrapTagHitomi(namespace: String, tag: String) = if (tag.contains(spaceRegex)) {
-        "$namespace:$tag".replace(spaceRegex, "_")
-    } else {
-        "$namespace:$tag"
     }
 
     private fun wrapTagNHentai(namespace: String, tag: String) = if (tag.contains(spaceRegex)) {

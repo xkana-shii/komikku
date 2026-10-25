@@ -66,7 +66,6 @@ row will be re-checked when its subsystem is touched.
 | 8 | History, Updates, release prediction, category update schedules | partial (category schedules, refresh scope, History day counts `0f759e47aa`); release prediction open | see session log |
 | 9 | Auto Reread, webhooks, Discord verification, storage, settings | partial (Auto Reread, webhooks `d042b5196f`; storage overview — batch 10) | see session log |
 | 10 | Remaining items (storage, History filters, …), final audit | in progress | see session log |
-| 11 | Komi-kun #70 SY/Mihon integration compatibility | done-unverified | Delegated sources, metadata, downloads, feeds and merge-view behavior integrated; migrations 59/60 intentionally follow KNS 57/58. SQL generation, debug Kotlin compilation, Spotless, migration verification and focused `:data:testDebugUnitTest` passed; the full unit suite remains to run. |
 
 ## Requirements
 

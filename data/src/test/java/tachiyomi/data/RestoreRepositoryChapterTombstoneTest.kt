@@ -41,14 +41,11 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
-                // Stored before the upload snapshot (1_000); the insert query stamps a missing
-                // last_modified_at itself, so a chapter that predates the snapshot says so explicitly.
-                chapterRepository.addAll(
-                    listOf(chapter("/c1", lastModifiedAt = 500L), chapter("/c2", lastModifiedAt = 500L)),
-                )
+                chapterRepository.addAll(listOf(chapter("/c1"), chapter("/c2")))
 
                 repository.restoreManga(
                     entries = listOf(
@@ -89,14 +86,11 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
-                // Stored before the upload snapshot (1_000); the insert query stamps a missing
-                // last_modified_at itself, so a chapter that predates the snapshot says so explicitly.
-                chapterRepository.addAll(
-                    listOf(chapter("/c1", lastModifiedAt = 500L), chapter("/c2", lastModifiedAt = 500L)),
-                )
+                chapterRepository.addAll(listOf(chapter("/c1"), chapter("/c2")))
 
                 repository.restoreManga(
                     entries = listOf(
@@ -137,12 +131,13 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
                 chapterRepository.addAll(
                     listOf(
-                        chapter("/c1", lastModifiedAt = 500L),
+                        chapter("/c1"),
                         // Added by a library update after the sync snapshot; not tombstoned.
                         chapter("/c2", lastModifiedAt = 2_000L),
                     ),
@@ -186,6 +181,7 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -216,51 +212,6 @@ class RestoreRepositoryChapterTombstoneTest {
     }
 
     @Test
-    fun `a sync restore keeps a chapter's own timestamp instead of stamping it as new`() {
-        runBlocking {
-            val driver = newDriver()
-            try {
-                val database = DatabaseBindings.providesDatabase(driver)
-                val mangaRepository = MangaRepositoryImpl(database)
-                val chapterRepository = ChapterRepositoryImpl(database)
-                val repository = RestoreRepositoryImpl(
-                    database = database,
-                    mangaRepository = mangaRepository,
-                    chapterRepository = chapterRepository,
-                    trackRepository = TrackRepositoryImpl(database),
-                    mangaMetadataRepository = mockk(relaxed = true),
-                )
-
-                driver.insertManga()
-
-                repository.restoreManga(
-                    entries = listOf(
-                        RestoredManga(
-                            manga = manga(),
-                            // The server's copy was never edited, so the payload carries no timestamp.
-                            chapters = listOf(chapter("/c1")),
-                            categoryIds = null,
-                            history = emptyList(),
-                            tracks = emptyList(),
-                            excludedScanlators = emptyList(),
-                        ),
-                    ),
-                    isSync = true,
-                    restoreCategories = false,
-                    removeMissingChaptersBefore = null,
-                    update = { it.toMangaUpdate() },
-                )
-
-                // A restored chapter is the server's state, not a local edit: stamping it with "now"
-                // would make the next delta re-upload the whole restored library.
-                chapterRepository.getChapterByMangaId(1).single().lastModifiedAt shouldBe 0L
-            } finally {
-                driver.close()
-            }
-        }
-    }
-
-    @Test
     fun `a newer remote chapter propagates an unread and unbookmarked reset`() {
         runBlocking {
             val driver = newDriver()
@@ -274,6 +225,7 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -333,6 +285,7 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -400,6 +353,7 @@ class RestoreRepositoryChapterTombstoneTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
+                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
