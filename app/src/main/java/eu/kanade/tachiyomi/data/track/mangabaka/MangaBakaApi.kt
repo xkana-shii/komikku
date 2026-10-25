@@ -290,32 +290,6 @@ class MangaBakaApi(
         }
     }
 
-    // SY -->
-    suspend fun getMangaMetadata(track: DomainTrack): TrackMangaMetadata {
-        return withContext(Dispatchers.IO) {
-            val url = "$API_BASE_URL/v1/series".toUri().buildUpon()
-                .appendPath(track.remoteId.toString())
-                .build()
-            with(json) {
-                authClient.newCall(GET(url.toString()))
-                    .awaitSuccess()
-                    .parseAs<MangaBakaItemResult>()
-                    .data
-                    .let {
-                        TrackMangaMetadata(
-                            remoteId = it.id,
-                            title = it.chooseBestTitle(),
-                            thumbnailUrl = it.cover.raw.url,
-                            description = it.description,
-                            authors = it.authors?.joinToString(separator = ", "),
-                            artists = it.artists?.joinToString(separator = ", "),
-                        )
-                    }
-            }
-        }
-    }
-    // SY <--
-
     suspend fun getCurrentUser(): MangaBakaUserProfile {
         return withContext(Dispatchers.IO) {
             with(json) {

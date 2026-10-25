@@ -299,6 +299,10 @@ class MyAnimeListApi(
         // Registered under KMK's MAL account
         private const val CLIENT_ID = "2be14959235191ece14eebdc2eea0466"
 
+        // KNS --> Keep the fork's existing OAuth client while allowing the imported token guard to compare issuers.
+        internal fun currentOAuthClientId(): String = CLIENT_ID
+        // KNS <--
+
         private const val BASE_OAUTH_URL = "https://myanimelist.net/v1/oauth2"
         private const val BASE_API_URL = "https://api.myanimelist.net/v2"
 

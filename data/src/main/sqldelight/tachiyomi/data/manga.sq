@@ -35,6 +35,13 @@ CREATE TABLE manga(
     -- entries that were removed from the library ("ever favorited"). The sync upload
     -- queries key on it, unlike user_favorite_at which goes NULL on removal.
     favorite_modified_at INTEGER,
+    -- KNS -->
+    -- Keep the released migration-57 columns before the later upstream migration-60 columns.
+    user_blacklisted_chapters TEXT AS List<String> NOT NULL DEFAULT '',
+    user_scanlator_priority TEXT AS List<String> NOT NULL DEFAULT '',
+    user_scanlator_range_rules TEXT AS List<String> NOT NULL DEFAULT '',
+    user_smart_merge_override INTEGER AS Boolean,
+    -- KNS <--
     -- The user's edited details. They live on the row itself (a NULL column means "not edited",
     -- so the og_*/remote_* value is shown), so every query and view sees them without a lookup.
     user_title TEXT,
@@ -45,12 +52,6 @@ CREATE TABLE manga(
     user_genre TEXT AS List<String>,
     user_status INTEGER,
     -- SY <--
-    -- KNS -->
-    user_blacklisted_chapters TEXT AS List<String> NOT NULL DEFAULT '',
-    user_scanlator_priority TEXT AS List<String> NOT NULL DEFAULT '',
-    user_scanlator_range_rules TEXT AS List<String> NOT NULL DEFAULT '',
-    user_smart_merge_override INTEGER AS Boolean,
-    -- KNS <--
     UNIQUE(source_id, remote_url)
 );
 

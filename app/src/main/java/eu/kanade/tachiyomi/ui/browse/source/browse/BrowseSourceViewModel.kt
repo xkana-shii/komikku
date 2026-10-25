@@ -669,7 +669,7 @@ open class BrowseSourceViewModel(
             val filterList = state.value.filters.ifEmpty { source.getFilterList() }
             // KNS --> saving under an existing name replaces that saved search (the dialog asked first),
             // keeping its id so feeds built on it follow, instead of adding a second one
-            val existing = UpdateSavedSearch.existingFor(name, state.value.savedSearches) { it.name }
+            val existing = UpdateSavedSearch.existingFor(name, savedSearches.value) { it.name }
             val savedSearch = SavedSearch(
                 id = existing?.id ?: -1,
                 source = source.id,

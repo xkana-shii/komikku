@@ -28,6 +28,16 @@ version 61 includes user-edit metadata columns and rebuilt views that retain boo
 all merged members. Validation results belong in the current integration task record rather than
 being inferred from this checkpoint.
 
+The assembly pass identified PR context that was lost while resolving conflicts: the accompanying
+MyAnimeList OAuth-client preference and token guard were restored from the PR head, and the
+fork's richer MangaBaka metadata path was kept as the sole implementation instead of duplicating
+the smaller SY API method. The saved-search replacement adaptation now reads the ViewModel flow,
+which is where the current source's searches are exposed.
+
+Migration verification also confirmed that a fresh database must preserve the historical order of
+the fork's migration-57 columns before the later edited-metadata columns from migration 60. The
+fresh SQLDelight schema is ordered accordingly so it is byte-for-byte equivalent to an upgrade.
+
 ## Pinned revisions
 
 | What | Ref | SHA |

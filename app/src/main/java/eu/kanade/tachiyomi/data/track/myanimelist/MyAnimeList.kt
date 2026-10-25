@@ -196,16 +196,49 @@ class MyAnimeList(id: Long) : BaseTracker(id, "MyAnimeList"), DeletableTracker {
     }
 
     fun saveOAuth(oAuth: MALOAuth?) {
-        trackPreferences.trackToken(this).set(json.encodeToString(oAuth))
+        // KUN -->
+        // Remember which OAuth client issued the token so it can be invalidated if the client changes.
+        if (oAuth == null) {
+            trackPreferences.trackToken(this).delete()
+            trackPreferences.trackOAuthClientId(this).delete()
+        } else {
+            trackPreferences.trackToken(this).set(json.encodeToString(oAuth))
+            // KNS --> Retain Komikku's registered MyAnimeList client rather than Komi-kun branding.
+            trackPreferences.trackOAuthClientId(this).set(MyAnimeListApi.currentOAuthClientId())
+            // KNS <--
+        }
+        // KUN <--
     }
 
     fun loadOAuth(): MALOAuth? {
+        // KUN -->
+        invalidateOAuthIfClientChanged()
+        // KUN <--
         return try {
             json.decodeFromString<MALOAuth>(trackPreferences.trackToken(this).get())
         } catch (_: Exception) {
             null
         }
     }
+
+    // KUN -->
+    /**
+     * Drops a stored token that was issued to a different OAuth client, since it can't be refreshed
+     * with Komi-kun's client. This also clears the saved credentials so the tracker shows as logged out.
+     */
+    fun invalidateOAuthIfClientChanged() {
+        if (
+            trackPreferences.trackToken(this).get().isNotEmpty() &&
+            // KNS --> Compare against the fork's existing MyAnimeList client.
+            trackPreferences.trackOAuthClientId(this).get() != MyAnimeListApi.currentOAuthClientId()
+            // KNS <--
+        ) {
+            trackPreferences.trackToken(this).delete()
+            trackPreferences.trackOAuthClientId(this).delete()
+            trackPreferences.setCredentials(this, "", "")
+        }
+    }
+    // KUN <--
 
     // KMK -->
     override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ

@@ -48,6 +48,14 @@ class TrackPreferences(
 
     fun trackToken(tracker: Tracker) = preferenceStore.getString(Preference.privateKey("track_token_${tracker.id}"), "")
 
+    // KUN -->
+    /** OAuth client ID that issued [trackToken], used to invalidate tokens after a client change. */
+    fun trackOAuthClientId(tracker: Tracker) = preferenceStore.getString(
+        Preference.privateKey("track_oauth_client_id_${tracker.id}"),
+        "",
+    )
+    // KUN <--
+
     val anilistScoreType = preferenceStore.getString("anilist_score_type", Anilist.POINT_10)
 
     val kitsuScoreType: Preference<String> = preferenceStore.getString("kitsu_score_type", Kitsu.RATING_ADVANCED)
