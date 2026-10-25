@@ -18,7 +18,6 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Edited manga details now live in the database rather than `edits.json`. Existing edits are imported once at startup, and later edits participate in normal backup and SyncYomi updates.
 
 ### Fixed
-- History and Updates unit-test fixtures now supply `MangaCover.lastModified`, restoring test compilation after the cover metadata model added that required field.
 - Merged entries now count chapters and show updates from every member instead of an arbitrary grouped member. Existing databases receive the same view definitions as fresh installs.
 
 ### Other
