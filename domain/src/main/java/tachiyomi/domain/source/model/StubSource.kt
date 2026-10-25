@@ -14,6 +14,8 @@ data class StubSource(
     override val name: String,
 ) : Source {
 
+    private val isInvalid: Boolean = name.isBlank() || lang.isBlank()
+
     override val supportsLatest: Boolean = false
 
     override suspend fun getPopularManga(page: Int): MangasPage = throw SourceNotInstalledException()
@@ -41,16 +43,8 @@ data class StubSource(
     ) = throw SourceNotInstalledException()
     // KMK <--
 
-    // KUN -->
-    // The backup only carries a source name, so a restored stub has no language. Fall back on the
-    // name alone rather than the id; the language comes back once the extension is installed and
-    // AndroidSourceManager.registerStubSource() overwrites the stub.
-    override fun toString(): String = when {
-        name.isBlank() -> id.toString()
-        lang.isBlank() -> name
-        else -> "$name (${lang.uppercase()})"
-    }
-    // KUN <--
+    override fun toString(): String =
+        if (!isInvalid) "$name (${lang.uppercase()})" else id.toString()
 
     companion object {
         fun from(source: Source): StubSource {
