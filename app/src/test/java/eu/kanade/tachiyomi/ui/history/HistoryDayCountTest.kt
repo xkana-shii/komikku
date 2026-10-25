@@ -40,7 +40,7 @@ class HistoryDayCountTest {
         readCountCalculated = 0,
         readAt = readAt,
         readDuration = 0,
-        coverData = MangaCover(mangaId, 0, true, null, null),
+        coverData = MangaCover(mangaId, 0, true, null, null, lastModified = null),
     )
 }
 // KNS <--

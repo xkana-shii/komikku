@@ -72,7 +72,7 @@ class UpdatesVisibilityFilterTest {
         lastPageRead = 0,
         sourceId = 1,
         dateFetch = Instant.fromEpochMilliseconds(0),
-        coverData = MangaCover(mangaId, 1, true, null, null),
+        coverData = MangaCover(mangaId, 1, true, null, null, lastModified = null),
     )
 }
 // KNS <--
