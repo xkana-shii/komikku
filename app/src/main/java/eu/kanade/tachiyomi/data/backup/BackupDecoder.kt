@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.protobuf.ProtoBuf
 import okio.BufferedSource
 import okio.buffer
@@ -38,7 +39,27 @@ class BackupDecoder(
     }
 
     /**
+     * Like [decodeMetadata], but hands each entry to [onEntry] decoded as [entry], which can declare only the fields
+     * it needs so the rest are skipped.
+     */
+    fun <T> decodeMetadata(uri: Uri, entry: DeserializationStrategy<T>, onEntry: (T) -> Unit): Metadata {
+        return read(uri) { reader ->
+            var entryCount = 0
+            while (orInvalid { reader.nextEntry() }) {
+                onEntry(orInvalid { reader.readEntry(entry) })
+                entryCount++
+            }
+            Metadata(entryCount, orInvalid { reader.readMetadata() })
+        }
+    }
+
+    // KUN -->
+    /**
      * Decode the entries of a potentially-gzipped backup one at a time, skipping those whose index [include] rejects.
+     *
+     * The fork restores in several passes (new entries, then existing ones, then deferred merge entries), so reading
+     * has to be able to skip the entries a previous pass already took; upstream decodes every entry exactly once
+     * since Mihon 3ed83a8d32.
      */
     fun decodeEntries(uri: Uri, include: (index: Int) -> Boolean = { true }): Flow<BackupManga> = flow {
         read(uri) { reader ->
@@ -52,6 +73,7 @@ class BackupDecoder(
             }
         }
     }
+    // KUN <--
 
     private inline fun <T> read(uri: Uri, block: (BackupReader) -> T): T {
         return context.contentResolver.openInputStream(uri)!!.use { inputStream ->
