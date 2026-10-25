@@ -4,7 +4,7 @@
 <!-- Only edit the Status and Notes columns; everything else is regenerated on every run. -->
 
 Commits from main upstream **mihon** and additional **tachiyomiSY**, **komikku**, **komikun** since **2024-01-01** (authors matching `renovate` excluded), checked against `codex/komikun-foundation`.
-Last updated **2026-10-24** from mihon `mihon/main` @ `d001e6f210`, tachiyomiSY `tachiyomiSY/master` @ `e08f5c10e7`, komikku `komikku/master` @ `1656575e8f`, komikun `komikun/master` @ `45c51d699f`.
+Last updated **2026-10-24** from mihon `mihon/main` @ `d001e6f210`, tachiyomiSY `tachiyomiSY/master` @ `629cfd0606`, komikku `komikku/master` @ `1656575e8f`, komikun `komikun/master` @ `23afd600b6`.
 How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills/cherrypick-log/README.md).
 
 **Status:** `O` cherry-picked · `?` maybe, needs review (includes commits that cancel each other out, flagged by the script) · empty = not found · `X` won't pick (set by hand, or version-bump-only commits). **Upstream** `↳ name` = copy of the mihon commit right below it. **Details** = how pairing / status was found (regenerated); **Notes** = yours, kept.
@@ -12,9 +12,9 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 | Upstream | O | ? | X | empty | other | total |
 |---|--:|--:|--:|--:|--:|--:|
 | mihon | 871 | 28 | 65 | 356 | 0 | 1320 |
-| tachiyomiSY | 840 | 2 | 15 | 459 | 0 | 1316 |
+| tachiyomiSY | 840 | 2 | 15 | 456 | 0 | 1313 |
 | komikku | 10 | 0 | 0 | 0 | 0 | 10 |
-| komikun | 37 | 0 | 9 | 1 | 0 | 47 |
+| komikun | 34 | 0 | 9 | 3 | 0 | 46 |
 
 ## Commits
 
@@ -31,9 +31,8 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 |   | [6fb2994a1b](https://github.com/jobobby04/TachiyomiSY/commit/6fb2994a1b5e2d896cf033eef20b11c4b27956fb) | ↳ tachiyomiSY | 2026-10-21 | Redact some sensitive headers in logcat (#4156) | MajorTanya | pick of mihon `0864ce0f46` [marker] |  |
 |   | [0864ce0f46](https://github.com/mihonapp/mihon/commit/0864ce0f468a154f4da242cf080bf6d1baf7a58b) | mihon | 2026-10-21 | Redact some sensitive headers in logcat (#4156) | MajorTanya |  |  |
 | O | [3b1e46c5ea](https://github.com/jobobby04/TachiyomiSY/commit/3b1e46c5ea7990abaefce6ca9d7da893f650125a) | ↳ tachiyomiSY | 2026-10-21 | Bump webgpuviewer (#4146) | w | pick of mihon `487c313d31` [marker]; codex/komikun-foundation `779952b0be` [hash of mihon, hash of komikun] |  |
-| O | [45c51d699f](https://github.com/komi-kun/komi-kun/commit/45c51d699f99185a380612dd885bccc83f48764b) | komikun | 2026-10-25 | fix(source): show the name of restored stub sources instead of their id (#74) | Luca Auer |  | AI checked 2026-10-24: functional cherry-pick 843a383ed9 on chore/kun-upstream-70. |
-| O | [23afd600b6](https://github.com/komi-kun/komi-kun/commit/23afd600b64c2ddf43c440e8f5bb68ace19d9c0d) | komikun | 2026-10-25 | chore(cherrypick-log): refresh after the upstream port | Luca Auer |  | AI checked 2026-10-24: intentionally empty cherry-pick 1f23eea5e5 on chore/kun-upstream-70. |
-| O | [32914fb3ed](https://github.com/komi-kun/komi-kun/commit/32914fb3ed3f960bbc7e627f29fcb9166a229426) | komikun | 2026-10-25 | chore(upstream): port SY/Mihon work (delegated sources, Compose metadata, edited info in DB) | Luca Auer |  | AI checked 2026-10-24: intentionally empty cherry-pick fdfb396bf7aaa838b3eb5d3eb6c0b68a5b090c5b on chore/kun-upstream-70; implementation already present in d5a21fef265c3c80b915d9d9b13c5ff604d27cb4. |
+|   | [23afd600b6](https://github.com/komi-kun/komi-kun/commit/23afd600b64c2ddf43c440e8f5bb68ace19d9c0d) | komikun | 2026-10-25 | chore(cherrypick-log): refresh after the upstream port | Luca Auer |  |  |
+|   | [32914fb3ed](https://github.com/komi-kun/komi-kun/commit/32914fb3ed3f960bbc7e627f29fcb9166a229426) | komikun | 2026-10-25 | chore(upstream): port SY/Mihon work (delegated sources, Compose metadata, edited info in DB) | Luca Auer |  |  |
 |   | [dbbab31e44](https://github.com/komi-kun/komi-kun/commit/dbbab31e442d5fe4e8a7e5dd483d35592f31e516) | komikun | 2026-10-22 | fix(i18n): fix the Japanese history entry strings (#68) | Luca Auer |  |  |
 | X | [7d7fe387fb](https://github.com/komi-kun/komi-kun/commit/7d7fe387fb1fe6fcf164ffee6188cd6fbca31314) | komikun | 2026-10-21 | chore(deps): enable semantic commits for Renovate (#67) | Luca Auer |  | Renovate semantic commits for Komi-kun's config; not applicable |
 | X | [c973ed68e1](https://github.com/komi-kun/komi-kun/commit/c973ed68e1434bf95eecbc63a7628e6aa5be77ae) | komikun | 2026-10-21 | chore(deps): introduce self-contained Renovate config (#65) | Luca Auer |  | Komi-kun's Renovate config; this fork keeps its own dependency tooling |
@@ -160,9 +159,6 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 |   | [f4c80adc17](https://github.com/jobobby04/TachiyomiSY/commit/f4c80adc17ceb360767098574bda12bb6a96105d) | ↳ tachiyomiSY | 2026-10-22 | Read extension stores on the app scope | AntsyLich | pick of mihon `8066b8dfc9` [marker] |  |
 |   | [c36e97f3e4](https://github.com/jobobby04/TachiyomiSY/commit/c36e97f3e4230697dea6540890530e8805a28ee4) | ↳ tachiyomiSY | 2026-10-21 | Read extension stores once at startup | AntsyLich | pick of mihon `8066b8dfc9` [marker] |  |
 | O | [8066b8dfc9](https://github.com/mihonapp/mihon/commit/8066b8dfc95a4c66c8d574fc078f101ac332910f) | mihon | 2026-10-11 | Read extension stores once at startup | AntsyLich |  |  |
-|   | [e08f5c10e7](https://github.com/jobobby04/TachiyomiSY/commit/e08f5c10e70f6bba53aee75f3e82e25199e19387) | tachiyomiSY | 2026-10-24 | Re-add edit cover in edit info dialog | Jobobby04 |  |  |
-|   | [df041f0a04](https://github.com/jobobby04/TachiyomiSY/commit/df041f0a04e4c617fda45b41b37c6c80711ce5dd) | tachiyomiSY | 2026-10-24 | Lint | Jobobby04 |  |  |
-|   | [8d7a67bbb7](https://github.com/jobobby04/TachiyomiSY/commit/8d7a67bbb7ed8852b8f88ba397b134d1ff000662) | tachiyomiSY | 2026-10-24 | Merge dedupe in database | Jobobby04 |  |  |
 |   | [629cfd0606](https://github.com/jobobby04/TachiyomiSY/commit/629cfd0606f2b739293a63acd2786c1e49fb5e21) | tachiyomiSY | 2026-10-24 | Add ability to manually merge manga in the library | Jobobby04 |  |  |
 |   | [c8e86b9ce4](https://github.com/jobobby04/TachiyomiSY/commit/c8e86b9ce44adcbf375b3e269a8822b12b2774ce) | tachiyomiSY | 2026-10-24 | Tests for Exh Favorites Sync | Jobobby04 |  |  |
 |   | [87d8db2de7](https://github.com/jobobby04/TachiyomiSY/commit/87d8db2de7eadeb5a486e9814ed12713ae799b50) | tachiyomiSY | 2026-10-24 | Metadata autofill implementation for MangaBaka, Comick and Hikka (#1674) | NGB-Was-Taken |  |  |
