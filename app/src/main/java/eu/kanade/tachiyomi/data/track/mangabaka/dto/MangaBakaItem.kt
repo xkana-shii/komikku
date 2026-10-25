@@ -23,16 +23,15 @@ data class MangaBakaItem(
     val artists: List<String>?,
     val description: String?,
     val published: MangaBakaPublishData,
-    // KNS --> optional: metadata autofill must not fail on a series without a status or type
-    val status: String? = null,
-    val type: String? = null,
+    // KNS --> Metadata autofill accepts incomplete MangaBaka responses.
+    val status: String = "",
+    val type: String = "",
     // KNS <--
     val rating: Double?,
     val titles: List<MangaBakaItemTitle>?,
     // KNS -->
     val genres: List<String>? = null,
     val tags: List<String>? = null,
-    /** `active`, `merged` or `deleted`; a merged series points at its replacement with [mergedWith]. */
     val state: String? = null,
     @SerialName("merged_with")
     val mergedWith: Long? = null,
@@ -74,23 +73,26 @@ data class MangaBakaRelationship(
 
 @Serializable
 data class MangaBakaCover(
-    // KNS --> the original image, which metadata autofill prefers
-    val raw: MangaBakaRawCover? = null,
-    // KNS <--
+    // SY -->
+    // KUN -->: defaulted, because this DTO also decodes search results and a response without the
+    // unscaled cover would otherwise fail the whole search.
+    val raw: MangaBakaRawCover = MangaBakaRawCover(null),
+    // KUN <--
+    // SY <--
     val x250: MangaBakaScaledCover,
 )
-
-// KNS -->
-@Serializable
-data class MangaBakaRawCover(
-    val url: String? = null,
-)
-// KNS <--
 
 @Serializable
 data class MangaBakaScaledCover(
     val x1: String?,
 )
+
+// SY -->
+@Serializable
+data class MangaBakaRawCover(
+    val url: String?,
+)
+// SY <--
 
 @Serializable
 data class MangaBakaPublishData(

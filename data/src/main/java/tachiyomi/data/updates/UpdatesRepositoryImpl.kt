@@ -100,10 +100,15 @@ class UpdatesRepositoryImpl(
         dateUpload: Instant?,
         dateFetch: Instant,
         excludedScanlator: String?,
+        // SY -->
+        userTitle: String?,
+        userThumbnailUrl: String?,
+        // SY <--
     ): UpdatesWithRelations = UpdatesWithRelations(
         mangaId = mangaId,
         // SY -->
         ogMangaTitle = mangaTitle,
+        userTitle = userTitle,
         // SY <--
         chapterId = chapterId,
         chapterName = chapterName,
@@ -122,6 +127,7 @@ class UpdatesRepositoryImpl(
             sourceId = sourceId,
             isMangaFavorite = favorite,
             ogUrl = thumbnailUrl,
+            userThumbnailUrl = userThumbnailUrl,
             lastModified = coverLastModified,
         ),
     )

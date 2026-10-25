@@ -109,7 +109,6 @@ class RestoreRepositoryMangaFieldsTest {
                 chapterRepository = ChapterRepositoryImpl(database),
                 trackRepository = TrackRepositoryImpl(database),
                 mangaMetadataRepository = mockk(relaxed = true),
-                customMangaRepository = mockk(relaxed = true),
             )
 
             driver.insertManga()

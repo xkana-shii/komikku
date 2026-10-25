@@ -249,6 +249,11 @@ dependencies {
     implementation(projects.icons.customMaterialSymbols)
     implementation(projects.icons.materialSymbols)
     implementation(projects.icons.simpleIcons)
+    // SY -->
+    implementation(projects.iconsSy.brands)
+    implementation(projects.iconsSy.customMaterialSymbols)
+    implementation(projects.iconsSy.materialSymbols)
+    // SY <--
     implementation(projects.core.archive)
     implementation(projects.core.common)
     implementation(projects.coreMetadata)
@@ -398,7 +403,6 @@ dependencies {
     implementation(sylibs.xlog)
 
     // RatingBar (SY)
-    implementation(sylibs.ratingbar)
     implementation(sylibs.composeRatingbar)
 
     // Google drive

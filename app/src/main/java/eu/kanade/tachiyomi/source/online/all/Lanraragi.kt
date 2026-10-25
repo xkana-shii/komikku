@@ -76,6 +76,10 @@ class Lanraragi(delegate: HttpSource, val context: Context) :
         return GET(uri.toString(), headers)
     }
 
+    // SY -->
+    override val overridesMangaDetails = true
+    // SY <--
+
     @Deprecated("Use the combined suspend API instead", replaceWith = ReplaceWith("getMangaUpdate"))
     override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
         return runAsObservable {
@@ -140,7 +144,6 @@ class Lanraragi(delegate: HttpSource, val context: Context) :
     @Serializable
     data class Archive(
         val arcid: String,
-        val isnew: String,
         val tags: String?,
         val summary: String?,
         val title: String,

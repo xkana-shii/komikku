@@ -154,11 +154,29 @@ abstract class DelegatedHttpSource(val delegate: HttpSource) : HttpSource() {
     ): SMangaUpdate {
         ensureDelegateCompatible()
         // KMK -->
+        // KUN -->
+        // SY -->: only run our own fetch overrides when the source actually overrides them, so the
+        // delegate's combined update API is used otherwise (one request instead of two).
+        val ownDetails = fetchDetails && overridesMangaDetails
+        val ownChapters = fetchChapters && overridesChapterList
+        val delegateDetails = fetchDetails && !ownDetails
+        val delegateChapters = fetchChapters && !ownChapters
+
         return supervisorScope {
-            val asyncManga = if (fetchDetails) async { fetchMangaDetails(manga).awaitSingle() } else null
-            val asyncChapters = if (fetchChapters) async { fetchChapterList(manga).awaitSingle() } else null
-            SMangaUpdate(asyncManga?.await() ?: manga, asyncChapters?.await() ?: chapters)
+            val asyncManga = if (ownDetails) async { fetchMangaDetails(manga).awaitSingle() } else null
+            val asyncChapters = if (ownChapters) async { fetchChapterList(manga).awaitSingle() } else null
+            val update = if (delegateDetails || delegateChapters) {
+                delegate.getMangaUpdate(manga, chapters, delegateDetails, delegateChapters)
+            } else {
+                null
+            }
+            SMangaUpdate(
+                asyncManga?.await() ?: update?.manga ?: manga,
+                asyncChapters?.await() ?: update?.chapters ?: chapters,
+            )
         }
+        // SY <--
+        // KUN <--
         // KMK <--
     }
 
@@ -173,6 +191,18 @@ abstract class DelegatedHttpSource(val delegate: HttpSource) : HttpSource() {
         ensureDelegateCompatible()
         return delegate.fetchMangaDetails(manga)
     }
+
+    // SY -->
+    /**
+     * Set when [fetchMangaDetails] is overridden, so [getMangaUpdate] uses it instead of the delegate.
+     */
+    protected open val overridesMangaDetails = false
+
+    /**
+     * Set when [fetchChapterList] is overridden, so [getMangaUpdate] uses it instead of the delegate.
+     */
+    protected open val overridesChapterList = false
+    // SY <--
 
     /**
      * Returns the request for the details of a manga. Override only if it's needed to change the

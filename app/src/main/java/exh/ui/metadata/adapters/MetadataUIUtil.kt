@@ -1,24 +1,15 @@
 package exh.ui.metadata.adapters
 
 import android.content.Context
-import android.graphics.Color
-import android.widget.TextView
-import androidx.annotation.AttrRes
-import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
 import androidx.annotation.FloatRange
-import androidx.appcompat.R
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.alpha
-import androidx.core.graphics.blue
-import androidx.core.graphics.green
-import androidx.core.graphics.red
-import eu.kanade.tachiyomi.util.system.dpToPx
 import exh.util.SourceTagsUtil
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.sy.SYMR
 import kotlin.math.roundToInt
 
+/**
+ * SY-specific file
+ */
 object MetadataUIUtil {
     fun getRatingString(
         context: Context,
@@ -58,46 +49,6 @@ object MetadataUIUtil {
         "Video" -> SourceTagsUtil.GenreColor.WESTERN_COLOR to SYMR.strings.video
         else -> null
     }?.let { (genreColor, stringId) ->
-        genreColor to context.stringResource(stringId)
-    }
-
-    fun TextView.bindDrawable(
-        context: Context,
-        @DrawableRes drawable: Int,
-        // KMK -->
-        @ColorInt color: Int = context.getResourceColor(R.attr.colorAccent),
-        drawablePadding: Int = 0.dpToPx,
-        // KMK <--
-    ) {
-        ContextCompat.getDrawable(context, drawable)?.apply {
-            // KMK -->
-            setTint(color)
-            // KMK <--
-            setBounds(0, 0, 20.dpToPx, 20.dpToPx)
-            setCompoundDrawables(this, null, null, null)
-            // KMK -->
-            setCompoundDrawablePadding(drawablePadding)
-            // KMK <--
-        }
-    }
-
-    /**
-     * Returns the color for the given attribute.
-     *
-     * @param resource the attribute.
-     * @param alphaFactor the alpha number [0,1].
-     */
-    @ColorInt
-    fun Context.getResourceColor(@AttrRes resource: Int, alphaFactor: Float = 1f): Int {
-        val typedArray = obtainStyledAttributes(intArrayOf(resource))
-        val color = typedArray.getColor(0, 0)
-        typedArray.recycle()
-
-        if (alphaFactor < 1f) {
-            val alpha = (color.alpha * alphaFactor).roundToInt()
-            return Color.argb(alpha, color.red, color.green, color.blue)
-        }
-
-        return color
+        genreColor.color to context.stringResource(stringId)
     }
 }

@@ -19,7 +19,11 @@ SELECT
     manga.state_cover_last_modified AS coverLastModified,
     chapter.remote_date_upload AS dateUpload,
     chapter.state_date_fetch AS dateFetch,
-    excluded_scanlator.scanlator AS excludedScanlator
+    excluded_scanlator.scanlator AS excludedScanlator,
+    -- SY -->
+    manga.user_title AS userTitle,
+    manga.user_thumbnail_url AS userThumbnailUrl
+    -- SY <--
 FROM manga JOIN chapter
 ON manga.id = chapter.manga_id
 LEFT JOIN excluded_scanlator
@@ -45,13 +49,14 @@ SELECT
     manga.state_cover_last_modified AS coverLastModified,
     chapter.remote_date_upload AS dateUpload,
     chapter.state_date_fetch AS dateFetch,
-    excluded_scanlator.scanlator AS excludedScanlator
+    excluded_scanlator.scanlator AS excludedScanlator,
+    -- SY -->
+    manga.user_title AS userTitle,
+    manga.user_thumbnail_url AS userThumbnailUrl
+    -- SY <--
 FROM manga
-LEFT JOIN (
-    SELECT merged.manga_id,merged.merge_id
-    FROM merged
-    GROUP BY merged.merge_id
-) AS ME
+-- Every entry the merge holds, not just one of them
+JOIN merged AS ME
 ON ME.merge_id = manga.id
 JOIN chapter
 ON ME.manga_id = chapter.manga_id
@@ -111,7 +116,10 @@ getReadUpdates:
 SELECT
     mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark, bookmarkColor,
     lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified, dateUpload, dateFetch,
-    excludedScanlator
+    excludedScanlator,
+    -- SY -->
+    userTitle, userThumbnailUrl
+    -- SY <--
 FROM updatesView
 WHERE read = 1
 AND dateUpload > :after
@@ -122,7 +130,10 @@ getUnreadUpdates:
 SELECT
     mangaId, mangaTitle, chapterId, chapterName, scanlator, chapterUrl, read, bookmark, bookmarkColor,
     lastPageRead, sourceId, favorite, thumbnailUrl, coverLastModified, dateUpload, dateFetch,
-    excludedScanlator
+    excludedScanlator,
+    -- SY -->
+    userTitle, userThumbnailUrl
+    -- SY <--
 FROM updatesView
 WHERE read = 0
 AND dateUpload > :after

@@ -41,7 +41,6 @@ class RestoreRepositoryChapterMetadataTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -111,7 +110,6 @@ class RestoreRepositoryChapterMetadataTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -161,7 +159,6 @@ class RestoreRepositoryChapterMetadataTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -231,7 +228,6 @@ class RestoreRepositoryChapterMetadataTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()
@@ -284,7 +280,6 @@ class RestoreRepositoryChapterMetadataTest {
                     chapterRepository = chapterRepository,
                     trackRepository = TrackRepositoryImpl(database),
                     mangaMetadataRepository = mockk(relaxed = true),
-                    customMangaRepository = mockk(relaxed = true),
                 )
 
                 driver.insertManga()

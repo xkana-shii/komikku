@@ -11,12 +11,17 @@ const val LOCAL_SOURCE_PACKAGE = "tachiyomi.source.local"
 // KMK <--
 
 const val NHENTAI_SOURCE_ID = 7309872737163460316L
-const val PURURIN_SOURCE_ID = 2221515250486218861L
 const val TSUMINO_SOURCE_ID = 6707338697138388238L
 const val EIGHTMUSES_SOURCE_ID = 1802675169972965535L
 const val HBROWSE_SOURCE_ID = 1401584337232758222L
-
-// If MERGED_SOURCE_ID is to update, remember to update updatesView.sq and libraryView.sq too
+// SY -->
+const val NINEHENTAI_SOURCE_ID = 7689490563697355048L
+const val HENTAINEXUS_SOURCE_ID = 7719798645438596394L
+// KUN -->
+// The pre-delegation in-app Hitomi source id, migrated on restore.
+const val HITOMI_OLD_ID = 6910L
+// KUN <--
+// SY <--
 const val MERGED_SOURCE_ID = LEWD_SOURCE_SERIES + 69
 
 // KMK -->

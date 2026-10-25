@@ -216,7 +216,10 @@ data class MigrateSourceSearchScreen(
                     startExpanded = viewModel.startExpanded,
                     onSave = {},
                     // KMK -->
-                    savedSearches = state.savedSearches,
+                    // KUN -->
+                    // BrowseSourceViewModel.savedSearches is a flow of its own now
+                    savedSearches = viewModel.savedSearches.collectAsState().value,
+                    // KUN <--
                     onSavedSearch = { search ->
                         viewModel.onSavedSearch(search) {
                             context.toast(it)

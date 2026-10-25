@@ -23,7 +23,6 @@ import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterRemoteUpdate
 import tachiyomi.domain.chapter.model.NoChaptersException
-import tachiyomi.domain.chapter.model.toChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.chapter.service.ChapterRecognition
 import tachiyomi.domain.download.service.DownloadPreferences
@@ -285,12 +284,6 @@ class SyncChaptersWithSource(
         )
         // SY -->
         syncPreferences.forgetDeletedChapters(added.map(tombstoneKey))
-        // KUN -->
-        // New and re-added chapters are inserted with last_modified_at = 0, which changedSince
-        // filters out of the next delta; write them once so the upload carries them. Otherwise the
-        // server never sees the chapter is back and its tombstone stands until a full sync.
-        chapterRepository.updateAll(added.map { it.toChapterUpdate() })
-        // KUN <--
         // SY <--
         val excludedScanlators = getExcludedScanlators.await(manga.id).toHashSet()
 

@@ -78,7 +78,7 @@ object DebugFunctions {
     private val throttleManager = ThrottleManager()
 
     fun getDelegatedSourceList(): String = AndroidSourceManager.currentDelegatedSources.map {
-        it.value.sourceName + " : " + it.value.sourceId + " : " + it.value.factory
+        it.value.sourceName + " : " + it.value.sourceIds + " : " + it.value.factory
     }.joinToString(separator = "\n")
 
     fun resetEHGalleriesForUpdater() {

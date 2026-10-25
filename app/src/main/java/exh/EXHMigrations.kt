@@ -3,12 +3,14 @@ package exh
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
+import eu.kanade.tachiyomi.source.online.all.Hitomi
 import exh.source.EH_OLD_ID
 import exh.source.EH_SOURCE_ID
 import exh.source.EXH_OLD_ID
 import exh.source.EXH_SOURCE_ID
 import exh.source.HBROWSE_OLD_ID
 import exh.source.HBROWSE_SOURCE_ID
+import exh.source.HITOMI_OLD_ID
 import exh.source.NHENTAI_OLD_ID
 import exh.source.NHENTAI_SOURCE_ID
 import exh.source.TSUMINO_OLD_ID
@@ -46,6 +48,15 @@ object EXHMigrations {
                 url = newManga.url + "/c00001/",
             )
         }
+
+        // SY -->
+        // Migrate the old Hitomi extension id to the delegated source
+        if (newManga.source == HITOMI_OLD_ID) {
+            newManga = newManga.copy(
+                source = Hitomi.HITOMI_SOURCE_IDS.first(),
+            )
+        }
+        // SY <--
 
         // KMK -->
         // Allow importing of EHentai extension backups
@@ -85,6 +96,11 @@ object EXHMigrations {
             EXH_OLD_ID -> mergeReference.copy(
                 mangaSourceId = EXH_SOURCE_ID,
             )
+            // KUN -->
+            HITOMI_OLD_ID -> mergeReference.copy(
+                mangaSourceId = Hitomi.HITOMI_SOURCE_IDS.first(),
+            )
+            // KUN <--
             else -> mergeReference
         }
     }
@@ -109,6 +125,11 @@ object EXHMigrations {
             EXH_OLD_ID -> savedSearch.copy(
                 source = EXH_SOURCE_ID,
             )
+            // KUN -->
+            HITOMI_OLD_ID -> savedSearch.copy(
+                source = Hitomi.HITOMI_SOURCE_IDS.first(),
+            )
+            // KUN <--
             else -> savedSearch
         }
     }
@@ -133,6 +154,11 @@ object EXHMigrations {
             EXH_OLD_ID -> feed.copy(
                 source = EXH_SOURCE_ID,
             )
+            // KUN -->
+            HITOMI_OLD_ID -> feed.copy(
+                source = Hitomi.HITOMI_SOURCE_IDS.first(),
+            )
+            // KUN <--
             else -> feed
         }
     }
@@ -162,6 +188,12 @@ object EXHMigrations {
             newSourceIds = newSourceIds.minus(EXH_OLD_ID.toString())
                 .plus(EXH_SOURCE_ID.toString())
         }
+        // KUN -->
+        if (HITOMI_OLD_ID.toString() in newSourceIds) {
+            newSourceIds = newSourceIds.minus(HITOMI_OLD_ID.toString())
+                .plus(Hitomi.HITOMI_SOURCE_IDS.first().toString())
+        }
+        // KUN <--
         return newSourceIds
     }
     // KMK -->

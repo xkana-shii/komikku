@@ -174,7 +174,6 @@ import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
 import tachiyomi.domain.libraryUpdateErrorMessage.interactor.InsertLibraryUpdateErrorMessages
 import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
 import tachiyomi.domain.manga.interactor.DeleteMergeById
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
@@ -182,20 +181,21 @@ import tachiyomi.domain.manga.interactor.GetMangaWithChapters
 import tachiyomi.domain.manga.interactor.GetMergedMangaById
 import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
-import tachiyomi.domain.manga.interactor.SetCustomMangaInfo
 import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
+import tachiyomi.domain.manga.interactor.SetMangaUserInfo
 import tachiyomi.domain.manga.interactor.UpdateMergedSettings
-import tachiyomi.domain.manga.model.CustomMangaInfo
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.manga.model.asMangaCover
+import tachiyomi.domain.manga.model.toMangaUserInfoUpdate
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracks
@@ -269,9 +269,8 @@ class MangaViewModel(
     private val getFlatMetadata: GetFlatMetadataById,
     private val getPagePreviews: GetPagePreviews,
     private val upsertTrack: UpsertTrack,
-    private val setCustomMangaInfo: SetCustomMangaInfo,
+    private val setMangaUserInfo: SetMangaUserInfo,
     // KUN -->
-    private val getCustomMangaInfo: GetCustomMangaInfo,
     private val syncStateBumper: SyncStateBumper,
     // KUN <--
     private val deleteLibraryUpdateErrors: DeleteLibraryUpdateErrors,
@@ -979,7 +978,7 @@ class MangaViewModel(
             } else {
                 null
             }
-            val customInfo = CustomMangaInfo(
+            val customInfo = MangaUserInfoUpdate(
                 state.manga.id,
                 title?.trimOrNull(),
                 author?.trimOrNull(),
@@ -990,17 +989,15 @@ class MangaViewModel(
                 status.takeUnless { it == state.manga.ogStatus },
             )
             // KUN -->
-            // The bump must survive leaving the screen right after the edit: the view model scope is
-            // cancelled then. The app-wide, non-cancellable launch still runs off the UI thread.
-            val previousCustomInfo = getCustomMangaInfo.get(state.manga.id)
-            // KUN <--
-            setCustomMangaInfo.set(customInfo)
-            // KUN -->
+            // The database row is authoritative after the JSON-to-row migration. Keep the write and
+            // sync bump together so a quick screen exit cannot strand a local-only change.
             appScope.launchNonCancellable {
+                val previousCustomInfo = getManga.await(state.manga.id)?.toMangaUserInfoUpdate()
+                setMangaUserInfo.setAll(listOf(customInfo))
                 syncStateBumper.bumpForCustomInfoEdit(customInfo.id, previousCustomInfo, customInfo)
             }
             // KUN <--
-            manga = manga.copy(lastUpdate = manga.lastUpdate?.plus(1.milliseconds) ?: Clock.System.now())
+            customMangaInfoOverride.value = null
         }
 
         // KUN -->

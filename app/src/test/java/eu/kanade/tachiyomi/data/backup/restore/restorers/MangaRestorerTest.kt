@@ -16,7 +16,6 @@ import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.manga.interactor.FetchInterval
-import tachiyomi.domain.manga.model.CustomMangaInfo
 
 class MangaRestorerTest {
 
@@ -278,8 +277,11 @@ class MangaRestorerTest {
 
         val captured = entriesSlot.captured.single()
         assertEquals(true, captured.customInfoIncluded)
-        // Kept for the repository, which only writes it when the payload owns the manga.
-        assertEquals(CustomMangaInfo(id = 0L, title = null), captured.customMangaInfo)
+        // An empty section carries no overrides of its own; the marker is what tells the repository
+        // this is an explicit clear rather than an unknown section.
+        assertEquals(null, captured.manga.userTitle)
+        assertEquals(null, captured.manga.userStatus)
+        assertEquals("Test Manga", captured.manga.ogTitle)
     }
 
     @Test
@@ -304,7 +306,49 @@ class MangaRestorerTest {
 
         val captured = entriesSlot.captured.single()
         assertEquals(null, captured.customInfoIncluded)
-        assertEquals(null, captured.customMangaInfo)
+        assertEquals(null, captured.manga.userTitle)
+    }
+
+    @Test
+    fun `restore carries the backup custom overrides onto the manga`() = runTest {
+        val restorer = createRestorer(isSync = true)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = true,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(
+                BackupManga(
+                    url = "/test/1",
+                    title = "Test Manga",
+                    customTitle = "Edited",
+                    customAuthor = "Edited author",
+                    customThumbnailUrl = "https://edited.example/cover.jpg",
+                    customGenre = listOf("Action"),
+                    customStatus = 2,
+                    customInfoIncluded = true,
+                ),
+            ),
+            backupCategories = emptyList(),
+        )
+
+        val manga = entriesSlot.captured.single().manga
+        // The overrides ride on the manga itself; the remote fields keep the source's values.
+        assertEquals("Edited", manga.userTitle)
+        assertEquals("Edited author", manga.userAuthor)
+        assertEquals("https://edited.example/cover.jpg", manga.userThumbnailUrl)
+        assertEquals(listOf("Action"), manga.userGenre)
+        assertEquals(2L, manga.userStatus)
+        assertEquals("Test Manga", manga.ogTitle)
+        assertEquals("Edited", manga.title)
     }
 
     @Test

@@ -100,7 +100,10 @@ internal fun BrowseSourceComfortableGridItem(
             mangaId = manga.id,
             sourceId = manga.source,
             isMangaFavorite = manga.favorite,
-            ogUrl = manga.thumbnailUrl,
+            // KUN -->
+            ogUrl = manga.ogThumbnailUrl,
+            userThumbnailUrl = manga.userThumbnailUrl,
+            // KUN <--
             lastModified = manga.coverLastModified,
         ),
         // KMK -->

@@ -181,7 +181,8 @@ class BackupCreator(
             // SY -->
             val mergedManga = getMergedManga.await()
             // SY <--
-            return getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */
+            return (getFavorites.await() + nonFavoriteManga /* SY --> */ + mergedManga /* SY <-- */)
+                .distinctBy(Manga::id)
         }
         val favorites = getFavorites.await()
         val categoriesByManga = categoryRepository.getCategoriesByMangaIds(favorites.map(Manga::id))

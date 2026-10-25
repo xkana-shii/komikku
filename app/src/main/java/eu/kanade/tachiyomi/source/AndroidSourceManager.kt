@@ -12,12 +12,15 @@ import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.EHentai
+import eu.kanade.tachiyomi.source.online.all.Hitomi
 import eu.kanade.tachiyomi.source.online.all.Lanraragi
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.source.online.all.MergedSource
 import eu.kanade.tachiyomi.source.online.all.NHentai
 import eu.kanade.tachiyomi.source.online.all.Pururin
 import eu.kanade.tachiyomi.source.online.english.EightMuses
+import eu.kanade.tachiyomi.source.online.english.HentaiNexus
+import eu.kanade.tachiyomi.source.online.english.NineHentai
 import exh.log.xLogD
 import exh.log.xLogE
 import exh.source.BlacklistedSources
@@ -27,7 +30,9 @@ import exh.source.EIGHTMUSES_SOURCE_ID
 import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.EnhancedHttpSource
 import exh.source.ExhPreferences
+import exh.source.HENTAINEXUS_SOURCE_ID
 import exh.source.MERGED_SOURCE_ID
+import exh.source.NINEHENTAI_SOURCE_ID
 import exh.source.handleSourceLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -99,6 +104,9 @@ class AndroidSourceManager(
                         mapOf(LocalSource.ID to localSource),
                     ).apply {
                         // KMK -->
+                        // KUN -->
+                        // Built directly instead of through the Komikku factories: the delegated
+                        // sources are constructed from this graph's context, not injected.
                         if (isHentaiEnabled) {
                             EHENTAI_EXT_SOURCES.forEach { (id, lang) ->
                                 put(id, EHentai(id, false, context, lang))
@@ -109,9 +117,12 @@ class AndroidSourceManager(
                                 }
                             }
                         }
+                        // KUN <--
                         // KMK <--
                         // SY -->
+                        // KUN -->
                         put(MERGED_SOURCE_ID, MergedSource(context))
+                        // KUN <--
                         // SY <--
                     }
                     extensions.forEach { extension ->
@@ -150,7 +161,10 @@ class AndroidSourceManager(
                 // KMK -->
                 DELEGATED_SOURCES.firstOrNull { delegated ->
                     sourceQName == delegated.originalSourceQualifiedClassName ||
-                        (delegated.factory && sourceQName.startsWith(delegated.originalSourceQualifiedClassName))
+                        (delegated.factory && sourceQName.startsWith(delegated.originalSourceQualifiedClassName)) ||
+                        // SY -->
+                        id in delegated.sourceIds
+                    // SY <--
                 }
                 // KMK <--
             } else {
@@ -359,12 +373,40 @@ class AndroidSourceManager(
                 // KUN <--
             ),
             DelegatedSource(
+                "Hitomi",
+                Hitomi.HITOMI_SOURCE_IDS,
+                "eu.kanade.tachiyomi.extension.all.hitomi.Hitomi",
+                Hitomi::class,
+                true,
+                // KUN -->
+                createSource = ::Hitomi,
+                // KUN <--
+            ),
+            DelegatedSource(
                 "LANraragi",
                 fillInSourceId,
                 "eu.kanade.tachiyomi.extension.all.lanraragi.LANraragi",
                 Lanraragi::class,
                 // KUN -->
                 createSource = ::Lanraragi,
+                // KUN <--
+            ),
+            DelegatedSource(
+                "HentaiNexus",
+                HENTAINEXUS_SOURCE_ID,
+                "eu.kanade.tachiyomi.extension.en.hentainexus.HentaiNexus",
+                HentaiNexus::class,
+                // KUN -->
+                createSource = ::HentaiNexus,
+                // KUN <--
+            ),
+            DelegatedSource(
+                "NineHentai",
+                NINEHENTAI_SOURCE_ID,
+                "eu.kanade.tachiyomi.extension.en.ninehentai.NineHentai",
+                NineHentai::class,
+                // KUN -->
+                createSource = ::NineHentai,
                 // KUN <--
             ),
         )
@@ -374,14 +416,36 @@ class AndroidSourceManager(
 
         data class DelegatedSource(
             val sourceName: String,
-            val sourceId: Long,
+            val sourceIds: List<Long>,
             val originalSourceQualifiedClassName: String,
             val newSourceClass: KClass<out DelegatedHttpSource>,
             val factory: Boolean = false,
             // KUN -->
             val createSource: ((HttpSource, Context) -> DelegatedHttpSource)? = null,
             // KUN <--
-        )
+        ) {
+            // SY -->
+            constructor(
+                sourceName: String,
+                sourceId: Long,
+                originalSourceQualifiedClassName: String,
+                newSourceClass: KClass<out DelegatedHttpSource>,
+                factory: Boolean = false,
+                // KUN -->
+                createSource: ((HttpSource, Context) -> DelegatedHttpSource)? = null,
+                // KUN <--
+            ) : this(
+                sourceName,
+                listOf(sourceId),
+                originalSourceQualifiedClassName,
+                newSourceClass,
+                factory,
+                // KUN -->
+                createSource,
+                // KUN <--
+            )
+            // SY <--
+        }
     }
 
     private class ListenMutableMap<K, V>(

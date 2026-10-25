@@ -12,6 +12,17 @@ migrated from the old `main`; they will be re-implemented one by one from `featu
 
 ## Pinned revisions
 
+### #70 follow-up integration (2026-10-24)
+
+Komi-kun squash `32914fb3ed3f960bbc7e627f29fcb9166a229426` is being integrated on a feature branch.
+It ports the TachiyomiSY/Mihon commits recorded as “ported in #70”, including delegated sources,
+metadata editor/tracker improvements, Compose downloads, subscriber-gated feeds and merged-entry
+views. Fork migrations 57 (KNS storage) and 58 (bookmark-color updates view) are deliberately
+preserved; the imported view and editable-manga changes are appended as KNS-compatible migrations
+59 and 60. Commit `f5c71cdddc` records the local integration. SQLDelight generation, migration
+verification, Spotless, `:app:compileDebugKotlin` and focused `:data:testDebugUnitTest` passed;
+the full unit-test suite remains a follow-up verification task.
+
 | What | Ref | SHA |
 |------|-----|-----|
 | Old personal `main` (= `origin/main` at start) | `main` | `0ff967c77feab85bc77b91f1350bb789264388e9` |

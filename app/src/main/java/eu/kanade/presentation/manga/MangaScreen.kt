@@ -89,11 +89,14 @@ import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.isIncognitoModeEnabled
 import eu.kanade.tachiyomi.source.online.MetadataSource
 import eu.kanade.tachiyomi.source.online.all.EHentai
+import eu.kanade.tachiyomi.source.online.all.Hitomi
 import eu.kanade.tachiyomi.source.online.all.Lanraragi
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.source.online.all.NHentai
 import eu.kanade.tachiyomi.source.online.all.Pururin
 import eu.kanade.tachiyomi.source.online.english.EightMuses
+import eu.kanade.tachiyomi.source.online.english.HentaiNexus
+import eu.kanade.tachiyomi.source.online.english.NineHentai
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.ui.manga.MergedMangaData
@@ -105,9 +108,12 @@ import exh.source.getMainSource
 import exh.source.isEhBasedManga
 import exh.ui.metadata.adapters.EHentaiDescription
 import exh.ui.metadata.adapters.EightMusesDescription
+import exh.ui.metadata.adapters.HentaiNexusDescription
+import exh.ui.metadata.adapters.HitomiDescription
 import exh.ui.metadata.adapters.LanraragiDescription
 import exh.ui.metadata.adapters.MangaDexDescription
 import exh.ui.metadata.adapters.NHentaiDescription
+import exh.ui.metadata.adapters.NineHentaiDescription
 import exh.ui.metadata.adapters.PururinDescription
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -709,6 +715,7 @@ private fun MangaScreenSmallImpl(
                             searchMetadataChips = remember(state.meta, state.source.id, state.manga.genre) {
                                 SearchMetadataChips(state.meta, state.source.id, state.manga.genre)
                             },
+                            hideEmptyDescription = metadataDescription != null,
                             // SY <--
                         )
                     }
@@ -1150,6 +1157,7 @@ private fun MangaScreenLargeImpl(
                             searchMetadataChips = remember(state.meta, state.source.id, state.manga.genre) {
                                 SearchMetadataChips(state.meta, state.source.id, state.manga.genre)
                             },
+                            hideEmptyDescription = metadataDescription != null,
                             // SY <--
                         )
                         // KNS -->
@@ -1480,6 +1488,9 @@ fun metadataDescription(source: Source): MetadataDescriptionComposable? {
             is NHentai -> { state, openMetadataViewer, _ ->
                 NHentaiDescription(state, openMetadataViewer)
             }
+            is Hitomi -> { state, openMetadataViewer, _ ->
+                HitomiDescription(state, openMetadataViewer)
+            }
             is EightMuses -> { state, openMetadataViewer, _ ->
                 EightMusesDescription(state, openMetadataViewer)
             }
@@ -1488,6 +1499,12 @@ fun metadataDescription(source: Source): MetadataDescriptionComposable? {
             }
             is Lanraragi -> { state, openMetadataViewer, _ ->
                 LanraragiDescription(state, openMetadataViewer)
+            }
+            is NineHentai -> { state, openMetadataViewer, _ ->
+                NineHentaiDescription(state, openMetadataViewer)
+            }
+            is HentaiNexus -> { state, openMetadataViewer, _ ->
+                HentaiNexusDescription(state, openMetadataViewer)
             }
             else -> null
         }

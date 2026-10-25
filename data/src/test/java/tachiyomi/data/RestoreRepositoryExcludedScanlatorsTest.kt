@@ -201,7 +201,6 @@ class RestoreRepositoryExcludedScanlatorsTest {
             chapterRepository = ChapterRepositoryImpl(database),
             trackRepository = TrackRepositoryImpl(database),
             mangaMetadataRepository = mockk(relaxed = true),
-            customMangaRepository = mockk(relaxed = true),
         )
 
     private fun manga(version: Long = 1L, lastModifiedAt: Long = 10L) = Manga.create().copy(
