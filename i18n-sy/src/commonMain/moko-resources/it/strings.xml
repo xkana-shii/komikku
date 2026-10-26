@@ -186,10 +186,6 @@
     <string name="center_margin_double_and_wide_page">Aggiungi a entrambi</string>
     <string name="az_recommends">Visualizza Suggerimenti</string>
     <string name="merge">Unisci</string>
-    <string name="title_hint">Titolo: %1$s</string>
-    <string name="description_hint">Descrizione: %1$s</string>
-    <string name="author_hint">Autore: %1$s</string>
-    <string name="artist_hint">Artista: %1$s</string>
     <string name="action_edit_tags">Modifica etichette</string>
     <string name="ext_redundant">Ridondante</string>
     <string name="latest_">Ultimo: %1$s</string>

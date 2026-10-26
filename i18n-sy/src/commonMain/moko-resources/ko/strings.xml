@@ -341,11 +341,6 @@
     <string name="reset_tags">태그 초기화</string>
     <string name="add_tags">태그 추가</string>
     <string name="reset_info">정보 초기화</string>
-    <string name="title_hint">제목: %1$s</string>
-    <string name="description_hint">설명: %1$s</string>
-    <string name="author_hint">저자: %1$s</string>
-    <string name="artist_hint">아티스트: %1$s</string>
-    <string name="thumbnail_url_hint">썸네일 Url: %1$s</string>
     <string name="multi_tags_comma_separated">태그 입력, 콤마로 구분합니다.</string>
     <string name="select_tracker">트래커 선택</string>
     <string name="entry_not_tracked">항목이 추적되지 않음.</string>

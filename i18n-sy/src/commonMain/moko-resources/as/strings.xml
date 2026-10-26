@@ -355,11 +355,6 @@
     <string name="reset_tags">টেগসমূহ ৰিছেট কৰক</string>
     <string name="add_tag">টেগ যোগ কৰক</string>
     <string name="reset_info">তথ্য ৰিছেট কৰক</string>
-    <string name="title_hint">শিৰোনাম: %1$s</string>
-    <string name="description_hint">বিৱৰণ: %1$s</string>
-    <string name="author_hint">লেখক: %1$s</string>
-    <string name="artist_hint">শিল্পী: %1$s</string>
-    <string name="thumbnail_url_hint">থাম্বনেইল Url: %1$s</string>
     <string name="find_in_another_source">অন্য উৎসত অনুসন্ধান কৰক</string>
     <string name="data_saver_exclude">ডাটা সেভাৰৰ পৰা বাদ দিয়ক</string>
     <string name="data_saver_stop_exclude">ডাটা সেভাৰৰ পৰা বাদ দিয়াৰ পৰা ৰোধ কৰক</string>
@@ -456,7 +451,7 @@
     <string name="favorites_sync_processing_throttle">%1$s
 \n
 \nচিঞৰ বৰ্তমান থ্ৰ\'টেল হৈছে (ExHentaiৰ পৰা নিষিদ্ধ হোৱাৰ পৰা বাচিবলৈ) আৰু সম্পূৰ্ণ হ\'বলৈ বহু সময় লাগিব পাৰে।</string>
-    <string name="favorites_sync_notes_message"><![CDATA[1. এপৰ বিভাগৰ নামত হোৱা পৰিবৰ্তনসমূহ <b>সমন্বিত নহয়</b>! দয়া কৰি <i>ExHentaiত বিভাগৰ নাম সলনি কৰক</i>। বিভাগৰ নামবোৰ প্ৰত্যেকবাৰ সমন্বয়ৰ সময়ত ExHentai চাৰ্ভাৰসমূহৰ পৰা নকল কৰা হব।<br><br>2. ExHentaiত থকা পছন্দৰ বিভাগসমূহ এপৰ <b>প্ৰথম 10 বিভাগৰ সৈতে মিলে</b> (‘\Default\’ বিভাগ বাদে)। <i>অন্যান্য বিভাগৰ গেছবুকসমূহ <b>সমন্বিত নহ’ব</b>!</i><br><br>3. <font color=\'red\'><b>সমন্বয়ৰ সময়ত নিশ্চিত কৰক যে আপোনাৰ ইণ্টাৰনেট সংযোগ স্থিৰ আছে!</b></font> যদি চিঞৰ চলি থকা সময়ত ইণ্টাৰনেট বিচ্ছিন্ন হয়, তেন্তে আপোনাৰ চিঞৰসমূহ <i>আংশিকভাৱে সমন্বিত অৱস্থা</i>ত ৰোৱা হ'ব পাৰে।<br><br>4. চিঞৰ চলি থকা সময়ত এপ খোলা ৰাখক। Android পিছৰ পটত থকা এপসমূহ বন্ধ কৰিব পাৰে আৰু ই যদি চিঞৰ চলি থকা সময়ত হয় তেন্তে ই বেয়া হ'ব পাৰে।<br><br>5. <b>পছন্দসমূহ একাধিক বিভাগত ৰাখিব নালাগে</b> (এপই ইয়াৰ সমৰ্থন কৰে)। এইয়ে সমন্বয় এলগ'ৰিদমৰ বিভ্ৰান্তি সৃষ্টি কৰিব পাৰে কিয়নো ExHentai প্ৰত্যেক পছন্দৰ একেটা বিভাগতে থকাটো অনুমতি দিয়ে।<br><br>এই সংলাপ মাত্ৰ একবাৰ আহিব। আপুনি \'Settings > E-Hentai > Show favorites sync notes'\ ত গৈ পুনৰ এই মন্তব্যসমূহ পঢ়িব পাৰে।]]></string>
+    <string name="favorites_sync_notes_message"><![CDATA[1. এপৰ বিভাগৰ নামত হোৱা পৰিবৰ্তনসমূহ <b>সমন্বিত নহয়</b>! দয়া কৰি ইয়াৰ পৰিবৰ্তে <i>ExHentaiত বিভাগৰ নাম সলনি কৰক</i>। প্ৰত্যেকবাৰ সমন্বয়ৰ সময়ত ExHentai চাৰ্ভাৰসমূহৰ পৰা বিভাগৰ নামবোৰ কপি কৰা হ\'ব।<br><br>2. ExHentaiত থকা পছন্দৰ বিভাগসমূহ এপৰ <b>প্ৰথম 10টা বিভাগৰ সৈতে মিলে</b> (\'Default\' বিভাগ বাদে)। <i>অন্য বিভাগসমূহত থকা গেলাৰীবোৰ <b>সমন্বিত নহ\'ব</b>!</i><br><br>3. <font color=\'red\'><b>সমন্বয় চলি থকা সময়ত নিশ্চিত কৰক যে আপোনাৰ ইণ্টাৰনেট সংযোগ স্থিৰ আছে!</b></font> যদি এপে সমন্বয় কৰি থকা সময়ত ইণ্টাৰনেট সংযোগ বিচ্ছিন্ন হয়, তেন্তে আপোনাৰ পছন্দসমূহ <i>আংশিকভাৱে সমন্বিত অৱস্থাত</i> থাকি যাব পাৰে।<br><br>4. পছন্দসমূহ সমন্বয় হৈ থকা সময়ত এপটো খোলা ৰাখক। Androidএ মাজে মাজে পটভূমিত থকা এপসমূহ বন্ধ কৰি দিয়ে, আৰু সমন্বয় চলি থকা সময়ত এনে হ\'লে ই সমস্যাৰ সৃষ্টি কৰিব পাৰে।<br><br>5. <b>পছন্দসমূহ একাধিক বিভাগত ৰাখিব নালাগে</b> (এপে ইয়াক সমৰ্থন কৰে)। ই সমন্বয়ৰ এলগ\'ৰিদমক বিভ্ৰান্ত কৰিব পাৰে, কাৰণ ExHentaiএ প্ৰতিটো পছন্দক কেৱল এটা বিভাগতহে থাকিবলৈ অনুমতি দিয়ে।<br><br>এই ডায়ালগ কেৱল এবাৰহে দেখা দিব। আপুনি \'Settings > E-Hentai > Show favorites sync notes\'লৈ গৈ এই টোকাসমূহ পুনৰ পঢ়িব পাৰে।]]></string>
     <string name="favorites_sync_reset">আপুনি নিশ্চিতনে?</string>
     <string name="favorites_sync_conformation_message">আপুনি নিশ্চিত যে আপোনাৰ পছন্দসমূহ E-Hentaiৰ সৈতে সমন্বয় কৰিবলৈ ইচ্ছা কৰিছে?</string>
     <string name="favorites_sync_reset_message">চিঞৰ অৱস্থা পুনৰ ছেট কৰাৰ ফলত আপোনাৰ পৰবর্তী চিঞৰ অত্যন্ত ধীৰ গতিত হ\'ব পাৰে।</string>
@@ -578,13 +573,6 @@
     <string name="merged_references_invalid">মাৰ্জ কৰা উল্লেখসমূহ অবৈধ</string>
     <string name="merged_chapter_updates_error">অধ্যায় আপডেট টগল কৰা ত্ৰুটি</string>
     <string name="merged_toggle_download_chapters_error">ডাউনলোড অধ্যায় টগল কৰা ত্ৰুটি</string>
-    <string name="allow_deduplication">ডিডুপ্লিকেচন অনুমোদন কৰক:</string>
-    <string name="deduplication_mode">ডিডুপ্লিকেচন ম\'ড:</string>
-    <string name="deduplication_entry_info">তথ্য প্ৰৱেশ:</string>
-    <string name="no_dedupe">কোনো ডিডুপ্লিকেচন নাই</string>
-    <string name="dedupe_priority">প্ৰাধান্যৰ দ্বাৰা ডিডুপ্লিকেচন</string>
-    <string name="dedupe_most_chapters">সৰ্বাধিক অধ্যায় থকা উৎস দেখুৱাওক</string>
-    <string name="dedupe_highest_chapter">সৰ্বোচ্চ অধ্যায় সংখ্যা থকা উৎস দেখুৱাওক</string>
     <string name="md_follows_unfollowed">অনুসৰণ কৰা নাই</string>
     <string name="mangadex_sync_follows_to_library">মাঙ্গাডেক্সৰ প্ৰৱেশবোৰ আপোনাৰ লাইব্ৰেৰীত চিঞৰাওক</string>
     <string name="mangadex_sync_follows_to_library_summary">মাঙ্গাডেক্সৰ পৰা প্ৰৱেশবোৰ আপোনাৰ লাইব্ৰেৰীত আনিব যদি সেয়া ইতিমধ্যে যোগ কৰা নাই।</string>
@@ -628,11 +616,7 @@
     <string name="rec_collecting">পৰামৰ্শ সংগ্ৰহ কৰা</string>
     <string name="pref_tracker_resolve_using_source_metadata_summary">স্বয়ংক্ৰিয়ভাৱে মিল থকা শিৰোনাম নিৰ্ব্বাচন কৰে যদি উৎসই ট্ৰেকাৰসমূহলে সংযোগসমূহ প্ৰদান কৰে। বৰ্তমান MangaDex দ্বাৰা সমৰ্থিত</string>
     <string name="pref_tracker_resolve_using_source_metadata">উৎস মেটাডাটা ব্যৱহাৰ কৰি প্ৰৱেশসমূহ নিৰ্ব্বাচন কৰক</string>
-    <string name="rec_search">সাধাৰণ পৰামৰ্শ বিচাৰি উলিয়াওক</string>
     <string name="rec_hide_library_entries">আপোনাৰ লাইব্ৰেৰীত ইতিমধ্যে ফলাফল লুকুৱাওক</string>
-    <string name="rec_services_to_search">সন্ধান কৰিবলৈ পৰামৰ্শ সেৱা</string>
-    <string name="rec_group_source">উৎসৰ পৰামৰ্শ</string>
-    <string name="rec_group_tracker">ট্ৰেকাৰৰ পৰামৰ্শ</string>
     <string name="rec_common_recommendations">সাধাৰণ পৰামৰ্শ</string>
     <string name="rec_search_short">পৰামৰ্শ বিচাৰি উলিয়াওক</string>
     <string name="rec_no_results">কোনো পৰামৰ্শ পোৱা নগ\'ল</string>

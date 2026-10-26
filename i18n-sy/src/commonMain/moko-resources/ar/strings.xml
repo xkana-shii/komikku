@@ -54,9 +54,9 @@
     <string name="open_debug_menu">فتح قائمة التصحيح</string>
     <string name="starting_cleanup">بدء عملية التنظيف</string>
     <string name="clean_up_downloaded_chapters">مسح الفصول التي تم تنزيلها</string>
-    <string name="delete_unused_chapters">حذف مجلدات الفصل غير الموجودة والتي تم تنزيلها جزئيًا وقراءتها</string>
+    <string name="delete_unused_chapters">حذف مجلدات الفصول غير الموجودة، و المنزلة جزئياً، و المقروءة</string>
     <string name="no_folders_to_cleanup">لا يوجد مجلدات لمسحها</string>
-    <string name="clean_orphaned_downloads">مسح الفصول المحذوفة</string>
+    <string name="clean_orphaned_downloads">تنظيف المهجورة</string>
     <string name="clean_read_downloads">مسح الفصول المقروءة</string>
     <string name="clean_read_entries_not_in_library">مسح الدخلات الغير موجودة في المكتبة</string>
     <string name="data_saver">توفير البيانات</string>
@@ -312,7 +312,7 @@
     <string name="action_share_combined_page">مشاركة الصفحة المدمجة</string>
     <string name="automatic_can_still_switch">أثناء استخدام تخطيط الصفحة التلقائي، لا يزال بإمكانك التبديل بين التخطيطات أثناء القراءة دون تجاوز هذا الإعداد</string>
     <string name="eh_auto_webtoon_snack">قراءة بأسلوب الويب تون</string>
-    <string name="double_pages">صفحات مزدوجة</string>
+    <string name="double_pages">الصفحات المزدوجة</string>
     <string name="automatic_orientation">تلقائي (على أساس الاتجاه)</string>
     <string name="invert_double_pages">عكس الصفحات المزدوجة</string>
     <string name="pref_center_margin_summary">أدخل فاصل لاستيعاب المساحة الميتة على الأجهزة القابلة للطي.</string>
@@ -340,13 +340,8 @@
     <string name="merged_already">تم دمج هذا الإدخال بالفعل مع الإدخال الحالي!</string>
     <string name="add_tag">اضافة فئة</string>
     <string name="reset_info">إعادة تعيين المعلومات</string>
-    <string name="title_hint">الإسم : %1$s</string>
-    <string name="description_hint">الوصف: %1$s</string>
-    <string name="author_hint">المؤلف : %1$s</string>
-    <string name="artist_hint">الرسام : %1$s</string>
     <string name="find_in_another_source">البحث في مصدر آخر</string>
     <string name="searching_source">مصدر البحث…</string>
-    <string name="thumbnail_url_hint">عنوان URL للصورة المصغرة:%1$s</string>
     <string name="data_saver_exclude">استبعاد من موفر البيانات</string>
     <string name="data_saver_stop_exclude">توقف عن الاستبعاد من موفر البيانات</string>
     <string name="could_not_find_entry">تعذر العثور على الإدخال في المصدر!</string>
@@ -387,7 +382,7 @@
     <string name="redundant_extension_message">هذا المصدر زائد عن الحاجة ولن يتم استخدامه داخل هذا الإصدار من Komikku.</string>
     <string name="select_sources">حدد المصادر</string>
     <string name="select_none">لا تختر شيء</string>
-    <string name="migration">النقل</string>
+    <string name="migration">الترحيل</string>
     <string name="skip_pre_migration">تخطي ما قبل النقل</string>
     <string name="match_enabled_sources">مطابقة المصادر المُمكنة</string>
     <string name="pre_migration_skip_toast">لإظهار هذه الشاشة مرة أخرى، انتقل إلى الإعدادات -&gt; المكتبة.</string>
@@ -437,13 +432,10 @@
     <string name="pref_tracker_resolve_using_source_metadata_summary">يحدد العنوان المطابق تلقائيا إذا كان المصدر يوفر روابط لأدوات التتبع. مدعوم حاليا من قبل MangaDex</string>
     <string name="rec_hide_library_entries">إخفاء النتائج الموجودة بالفعل في مكتبتك</string>
     <string name="rec_search_short">البحث عن التوصيات</string>
-    <string name="rec_group_tracker">توصيات المتتبع</string>
     <string name="rec_processing_state">إدخال المعالجة %1$d من %2$d</string>
     <string name="gallery_size">حجم المعرض</string>
     <string name="aged">مُسن</string>
-    <string name="rec_services_to_search">خدمات التوصية للبحث</string>
     <string name="entry_not_tracked">لم يتم تتبع الإدخال.</string>
-    <string name="rec_group_source">توصيات المصدر</string>
     <string name="page_count">عدد الصفحات</string>
     <string name="total_favorites">إجمالي المفضلة</string>
     <string name="short_title">عنوان قصير</string>
@@ -457,7 +449,7 @@
     <string name="manga_updates_id">معرف Manga updates</string>
     <string name="delete_merged_entry">هل أنت متأكد؟</string>
     <string name="translated">مُتَرْجَم</string>
-    <string name="author">الكاتب</string>
+    <string name="author">المؤلِّف</string>
     <string name="japanese_title">العنوان الياباني</string>
     <string name="english_title">العنوان الإنجليزي</string>
     <string name="uploader_capital">تم كتابة المُحمل بأحرف كبيرة</string>
@@ -469,7 +461,6 @@
     <string name="pref_tracker_resolve_using_source_metadata">تحديد الإدخالات باستخدام بيانات تعريف المصدر</string>
     <string name="select_tracker">حدد أداة تعقب</string>
     <string name="fill_from_tracker">ملء من تعقب</string>
-    <string name="rec_search">البحث عن التوصيات الشائعة</string>
     <string name="rec_common_recommendations">التوصيات الشائعة</string>
     <string name="rec_no_results">لم يتم العثور على توصيات</string>
     <string name="rec_error_title">فشل البحث</string>
@@ -482,7 +473,7 @@
     <string name="average_rating">متوسط التقييم</string>
     <string name="last_update_check">التحقق من آخر تحديث</string>
     <string name="path">مسار</string>
-    <string name="artist">فنان</string>
+    <string name="artist">الرسَّام</string>
     <string name="group">مجموعة</string>
     <string name="cover_image_file_type">نوع ملف صورة الغلاف</string>
     <string name="url">الرابط</string>
@@ -540,8 +531,6 @@
     <string name="game_cg">لعبة</string>
     <string name="total_ratings">التقييم الكلي</string>
     <string name="fetch_chapter_updates">البحث عن تحديثات الفصول</string>
-    <string name="no_dedupe">لا تكرار</string>
-    <string name="deduplication_mode">وضع إزالة التكرار:</string>
     <string name="mangadex_add_to_follows">اضافة تتبع ل MangaDex</string>
     <string name="mangadex_preffered_source_summary">قم بتعيين مصدر MangaDex الذي اخترته، وسيتم استخدامه للتتبع ومجموعة من الميزات الأخرى في التطبيق</string>
     <string name="mangadex_sync_follows_to_library_summary">نقل إدخالات MangaDex إلى مكتبتك إذا لم تتم إضافتها بالفعل.</string>
@@ -563,13 +552,8 @@
     <string name="genre">النوع</string>
     <string name="merged_toggle_download_chapters_error">خطأ في تنزيل الفصول</string>
     <string name="merged_references_invalid">اندماج المراجع غير صالح</string>
-    <string name="dedupe_priority">إزالة التكرار حسب الأولوية</string>
-    <string name="allow_deduplication">سماح بالتكرار:</string>
-    <string name="dedupe_highest_chapter">اضهار المصدر صاحب أعلى عدد من الفصول</string>
-    <string name="dedupe_most_chapters">اضهار المصدر مع اكثر الفصول</string>
     <string name="relation_preserialization">التسلسل المسبق</string>
     <string name="rating0">كارثة</string>
-    <string name="deduplication_entry_info">معلومات عن الإدخال:</string>
     <string name="merged_chapter_updates_error">خطأ تبديل تحديثات الفصل</string>
     <string name="ignore_non_library_entries">تجاهل المدخلات التي لا تنتمي إلى الكتبة</string>
     <string name="md_follows_unfollowed">إزالة المتابعة</string>

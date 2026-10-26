@@ -325,11 +325,6 @@
     <string name="reset_tags">Redefinir Tags</string>
     <string name="add_tags">Adicionar tags</string>
     <string name="reset_info">Redefinir informações</string>
-    <string name="title_hint">Título: %1$s</string>
-    <string name="description_hint">Descrição: %1$s</string>
-    <string name="author_hint">Autor: %1$s</string>
-    <string name="artist_hint">Artista: %1$s</string>
-    <string name="thumbnail_url_hint">URL da miniatura: %1$s</string>
     <string name="select_tracker">Selecione um rastreador</string>
     <string name="find_in_another_source">Procurar em outra fonte</string>
     <string name="data_saver_exclude">Excluir da proteção de dados</string>
@@ -384,7 +379,6 @@
     <string name="stop_migrating">Parar migração?</string>
     <string name="action_stop">Parar</string>
     <string name="skipping_">(pulando %1$d)</string>
-    <string name="rec_search">Encontre recomendações comuns</string>
     <string name="rec_hide_library_entries">Ocultar resultados já existentes na sua biblioteca</string>
     <string name="rec_common_recommendations">Recomendações comuns</string>
     <string name="rec_search_short">Encontre recomendações</string>
@@ -529,13 +523,6 @@
     <string name="merged_references_invalid">Referências juntadas inválidas</string>
     <string name="merged_chapter_updates_error">Alternar erro de atualizações de capítulo</string>
     <string name="merged_toggle_download_chapters_error">Erro ao alternar descargas de capítulo</string>
-    <string name="allow_deduplication">Permitir desduplicação:</string>
-    <string name="deduplication_mode">Modo da desduplicação:</string>
-    <string name="deduplication_entry_info">Informações da entrada:</string>
-    <string name="no_dedupe">Sem remoção de duplicatas</string>
-    <string name="dedupe_priority">Eliminar duplicatas com base na prioridade</string>
-    <string name="dedupe_most_chapters">Mostrar fonte com mais capítulos</string>
-    <string name="dedupe_highest_chapter">Mostrar fonte com maior número de capítulo</string>
     <string name="md_follows_unfollowed">Deixado de seguir</string>
     <string name="mangadex_sync_follows_to_library">Sincronizar entrada do MangaDex a sua biblioteca</string>
     <string name="mangadex_sync_follows_to_library_summary">Mover entradas do MangaDex para a sua biblioteca, se ainda não forem adicionadas.</string>
@@ -589,9 +576,6 @@
     <string name="fill_from_tracker">Preencher a partir do rastreador</string>
     <string name="feed">Feed</string>
     <string name="action_edit_tags">Editar tags</string>
-    <string name="rec_services_to_search">Serviços de recomendação para pesquisa</string>
-    <string name="rec_group_source">Recomendações de fontes</string>
-    <string name="rec_group_tracker">Recomendações do rastreador</string>
     <string name="rec_collecting">A coletar recomendações</string>
     <string name="favorites_sync_failed_to_featch">Falha ao buscar favoritos do servidor remoto!</string>
     <string name="favorites_sync_could_not_fetch">Não foi possível buscar favoritos!</string>

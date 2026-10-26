@@ -74,7 +74,6 @@
     <string name="no_alternatives_found">Nije pronađena nijedna alternativa</string>
     <string name="no_chapters_found_for_migration">Nije pronađeno nijedno poglavlje. Ovaj se unos ne može koristiti za premještanje</string>
     <string name="skipping_">(preskače se %1$d)</string>
-    <string name="rec_search">Pronađi uobičajene preporuke</string>
     <string name="rec_hide_library_entries">Sakrij rezultate koji se već nalaze u tvojoj biblioteci</string>
     <string name="skip_this_step_next_time">Preskoči ovaj korak idući put</string>
     <string name="use_intelligent_search">Traži naslov i ključne riječi naslova</string>
@@ -93,9 +92,6 @@
     <string name="migrating_to">premješta se u</string>
     <string name="match_pinned_sources">Usporedi s prikvačenim izvorima</string>
     <string name="match_enabled_sources">Usporedi s aktiviranim izvorima</string>
-    <string name="rec_services_to_search">Usluge preporuka za pretraživanje</string>
-    <string name="rec_group_source">Preporuke izvora</string>
-    <string name="rec_group_tracker">Preporuke usluge praćenja</string>
     <string name="rec_common_recommendations">Uobičajene preporuke</string>
     <string name="rec_search_short">Pronađi preporuke</string>
     <string name="rec_no_results">Nijedna preporuka nije pronađena</string>
@@ -353,11 +349,6 @@
     <string name="reset_tags">Resetiraj oznake</string>
     <string name="add_tags">Dodaj oznake</string>
     <string name="reset_info">Resetiraj informacije</string>
-    <string name="title_hint">Naslov: %1$s</string>
-    <string name="description_hint">Opis: %1$s</string>
-    <string name="author_hint">Autor: %1$s</string>
-    <string name="artist_hint">Umjetnik: %1$s</string>
-    <string name="thumbnail_url_hint">URL minijature: %1$s</string>
     <string name="multi_tags_comma_separated">Upiši oznake, odvojene zarezima.</string>
     <string name="find_in_another_source">Pronađi u jednom drugom izvoru</string>
     <string name="searching_source">Pretraživanje izvora …</string>
@@ -576,9 +567,6 @@
     <string name="md_follows_unfollowed">Nepraćeno</string>
     <string name="mangadex_follows">MangaDex praćenja</string>
     <string name="mangadex_add_to_follows">Dodaj u MangaDex praćenja</string>
-    <string name="dedupe_most_chapters">Prikaži izvor s najviše poglavlja</string>
-    <string name="dedupe_highest_chapter">Prikaži izvor s najvećim brojem poglavlja</string>
-    <string name="deduplication_entry_info">Informacije unosa:</string>
     <string name="follow_status">Stanje praćenja</string>
     <string name="language_translated">%1$s prevedeno</string>
     <string name="media_id">ID medija</string>
@@ -591,10 +579,6 @@
     <string name="pref_crop_borders_continuous_vertical">Obreži rubove za kontinuirano okomito listanje</string>
     <string name="pref_crop_borders_pager">Obreži rubove za listanje pojedinačnih stranica</string>
     <string name="rating_string">Znakovni niz ocjene</string>
-    <string name="allow_deduplication">Dozvoli ukljanjanje duplikata:</string>
-    <string name="deduplication_mode">Modus uklanjanja duplikata:</string>
-    <string name="no_dedupe">Bez uklanjanja duplikata</string>
-    <string name="dedupe_priority">Uklanjaj duplikate prema prioritetu</string>
     <string name="mangadex_preffered_source_summary">Postavi odabrani MangaDex izvor, ovo će se koristiti za praćenje i za mnoge druge funkcije u aplikaciji</string>
     <string name="tag_filtering_threshhold_summary">Oznake možete lagano filtrirati dodavanjem na stranicu Moje oznake E/ExHentai s negativnom težinom. Ako galerija ima oznake čija je zbrojna težina ispod ove vrijednosti, filtrira se iz prikaza. Ovaj prag se može postaviti između −9999 i 0. Aktualno: %1$d</string>
     <string name="tag_watching_threshhold_summary">Nedavno prenesene galerije će se uključiti u ekran praćenja ako ima barem jednu oznaku praćenja s pozitivnom težinom, a zbroj težina na oznakama praćenja iznosi tu vrijednost ili više. Ovaj se prag može postaviti između 0 i 9999. Aktualno: %1$d</string>

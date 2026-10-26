@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Actions -->
     <string name="action_skip_entry">Jangan pindahkan</string>
     <string name="action_search_manually">Cari secara manual</string>
     <string name="action_migrate_now">Pindahkan sekarang</string>
@@ -34,7 +33,7 @@
     <string name="use_original_images_on">Saat ini menggunakan gambar asli</string>
     <string name="use_original_images_off">Saat ini menggunakan gambar yang telah di-resample</string>
     <string name="watched_tags">Tag yang telah dibaca</string>
-    <string name="watched_tags_summary">Membuka tampilan web ke halaman tag yang telah Anda tonton di E/ExHentai</string>
+    <string name="watched_tags_summary">Membuka tampilan web ke halaman tag yang pernah Anda tonton di E/ExHentai</string>
     <string name="watched_tags_exh">Tag yang Telah Ditonton di ExHentai</string>
     <string name="tag_filtering_threshold">Batasan Pemfilteran Tag</string>
     <string name="tag_filtering_threshhold_error">Harus diantara -9999 dan 0!</string>
@@ -265,11 +264,6 @@
     <!-- Manga Info Edit -->
     <string name="reset_tags">Reset Tag</string>
     <string name="add_tag">Tambahkan Tag</string>
-    <string name="title_hint">Judul: %1$s</string>
-    <string name="description_hint">Deskripsi: %1$s</string>
-    <string name="author_hint">Author: %1$s</string>
-    <string name="artist_hint">Artist: %1$s</string>
-    <string name="thumbnail_url_hint">Cuplikan Url: %1$s</string>
     <!-- Browse -->
     <!-- Sources Tab -->
     <string name="find_in_another_source">Cari di sumber yang lain</string>
@@ -301,7 +295,6 @@
     <!-- Extension section -->
     <string name="ext_redundant">Duplikat</string>
     <string name="redundant_extension_message">Ekstensi ini duplikat dan tak akan digunakan di dalam versi Komikku ini.</string>
-    <!-- Migration -->
     <string name="select_sources">Pilih sumber</string>
     <string name="select_none">Tak ada yang dipilih</string>
     <string name="migration">Migrasi</string>
@@ -473,7 +466,6 @@
     <string name="manga_updates_id">Manga pembaruan id</string>
     <string name="anime_planet_id">ID Planet Anime</string>
     <string name="translated">Diterjemahkan</string>
-    <!-- Extra gallery info -->
     <string name="is_visible">Visible: %1$s</string>
     <string name="language_translated">%1$s TR</string>
     <!-- Merged manga -->
@@ -488,13 +480,6 @@
     <string name="merged_references_invalid">Referensi penggabungan tidak valid</string>
     <string name="merged_chapter_updates_error">Tombol kesalahan pembaruan bab</string>
     <string name="merged_toggle_download_chapters_error">Tombol kesalahan unduhan bab</string>
-    <string name="allow_deduplication">Izinkan deduplikasi:</string>
-    <string name="deduplication_mode">Mode deduplikasi:</string>
-    <string name="deduplication_entry_info">Info manga:</string>
-    <string name="no_dedupe">Tak dideduplikasi</string>
-    <string name="dedupe_priority">Deduplikasi menurut prioritas</string>
-    <string name="dedupe_most_chapters">Tampilkan sumber dengan bab terbanyak</string>
-    <string name="dedupe_highest_chapter">Tampilkan sumber dengan nomor bab tertinggi</string>
     <!-- MangaDex -->
     <string name="md_follows_unfollowed">Tak diikuti</string>
     <string name="mangadex_sync_follows_to_library">Sinkronkan MangaDex ke pustaka</string>
@@ -506,7 +491,6 @@
     <string name="random">Acak</string>
     <string name="mangadex_push_favorites_to_mangadex">Sinkronkan pustaka ke MangaDex</string>
     <string name="mangadex_push_favorites_to_mangadex_summary">Sinkronkan manga yang bukan berasal dari MangaDex dan masukkan ke MDList.</string>
-    <!-- Scanlator filters -->
     <string name="select_scanlators">Grup pemindai yang ditampilkan</string>
     <!-- Similar -->
     <string name="similar">Mirip dengan %1$s</string>
@@ -649,11 +633,7 @@
     <string name="similar_titles">Judul serupa</string>
     <string name="pref_tracker_resolve_using_source_metadata">Pilih entri dengan sumber metadata</string>
     <string name="pref_tracker_resolve_using_source_metadata_summary">Secara otomatis memilih judul yang cocok bila sumber menyediakan tautan ke trackers. Saat ini didukung oleh MangaDex</string>
-    <string name="rec_search">Temukan rekomendasi umum</string>
     <string name="rec_hide_library_entries">Sembunyikan hasil yang terdapat di pustaka</string>
-    <string name="rec_services_to_search">Layanan rekomendasi untuk dicari</string>
-    <string name="rec_group_source">Layanan rekomendasi</string>
-    <string name="rec_group_tracker">Rekomendasi pelacak</string>
     <string name="rec_common_recommendations">Rekomendasi umum</string>
     <string name="rec_search_short">Temukan rekomendasi</string>
     <string name="rec_no_results">Rekomendasi tidak ditemukan</string>

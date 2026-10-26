@@ -337,11 +337,6 @@
     <string name="merge_duplicate">¡Esta entrada unida es un duplicado!</string>
     <string name="reset_tags">Restablecer etiquetas</string>
     <string name="reset_info">Restablecer información</string>
-    <string name="title_hint">Título: %1$s</string>
-    <string name="description_hint">Descripción: %1$s</string>
-    <string name="author_hint">Autor: %1$s</string>
-    <string name="artist_hint">Artista: %1$s</string>
-    <string name="thumbnail_url_hint">Url de miniatura: %1$s</string>
     <string name="add_tags">Añadir etiquetas</string>
     <string name="action_share_combined_page">Compartir página combinada</string>
     <string name="entry_merged">¡Entrada unida!</string>
@@ -561,10 +556,6 @@
     <string name="aged">Envejecido</string>
     <string name="media_id">Identificación de medios</string>
     <string name="rating_string">Cadena de valoración</string>
-    <string name="no_dedupe">Sin deduplicar</string>
-    <string name="dedupe_priority">Eliminar duplicados por prioridad</string>
-    <string name="dedupe_most_chapters">Mostrar fuentes con la mayor cantidad de capítulos</string>
-    <string name="dedupe_highest_chapter">Mostrar fuente con el número de capítulo más alto</string>
     <string name="mangadex_preffered_source">Fuente preferida de MangaDex</string>
     <string name="relation_preserialization">Pre-serialización</string>
     <string name="gallery_adder_uri_map_to_chapter_error">¡Error en el mapa URI de origen al capítulo!</string>
@@ -589,9 +580,6 @@
     <string name="merged_references_invalid">Referencias combinadas no válidas</string>
     <string name="merged_chapter_updates_error">Error al alternar actualizaciones de capítulos</string>
     <string name="merged_toggle_download_chapters_error">Error al alternar la descarga del capítulo</string>
-    <string name="allow_deduplication">Permitir deduplicación:</string>
-    <string name="deduplication_mode">Modo deduplicación:</string>
-    <string name="deduplication_entry_info">Entrada de información:</string>
     <string name="mangadex_add_to_follows">Añadir a seguidores MangaDex</string>
     <string name="random">Aleatorio</string>
     <string name="mangadex_push_favorites_to_mangadex">Sincronizar títulos de la biblioteca con MangaDex</string>
@@ -608,7 +596,6 @@
     <string name="favorites_sync_unable_to_add_to_remote">No se puede añadir la galería al servidor remoto: \'%1$s\' (GID: %2$s)!</string>
     <string name="rec_error_title">La búsqueda no se ha podido completar</string>
     <string name="rec_common_recommendations">Recomendaciones en común</string>
-    <string name="rec_group_tracker">Recomendaciones del serv. de seguimiento</string>
     <string name="rec_error_string">Hubo un error al buscar: %1$s</string>
     <string name="rec_no_results">No se ha encontrado ninguna recomendación</string>
     <string name="rec_search_short">Buscar recomendaciones</string>
@@ -616,9 +603,6 @@
     <string name="rec_collecting">Obteniendo recomendaciones</string>
     <string name="rec_processing_state">Procesando elemento %1$d de %2$d</string>
     <string name="similar_titles">Títulos similares</string>
-    <string name="rec_search">Buscar recomendaciones en común</string>
-    <string name="rec_group_source">Recomendaciones de la fuente</string>
-    <string name="rec_services_to_search">Servicios de recomendación en los que buscar</string>
     <string name="rec_hide_library_entries">Ocultar elementos que ya estén en la biblioteca</string>
     <string name="pref_tracker_resolve_using_source_metadata_summary">Encuentra la obra automáticamente si la fuente ya enlaza con el servicio de seguimiento. De momento solo funciona en MangaDex</string>
     <string name="pref_tracker_resolve_using_source_metadata">Elegir obras a través de los metadatos de la fuente</string>

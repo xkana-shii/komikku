@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Actions -->
     <string name="action_skip_entry">Ne pas migrer</string>
     <string name="action_search_manually">Rechercher manuellement</string>
     <string name="action_migrate_now">Migrer maintenant</string>
@@ -158,8 +157,6 @@
     <string name="biometric_lock_time_conflicts">Un temps de verrouillage entre en conflit avec celui qui existe déjà !</string>
     <string name="biometric_lock_start_time">Entrez l\'heure de début</string>
     <string name="biometric_lock_end_time">Entrez l\'heure de fin</string>
-    <!-- Reader Settings -->
-<!--        <string name="download_threads">Download threads</string>-->
     <string name="download_threads_summary">Des valeurs plus élevées peuvent accélérer considérablement le téléchargement des images, mais peuvent également déclencher des Bannissement. La valeur recommandée est 2 ou 3. La valeur actuelle est : %s</string>
     <string name="aggressively_load_pages">Charger les pages de manière agressive</string>
     <string name="aggressively_load_pages_summary">Téléchargez lentement le chapitre entier pendant la lecture au lieu de simplement charger les pages que vous consultez.</string>
@@ -233,7 +230,6 @@
     <!-- Extension section -->
     <string name="ext_redundant">Redondante</string>
     <string name="redundant_extension_message">Cette extension est redondante et ne sera pas utilisée dans cette version de Komikku.</string>
-    <!-- Migration -->
     <string name="select_sources">Sélectionnez les sources</string>
     <string name="select_none">Ne rien sélectionner</string>
     <string name="migration">Migration</string>
@@ -409,9 +405,6 @@
     <string name="merged_references_invalid">Références de fusion non valides</string>
     <string name="merged_chapter_updates_error">Erreur de basculement des mises à jour de chapitre</string>
     <string name="merged_toggle_download_chapters_error">Erreur de basculement des chapitres de téléchargement</string>
-    <string name="allow_deduplication">Autoriser la déduplication :</string>
-    <string name="deduplication_mode">Mode de déduplication :</string>
-    <string name="deduplication_entry_info">Info de la série :</string>
     <!-- MangaDex -->
     <string name="md_follows_unfollowed">Désabonné</string>
     <string name="mangadex_sync_follows_to_library">Synchronise les séries MangaDex dans votre bibliothèque</string>
@@ -533,7 +526,6 @@
     <string name="pref_smooth_scroll">Défilement automatique fluide</string>
     <string name="eh_boost_page_invalid">Cette page ne peut pas être boostée (page invalide) !</string>
     <string name="shift_double_pages">Décaler d\'une page</string>
-    <string name="title_hint">Titre : %1$s</string>
     <string name="could_not_find_entry">Impossible de trouver la série dans la source !</string>
     <string name="save_search_invalid">Recherche sauvegardée invalide, les filtres ont changé</string>
     <string name="biometric_lock_days_summary">Jours de verrouillage de l\'application</string>
@@ -591,12 +583,8 @@
     <string name="archive_mode_cache_to_disk">Copier sur le disque</string>
     <string name="pref_archive_reader_mode">Mode lecteur d\'archives</string>
     <string name="entry_merged">Série fusionnée !</string>
-    <string name="description_hint">Description : %1$s</string>
     <string name="merged_already">Cette série est déjà fusionnée avec la série actuelle !</string>
-    <string name="author_hint">Auteur : %1$s</string>
-    <string name="artist_hint">Artiste : %1$s</string>
     <string name="merge_duplicate">Cette série fusionnée est un doublon !</string>
-    <string name="thumbnail_url_hint">Url de la vignette : %1$s</string>
     <string name="action_copy_first_page">Copier la première page</string>
     <string name="automatic_search_error">Erreur lors de la recherche automatique !</string>
     <string name="save_search_invalid_name">Nom de la recherche sauvegardée invalide</string>
@@ -615,7 +603,6 @@
     <string name="favorites_sync_unable_to_add_to_remote">Impossible d\'ajouter une galerie au serveur distant : \'%1$s\' (GID : %2$s) !</string>
     <string name="relation_main_story">Histoire principale</string>
     <string name="delete_tag">Supprimer le tag</string>
-    <string name="dedupe_most_chapters">Afficher la source avec le plus grand nombre de chapitres</string>
     <string name="relation_similar">Similaire</string>
     <string name="relation_side_story">Histoire parallèle</string>
     <string name="relation_sequel">Suite</string>
@@ -623,7 +610,6 @@
     <string name="relation_adapted_from">Adapté de</string>
     <string name="relation_shared_universe">Univers partagé</string>
     <string name="relation_monochrome">Monochrome</string>
-    <string name="no_dedupe">Pas de déduplication</string>
     <string name="relation_spin_off">Spin-off</string>
     <string name="no_valid_entry">Aucune série valide n\'a été sélectionnée</string>
     <string name="action_stop">Stop</string>
@@ -634,8 +620,6 @@
     <string name="pref_clear_page_preview_cache">Effacer le cache de l\'aperçu de la page</string>
     <string name="page_preview_page_go_to">Aller à</string>
     <string name="translated">Traduit</string>
-    <string name="dedupe_priority">Déduplication par priorité</string>
-    <string name="dedupe_highest_chapter">Afficher la source dont le numéro de chapitre est le plus élevé</string>
     <string name="relation_doujinshi">Doujinshi</string>
     <string name="relation_same_franchise">Même franchise</string>
     <string name="relation_alternate_story">Histoire alternative</string>
@@ -653,11 +637,7 @@
     <string name="scan_qr_code">Scannez un QR code</string>
     <string name="encrypt_database_message"><![CDATA[<font color=\'red\'> L'ACTIVER CRÉERA UNE NOUVELLE BASE DE DONNÉES. SUIVEZ CES ÉTAPES POUR CONSERVER VOS DONNÉES<br>1. PARAMÈTRES -> DONNÉES ET STOCKAGE -> CRÉER UNE SAUVEGARDE<br>2. PARAMÈTRES DE L'APPAREIL -> APPLICATION -> MIHON -> EFFACER LES DONNÉES<br>3. OUVRIR L'APPLICATION ET ACTIVER CETTE OPTION<br>4. PARAMÈTRES DE L'APPAREIL -> APPLICATION -> MIHON -> FORCER L'ARRÊT<br>5. PARAMÈTRES -> DONNÉES ET STOCKAGE -> RESTAURER UNE SAUVEGARDE</font>]]></string>
     <string name="pref_crop_borders_pager">Rogner les bordures Pagé</string>
-    <string name="rec_search">Rechercher des recommandations similaire</string>
     <string name="rec_hide_library_entries">Masquer les séries déjà présentes dans votre bibliothèque</string>
-    <string name="rec_services_to_search">Services de recommandation pour la recherche</string>
-    <string name="rec_group_source">Recommandations de sources</string>
-    <string name="rec_group_tracker">Recommandations du service de suivi</string>
     <string name="rec_common_recommendations">Recommandations communes</string>
     <string name="rec_search_short">Trouver des recommandations</string>
     <string name="rec_no_results">Aucune recommandation trouvée</string>
