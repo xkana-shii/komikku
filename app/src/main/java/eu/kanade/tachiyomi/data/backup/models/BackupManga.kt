@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.data.backup.models
 
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
@@ -15,8 +16,10 @@ import tachiyomi.domain.manga.model.Manga
 class BackupManga(
     // in 1.x some of these values have different names
     // SY -->
+    @EncodeDefault
     @ProtoNumber(1) var source: Long = 0,
     // url is called key in 1.x
+    @EncodeDefault
     @ProtoNumber(2) var url: String = "",
     // SY <--
     @ProtoNumber(3) var title: String = "",

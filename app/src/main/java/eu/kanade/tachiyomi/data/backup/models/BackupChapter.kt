@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.JsonObjectEmptyBytes
@@ -15,7 +16,9 @@ class BackupChapter(
     // in 1.x some of these values have different names
     // url is called key in 1.x
     // SY -->
+    @EncodeDefault
     @ProtoNumber(1) var url: String = "",
+    @EncodeDefault
     @ProtoNumber(2) var name: String = "",
     // SY <--
     @ProtoNumber(3) var scanlator: String? = null,

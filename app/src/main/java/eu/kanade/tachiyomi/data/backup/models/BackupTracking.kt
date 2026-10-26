@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.core.common.extensions.toEpochMillisOrZero
@@ -10,8 +11,10 @@ import tachiyomi.domain.track.model.Track
 data class BackupTracking(
     // in 1.x some of these values have different types or names
     // SY -->
+    @EncodeDefault
     @ProtoNumber(1) var syncId: Int = 0,
     // LibraryId is not null in 1.x
+    @EncodeDefault
     @ProtoNumber(2) var libraryId: Long = 0,
     // SY <--
     @Deprecated("Use mediaId instead", level = DeprecationLevel.WARNING)

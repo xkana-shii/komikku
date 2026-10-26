@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import tachiyomi.domain.category.model.Category
@@ -7,6 +8,7 @@ import tachiyomi.domain.category.model.Category
 @Serializable
 class BackupCategory(
     // SY -->
+    @EncodeDefault
     @ProtoNumber(1) var name: String = "",
     // SY <--
     @ProtoNumber(2) var order: Long = 0,

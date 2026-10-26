@@ -1,11 +1,13 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 
 @Serializable
 data class Backup(
     // SY -->
+    @EncodeDefault
     @ProtoNumber(1) val backupManga: List<BackupManga> = emptyList(),
     // SY <--
     @ProtoNumber(2) var backupCategories: List<BackupCategory> = emptyList(),

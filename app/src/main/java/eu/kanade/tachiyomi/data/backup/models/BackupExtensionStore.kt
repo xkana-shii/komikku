@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import mihon.domain.extension.model.ExtensionStore
@@ -7,10 +8,14 @@ import mihon.domain.extension.model.ExtensionStore
 @Serializable
 class BackupExtensionStore(
     // SY -->
+    @EncodeDefault
     @ProtoNumber(1) var indexUrl: String = "",
+    @EncodeDefault
     @ProtoNumber(2) var name: String = "",
     @ProtoNumber(3) var badgeLabel: String? = null,
+    @EncodeDefault
     @ProtoNumber(5) var signingKey: String = "",
+    @EncodeDefault
     @ProtoNumber(4) var contactWebsite: String = "",
     @ProtoNumber(6) var contactDiscord: String? = null,
     @ProtoNumber(7) var isLegacy: Boolean? = null,
