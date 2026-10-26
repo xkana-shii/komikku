@@ -58,7 +58,6 @@ import eu.kanade.presentation.more.settings.widget.TrailingWidgetBuffer
 import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.tachiyomi.data.backup.create.BackupCreateWorker
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreWorker
-import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.export.LibraryExporter
 import eu.kanade.tachiyomi.data.export.LibraryExporter.ExportOptions
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
@@ -72,9 +71,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.app.di.appGraph
+import mihon.data.cache.ChapterCache
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.rounded.QrCodeScanner
@@ -346,7 +345,7 @@ object SettingsDataScreen : SearchableSettings {
         val chapterCache = remember { context.appGraph.chapterCache }
         var cacheReadableSizeSema by remember { mutableIntStateOf(0) }
         val cacheReadableSize by produceState("", cacheReadableSizeSema) {
-            value = withContext(Dispatchers.IO) { chapterCache.readableSize }
+            value = chapterCache.readableSize()
         }
 
         // SY -->
@@ -386,7 +385,7 @@ object SettingsDataScreen : SearchableSettings {
                     onClick = {
                         scope.launch {
                             try {
-                                val deletedFiles = withContext(Dispatchers.IO) { chapterCache.clear() }
+                                val deletedFiles = chapterCache.clear()
                                 context.toast(context.stringResource(MR.strings.cache_deleted, deletedFiles))
                                 cacheReadableSizeSema++
                             } catch (e: Exception) {
