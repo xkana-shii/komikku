@@ -159,6 +159,12 @@ object HomeScreen : Screen() {
 
             BackHandler(enabled = tabNavigator.current != LibraryTab, onBack = goToLibraryTab)
 
+            // SY -->
+            LaunchedEffect(tabNavigator.current) {
+                BrowseTab.onBrowseTabSelected(tabNavigator.current == BrowseTab)
+            }
+            // SY <--
+
             LaunchedEffect(Unit) {
                 launch {
                     librarySearchEvent.receiveAsFlow().collectLatest {

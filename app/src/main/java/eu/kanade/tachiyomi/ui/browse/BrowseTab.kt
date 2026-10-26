@@ -65,6 +65,25 @@ data object BrowseTab : Tab {
         switchToExtensionTabChannel.trySend(Unit)
     }
 
+    // SY -->
+    private val feedRefreshChannel = Channel<Unit>(Channel.CONFLATED)
+    private var feedRefreshNotified = false
+
+    /**
+     * Notify the feed to refresh on browse-tab selection
+     */
+    fun onBrowseTabSelected(isSelected: Boolean) {
+        if (isSelected) {
+            if (!feedRefreshNotified) {
+                feedRefreshNotified = true
+                feedRefreshChannel.trySend(Unit)
+            }
+        } else {
+            feedRefreshNotified = false
+        }
+    }
+    // SY <--
+
     @Composable
     override fun Content() {
         val context = LocalContext.current
@@ -84,6 +103,11 @@ data object BrowseTab : Tab {
         // KMK <--
 
         // SY -->
+        LaunchedEffect(Unit) {
+            feedRefreshChannel.receiveAsFlow().collect {
+                feedViewModel.init()
+            }
+        }
         val tabs = when {
             hideFeedTab ->
                 listOf(

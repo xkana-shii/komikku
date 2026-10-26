@@ -106,7 +106,6 @@ class FeedViewModel(
     private val feedJobs = mutableMapOf<Long, Job>()
     private val latestFeedResults = LatestFeedResults()
     // KNS <--
-    var pushed: Boolean = false
 
     init {
         // KNS --> Observe effective configurations and reload only rows whose configuration changed.
@@ -153,7 +152,6 @@ class FeedViewModel(
     }
 
     fun init() {
-        pushed = false
         // KNS --> Keep request bookkeeping on the ViewModel's main dispatcher.
         viewModelScope.launch {
             val newItems = mutableState.value.items?.map { it.copy(results = null) } ?: return@launch
