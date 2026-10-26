@@ -281,6 +281,12 @@
     <string name="eh_autoscroll_freq_invalid">Frecuencia inválida</string>
     <string name="eh_retry_all_help">Ayuda de reintentar todo</string>
     <string name="eh_autoscroll">Desplazamiento automático</string>
+    <string name="eh_autoscroll_gestures">Gestos de desplazamiento automático</string>
+    <string name="eh_autoscroll_gestures_help">Ayuda de los gestos de desplazamiento automático</string>
+    <string name="eh_autoscroll_gestures_help_message">Desplazamiento automático activado:\n- Toca para pausar o reanudar\n- Desliza hacia arriba o hacia abajo para ajustar la velocidad\n- Arrastra con dos dedos para desplazarte manualmente\n- Desliza hacia los lados para detenerte\n\nDesplazamiento automático desactivado:\n- Desliza hacia los lados para empezar\n\nCierra el menú del lector para usar los gestos.</string>
+    <string name="eh_autoscroll_gesture_toasts">Mensajes de gestos</string>
+    <string name="eh_autoscroll_gesture_toasts_help">Ayuda de los mensajes de gestos</string>
+    <string name="eh_autoscroll_gesture_toasts_help_message">Cuando esta opción está activada, el lector muestra mensajes breves tras los gestos de desplazamiento automático, como iniciar, pausar, reanudar, detener, cambiar la velocidad o avanzar por el capítulo.\n\nCuando esta opción está desactivada, los gestos funcionan igual, pero no se muestran esos mensajes.</string>
     <string name="eh_boost_page">Potenciar página</string>
     <string name="eh_retry_all_help_message">Vuelve a añadir todas las páginas erróneas a la cola de descarga.</string>
     <string name="eh_boost_page_help">Ayuda de potenciado de página</string>

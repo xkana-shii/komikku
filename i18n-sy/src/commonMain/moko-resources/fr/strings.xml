@@ -187,6 +187,12 @@
     <!-- Reader -->
     <!-- Reader Actions -->
     <string name="eh_autoscroll">Défilement automatique</string>
+    <string name="eh_autoscroll_gestures">Gestes de défilement automatique</string>
+    <string name="eh_autoscroll_gestures_help">Aide des gestes de défilement automatique</string>
+    <string name="eh_autoscroll_gestures_help_message">Défilement automatique activé :\n- Appuyez pour mettre en pause ou reprendre\n- Balayez vers le haut ou le bas pour régler la vitesse\n- Faites glisser avec deux doigts pour défiler manuellement\n- Balayez sur le côté pour arrêter\n\nDéfilement automatique désactivé :\n- Balayez sur le côté pour démarrer\n\nFermez le menu du lecteur pour utiliser les gestes.</string>
+    <string name="eh_autoscroll_gesture_toasts">Messages des gestes</string>
+    <string name="eh_autoscroll_gesture_toasts_help">Aide des messages des gestes</string>
+    <string name="eh_autoscroll_gesture_toasts_help_message">Lorsque cette option est activée, le lecteur affiche de brefs messages après les gestes de défilement automatique, par exemple pour le démarrage, la pause, la reprise, l\'arrêt, les changements de vitesse ou le passage au chapitre suivant.\n\nLorsque cette option est désactivée, les gestes fonctionnent de la même manière, mais ces messages ne sont pas affichés.</string>
     <string name="eh_retry_all">Tout réessayer</string>
     <string name="eh_boost_page">Booster la page</string>
     <string name="eh_autoscroll_help">Aide du défilement automatique</string>

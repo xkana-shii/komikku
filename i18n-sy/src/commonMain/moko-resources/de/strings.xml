@@ -187,6 +187,12 @@
     <string name="aggressively_load_pages">Seiten aggresiv laden</string>
     <string name="reader_preload_amount">Anzahl der vorgeladenen Seiten</string>
     <string name="eh_autoscroll">Auto-Scroll</string>
+    <string name="eh_autoscroll_gestures">Auto-Scroll-Gesten</string>
+    <string name="eh_autoscroll_gestures_help">Hilfe zu Auto-Scroll-Gesten</string>
+    <string name="eh_autoscroll_gestures_help_message">Auto-Scroll an:\n- Tippen zum Pausieren oder Fortsetzen\n- Nach oben oder unten wischen, um die Geschwindigkeit anzupassen\n- Mit zwei Fingern ziehen, um manuell zu scrollen\n- Seitwärts wischen zum Stoppen\n\nAuto-Scroll aus:\n- Seitwärts wischen zum Starten\n\nSchließe das Reader-Menü, um die Gesten zu verwenden.</string>
+    <string name="eh_autoscroll_gesture_toasts">Gesten-Hinweise</string>
+    <string name="eh_autoscroll_gesture_toasts_help">Hilfe zu Gesten-Hinweisen</string>
+    <string name="eh_autoscroll_gesture_toasts_help_message">Wenn diese Option aktiviert ist, zeigt der Reader nach Auto-Scroll-Gesten kurze Hinweise an, etwa für Start, Pause, Fortsetzen, Stopp, Geschwindigkeitsänderungen oder das Weiterblättern im Kapitel.\n\nWenn diese Option deaktiviert ist, funktionieren die Gesten weiterhin gleich, aber diese Hinweise werden nicht angezeigt.</string>
     <string name="reader_preload_amount_20_pages">20 Seiten</string>
     <string name="eh_retry_all">Alle wiederholen</string>
     <string name="eh_boost_page">Seite boosten</string>

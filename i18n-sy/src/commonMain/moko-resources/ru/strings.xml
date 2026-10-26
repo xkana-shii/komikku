@@ -288,6 +288,12 @@
     <!-- Reader -->
     <!-- Reader Actions -->
     <string name="eh_autoscroll">Автопрокрутка</string>
+    <string name="eh_autoscroll_gestures">Жесты автопрокрутки</string>
+    <string name="eh_autoscroll_gestures_help">Справка по жестам автопрокрутки</string>
+    <string name="eh_autoscroll_gestures_help_message">Автопрокрутка включена:\n- Коснитесь, чтобы приостановить или продолжить\n- Проведите вверх или вниз, чтобы изменить скорость\n- Потяните двумя пальцами для ручной прокрутки\n- Проведите в сторону, чтобы остановить\n\nАвтопрокрутка выключена:\n- Проведите в сторону, чтобы запустить\n\nЗакройте меню читалки, чтобы использовать жесты.</string>
+    <string name="eh_autoscroll_gesture_toasts">Уведомления о жестах</string>
+    <string name="eh_autoscroll_gesture_toasts_help">Справка по уведомлениям о жестах</string>
+    <string name="eh_autoscroll_gesture_toasts_help_message">Если этот параметр включён, читалка показывает короткие уведомления после жестов автопрокрутки: запуск, пауза, продолжение, остановка, изменение скорости или переход по главе.\n\nЕсли этот параметр выключен, жесты работают так же, но эти уведомления не отображаются.</string>
     <string name="eh_retry_all">Повторить всё</string>
     <string name="eh_boost_page">Ускорение страницы</string>
     <string name="eh_autoscroll_help">Автопрокрутка (Подсказка)</string>

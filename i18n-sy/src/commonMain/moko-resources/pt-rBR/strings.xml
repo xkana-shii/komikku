@@ -212,6 +212,12 @@
     <!-- Reader -->
     <!-- Reader Actions -->
     <string name="eh_autoscroll">Rolagem automática</string>
+    <string name="eh_autoscroll_gestures">Gestos de rolagem automática</string>
+    <string name="eh_autoscroll_gestures_help">Ajuda dos gestos de rolagem automática</string>
+    <string name="eh_autoscroll_gestures_help_message">Rolagem automática ativada:\n- Toque para pausar ou retomar\n- Deslize para cima ou para baixo para ajustar a velocidade\n- Arraste com dois dedos para rolar manualmente\n- Deslize para o lado para parar\n\nRolagem automática desativada:\n- Deslize para o lado para iniciar\n\nFeche o menu do leitor para usar os gestos.</string>
+    <string name="eh_autoscroll_gesture_toasts">Mensagens dos gestos</string>
+    <string name="eh_autoscroll_gesture_toasts_help">Ajuda das mensagens dos gestos</string>
+    <string name="eh_autoscroll_gesture_toasts_help_message">Quando esta opção está ativada, o leitor mostra mensagens breves após os gestos de rolagem automática, como iniciar, pausar, retomar, parar, mudanças de velocidade ou avanço no capítulo.\n\nQuando esta opção está desativada, os gestos continuam funcionando da mesma forma, mas essas mensagens não são exibidas.</string>
     <string name="eh_retry_all">Tentar tudo novamente</string>
     <string name="eh_boost_page">Impulsionar página</string>
     <string name="eh_autoscroll_help">Sobre Rolagem automática</string>
