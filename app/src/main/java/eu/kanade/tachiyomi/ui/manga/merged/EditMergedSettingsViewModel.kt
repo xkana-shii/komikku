@@ -57,8 +57,8 @@ class EditMergedSettingsViewModel(
             val entries: List<Entry>,
             val pendingConfirm: PendingConfirm?,
         ) : State {
-            val isPriorityOrder: Boolean
-                get() = sortMode == MergeSettings.CHAPTER_SORT_PRIORITY
+            val isReorderEnabled: Boolean
+                get() = MergeSettings.isReorderEnabled(sortMode)
 
             val infoIndex: Int
                 get() = entries.indexOfFirst { it.entry.mangaId == infoMangaId }.coerceAtLeast(0)

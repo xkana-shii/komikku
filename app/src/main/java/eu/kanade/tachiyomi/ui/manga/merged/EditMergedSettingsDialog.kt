@@ -107,7 +107,7 @@ fun EditMergedSettingsDialog(
 
     val entries = ready.entries
     val sortMode = ready.sortMode
-    val isPriorityOrder = ready.isPriorityOrder
+    val isReorderEnabled = ready.isReorderEnabled
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -136,14 +136,14 @@ fun EditMergedSettingsDialog(
                         },
                         infoIndex = ready.infoIndex,
                         onInfoIndexChange = viewModel::onInfoIndexChange,
-                        canReorder = isPriorityOrder,
+                        canReorder = isReorderEnabled,
                     )
                 }
                 items(entries, key = { it.entry.id }) { entry ->
                     ReorderableItem(reorderableState, key = entry.entry.id) {
                         MergedEntryItem(
                             entry = entry,
-                            canReorder = isPriorityOrder,
+                            canReorder = isReorderEnabled,
                             onMangaClick = { onMangaClick(entry.entry) },
                             onDeleteClick = { viewModel.requestDelete(entry.entry) },
                             onToggleDownloadsClick = { viewModel.requestToggleDownloads(entry.entry.id) },

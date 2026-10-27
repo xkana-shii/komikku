@@ -19,5 +19,15 @@ data class MergeSettings(
         const val CHAPTER_SORT_MOST_CHAPTERS = 2
         const val CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER = 3
         // KUN <--
+
+        /**
+         * Modes where reordering the entries matters: NONE groups every chapter by entry priority,
+         * PRIORITY keeps the highest-priority copy of each number.
+         *
+         * KUN: upstream also lists its `CHAPTER_SORT_NO_DEDUPE`; this fork has no such mode.
+         */
+        fun isReorderEnabled(chapterSortMode: Int): Boolean =
+            chapterSortMode == CHAPTER_SORT_NONE ||
+                chapterSortMode == CHAPTER_SORT_PRIORITY
     }
 }
