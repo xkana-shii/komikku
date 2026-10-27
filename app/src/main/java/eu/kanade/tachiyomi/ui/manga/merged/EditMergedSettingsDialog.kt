@@ -59,7 +59,8 @@ import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.MergeSettings
+import tachiyomi.domain.manga.model.MergedEntry
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -72,7 +73,7 @@ import tachiyomi.presentation.core.screens.LoadingScreen
 fun EditMergedSettingsDialog(
     viewModel: EditMergedSettingsViewModel,
     onDismissRequest: () -> Unit,
-    onMangaClick: (MergedMangaReference) -> Unit,
+    onMangaClick: (MergedEntry) -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -138,15 +139,15 @@ fun EditMergedSettingsDialog(
                         canReorder = isPriorityOrder,
                     )
                 }
-                items(entries, key = { it.reference.id }) { entry ->
-                    ReorderableItem(reorderableState, key = entry.reference.id) {
+                items(entries, key = { it.entry.id }) { entry ->
+                    ReorderableItem(reorderableState, key = entry.entry.id) {
                         MergedEntryItem(
                             entry = entry,
                             canReorder = isPriorityOrder,
-                            onMangaClick = { onMangaClick(entry.reference) },
-                            onDeleteClick = { viewModel.requestDelete(entry.reference) },
-                            onToggleDownloadsClick = { viewModel.requestToggleDownloads(entry.reference.id) },
-                            onToggleUpdatesClick = { viewModel.requestToggleUpdates(entry.reference.id) },
+                            onMangaClick = { onMangaClick(entry.entry) },
+                            onDeleteClick = { viewModel.requestDelete(entry.entry) },
+                            onToggleDownloadsClick = { viewModel.requestToggleDownloads(entry.entry.id) },
+                            onToggleUpdatesClick = { viewModel.requestToggleUpdates(entry.entry.id) },
                         )
                     }
                 }
@@ -387,7 +388,7 @@ private fun ReorderableCollectionItemScope.MergedEntryItem(
                     .weight(1f)
                     .padding(horizontal = 12.dp),
             )
-            val downloads = entry.reference.downloadChapters
+            val downloads = entry.entry.downloadChapters
             EntryToggleButton(
                 icon = if (downloads) MaterialSymbols.Rounded.Download else MaterialSymbols.Rounded.FileDownloadOff,
                 contentDescription = stringResource(MR.strings.pref_download_new),
@@ -397,7 +398,7 @@ private fun ReorderableCollectionItemScope.MergedEntryItem(
             EntryToggleButton(
                 icon = MaterialSymbols.Rounded.Sync,
                 contentDescription = stringResource(SYMR.strings.fetch_chapter_updates),
-                active = entry.reference.getChapterUpdates,
+                active = entry.entry.fetchChapterUpdates,
                 onClick = onToggleUpdatesClick,
             )
             Box {
@@ -485,23 +486,23 @@ private val DedupeModes = listOf(
         // KUN -->
         // No CHAPTER_SORT_NO_DEDUPE: the fork dropped that mode (Komikku #1194), so its numbering
         // has no gap and "Keep all" is the only dedupe-off state.
-        sortModes = listOf(MergedMangaReference.CHAPTER_SORT_NONE),
+        sortModes = listOf(MergeSettings.CHAPTER_SORT_NONE),
         // KUN <--
         label = SYMR.strings.merge_dedupe_keep_all,
         summary = SYMR.strings.merge_dedupe_keep_all_summary,
     ),
     DedupeMode(
-        sortModes = listOf(MergedMangaReference.CHAPTER_SORT_PRIORITY),
+        sortModes = listOf(MergeSettings.CHAPTER_SORT_PRIORITY),
         label = SYMR.strings.merge_dedupe_priority,
         summary = SYMR.strings.merge_dedupe_priority_summary,
     ),
     DedupeMode(
-        sortModes = listOf(MergedMangaReference.CHAPTER_SORT_MOST_CHAPTERS),
+        sortModes = listOf(MergeSettings.CHAPTER_SORT_MOST_CHAPTERS),
         label = SYMR.strings.merge_dedupe_most,
         summary = SYMR.strings.merge_dedupe_most_summary,
     ),
     DedupeMode(
-        sortModes = listOf(MergedMangaReference.CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER),
+        sortModes = listOf(MergeSettings.CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER),
         label = SYMR.strings.merge_dedupe_highest,
         summary = SYMR.strings.merge_dedupe_highest_summary,
     ),

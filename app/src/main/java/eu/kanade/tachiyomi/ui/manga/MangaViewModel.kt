@@ -177,8 +177,8 @@ import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.GetMangaWithChapters
+import tachiyomi.domain.manga.interactor.GetMergedEntriesById
 import tachiyomi.domain.manga.interactor.GetMergedMangaById
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
 import tachiyomi.domain.manga.interactor.SetMangaUserInfo
@@ -188,7 +188,7 @@ import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.MergedEntry
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.applyFilter
 import tachiyomi.domain.manga.model.asMangaCover
@@ -258,7 +258,7 @@ class MangaViewModel(
     // KNS <--
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
     private val getMergedMangaById: GetMergedMangaById,
-    private val getMergedReferencesById: GetMergedReferencesById,
+    private val getMergedEntriesById: GetMergedEntriesById,
     private val smartSearchMerge: SmartSearchMerge,
     private val networkToLocalManga: NetworkToLocalManga,
     private val getFlatMetadata: GetFlatMetadataById,
@@ -367,14 +367,17 @@ class MangaViewModel(
             combine(
                 getMergedMangaById.subscribe(mangaId)
                     .distinctUntilChanged(),
-                getMergedReferencesById.subscribe(mangaId)
+                getMergedEntriesById.subscribe(mangaId)
                     .distinctUntilChanged(),
-            ) { manga, references ->
+            ) { manga, entries ->
                 if (manga.isNotEmpty()) {
                     MergedMangaData(
-                        references,
+                        entries,
                         manga.associateBy { it.id },
-                        references.map { it.mangaSourceId }.distinct()
+                        // KUN -->
+                        // The entry itself no longer stores the source; take it from its manga row.
+                        manga.map { it.source }.distinct()
+                            // KUN <--
                             .map { sourceManager.getOrStub(it) },
                     )
                 } else {
@@ -2374,7 +2377,7 @@ class MangaViewModel(
 
 // SY -->
 data class MergedMangaData(
-    val references: List<MergedMangaReference>,
+    val entries: List<MergedEntry>,
     val manga: Map<Long, Manga>,
     val sources: List<Source>,
 )

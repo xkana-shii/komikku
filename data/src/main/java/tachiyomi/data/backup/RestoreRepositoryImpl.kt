@@ -19,6 +19,8 @@ import tachiyomi.data.manga.MergedMangaMapper
 import tachiyomi.domain.backup.model.RestoredForkState
 import tachiyomi.domain.backup.model.RestoredHistory
 import tachiyomi.domain.backup.model.RestoredManga
+import tachiyomi.domain.backup.model.RestoredMergeSettings
+import tachiyomi.domain.backup.model.RestoredMergedEntry
 import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.Chapter
@@ -27,8 +29,8 @@ import tachiyomi.domain.history.model.History
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
-import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.manga.model.toMangaUserInfoUpdate
+import tachiyomi.domain.manga.repository.MangaMergeRepository
 import tachiyomi.domain.manga.repository.MangaMetadataRepository
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.track.model.Track
@@ -176,9 +178,10 @@ class RestoreRepositoryImpl(
         entry.forkState?.let { restoreForkState(manga, it, isSync, incomingIsNewerOrEqual, incomingIsStrictlyNewer) }
         // KNS <--
         // SY -->
-        restoreMergedMangaReferencesForManga(
+        restoreMergedManga(
             manga.id,
-            entry.mergedMangaReferences,
+            entry.mergedEntries,
+            entry.mergeSettings,
             // KUN -->
             isSync,
             incomingIsNewerOrEqual,
@@ -806,6 +809,123 @@ class RestoreRepositoryImpl(
             }
         }
     }
+
+    // SY -->
+    // KUN -->
+    /**
+     * Restore a merged entry's children and its merge-level settings.
+     *
+     * An ordinary restore and a losing sync payload only add missing entries and refresh the ones
+     * they know: an older payload cannot know which children the user merged afterwards. A winning
+     * sync payload can also delete, but only when its marker says the list is complete
+     * ([mergedMangaReferencesIncluded]) and every incoming entry resolves to a local manga: an
+     * unresolvable entry means the payload was built against a library this device does not have.
+     * A legacy payload that omitted the field entirely must never delete — absence is "unknown",
+     * not "no children".
+     *
+     * The writes go straight to the merged tables, never through `MangaMergeRepository`: this is a
+     * sync apply, so the merge parent's version must not be bumped.
+     */
+    private suspend fun restoreMergedManga(
+        mergeMangaId: Long,
+        backupMergedEntries: List<RestoredMergedEntry>,
+        mergeSettings: RestoredMergeSettings?,
+        isSync: Boolean,
+        incomingIsNewerOrEqual: Boolean,
+        mergedMangaReferencesIncluded: Boolean?,
+    ) {
+        val payloadWins = isSync && incomingIsNewerOrEqual
+        val mayDelete = mergedMangaReferencesIncluded == true
+        if (!payloadWins && backupMergedEntries.isEmpty() && mergeSettings == null) return
+        if (payloadWins && !mayDelete && backupMergedEntries.isEmpty()) return
+
+        // Only this merge's entries: the tables are shared by every merge, so reconciling against
+        // them all would touch unrelated merges.
+        val dbEntries = database.mergedQueries
+            .selectEntriesByMergeId(mergeMangaId, MergedMangaMapper::mapEntry)
+            .awaitAsList()
+
+        // Resolve every incoming entry to a local child first: the identity of an entry is the
+        // manga row, not the (source, url) pair the payload carries.
+        val resolved = backupMergedEntries.mapNotNull { incoming ->
+            val childId = database.mangaQueries
+                .getMangaByUrlAndSource(incoming.mangaSourceId, incoming.mangaUrl, MangaMapper::mapManga)
+                .awaitAsOneOrNull()
+                ?.id
+                ?: return@mapNotNull null
+            childId to incoming
+        }
+        // An incoming child this device does not have means the payload was built against another
+        // library, so it may neither delete nor rewrite what is here: add-only, like a payload that
+        // lost the version comparison.
+        val addOnly = !payloadWins || resolved.size != backupMergedEntries.size
+        if (addOnly && payloadWins && resolved.size != backupMergedEntries.size) {
+            logcat(LogPriority.DEBUG) {
+                "Sync kept merged entries of manga $mergeMangaId: an incoming child is not local"
+            }
+        }
+
+        // Settings: the info entry is stored by id, so it is resolved the same way. A losing sync
+        // payload must not rewrite them; a manual restore is authoritative.
+        if (!isSync || incomingIsNewerOrEqual) {
+            mergeSettings?.let { settings ->
+                val infoMangaId = if (settings.infoMangaSourceId != 0L) {
+                    database.mangaQueries
+                        .getMangaByUrlAndSource(settings.infoMangaSourceId, settings.infoMangaUrl, MangaMapper::mapManga)
+                        .awaitAsOneOrNull()
+                        ?.id
+                } else {
+                    null
+                }
+                database.mergedQueries.insertMerge(
+                    mangaId = mergeMangaId,
+                    chapterSortMode = settings.chapterSortMode.toLong(),
+                    infoMangaId = infoMangaId,
+                )
+            }
+        }
+
+        val dbByChildId = dbEntries.associateBy { it.mangaId }
+        val incomingChildIds = resolved.mapTo(mutableSetOf()) { it.first }
+        database.transaction {
+            // Delete only when the payload said its list is complete and every incoming entry could
+            // be resolved; a legacy or partial payload is add-only.
+            if (!addOnly && mayDelete) {
+                dbEntries.forEach { entry ->
+                    if (entry.mangaId !in incomingChildIds) {
+                        database.mergedQueries.deleteEntryById(entry.id)
+                    }
+                }
+            }
+            resolved.forEach { (childId, incoming) ->
+                val dbEntry = dbByChildId[childId]
+                if (dbEntry == null) {
+                    database.mergedQueries.insertEntry(
+                        mergeId = mergeMangaId,
+                        mangaId = childId,
+                        fetchChapterUpdates = incoming.fetchChapterUpdates,
+                        downloadChapters = incoming.downloadChapters,
+                        chapterPriority = incoming.chapterPriority.toLong(),
+                    )
+                } else if (
+                    !addOnly &&
+                    (
+                        dbEntry.fetchChapterUpdates != incoming.fetchChapterUpdates ||
+                            dbEntry.downloadChapters != incoming.downloadChapters ||
+                            dbEntry.chapterPriority != incoming.chapterPriority
+                        )
+                ) {
+                    database.mergedQueries.updateEntryFromRestore(
+                        id = dbEntry.id,
+                        fetchChapterUpdates = incoming.fetchChapterUpdates,
+                        downloadChapters = incoming.downloadChapters,
+                        chapterPriority = incoming.chapterPriority.toLong(),
+                        mangaId = childId,
+                    )
+                }
+            }
+        }
+    }
     // KUN <--
 
     // KNS -->
@@ -927,161 +1047,6 @@ class RestoreRepositoryImpl(
                 database.excluded_scanlatorQueries.insert(manga.id, it)
             }
         }
-    }
-    // KUN <--
-
-    // SY -->
-    /**
-     * Restore the merged manga references for the merged manga.
-     *
-     * An ordinary restore and a losing sync payload only add missing references: an older payload
-     * cannot know which children the user merged afterwards. A winning sync payload can also update
-     * settings, and may replace the entry's references only when its marker says the list is complete
-     * ([mergedMangaReferencesIncluded]). A legacy payload that omitted the field entirely must never
-     * delete: absence is "unknown", not "no children". Even a complete payload only deletes when every
-     * incoming reference resolves to a local child, because an unresolvable reference means the
-     * payload was built against a library this device does not have.
-     *
-     * @param mergeMangaId the merged manga for the references
-     * @param mergedMangaReferences the references for the merged manga
-     */
-    private suspend fun restoreMergedMangaReferencesForManga(
-        mergeMangaId: Long,
-        mergedMangaReferences: List<MergedMangaReference>,
-        // KUN -->
-        isSync: Boolean,
-        incomingIsNewerOrEqual: Boolean,
-        mergedMangaReferencesIncluded: Boolean?,
-        // KUN <--
-    ) {
-        // KUN -->
-        // A merge reference lives outside the manga row, so the payload needs its own marker before
-        // it may delete anything. Absence from a losing/manual payload is not a removal either.
-        val payloadWins = isSync && incomingIsNewerOrEqual
-        val mayDelete = mergedMangaReferencesIncluded == true
-        if (!payloadWins) {
-            // Nothing to add: skip the per-manga query entirely.
-            if (mergedMangaReferences.isEmpty()) return
-        } else if (!mayDelete && mergedMangaReferences.isEmpty()) {
-            // An unmarked empty list says nothing about the entry's children. Preserve local
-            // references and skip the query, which also keeps the common non-merged entry cheap.
-            return
-        }
-
-        // Only this merge entry's references: the `merged` table is shared by every merge, so reading
-        // (and reconciling against) the whole table would touch unrelated merges.
-        val dbMergedMangaReferences = database.mergedQueries
-            .selectByMergeId(mergeMangaId, MergedMangaMapper::map)
-            .awaitAsList()
-        if (!payloadWins) {
-            insertMissingMergedMangaReferences(mergeMangaId, mergedMangaReferences, dbMergedMangaReferences)
-            return
-        }
-
-        // Last copy wins, matching how duplicate rows are handled elsewhere in a restore.
-        val incomingByKey = mergedMangaReferences.associateBy { it.mangaSourceId to it.mangaUrl }
-        val resolvedMangaIds = incomingByKey.keys.associateWith { (sourceId, url) ->
-            database.mangaQueries
-                .getMangaByUrlAndSource(sourceId, url, MangaMapper::mapManga)
-                .awaitAsOneOrNull()
-                ?.id
-        }
-        if (resolvedMangaIds.values.any { it == null }) {
-            // Some incoming reference has no local child. Keep every local reference and only add the
-            // ones this device can resolve.
-            logcat(LogPriority.DEBUG) {
-                "Sync kept merged references of manga $mergeMangaId: an incoming child is not local"
-            }
-            insertMissingMergedMangaReferences(mergeMangaId, mergedMangaReferences, dbMergedMangaReferences)
-            return
-        }
-
-        val dbByKey = dbMergedMangaReferences.associateBy { it.mangaSourceId to it.mangaUrl }
-        database.transaction {
-            // Delete the local references this merge no longer has, but only when the payload said its
-            // list is complete. A legacy payload is add/update-only.
-            if (mayDelete) {
-                dbByKey.forEach { (key, reference) ->
-                    if (key !in incomingByKey) {
-                        database.mergedQueries.deleteById(reference.id)
-                    }
-                }
-            }
-            incomingByKey.forEach { (key, incoming) ->
-                val dbReference = dbByKey[key]
-                val resolvedMangaId = resolvedMangaIds.getValue(key)!!
-                if (dbReference == null) {
-                    insertMergedMangaReference(mergeMangaId, incoming, resolvedMangaId)
-                } else if (
-                    // Refresh the resolved child id too: a child that was deleted and re-added
-                    // leaves `merged.manga_id = NULL` (ON DELETE SET NULL) until this write.
-                    dbReference.mangaId != resolvedMangaId ||
-                    dbReference.isInfoManga != incoming.isInfoManga ||
-                    dbReference.getChapterUpdates != incoming.getChapterUpdates ||
-                    dbReference.chapterSortMode != incoming.chapterSortMode ||
-                    dbReference.chapterPriority != incoming.chapterPriority ||
-                    dbReference.downloadChapters != incoming.downloadChapters
-                ) {
-                    database.mergedQueries.updateFromRestore(
-                        id = dbReference.id,
-                        infoManga = incoming.isInfoManga,
-                        getChapterUpdates = incoming.getChapterUpdates,
-                        chapterSortMode = incoming.chapterSortMode.toLong(),
-                        chapterPriority = incoming.chapterPriority.toLong(),
-                        downloadChapters = incoming.downloadChapters,
-                        mangaId = resolvedMangaId,
-                    )
-                }
-            }
-        }
-        // KUN <--
-    }
-
-    // KUN -->
-    /**
-     * Adds the references [incoming] has that [existing] does not, resolving each child against the
-     * local library. Anything unresolvable is skipped: a reference to a manga this device does not
-     * have cannot be inserted. Never updates or deletes.
-     */
-    private suspend fun insertMissingMergedMangaReferences(
-        mergeMangaId: Long,
-        incoming: List<MergedMangaReference>,
-        existing: List<MergedMangaReference>,
-    ) {
-        val existingKeys = existing.mapTo(mutableSetOf()) { it.mangaSourceId to it.mangaUrl }
-        incoming.forEach { reference ->
-            val key = reference.mangaSourceId to reference.mangaUrl
-            if (key in existingKeys) return@forEach
-            val mangaId = database.mangaQueries
-                .getMangaByUrlAndSource(
-                    reference.mangaSourceId,
-                    reference.mangaUrl,
-                    MangaMapper::mapManga,
-                )
-                .awaitAsOneOrNull()
-                ?.id
-                ?: return@forEach
-            insertMergedMangaReference(mergeMangaId, reference, mangaId)
-        }
-    }
-
-    private suspend fun insertMergedMangaReference(
-        mergeMangaId: Long,
-        reference: MergedMangaReference,
-        mangaId: Long,
-    ) {
-        database.mergedQueries.insert(
-            infoManga = reference.isInfoManga,
-            getChapterUpdates = reference.getChapterUpdates,
-            chapterSortMode = reference.chapterSortMode.toLong(),
-            chapterPriority = reference.chapterPriority.toLong(),
-            downloadChapters = reference.downloadChapters,
-            mergeId = mergeMangaId,
-            mergeUrl = reference.mergeUrl,
-            mangaId = mangaId,
-            mangaUrl = reference.mangaUrl,
-            mangaSource = reference.mangaSourceId,
-        ).awaitAsOneOrNull()
     }
     // KUN <--
 

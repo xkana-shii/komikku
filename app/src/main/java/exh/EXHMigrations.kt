@@ -1,7 +1,7 @@
 package exh
 
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
-import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
+import eu.kanade.tachiyomi.data.backup.models.BackupMergedEntry
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.source.online.all.Hitomi
 import exh.source.EH_OLD_ID
@@ -79,7 +79,7 @@ object EXHMigrations {
     /**
      * Migrate old source ID of delegated sources in old backup
      */
-    fun migrateBackupMergedMangaReference(mergeReference: BackupMergedMangaReference): BackupMergedMangaReference {
+    fun migrateBackupMergedEntry(mergeReference: BackupMergedEntry): BackupMergedEntry {
         return when (mergeReference.mangaSourceId) {
             NHENTAI_OLD_ID -> mergeReference.copy(
                 mangaSourceId = NHENTAI_SOURCE_ID,

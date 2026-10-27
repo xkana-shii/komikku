@@ -102,7 +102,7 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
+import tachiyomi.domain.manga.interactor.GetMergedEntriesById
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.DeleteTrack
@@ -295,7 +295,7 @@ data class TrackInfoDialogHomeScreen(
         private val sourceManager: SourceManager,
         private val getFlatMetadataById: GetFlatMetadataById,
         private val getMangaById: GetManga,
-        private val getMergedReferencesById: GetMergedReferencesById,
+        private val getMergedEntriesById: GetMergedEntriesById,
         // KMK <--
         private val refreshTracks: RefreshTracks,
         // KNS -->
@@ -412,12 +412,16 @@ data class TrackInfoDialogHomeScreen(
                 return getMangaById.await(mangaId)
             }
             item.tracker as EnhancedTracker
-            val references = getMergedReferencesById.await(mangaId)
-            return references.distinctBy { it.mangaSourceId }.firstNotNullOfOrNull { ref ->
-                sourceManager.get(ref.mangaSourceId)
+            // KUN -->
+            // An entry stores the child's manga id, so its source comes from the manga row.
+            val entries = getMergedEntriesById.await(mangaId)
+            return entries.firstNotNullOfOrNull { entry ->
+                val manga = getMangaById.await(entry.mangaId)
+                manga?.let { sourceManager.get(it.source) }
                     ?.takeIf(item.tracker::accept)
-                    ?.let { ref.mangaId?.let { mangaId -> getMangaById.await(mangaId) } }
+                    ?.let { manga }
             }
+            // KUN <--
         }
         // KMK <--
 

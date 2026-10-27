@@ -17,7 +17,7 @@ class SourceMigrationRepositoryImpl(
     override suspend fun migrateSource(newId: Long, oldId: Long) {
         database.ehQueries.migrateSource(newId, oldId)
         // KUN -->
-        database.ehQueries.migrateMergedSource(newId, oldId)
+        // Merge entries follow their child manga, which `migrateSource` already moved.
         // Migrate saved searches & feeds
         database.ehQueries.migrateSourceSavedSearch(newId, oldId)
         database.ehQueries.migrateSourceFeed(newId, oldId)

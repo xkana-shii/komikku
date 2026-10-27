@@ -156,11 +156,16 @@ LIMIT 1;
 -- The fork's sort-mode numbering differs from upstream's (PRIORITY is 1, not 2), and the bookmark
 -- flags filter is kept.
 -- KUN <--
+-- Returns the chapters a merged entry shows, deduped per its sort mode (MergeSettings.CHAPTER_SORT_*).
 getDedupedMergedChapters:
 WITH refs AS (
     SELECT manga_id, chapter_priority
-    FROM merged
+    FROM merged_entry
+    -- KUN -->
+    -- Shares the `:mangaId` parameter with the bookmark-flag join below, so the repository keeps
+    -- passing one merge id.
     WHERE merge_id = :mangaId
+    -- KUN <--
 ),
 base AS (
     SELECT
@@ -238,7 +243,7 @@ ORDER BY B.chapter_priority, B.manga_id, B.remote_order;
 getScanlatorsByMergeId:
 SELECT DISTINCT remote_scanlator
 FROM (
-    SELECT manga_id FROM merged WHERE merge_id = ?
+    SELECT manga_id FROM merged_entry WHERE merge_id = ?
 ) AS M
 JOIN chapter
 ON chapter.manga_id = M.manga_id;

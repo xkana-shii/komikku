@@ -136,7 +136,6 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.GetMergedMangaById
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
@@ -184,7 +183,6 @@ class ReaderViewModel(
     private val sourcePreferences: SourcePreferences,
     private val getFlatMetadataById: GetFlatMetadataById,
     private val getMergedMangaById: GetMergedMangaById,
-    private val getMergedReferencesById: GetMergedReferencesById,
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
     // SY <--
     private val coverManager: LocalCoverManager,
@@ -554,13 +552,6 @@ class ReaderViewModel(
                 } else {
                     null
                 }
-                val mergedReferences = if (source is MergedSource) {
-                    runBlocking {
-                        getMergedReferencesById.await(manga.id)
-                    }
-                } else {
-                    emptyList()
-                }
                 val mergedManga = if (source is MergedSource) {
                     runBlocking {
                         getMergedMangaById.await(manga.id)
@@ -603,7 +594,6 @@ class ReaderViewModel(
                     sourceManager = sourceManager,
                     readerPrefs = readerPreferences,
                     sourcePreferences = sourcePreferences,
-                    mergedReferences = mergedReferences,
                     mergedManga = mergedManga,
                     // SY <--
                 )

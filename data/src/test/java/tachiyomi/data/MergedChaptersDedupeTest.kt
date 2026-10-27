@@ -10,7 +10,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tachiyomi.data.chapter.ChapterMapper
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.MergeSettings
 
 /**
  * Guards the merge dedupe that lives in the queries: `getDedupedMergedChapters` and the library
@@ -26,11 +26,11 @@ class MergedChaptersDedupeTest {
     @Test
     fun `no dedupe returns every chapter of every child`() {
         runBlocking {
-            val driver = seededDriver(MergedMangaReference.CHAPTER_SORT_NONE)
+            val driver = seededDriver(MergeSettings.CHAPTER_SORT_NONE)
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
 
-                chapters(database, MergedMangaReference.CHAPTER_SORT_NONE) shouldContainExactly listOf("/a1", "/a2", "/b1", "/b3")
+                chapters(database, MergeSettings.CHAPTER_SORT_NONE) shouldContainExactly listOf("/a1", "/a2", "/b1", "/b3")
                 libraryTotal(driver) shouldBe 4L
             } finally {
                 driver.close()
@@ -41,12 +41,12 @@ class MergedChaptersDedupeTest {
     @Test
     fun `priority dedupe keeps the chapter of the higher priority source`() {
         runBlocking {
-            val driver = seededDriver(MergedMangaReference.CHAPTER_SORT_PRIORITY)
+            val driver = seededDriver(MergeSettings.CHAPTER_SORT_PRIORITY)
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
 
                 // Child A has priority 1, child B priority 2, so the shared chapter 1 is A's.
-                chapters(database, MergedMangaReference.CHAPTER_SORT_PRIORITY) shouldContainExactly listOf("/a1", "/a2", "/b3")
+                chapters(database, MergeSettings.CHAPTER_SORT_PRIORITY) shouldContainExactly listOf("/a1", "/a2", "/b3")
                 libraryTotal(driver) shouldBe 3L
             } finally {
                 driver.close()
@@ -57,12 +57,12 @@ class MergedChaptersDedupeTest {
     @Test
     fun `most chapters mode keeps the source with the most chapters`() {
         runBlocking {
-            val driver = seededDriver(MergedMangaReference.CHAPTER_SORT_MOST_CHAPTERS)
+            val driver = seededDriver(MergeSettings.CHAPTER_SORT_MOST_CHAPTERS)
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
 
                 // A tie on the count is broken by the lower manga id, so child A wins.
-                chapters(database, MergedMangaReference.CHAPTER_SORT_MOST_CHAPTERS) shouldContainExactly listOf("/a1", "/a2")
+                chapters(database, MergeSettings.CHAPTER_SORT_MOST_CHAPTERS) shouldContainExactly listOf("/a1", "/a2")
                 libraryTotal(driver) shouldBe 2L
             } finally {
                 driver.close()
@@ -73,12 +73,12 @@ class MergedChaptersDedupeTest {
     @Test
     fun `highest chapter number mode keeps the source that reaches furthest`() {
         runBlocking {
-            val driver = seededDriver(MergedMangaReference.CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER)
+            val driver = seededDriver(MergeSettings.CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER)
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
 
                 // Child B reaches chapter 3, child A only chapter 2.
-                chapters(database, MergedMangaReference.CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER) shouldContainExactly listOf("/b1", "/b3")
+                chapters(database, MergeSettings.CHAPTER_SORT_HIGHEST_CHAPTER_NUMBER) shouldContainExactly listOf("/b1", "/b3")
                 libraryTotal(driver) shouldBe 2L
             } finally {
                 driver.close()
@@ -105,13 +105,16 @@ class MergedChaptersDedupeTest {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also {
             Database.Schema.create(it).await()
         }
-        // The merge parent is a manga row of the merge source, holding the sort mode.
+        // KUN -->
+        // The sort mode lives on the merge row now; the entries only carry their priority. The
+        // `manga_source = 6969` self-reference that used to hold it is gone.
+        // KUN <--
         driver.insertManga(id = MERGE_ID, sourceId = MERGED_SOURCE_ID, url = "/merge")
         driver.insertManga(id = 1L, sourceId = 1L, url = "/a")
         driver.insertManga(id = 2L, sourceId = 1L, url = "/b")
-        driver.insertReference(mergeId = MERGE_ID, mangaId = null, priority = 0, sortMode = sortMode)
-        driver.insertReference(mergeId = MERGE_ID, mangaId = 1L, priority = 1, sortMode = sortMode)
-        driver.insertReference(mergeId = MERGE_ID, mangaId = 2L, priority = 2, sortMode = sortMode)
+        driver.insertMerge(mergeId = MERGE_ID, sortMode = sortMode)
+        driver.insertReference(mergeId = MERGE_ID, mangaId = 1L, priority = 1)
+        driver.insertReference(mergeId = MERGE_ID, mangaId = 2L, priority = 2)
         driver.insertChapter(mangaId = 1L, url = "/a1", number = "1")
         driver.insertChapter(mangaId = 1L, url = "/a2", number = "2")
         driver.insertChapter(mangaId = 2L, url = "/b1", number = "1")
@@ -147,16 +150,22 @@ class MergedChaptersDedupeTest {
         )
     }
 
-    private suspend fun SqlDriver.insertReference(mergeId: Long, mangaId: Long?, priority: Long, sortMode: Int) {
-        val source = if (mangaId == null) MERGED_SOURCE_ID else 1L
-        val mangaUrl = if (mangaId == null) "/merge" else "/m$mangaId"
+    private suspend fun SqlDriver.insertMerge(mergeId: Long, sortMode: Int) {
         execute(
             """
-            INSERT INTO merged(
-                info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority,
-                download_chapters, merge_id, merge_url, manga_id, manga_url, manga_source
+            INSERT INTO merge(manga_id, chapter_sort_mode, info_manga_id)
+            VALUES ($mergeId, $sortMode, 1)
+            """.trimIndent(),
+        )
+    }
+
+    private suspend fun SqlDriver.insertReference(mergeId: Long, mangaId: Long, priority: Long) {
+        execute(
+            """
+            INSERT INTO merged_entry(
+                merge_id, manga_id, fetch_chapter_updates, download_chapters, chapter_priority
             ) VALUES (
-                0, 1, $sortMode, $priority, 0, $mergeId, '/merge', ${mangaId ?: "NULL"}, '$mangaUrl', $source
+                $mergeId, $mangaId, 1, 0, $priority
             )
             """.trimIndent(),
         )

@@ -7,7 +7,6 @@ import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.interactor.UpdateMergedSettings
-import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.repository.MangaMergeRepository
 
 @Inject
@@ -19,19 +18,20 @@ class MergedMangaDedupeModeMigration(
     override val version: Float = 77f
 
     override suspend fun invoke(migrationContext: MigrationContext): Boolean = withIOContext {
-        // Get merged manga references from db
-        val dbMergedMangaReferences = mangaMergeRepository.getAllReferences()
+        // KUN -->
+        // The sort mode moved from the shared `merged` self-reference row to one `merge` row per
+        // merge, so the shift is applied per merge instead of per reference.
+        val mergedMangas = mangaMergeRepository.getMergedManga()
 
-        dbMergedMangaReferences.map {
-            MergeMangaSettingsUpdate(
-                id = it.id,
-                chapterSortMode = (it.chapterSortMode - 1).coerceAtLeast(0),
-                isInfoManga = null,
-                getChapterUpdates = null,
-                chapterPriority = null,
-                downloadChapters = null,
+        mergedMangas.forEach { mergedManga ->
+            val settings = mangaMergeRepository.getMergeSettings(mergedManga.id) ?: return@forEach
+            updateMergedSettings.awaitMerge(
+                mergeId = mergedManga.id,
+                chapterSortMode = (settings.chapterSortMode - 1).coerceAtLeast(0),
+                infoMangaId = settings.infoMangaId,
             )
-        }.let { updateMergedSettings.awaitAll(it) }
+        }
+        // KUN <--
         return@withIOContext true
     }
 }

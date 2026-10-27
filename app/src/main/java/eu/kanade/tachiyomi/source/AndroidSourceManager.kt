@@ -44,7 +44,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mihon.core.metro.AppCoroutineScope
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
+import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.manga.interactor.GetMergedEntriesById
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.repository.StubSourceRepository
 import tachiyomi.domain.source.service.SourceManager
@@ -67,7 +68,10 @@ class AndroidSourceManager(
     private val sourcePreferences: SourcePreferences,
     // SY <--
     // KMK -->
-    private val getMergedReferencesById: GetMergedReferencesById,
+    private val getMergedEntriesById: GetMergedEntriesById,
+    // KUN -->
+    private val getMangaById: GetManga,
+    // KUN <--
     // KMK <--
 ) : SourceManager {
 
@@ -298,9 +302,14 @@ class AndroidSourceManager(
 
     // KMK -->
     override suspend fun getMergedSources(mangaId: Long): List<Source> {
-        val sources = getMergedReferencesById.await(mangaId)
-        return sources.distinctBy { it.mangaSourceId }
-            .map { getOrStub(it.mangaSourceId) }
+        // KUN -->
+        // An entry stores the child's manga id, so its source comes from the manga row.
+        val entries = getMergedEntriesById.await(mangaId)
+        return entries.distinctBy { it.mangaId }
+            .mapNotNull { getMangaById.await(it.mangaId)?.source }
+            .distinct()
+            .map { getOrStub(it) }
+        // KUN <--
     }
     // KMK <--
 

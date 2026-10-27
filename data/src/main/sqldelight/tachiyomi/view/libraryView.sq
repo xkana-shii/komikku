@@ -67,14 +67,14 @@ SELECT
     -- Same as the non-merged branch above, but over every manga of the merge group
     CASE WHEN EXISTS (
         SELECT 0 FROM excluded_scanlator
-        WHERE excluded_scanlator.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+        WHERE excluded_scanlator.manga_id IN (SELECT manga_id FROM merged_entry WHERE merge_id = M.id)
     )
     THEN (
         SELECT max(history.read_at)
         FROM history
         JOIN chapter
         ON chapter.id = history.chapter_id
-        WHERE history.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+        WHERE history.manga_id IN (SELECT manga_id FROM merged_entry WHERE merge_id = M.id)
         AND NOT EXISTS (
             SELECT 0 FROM excluded_scanlator
             WHERE excluded_scanlator.manga_id = history.manga_id
@@ -84,7 +84,7 @@ SELECT
     ELSE (
         SELECT max(history.read_at)
         FROM history
-        WHERE history.manga_id IN (SELECT manga_id FROM merged WHERE merge_id = M.id)
+        WHERE history.manga_id IN (SELECT manga_id FROM merged_entry WHERE merge_id = M.id)
     )
     END AS lastRead,
     -- KUN <--
@@ -109,16 +109,15 @@ LEFT JOIN(
             chapter.user_bookmark,
             ME.merge_id,
             ME.chapter_priority,
-            coalesce(SELF.chapter_sort_mode, 0) AS sort_mode
+            MG.chapter_sort_mode AS sort_mode
         FROM chapter
         LEFT JOIN excluded_scanlator
         ON chapter.manga_id = excluded_scanlator.manga_id
         AND chapter.remote_scanlator = excluded_scanlator.scanlator
-        JOIN merged AS ME
+        JOIN merged_entry AS ME
         ON ME.manga_id = chapter.manga_id
-        LEFT JOIN merged AS SELF
-        ON SELF.merge_id = ME.merge_id
-        AND SELF.manga_source = 6969
+        JOIN merge AS MG
+        ON MG.manga_id = ME.merge_id
         WHERE excluded_scanlator.scanlator IS NULL
     )
     -- KUN <--

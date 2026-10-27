@@ -60,7 +60,12 @@ class MigrationTest {
                 driver.triggerExists("insert_category_uid") shouldBe true
 
                 // Komikku/SY extra tables survive
-                driver.tableExists("merged") shouldBe true
+                // KUN -->
+                // `merged` was split into `merge` + `merged_entry` by 61.sqm.
+                driver.tableExists("merged") shouldBe false
+                driver.tableExists("merge") shouldBe true
+                driver.tableExists("merged_entry") shouldBe true
+                // KUN <--
                 driver.tableExists("search_metadata") shouldBe true
                 driver.tableExists("search_tags") shouldBe true
                 driver.tableExists("search_titles") shouldBe true
@@ -126,12 +131,20 @@ class MigrationTest {
                 driver.scalarLong("SELECT category_id FROM manga_category") shouldBe 1
                 driver.scalarLong("SELECT last_modified_at FROM manga_category") shouldBe 999
 
-                // The `merged` row that referenced a removed member follows it onto the survivor
-                driver.scalarLong("SELECT count(*) FROM merged") shouldBe 2
-                driver.scalarLong("SELECT manga_id FROM merged WHERE _id = 1") shouldBe 1
-                driver.scalarLong("SELECT merge_id FROM merged WHERE _id = 1") shouldBe 2
-                driver.scalarLong("SELECT manga_id FROM merged WHERE _id = 2") shouldBe 2
-                driver.scalarLong("SELECT merge_id FROM merged WHERE _id = 2") shouldBe 1
+                // The entry that referenced a removed member follows it onto the survivor
+                // KUN -->
+                // The split keeps one `merge` row per merge and one `merged_entry` row per child.
+                driver.scalarLong("SELECT count(*) FROM merge") shouldBe 2
+                driver.scalarLong("SELECT count(*) FROM merged_entry") shouldBe 2
+                driver.scalarLong("SELECT manga_id FROM merged_entry WHERE _id = 1") shouldBe 1
+                driver.scalarLong("SELECT merge_id FROM merged_entry WHERE _id = 1") shouldBe 2
+                driver.scalarLong("SELECT manga_id FROM merged_entry WHERE _id = 2") shouldBe 2
+                driver.scalarLong("SELECT merge_id FROM merged_entry WHERE _id = 2") shouldBe 1
+                // No `manga_source = 6969` self-reference in this seed, so there is no sort mode and
+                // no info entry to carry over.
+                driver.scalarLong("SELECT chapter_sort_mode FROM merge WHERE manga_id = 2") shouldBe 0
+                driver.scalarLong("SELECT count(*) FROM merge WHERE info_manga_id IS NOT NULL") shouldBe 0
+                // KUN <--
 
                 // The unique-keyed extras collapse to one row per surviving entry before the re-point
                 driver.scalarLong("SELECT count(*) FROM search_metadata") shouldBe 1

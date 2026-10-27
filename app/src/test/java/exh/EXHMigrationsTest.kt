@@ -2,7 +2,7 @@
 package exh
 
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
-import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
+import eu.kanade.tachiyomi.data.backup.models.BackupMergedEntry
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import eu.kanade.tachiyomi.source.online.all.Hitomi
 import exh.source.HITOMI_OLD_ID
@@ -27,8 +27,8 @@ class EXHMigrationsTest {
 
     @Test
     fun `a merge reference, saved search, feed and source filter follow the same move`() {
-        EXHMigrations.migrateBackupMergedMangaReference(
-            BackupMergedMangaReference(mangaSourceId = HITOMI_OLD_ID),
+        EXHMigrations.migrateBackupMergedEntry(
+            BackupMergedEntry(mangaSourceId = HITOMI_OLD_ID),
         ).mangaSourceId shouldBe delegatedHitomi
 
         EXHMigrations.migrateBackupSavedSearch(

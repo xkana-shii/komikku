@@ -15,12 +15,16 @@ import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.GetMangaBySource
-import tachiyomi.domain.manga.interactor.InsertMergedReference
+import tachiyomi.domain.manga.interactor.InsertMerge
+import tachiyomi.domain.manga.interactor.InsertMergedEntry
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.MergedEntry
 import tachiyomi.domain.source.service.SourceManager
 
+/**
+ * SY-specific file
+ */
 class MergedMangaRewriteMigration : Migration {
     override val version: Float = 7f
 
@@ -29,7 +33,8 @@ class MergedMangaRewriteMigration : Migration {
         val getMangaBySource = migrationContext.get<GetMangaBySource>() ?: return@withIOContext false
         val getManga = migrationContext.get<GetManga>() ?: return@withIOContext false
         val updateManga = migrationContext.get<UpdateManga>() ?: return@withIOContext false
-        val insertMergedReference = migrationContext.get<InsertMergedReference>() ?: return@withIOContext false
+        val insertMergedEntry = migrationContext.get<InsertMergedEntry>() ?: return@withIOContext false
+        val insertMerge = migrationContext.get<InsertMerge>() ?: return@withIOContext false
         val sourceManager = migrationContext.get<SourceManager>() ?: return@withIOContext false
         val deleteChapters = migrationContext.get<DeleteChapters>() ?: return@withIOContext false
         val updateChapter = migrationContext.get<UpdateChapter>() ?: return@withIOContext false
@@ -41,46 +46,36 @@ class MergedMangaRewriteMigration : Migration {
             }
             if (mangaConfigs.isNotEmpty()) {
                 val mangaToUpdate = mutableListOf<MangaUpdate>()
-                val mergedMangaReferences = mutableListOf<MergedMangaReference>()
+                val mergedEntries = mutableListOf<MergedEntry>()
+                val mergeInserts = mutableListOf<Triple<Long, Int, Long?>>()
                 mangaConfigs.onEach { mergedManga ->
                     val newFirst = mergedManga.second.children.firstOrNull()?.url?.let {
                         if (getManga.await(it, MERGED_SOURCE_ID) != null) return@onEach
                         mangaToUpdate += MangaUpdate(mergedManga.first.id) { url = it }
                         mergedManga.first.copy(url = it)
                     } ?: mergedManga.first
-                    mergedMangaReferences += MergedMangaReference(
-                        id = -1,
-                        isInfoManga = false,
-                        getChapterUpdates = false,
-                        chapterSortMode = 0,
-                        chapterPriority = 0,
-                        downloadChapters = false,
-                        mergeId = newFirst.id,
-                        mergeUrl = newFirst.url,
-                        mangaId = newFirst.id,
-                        mangaUrl = newFirst.url,
-                        mangaSourceId = MERGED_SOURCE_ID,
-                    )
-                    mergedManga.second.children.distinct().forEachIndexed { index, mangaSource ->
-                        val load = mangaSource.load(getManga, sourceManager) ?: return@forEachIndexed
-                        mergedMangaReferences += MergedMangaReference(
+                    val startCount = mergedEntries.size
+                    var infoMangaId: Long? = null
+                    mergedManga.second.children.distinct().forEach { mangaSource ->
+                        val load = mangaSource.load(getManga, sourceManager) ?: return@forEach
+                        if (infoMangaId == null) infoMangaId = load.manga.id
+                        mergedEntries += MergedEntry(
                             id = -1,
-                            isInfoManga = index == 0,
-                            getChapterUpdates = true,
-                            chapterSortMode = 0,
-                            chapterPriority = 0,
-                            downloadChapters = true,
                             mergeId = newFirst.id,
-                            mergeUrl = newFirst.url,
                             mangaId = load.manga.id,
-                            mangaUrl = load.manga.url,
-                            mangaSourceId = load.source.id,
+                            fetchChapterUpdates = true,
+                            downloadChapters = true,
+                            chapterPriority = 0,
                         )
+                    }
+                    if (mergedEntries.size > startCount) {
+                        mergeInserts += Triple(newFirst.id, 0, infoMangaId)
                     }
                 }
 
                 updateManga.awaitAll(mangaToUpdate)
-                insertMergedReference.awaitAll(mergedMangaReferences)
+                mergeInserts.forEach { (mangaId, sortMode, infoId) -> insertMerge.await(mangaId, sortMode, infoId) }
+                insertMergedEntry.awaitAll(mergedEntries)
 
                 val loadedMangaList = mangaConfigs
                     .map { it.second.children }

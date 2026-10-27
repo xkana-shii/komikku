@@ -444,7 +444,7 @@ AND (
 )
 -- SY -->
 AND id NOT IN (
-     SELECT DISTINCT manga_id FROM merged WHERE manga_id != merge_id
+    SELECT DISTINCT manga_id FROM merged_entry
 )
 -- SY <--
 ;

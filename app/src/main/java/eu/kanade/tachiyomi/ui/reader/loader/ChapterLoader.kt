@@ -19,7 +19,6 @@ import mihon.core.archive.epubReader
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
@@ -42,7 +41,6 @@ class ChapterLoader(
     private val sourceManager: SourceManager,
     private val readerPrefs: ReaderPreferences,
     private val sourcePreferences: SourcePreferences,
-    private val mergedReferences: List<MergedMangaReference>,
     private val mergedManga: Map<Long, Manga>?,
     // SY <--
 ) {
@@ -113,12 +111,12 @@ class ChapterLoader(
         return when {
             // SY -->
             source is MergedSource -> {
-                val mangaReference = mergedReferences.firstOrNull {
-                    it.mangaId == chapter.chapter.mangaId
-                } ?: error("Merge reference null")
-                val source = sourceManager.get(mangaReference.mangaSourceId)
-                    ?: error("Source ${mangaReference.mangaSourceId} was null")
+                // KUN -->
+                // The entry no longer carries its source, and the fork's map is nullable.
                 val manga = mergedManga?.get(chapter.chapter.mangaId) ?: error("Manga for merged chapter was null")
+                val source = sourceManager.get(manga.source)
+                    ?: error("Source ${manga.source} was null")
+                // KUN <--
                 val isMergedMangaDownloaded = downloadManager.isChapterDownloadedOnDisk(
                     chapterName = chapter.chapter.name,
                     chapterScanlator = chapter.chapter.scanlator,

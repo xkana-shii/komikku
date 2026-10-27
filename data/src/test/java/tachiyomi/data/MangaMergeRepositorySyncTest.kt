@@ -11,19 +11,19 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MangaMergeRepositoryImpl
-import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.MergedEntry
 
 /**
- * A merged reference lives in the `merged` table, not in the merge parent's manga row, so inserting,
- * editing or deleting one fires no manga trigger. Without an explicit bump of the merge parent, the
- * delta sync would never upload the change. The restore path writes `merged` directly and must not
- * go through this repository (the `is_syncing` guard on `bumpSyncVersion` backs that up).
+ * A merge entry lives in the `merged_entry` table and the merge-level settings in `merge`, not in the
+ * merge parent's manga row, so inserting, editing or deleting one fires no manga trigger. Without an
+ * explicit bump of the merge parent, the delta sync would never upload the change. The restore path
+ * writes the merged tables directly and must not go through this repository (the `is_syncing` guard
+ * on `bumpSyncVersion` backs that up).
  */
 class MangaMergeRepositorySyncTest {
 
     @Test
-    fun `inserting a reference bumps the merge parent`() {
+    fun `inserting an entry bumps the merge parent`() {
         runBlocking {
             val driver = newDriver()
             try {
@@ -31,8 +31,9 @@ class MangaMergeRepositorySyncTest {
                 val repository = MangaMergeRepositoryImpl(database)
                 driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
                 driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
+                driver.insertMerge(mergeId = 1L)
 
-                repository.insert(reference())
+                repository.insert(entry())
 
                 val parent = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
                 parent.version shouldBe 6L
@@ -44,7 +45,7 @@ class MangaMergeRepositorySyncTest {
     }
 
     @Test
-    fun `inserting many references bumps each merge parent once`() {
+    fun `inserting many entries bumps each merge parent once`() {
         runBlocking {
             val driver = newDriver()
             try {
@@ -53,16 +54,17 @@ class MangaMergeRepositorySyncTest {
                 driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
                 driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
                 driver.insertManga(id = 3L, sourceId = SOURCE, url = "/child/b")
+                driver.insertMerge(mergeId = 1L)
 
                 repository.insertAll(
                     listOf(
-                        reference(mangaId = 2L, mangaUrl = "/child/a"),
-                        reference(mangaId = 3L, mangaUrl = "/child/b"),
+                        entry(mangaId = 2L),
+                        entry(mangaId = 3L),
                     ),
                 )
 
                 val parent = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
-                // Both references belong to the same merge, so it is bumped once, not twice.
+                // Both entries belong to the same merge, so it is bumped once, not twice.
                 parent.version shouldBe 6L
             } finally {
                 driver.close()
@@ -71,7 +73,7 @@ class MangaMergeRepositorySyncTest {
     }
 
     @Test
-    fun `updating reference settings bumps the merge parent`() {
+    fun `updating entry settings bumps the merge parent`() {
         runBlocking {
             val driver = newDriver()
             try {
@@ -79,17 +81,13 @@ class MangaMergeRepositorySyncTest {
                 val repository = MangaMergeRepositoryImpl(database)
                 driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
                 driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
-                val referenceId = driver.insertReference(mergeId = 1L, mangaId = 2L, mangaUrl = "/child/a")
+                driver.insertMerge(mergeId = 1L, sortMode = 1)
+                val entryId = driver.insertEntry(mergeId = 1L, mangaId = 2L, priority = 1)
                 driver.resetManga(version = 5L, lastModifiedAt = 10L)
 
-                val updated = repository.updateSettings(
-                    MergeMangaSettingsUpdate(
-                        id = referenceId,
-                        isInfoManga = true,
-                        getChapterUpdates = false,
-                        chapterPriority = 5,
-                        downloadChapters = true,
-                        chapterSortMode = 1,
+                val updated = repository.updateAllEntries(
+                    listOf(
+                        entry(id = entryId, fetchChapterUpdates = false, downloadChapters = true, priority = 5),
                     ),
                 )
 
@@ -103,7 +101,7 @@ class MangaMergeRepositorySyncTest {
     }
 
     @Test
-    fun `saving unchanged reference settings does not bump the merge parent`() {
+    fun `saving unchanged entry settings does not bump the merge parent`() {
         runBlocking {
             val driver = newDriver()
             try {
@@ -111,19 +109,15 @@ class MangaMergeRepositorySyncTest {
                 val repository = MangaMergeRepositoryImpl(database)
                 driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
                 driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
-                val referenceId = driver.insertReference(mergeId = 1L, mangaId = 2L, mangaUrl = "/child/a")
+                driver.insertMerge(mergeId = 1L)
+                val entryId = driver.insertEntry(mergeId = 1L, mangaId = 2L, priority = 1)
                 driver.resetManga(version = 5L, lastModifiedAt = 10L)
                 val before = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
 
-                // Exactly the settings the reference already has.
-                val updated = repository.updateSettings(
-                    MergeMangaSettingsUpdate(
-                        id = referenceId,
-                        isInfoManga = false,
-                        getChapterUpdates = true,
-                        chapterPriority = 1,
-                        downloadChapters = false,
-                        chapterSortMode = 0,
+                // Exactly the settings the entry already has (see `entry` and `insertEntry`).
+                val updated = repository.updateAllEntries(
+                    listOf(
+                        entry(id = entryId, fetchChapterUpdates = true, downloadChapters = false, priority = 1),
                     ),
                 )
 
@@ -140,7 +134,51 @@ class MangaMergeRepositorySyncTest {
     }
 
     @Test
-    fun `deleting a reference bumps the merge parent`() {
+    fun `saving merge-level settings bumps the merge parent`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val repository = MangaMergeRepositoryImpl(database)
+                driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
+                driver.insertMerge(mergeId = 1L, sortMode = 0)
+                driver.resetManga(version = 5L, lastModifiedAt = 10L)
+
+                repository.updateMergeSettings(mergeId = 1L, chapterSortMode = 2, infoMangaId = null) shouldBe true
+
+                val parent = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
+                parent.version shouldBe 6L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `saving unchanged merge-level settings does not bump the merge parent`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val repository = MangaMergeRepositoryImpl(database)
+                driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
+                driver.insertMerge(mergeId = 1L, sortMode = 0)
+                driver.resetManga(version = 5L, lastModifiedAt = 10L)
+                val before = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
+
+                repository.updateMergeSettings(mergeId = 1L, chapterSortMode = 0, infoMangaId = null) shouldBe true
+
+                val parent = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
+                parent.version shouldBe before.version
+                parent.lastModifiedAt shouldBe before.lastModifiedAt
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `deleting an entry bumps the merge parent`() {
         runBlocking {
             val driver = newDriver()
             try {
@@ -148,10 +186,11 @@ class MangaMergeRepositorySyncTest {
                 val repository = MangaMergeRepositoryImpl(database)
                 driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
                 driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
-                val referenceId = driver.insertReference(mergeId = 1L, mangaId = 2L, mangaUrl = "/child/a")
+                driver.insertMerge(mergeId = 1L)
+                val entryId = driver.insertEntry(mergeId = 1L, mangaId = 2L, priority = 1)
                 driver.resetManga(version = 5L, lastModifiedAt = 10L)
 
-                repository.deleteById(referenceId)
+                repository.deleteById(entryId)
 
                 val parent = database.mangaQueries.getMangaById(1L, MangaMapper::mapManga).awaitAsOne()
                 parent.version shouldBe 6L
@@ -170,7 +209,8 @@ class MangaMergeRepositorySyncTest {
                 val repository = MangaMergeRepositoryImpl(database)
                 driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L, lastModifiedAt = 10L)
                 driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
-                driver.insertReference(mergeId = 1L, mangaId = 2L, mangaUrl = "/child/a")
+                driver.insertMerge(mergeId = 1L)
+                driver.insertEntry(mergeId = 1L, mangaId = 2L, priority = 1)
                 driver.resetManga(version = 5L, lastModifiedAt = 10L)
 
                 repository.deleteByMergeId(1L)
@@ -183,21 +223,19 @@ class MangaMergeRepositorySyncTest {
         }
     }
 
-    private fun reference(
-        mangaId: Long? = 2L,
-        mangaUrl: String = "/child/a",
-    ) = MergedMangaReference(
-        id = 0L,
-        isInfoManga = false,
-        getChapterUpdates = true,
-        chapterSortMode = 0,
-        chapterPriority = 1,
-        downloadChapters = false,
+    private fun entry(
+        id: Long = 0L,
+        mangaId: Long = 2L,
+        fetchChapterUpdates: Boolean = true,
+        downloadChapters: Boolean = false,
+        priority: Int = 1,
+    ) = MergedEntry(
+        id = id,
         mergeId = 1L,
-        mergeUrl = "/merge",
         mangaId = mangaId,
-        mangaUrl = mangaUrl,
-        mangaSourceId = SOURCE,
+        fetchChapterUpdates = fetchChapterUpdates,
+        downloadChapters = downloadChapters,
+        chapterPriority = priority,
     )
 
     private suspend fun newDriver(): SqlDriver {
@@ -242,19 +280,22 @@ class MangaMergeRepositorySyncTest {
         ).await()
     }
 
-    private suspend fun SqlDriver.insertReference(
-        mergeId: Long,
-        mangaId: Long,
-        mangaUrl: String,
-    ): Long {
+    private suspend fun SqlDriver.insertMerge(mergeId: Long, sortMode: Int = 0) {
+        execute(
+            null,
+            "INSERT INTO merge(manga_id, chapter_sort_mode, info_manga_id) VALUES ($mergeId, $sortMode, NULL)",
+            0,
+        ).await()
+    }
+
+    private suspend fun SqlDriver.insertEntry(mergeId: Long, mangaId: Long, priority: Long): Long {
         execute(
             null,
             """
-            INSERT INTO merged(
-                info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority,
-                download_chapters, merge_id, merge_url, manga_id, manga_url, manga_source
+            INSERT INTO merged_entry(
+                merge_id, manga_id, fetch_chapter_updates, download_chapters, chapter_priority
             ) VALUES (
-                0, 1, 0, 1, 0, $mergeId, '/merge', $mangaId, '$mangaUrl', $SOURCE
+                $mergeId, $mangaId, 1, 0, $priority
             )
             """.trimIndent(),
             0,

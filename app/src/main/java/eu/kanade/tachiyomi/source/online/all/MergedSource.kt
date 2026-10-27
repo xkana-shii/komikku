@@ -24,16 +24,16 @@ import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.interactor.GetManga
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
-import tachiyomi.domain.manga.interactor.NetworkToLocalManga
+import tachiyomi.domain.manga.interactor.GetMergeSettings
+import tachiyomi.domain.manga.interactor.GetMergedEntriesById
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.model.MergedEntry
 import tachiyomi.domain.source.service.SourceManager
 
 class MergedSource(private val context: Context) : HttpSource() {
     private val getManga: GetManga get() = context.appGraph.getManga
-    private val getMergedReferencesById: GetMergedReferencesById get() = context.appGraph.getMergedReferencesById
-    private val networkToLocalManga: NetworkToLocalManga get() = context.appGraph.networkToLocalManga
+    private val getMergedEntriesById: GetMergedEntriesById get() = context.appGraph.getMergedEntriesById
+    private val getMergeSettings: GetMergeSettings get() = context.appGraph.getMergeSettings
     private val updateMangaFromRemote: UpdateMangaFromRemote get() = context.appGraph.updateMangaFromRemote
     private val sourceManager: SourceManager get() = context.appGraph.sourceManager
     private val downloadManager: DownloadManager get() = context.appGraph.downloadManager
@@ -78,19 +78,15 @@ class MergedSource(private val context: Context) : HttpSource() {
     private suspend fun getMangaDetails(manga: SManga): SManga {
         return withIOContext {
             val mergedManga = requireNotNull(getManga.await(manga.url, id)) { "merged manga not in db" }
-            val mangaReferences = getMergedReferencesById.await(mergedManga.id)
+            val mangaEntries = getMergedEntriesById.await(mergedManga.id)
                 .apply {
-                    require(isNotEmpty()) { "Manga references are empty, info unavailable, merge is likely corrupted" }
-                    require(!(size == 1 && first().mangaSourceId == MERGED_SOURCE_ID)) {
-                        "Manga references contain only the merged reference, merge is likely corrupted"
-                    }
+                    require(isNotEmpty()) { "Manga merged entries are empty, info unavailable, merge is likely corrupted" }
                 }
 
-            val mangaInfoReference = mangaReferences.firstOrNull { it.isInfoManga }
-                ?: mangaReferences.firstOrNull { it.mangaId != it.mergeId }
-            val dbManga = mangaInfoReference?.run {
-                getManga.await(mangaUrl, mangaSourceId)?.toSManga()
-            }
+            val infoMangaId = getMergeSettings.await(mergedManga.id)?.infoMangaId
+            val infoEntry = mangaEntries.firstOrNull { it.mangaId == infoMangaId }
+                ?: mangaEntries.first()
+            val dbManga = getManga.await(infoEntry.mangaId)?.toSManga()
             (dbManga ?: mergedManga.toSManga()).copy(
                 url = manga.url,
             )
@@ -98,48 +94,48 @@ class MergedSource(private val context: Context) : HttpSource() {
     }
 
     suspend fun fetchChaptersAndSync(manga: Manga, downloadChapters: Boolean = true): List<Chapter> {
-        val mangaReferences = getMergedReferencesById.await(manga.id)
-        require(mangaReferences.isNotEmpty()) {
-            "Manga references are empty, chapters unavailable, merge is likely corrupted"
+        val mangaEntries = getMergedEntriesById.await(manga.id)
+        require(mangaEntries.isNotEmpty()) {
+            "Manga merged entries are empty, chapters unavailable, merge is likely corrupted"
         }
 
         val semaphore = Semaphore(5)
         var exception: Exception? = null
         return supervisorScope {
-            mangaReferences
-                .groupBy(MergedMangaReference::mangaSourceId)
-                .minus(MERGED_SOURCE_ID)
-                .map { (_, values) ->
+            mangaEntries
+                .map { entry ->
                     async {
                         semaphore.withPermit {
-                            values.flatMap {
-                                try {
-                                    val (source, loadedManga, reference) = it.load()
-                                    if (loadedManga != null && reference.getChapterUpdates) {
-                                        val results = updateMangaFromRemote(
-                                            source = source,
-                                            manga = loadedManga,
-                                            fetchChapters = true,
-                                        ).getOrThrow().newChapters
+                            try {
+                                val (source, loadedManga, _) = entry.load()
+                                if (loadedManga != null && entry.fetchChapterUpdates) {
+                                    // KUN -->
+                                    // The fork's UpdateMangaFromRemote takes the source/manga by name and
+                                    // defaults fetchDetails to false.
+                                    val results = updateMangaFromRemote(
+                                        source = source,
+                                        manga = loadedManga,
+                                        fetchChapters = true,
+                                    ).getOrThrow().newChapters
+                                    // KUN <--
 
-                                        if (downloadChapters && reference.downloadChapters) {
-                                            val chaptersToDownload = filterChaptersForDownload.await(manga, results)
-                                            if (chaptersToDownload.isNotEmpty()) {
-                                                downloadManager.downloadChapters(
-                                                    loadedManga,
-                                                    chaptersToDownload,
-                                                )
-                                            }
+                                    if (downloadChapters && entry.downloadChapters) {
+                                        val chaptersToDownload = filterChaptersForDownload.await(manga, results)
+                                        if (chaptersToDownload.isNotEmpty()) {
+                                            downloadManager.downloadChapters(
+                                                loadedManga,
+                                                chaptersToDownload,
+                                            )
                                         }
-                                        results
-                                    } else {
-                                        emptyList()
                                     }
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    exception = e
+                                    results
+                                } else {
                                     emptyList()
                                 }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                exception = e
+                                emptyList()
                             }
                         }
                     }
@@ -151,26 +147,13 @@ class MergedSource(private val context: Context) : HttpSource() {
         }
     }
 
-    suspend fun MergedMangaReference.load(): LoadedMangaSource {
-        var manga = getManga.await(mangaUrl, mangaSourceId)
-        val source = sourceManager.getOrStub(manga?.source ?: mangaSourceId)
-        if (manga == null) {
-            val newManga = networkToLocalManga(
-                Manga.create().copy(
-                    source = mangaSourceId,
-                    url = mangaUrl,
-                ),
-            )
-            manga = updateMangaFromRemote(
-                source = source,
-                manga = newManga,
-                fetchDetails = true,
-            ).getOrThrow().manga
-        }
+    suspend fun MergedEntry.load(): LoadedMangaSource {
+        val manga = getManga.await(mangaId)
+        val source = sourceManager.getOrStub(manga?.source ?: -1)
         return LoadedMangaSource(source, manga, this)
     }
 
-    data class LoadedMangaSource(val source: Source, val manga: Manga?, val reference: MergedMangaReference)
+    data class LoadedMangaSource(val source: Source, val manga: Manga?, val entry: MergedEntry)
 
     override val lang = "all"
     override val supportsLatest = false

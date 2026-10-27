@@ -1,7 +1,6 @@
 package tachiyomi.domain.chapter.interactor
 
 import dev.zacsweers.metro.Inject
-import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -11,13 +10,13 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
-import tachiyomi.domain.manga.interactor.GetMergedReferencesById
-import tachiyomi.domain.manga.model.MergedMangaReference
+import tachiyomi.domain.manga.interactor.GetMergeSettings
+import tachiyomi.domain.manga.model.MergeSettings
 
 @Inject
 class GetMergedChaptersByMangaId(
     private val chapterRepository: ChapterRepository,
-    private val getMergedReferencesById: GetMergedReferencesById,
+    private val getMergeSettings: GetMergeSettings,
 ) {
 
     suspend fun await(
@@ -27,8 +26,11 @@ class GetMergedChaptersByMangaId(
         applyFilter: Boolean = false,
     ): List<Chapter> {
         return try {
-            val sortMode = if (dedupe) sortModeOf(getMergedReferencesById.await(mangaId)) else MergedMangaReference.CHAPTER_SORT_NONE
+            val sortMode = if (dedupe) sortModeOf(getMergeSettings.await(mangaId)) else MergeSettings.CHAPTER_SORT_NONE
+            // KUN -->
+            // The fork's parameter is named applyFilter, not applyScanlatorFilter.
             val chapters = chapterRepository.getDedupedMergedChapters(mangaId, sortMode, applyFilter)
+            // KUN <--
             applyPriorityOrder(chapters, dedupe, sortMode)
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
@@ -42,8 +44,8 @@ class GetMergedChaptersByMangaId(
         /** Filter excluded scanlators & bookmarked/unbookmarked filter */
         applyFilter: Boolean = false,
     ): Flow<List<Chapter>> {
-        return getMergedReferencesById.subscribe(mangaId)
-            .map { references -> if (dedupe) sortModeOf(references) else MergedMangaReference.CHAPTER_SORT_NONE }
+        return getMergeSettings.subscribe(mangaId)
+            .map { settings -> if (dedupe) sortModeOf(settings) else MergeSettings.CHAPTER_SORT_NONE }
             .distinctUntilChanged()
             .flatMapLatest { sortMode ->
                 chapterRepository.getDedupedMergedChaptersAsFlow(mangaId, sortMode, applyFilter)
@@ -55,13 +57,11 @@ class GetMergedChaptersByMangaId(
             }
     }
 
-    private fun sortModeOf(references: List<MergedMangaReference>): Int =
-        references.firstOrNull { it.mangaSourceId == MERGED_SOURCE_ID }
-            ?.chapterSortMode
-            ?: MergedMangaReference.CHAPTER_SORT_NONE
+    private fun sortModeOf(settings: MergeSettings?): Int =
+        settings?.chapterSortMode ?: MergeSettings.CHAPTER_SORT_NONE
 
     private fun applyPriorityOrder(chapters: List<Chapter>, dedupe: Boolean, sortMode: Int): List<Chapter> {
-        return if (!dedupe || sortMode != MergedMangaReference.CHAPTER_SORT_PRIORITY) {
+        return if (!dedupe || sortMode != MergeSettings.CHAPTER_SORT_PRIORITY) {
             chapters
         } else {
             // Orders by chapter number; an unrecognized chapter stays after the number preceding it in its own source.

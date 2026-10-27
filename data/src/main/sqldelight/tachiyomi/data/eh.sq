@@ -7,11 +7,10 @@ SET source_id = :newId
 WHERE source_id = :oldId;
 
 -- KMK -->
-migrateMergedSource:
-UPDATE merged
-SET manga_source = :newId
-WHERE manga_source = :oldId;
-
+-- KUN -->
+-- No `migrateMergedSource`: a merge entry now stores the child's manga id, so the `migrateSource`
+-- update above already moves it to the new source id (the entry follows its manga row).
+-- KUN <--
 migrateSourceSavedSearch:
 UPDATE saved_search
 SET source = :newId

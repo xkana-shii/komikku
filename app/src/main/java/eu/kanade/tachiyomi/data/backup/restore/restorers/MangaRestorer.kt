@@ -9,6 +9,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import tachiyomi.domain.backup.model.RestoredHistory
 import tachiyomi.domain.backup.model.RestoredManga
+import tachiyomi.domain.backup.model.RestoredMergeSettings
+import tachiyomi.domain.backup.model.RestoredMergedEntry
 import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.service.CategoryTree
@@ -125,9 +127,17 @@ class MangaRestorer(
                 tracks = backupManga.tracking.map { it.getTrackImpl() },
                 excludedScanlators = backupManga.excludedScanlators,
                 // SY -->
-                mergedMangaReferences = backupManga.mergedMangaReferences.map {
-                    EXHMigrations.migrateBackupMergedMangaReference(it).getMergedMangaReference()
+                mergedEntries = backupManga.mergedEntries.map { ref ->
+                    val migrated = EXHMigrations.migrateBackupMergedEntry(ref)
+                    RestoredMergedEntry(
+                        mangaUrl = migrated.mangaUrl,
+                        mangaSourceId = migrated.mangaSourceId,
+                        fetchChapterUpdates = migrated.fetchChapterUpdates,
+                        downloadChapters = migrated.downloadChapters,
+                        chapterPriority = migrated.chapterPriority,
+                    )
                 },
+                mergeSettings = resolveMergeSettings(backupManga),
                 // KUN -->
                 mergedMangaReferencesIncluded = backupManga.mergedMangaReferencesIncluded,
                 // KUN <--
@@ -160,10 +170,35 @@ class MangaRestorer(
             if (preservedNextUpdate != null) update.apply { nextUpdate = preservedNextUpdate } else update
         }
     }
-
     // KMK/SY -->
     suspend fun updateManga(manga: Manga) {
         restoreRepository.updateManga(manga, isSync)
     }
     // KMK/SY <--
+
+    // SY -->
+
+    /**
+     * The merge-level settings for a restored entry. New backups carry them in [BackupManga.mergeSettings]
+     */
+    private fun resolveMergeSettings(backupManga: BackupManga): RestoredMergeSettings? {
+        val settings = backupManga.mergeSettings
+        if (settings != null) {
+            return RestoredMergeSettings(
+                chapterSortMode = settings.chapterSortMode,
+                infoMangaUrl = settings.infoMangaUrl,
+                infoMangaSourceId = settings.infoMangaSourceId,
+            )
+        }
+        val refs = backupManga.mergedEntries
+        if (refs.isEmpty()) return null
+        val sortMode = refs.firstOrNull()?.chapterSortMode ?: 0
+        val infoRef = refs.firstOrNull { it.isInfoManga }
+        return RestoredMergeSettings(
+            chapterSortMode = sortMode,
+            infoMangaUrl = infoRef?.mangaUrl.orEmpty(),
+            infoMangaSourceId = infoRef?.mangaSourceId ?: 0L,
+        )
+    }
+    // SY <--
 }

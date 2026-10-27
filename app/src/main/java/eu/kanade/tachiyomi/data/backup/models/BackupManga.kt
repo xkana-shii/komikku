@@ -76,10 +76,18 @@ class BackupManga(
     // KNS <--
 
     // SY specific values
-    @ProtoNumber(600) var mergedMangaReferences: List<BackupMergedMangaReference> = emptyList(),
+    @ProtoNumber(600) var mergedEntries: List<BackupMergedEntry> = emptyList(),
     @ProtoNumber(601) var flatMetadata: BackupFlatMetadata? = null,
     @ProtoNumber(602) var customStatus: Int = 0,
     @ProtoNumber(603) var customThumbnailUrl: String? = null,
+    // KUN -->
+    // Upstream spells the merge-level settings as field 604, but 604 is already claimed for a
+    // different wire type by an open SY PR (`List<BackupSortedScanlator>`, SY #1420), and a
+    // protobuf number cannot hold two types. Take a field from the fork-reserved BackupManga block
+    // instead (AGENTS.md, "Backup protobuf field numbers"): a peer that speaks upstream's 604 keeps
+    // its entries at 600, so the merge still restores without its sort mode/info entry.
+    @ProtoNumber(10002) var mergeSettings: BackupMergeSettings? = null,
+    // KUN <--
 
     // J2K specific values
     @ProtoNumber(800) var customTitle: String? = null,
