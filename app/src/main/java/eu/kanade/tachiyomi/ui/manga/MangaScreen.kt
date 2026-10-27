@@ -674,6 +674,7 @@ class MangaScreen(
                     coverRatio = coverRatio,
                     // KMK <--
                     sourceName = successState.source.getNameForMangaInfo(),
+                    mergedManga = successState.mergedData?.manga?.values?.toList()?.ifEmpty { null },
                     onDismissRequest = viewModel::dismissDialog,
                     onPositiveClick = viewModel::updateMangaInfo,
                     onCoverClick = { getContent.launch("image/*") },
