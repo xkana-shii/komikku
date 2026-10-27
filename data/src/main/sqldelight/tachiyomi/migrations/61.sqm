@@ -1,0 +1,53 @@
+-- SY -->
+-- Ported from TachiyomiSY's 48.sqm ("sync library removals and unread chapters"), renumbered to the
+-- next free migration: Komi-kun's 59.sqm, 61 in this fork, whose 59 and 60 had already shipped. The
+-- table lets a sync upload the entries the user removed from the library, which are no longer
+-- favorites and so no longer match any upload query.
+CREATE TABLE library_removal (
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    removed_at INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES manga (id)
+    ON DELETE CASCADE
+);
+
+CREATE TRIGGER record_library_removal
+AFTER UPDATE OF user_favorite_at ON manga
+WHEN new.is_syncing = 0 AND old.user_favorite_at IS NOT NULL AND new.user_favorite_at IS NULL
+BEGIN
+    INSERT OR REPLACE INTO library_removal (manga_id, removed_at) VALUES (new.id, strftime('%s', 'now'));
+END;
+
+CREATE TRIGGER clear_library_removal
+AFTER UPDATE OF user_favorite_at ON manga
+WHEN new.user_favorite_at IS NOT NULL
+BEGIN
+    DELETE FROM library_removal WHERE manga_id = new.id;
+END;
+
+-- SY <--
+-- KNS -->
+-- The version trigger as data/manga.sq declares it: Komi-kun's NULL-safe `IS NOT` for remote_url and
+-- remote_description, plus this fork's scanlator and blacklist columns, which its 59.sqm left out.
+DROP TRIGGER IF EXISTS update_manga_version;
+CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
+BEGIN
+    UPDATE manga SET version = version + 1
+    WHERE id = new.id AND new.is_syncing = 0 AND (
+        -- KUN -->
+        -- `!=` is never true against NULL, so clearing a nullable field never bumped the version
+        new.remote_url IS NOT old.remote_url OR
+        new.remote_description IS NOT old.remote_description OR
+        -- KUN <--
+        new.user_favorite_at IS NOT old.user_favorite_at OR
+        new.user_reader_flags != old.user_reader_flags OR
+        new.user_chapter_flags != old.user_chapter_flags OR
+        new.user_notes != old.user_notes
+        -- KNS -->
+        OR new.user_blacklisted_chapters != old.user_blacklisted_chapters
+        OR new.user_scanlator_priority != old.user_scanlator_priority
+        OR new.user_scanlator_range_rules != old.user_scanlator_range_rules
+        OR new.user_smart_merge_override IS NOT old.user_smart_merge_override
+        -- KNS <--
+    );
+END;
+-- KNS <--

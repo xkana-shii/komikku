@@ -3,8 +3,10 @@ package eu.kanade.tachiyomi.data.sync
 import eu.kanade.domain.sync.models.SyncSettings
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
+import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 
 /**
@@ -264,3 +266,66 @@ internal fun mergeSyncCategories(
     }
 }
 // KUN <--
+
+// SY -->
+// Ported from TachiyomiSY (jobobby04/TachiyomiSY#1679), keeping this fork's checks: the
+// `completeChapterList` handling and the read/bookmark/page comparison of the chapters.
+// KUN -->
+internal class LocalMangaState(
+    val manga: Manga,
+    val chapters: List<Chapter>,
+    val categoryOrders: Set<Long>,
+    val lastReadByChapterUrl: Map<String, Long>,
+)
+
+internal fun needsRestore(
+    local: LocalMangaState,
+    remote: BackupManga,
+    // A v2 response carries the manga's complete chapter list, so a local chapter that is missing
+    // from it was deleted on another device.
+    completeChapterList: Boolean = true,
+): Boolean =
+    local.manga.favorite != remote.favorite ||
+        // These fields feed the version trigger, so an equal-version response that still differs
+        // must be restored instead of being skipped as "up-to-date".
+        mangaPayloadFieldsDiffer(local.manga, remote) ||
+        chaptersDiffer(local.chapters, remote.chapters, completeChapterList) ||
+        local.manga.version != remote.version ||
+        // A v2 delta leaves the categories out when they did not change; an absent list is not a change.
+        (remote.categories.isNotEmpty() && local.categoryOrders != remote.categories.toSet()) ||
+        // A peer that read further must win even when nothing else about the entry moved.
+        remote.history.any { it.lastRead > (local.lastReadByChapterUrl[it.url] ?: 0L) }
+
+private fun chaptersDiffer(
+    local: List<Chapter>,
+    remote: List<BackupChapter>,
+    completeChapterList: Boolean,
+): Boolean {
+    if (!completeChapterList && remote.isEmpty()) {
+        return false
+    }
+    val localChapterMap = local.associateBy { it.url }
+    val remoteChapterUrls = remote.mapTo(mutableSetOf()) { it.url }
+
+    if (completeChapterList && missingRemoteChapterUrls(localChapterMap.keys, remoteChapterUrls).isNotEmpty()) {
+        return true
+    }
+
+    for (remoteChapter in remote) {
+        val localChapter = localChapterMap[remoteChapter.url]
+
+        // If a matching remote chapter doesn't exist locally, or their states/versions differ
+        if (localChapter == null ||
+            localChapter.version != remoteChapter.version ||
+            localChapter.read != remoteChapter.read ||
+            localChapter.bookmark != remoteChapter.bookmark ||
+            localChapter.lastPageRead.toLong() != remoteChapter.lastPageRead
+        ) {
+            return true
+        }
+    }
+
+    return false
+}
+// KUN <--
+// SY <--

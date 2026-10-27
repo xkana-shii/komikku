@@ -1,5 +1,6 @@
 package tachiyomi.data
 
+import tachiyomi.domain.category.service.CategoryTombstones
 import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
@@ -39,9 +40,14 @@ class CategoryHierarchyTest {
     private val preferences = InMemoryPreferenceStore()
     private val create = CreateCategoryWithName(repository, LibraryPreferences(preferences))
     private val deleted = mutableListOf<Long>()
-    private val delete = DeleteCategory(repository, LibraryPreferences(preferences), DownloadPreferences(preferences)) {
-        deleted += it
-    }
+    // KNS --> the deleted uids reach sync through CategoryTombstones (Komi-kun #80) instead of a callback
+    private val delete = DeleteCategory(
+        repository,
+        LibraryPreferences(preferences),
+        DownloadPreferences(preferences),
+        CategoryTombstones { deleted += it },
+    )
+    // KNS <--
 
     init {
         runBlocking { Database.Schema.create(driver).await() }

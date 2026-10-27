@@ -231,19 +231,21 @@ object AppBindings {
 
     // SY -->
     // KMK -->
-    // Metro cannot bind a function type, so DeleteCategory's sync tombstone callback is wired here.
+    // DeleteCategory is not `@Inject`-annotated upstream (its sync hook used to be a function type,
+    // which Metro cannot bind), so it is built here. The hook is now the `CategoryTombstones`
+    // service, contributed by `SyncCategoryTombstones`.
     @Provides
     @SingleIn(AppScope::class)
     fun providesDeleteCategory(
         categoryRepository: tachiyomi.domain.category.repository.CategoryRepository,
         libraryPreferences: tachiyomi.domain.library.service.LibraryPreferences,
         downloadPreferences: tachiyomi.domain.download.service.DownloadPreferences,
-        syncPreferences: eu.kanade.domain.sync.SyncPreferences,
+        categoryTombstones: tachiyomi.domain.category.service.CategoryTombstones,
     ): tachiyomi.domain.category.interactor.DeleteCategory = tachiyomi.domain.category.interactor.DeleteCategory(
         categoryRepository = categoryRepository,
         libraryPreferences = libraryPreferences,
         downloadPreferences = downloadPreferences,
-        onCategoryDeleted = syncPreferences::rememberDeletedCategory,
+        categoryTombstones = categoryTombstones,
     )
     // KMK <--
     // SY <--

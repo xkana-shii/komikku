@@ -18,9 +18,10 @@ interface SyncRepository {
     suspend fun resetSyncing()
 
     /**
-     * Every manga that has ever been favorited (i.e. has a favorite timestamp), for a full upload.
+     * Every manga that has ever been favorited (i.e. has a favorite timestamp), for a full upload,
+     * plus the entries removed from the library since [removedSince] so their removal is uploaded.
      */
-    suspend fun getMangasWithFavoriteTimestamp(): List<Manga>
+    suspend fun getMangasToSync(removedSince: Long): List<Manga>
 
     /** Every manga, used by the sync to reconcile remote entries against the local library. */
     suspend fun getAllManga(): List<Manga>

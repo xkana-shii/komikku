@@ -8,7 +8,6 @@ import eu.kanade.domain.sync.models.SyncSettings
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.models.Backup
-import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreWorker
@@ -32,11 +31,12 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.repository.CategoryRepository
-import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.sync.repository.SyncRepository
 import tachiyomi.i18n.kmk.KMR
 import java.io.File
@@ -55,6 +55,7 @@ class SyncManager(
     private val context: Context,
     private val syncRepository: SyncRepository,
     private val chapterRepository: ChapterRepository,
+    private val historyRepository: HistoryRepository,
     private val categoryRepository: CategoryRepository,
     private val syncPreferences: SyncPreferences,
     private val getCategories: GetCategories,
@@ -695,7 +696,7 @@ class SyncManager(
     }
 
     private suspend fun getAllMangaThatNeedsSync(): List<Manga> {
-        return syncRepository.getMangasWithFavoriteTimestamp()
+        return syncRepository.getMangasToSync(syncPreferences.lastPushedAt.get())
     }
 
     // SY -->
@@ -709,74 +710,33 @@ class SyncManager(
         remoteManga: BackupManga,
         completeChapterList: Boolean,
     ): Boolean {
-        val localChapters = chapterRepository
-            .getChapterByMangaId(localManga.id, applyFilter = false)
-        val localCategories = getCategories.await(localManga.id).map { it.order }
-
-        // KUN -->
-        if (localManga.favorite != remoteManga.favorite) {
-            return true
-        }
-
-        // These fields feed the version trigger, so an equal-version response that still differs
-        // must be restored instead of being skipped as "up-to-date".
-        if (mangaPayloadFieldsDiffer(localManga, remoteManga)) {
-            return true
-        }
-        // KUN <--
-
-        if (areChaptersDifferent(localChapters, remoteManga.chapters, completeChapterList)) {
-            return true
-        }
-
-        if (localManga.version != remoteManga.version) {
-            return true
-        }
-
-        // KUN -->
-        if (remoteManga.categories.isNotEmpty() && localCategories.toSet() != remoteManga.categories.toSet()) {
-            return true
-        }
-        // KUN <--
-
-        return false
+        return needsRestore(localStateOf(localManga), remoteManga, completeChapterList)
     }
 
+    // SY -->
     // KUN -->
-    private fun areChaptersDifferent(
-        localChapters: List<Chapter>,
-        remoteChapters: List<BackupChapter>,
-        // A v2 response carries the manga's complete chapter list, so a local chapter that is
-        // missing from it was deleted on another device.
-        completeChapterList: Boolean,
-    ): Boolean {
-        if (!completeChapterList && remoteChapters.isEmpty()) {
-            return false
-        }
-        val localChapterMap = localChapters.associateBy { it.url }
-        val remoteChapterUrls = remoteChapters.mapTo(mutableSetOf()) { it.url }
-
-        if (completeChapterList && missingRemoteChapterUrls(localChapterMap.keys, remoteChapterUrls).isNotEmpty()) {
-            return true
-        }
-
-        for (remoteChapter in remoteChapters) {
-            val localChapter = localChapterMap[remoteChapter.url]
-
-            // If a matching remote chapter doesn't exist locally, or their states/versions differ
-            if (localChapter == null ||
-                localChapter.version != remoteChapter.version ||
-                localChapter.read != remoteChapter.read ||
-                localChapter.bookmark != remoteChapter.bookmark ||
-                localChapter.lastPageRead.toLong() != remoteChapter.lastPageRead
-            ) {
-                return true
-            }
-        }
-
-        return false
+    /**
+     * Everything the restore decision needs from the local row, gathered in one place so a manga
+     * whose local state matches the payload can be skipped without touching its chapters or history.
+     */
+    private suspend fun localStateOf(manga: Manga): LocalMangaState {
+        val chapters = chapterRepository
+            .getChapterByMangaId(manga.id, applyFilter = false)
+        val chapterUrlById = chapters.associate { it.id to it.url }
+        return LocalMangaState(
+            manga = manga,
+            chapters = chapters,
+            categoryOrders = getCategories.await(manga.id).mapTo(mutableSetOf()) { it.order },
+            lastReadByChapterUrl = historyRepository.getHistoryByMangaId(manga.id)
+                .mapNotNull { history ->
+                    val url = chapterUrlById[history.chapterId] ?: return@mapNotNull null
+                    history.readAt?.let { url to it.toEpochMilliseconds() }
+                }
+                .toMap(),
+        )
     }
     // KUN <--
+    // SY <--
 
     /**
      * Filters the favorite and non-favorite manga from the backup and checks

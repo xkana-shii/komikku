@@ -33,7 +33,7 @@ class SyncRepositoryFavoriteTimestampTest {
                 // Simulate a row written by a build whose insert trigger was missing.
                 driver.execute(null, "UPDATE manga SET favorite_modified_at = NULL WHERE id = 1", 0).await()
 
-                repository.getMangasWithFavoriteTimestamp().map { it.id } shouldContainExactly listOf(1L)
+                repository.getMangasToSync(removedSince = 0L).map { it.id } shouldContainExactly listOf(1L)
                 repository.getMangasModifiedSince(since = 300L).map { it.id } shouldContainExactly listOf(1L)
             } finally {
                 driver.close()
@@ -56,7 +56,7 @@ class SyncRepositoryFavoriteTimestampTest {
                     lastModifiedAt = 400L,
                 )
 
-                repository.getMangasWithFavoriteTimestamp().map { it.id } shouldContainExactly listOf(2L)
+                repository.getMangasToSync(removedSince = 0L).map { it.id } shouldContainExactly listOf(2L)
                 repository.getMangasModifiedSince(since = 300L).map { it.id } shouldContainExactly listOf(2L)
             } finally {
                 driver.close()
@@ -79,7 +79,7 @@ class SyncRepositoryFavoriteTimestampTest {
                     lastModifiedAt = 400L,
                 )
 
-                repository.getMangasWithFavoriteTimestamp() shouldContainExactly emptyList()
+                repository.getMangasToSync(removedSince = 0L) shouldContainExactly emptyList()
                 repository.getMangasModifiedSince(since = 300L) shouldContainExactly emptyList()
             } finally {
                 driver.close()
