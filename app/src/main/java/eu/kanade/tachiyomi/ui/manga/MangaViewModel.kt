@@ -173,7 +173,6 @@ import tachiyomi.domain.libraryUpdateError.interactor.InsertLibraryUpdateErrors
 import tachiyomi.domain.libraryUpdateError.model.LibraryUpdateError
 import tachiyomi.domain.libraryUpdateErrorMessage.interactor.InsertLibraryUpdateErrorMessages
 import tachiyomi.domain.libraryUpdateErrorMessage.model.LibraryUpdateErrorMessage
-import tachiyomi.domain.manga.interactor.DeleteMergeById
 import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
@@ -183,14 +182,12 @@ import tachiyomi.domain.manga.interactor.GetMergedReferencesById
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.interactor.SetMangaChapterFlags
 import tachiyomi.domain.manga.interactor.SetMangaUserInfo
-import tachiyomi.domain.manga.interactor.UpdateMergedSettings
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
-import tachiyomi.domain.manga.model.MergeMangaSettingsUpdate
 import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.domain.manga.model.applyFilter
@@ -263,9 +260,7 @@ class MangaViewModel(
     private val getMergedMangaById: GetMergedMangaById,
     private val getMergedReferencesById: GetMergedReferencesById,
     private val smartSearchMerge: SmartSearchMerge,
-    private val updateMergedSettings: UpdateMergedSettings,
     private val networkToLocalManga: NetworkToLocalManga,
-    private val deleteMergeById: DeleteMergeById,
     private val getFlatMetadata: GetFlatMetadataById,
     private val getPagePreviews: GetPagePreviews,
     private val upsertTrack: UpsertTrack,
@@ -1007,31 +1002,6 @@ class MangaViewModel(
         return smartSearchMerge.smartSearchMerge(manga, originalMangaId, strict = true)
     }
     // KMK <--
-
-    fun updateMergeSettings(mergedMangaReferences: List<MergedMangaReference>) {
-        viewModelScope.launchNonCancellable {
-            if (mergedMangaReferences.isNotEmpty()) {
-                updateMergedSettings.awaitAll(
-                    mergedMangaReferences.map {
-                        MergeMangaSettingsUpdate(
-                            id = it.id,
-                            isInfoManga = it.isInfoManga,
-                            getChapterUpdates = it.getChapterUpdates,
-                            chapterPriority = it.chapterPriority,
-                            downloadChapters = it.downloadChapters,
-                            chapterSortMode = it.chapterSortMode,
-                        )
-                    },
-                )
-            }
-        }
-    }
-
-    fun deleteMerge(reference: MergedMangaReference) {
-        viewModelScope.launchNonCancellable {
-            deleteMergeById.await(reference.id)
-        }
-    }
     // SY <--
 
     // Manga info - start
@@ -2125,7 +2095,7 @@ class MangaViewModel(
 
         // SY -->
         data class EditMangaInfo(val manga: Manga) : Dialog
-        data class EditMergedSettings(val mergedData: MergedMangaData) : Dialog
+        data object EditMergedSettings : Dialog
         // SY <--
 
         // KMK -->
@@ -2190,8 +2160,7 @@ class MangaViewModel(
     }
 
     fun showEditMergedSettingsDialog() {
-        val mergedData = successState?.mergedData ?: return
-        dialog.value = Dialog.EditMergedSettings(mergedData)
+        dialog.value = Dialog.EditMergedSettings
     }
     // SY <--
 

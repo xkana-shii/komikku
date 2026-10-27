@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -33,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -42,13 +42,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.manga.components.MangaCover
-import eu.kanade.tachiyomi.ui.manga.MergedMangaData
 import eu.kanade.tachiyomi.util.system.toast
-import exh.source.MERGED_SOURCE_ID
-import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.DragHandle
@@ -65,69 +63,59 @@ import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.screens.LoadingScreen
 
+/**
+ * SY-specific file
+ */
 @Composable
 fun EditMergedSettingsDialog(
+    viewModel: EditMergedSettingsViewModel,
     onDismissRequest: () -> Unit,
-    mergedData: MergedMangaData,
-    onDeleteClick: (MergedMangaReference) -> Unit,
-    onPositiveClick: (List<MergedMangaReference>) -> Unit,
-    // KUN -->
-    // Tapping an entry's cover opens that entry (Komikku keeps this; upstream only added it later).
-    onOpenEntryClick: (MergedMangaReference) -> Unit,
-    // KUN <--
+    onMangaClick: (MergedMangaReference) -> Unit,
 ) {
     val context = LocalContext.current
-    val sourceManager = remember { context.appGraph.sourceManager }
-    val references = mergedData.references
 
-    LaunchedEffect(Unit) {
-        if (references.size <= 1) {
-            context.toast(SYMR.strings.merged_references_invalid)
-            onDismissRequest()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Reload only while stale (first show, or after a previous dismiss/save)
+    LaunchedEffect(state) {
+        if (state is EditMergedSettingsViewModel.State.Loading) {
+            viewModel.reload()
         }
     }
 
-    var mergeReference by remember {
-        mutableStateOf(references.firstOrNull { it.mangaSourceId == MERGED_SOURCE_ID })
+    // Dismissing the sheet marks the data stale so the next show reloads it
+    val dismiss = {
+        viewModel.markStale()
+        onDismissRequest()
     }
-    val entries = remember {
-        val mangas = mergedData.manga.values
-        references
-            .filter { it.mangaSourceId != MERGED_SOURCE_ID }
-            .sortedBy { it.chapterPriority }
-            .let { sorted ->
-                // The info manga defaults to the first entry when none is set yet
-                if (sorted.none { it.isInfoManga }) {
-                    sorted.mapIndexed { index, reference -> reference.copy(isInfoManga = index == 0) }
-                } else {
-                    sorted
-                }
-            }
-            .map { reference -> MergedEntry(mangas.firstOrNull { it.id == reference.mangaId }, reference) }
-            .toMutableStateList()
-    }
-    var pendingConfirm by remember { mutableStateOf<PendingConfirm?>(null) }
 
-    val sortMode = mergeReference?.chapterSortMode ?: MergedMangaReference.CHAPTER_SORT_NONE
-    val isPriorityOrder = sortMode == MergedMangaReference.CHAPTER_SORT_PRIORITY
-
-    fun updateEntry(id: Long, transform: (MergedMangaReference) -> MergedMangaReference) {
-        val index = entries.indexOfFirst { it.reference.id == id }
-        if (index != -1) entries[index] = entries[index].copy(reference = transform(entries[index].reference))
+    val ready = state as? EditMergedSettingsViewModel.State.Ready
+    if (ready == null) {
+        LoadingScreen(Modifier.systemBarsPadding())
+        return
     }
+
+    LaunchedEffect(ready.isInvalid) {
+        if (ready.isInvalid) {
+            context.toast(SYMR.strings.merged_references_invalid)
+            dismiss()
+        }
+    }
+
+    val entries = ready.entries
+    val sortMode = ready.sortMode
+    val isPriorityOrder = ready.isPriorityOrder
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         // The header is the first item, entries follow it
         if (from.index < 1 || to.index < 1) return@rememberReorderableLazyListState
-        entries.add(to.index - 1, entries.removeAt(from.index - 1))
-        entries.forEachIndexed { index, entry ->
-            entries[index] = entry.copy(reference = entry.reference.copy(chapterPriority = index))
-        }
+        viewModel.reorder(from.index - 1, to.index - 1)
     }
 
-    AdaptiveSheet(onDismissRequest = onDismissRequest) {
+    AdaptiveSheet(onDismissRequest = dismiss) {
         Column {
             Text(
                 text = stringResource(SYMR.strings.merge_settings),
@@ -141,21 +129,12 @@ fun EditMergedSettingsDialog(
                 item(key = "header") {
                     MergedSettingsHeader(
                         sortMode = sortMode,
-                        onSortModeChange = { mode -> mergeReference = mergeReference?.copy(chapterSortMode = mode) },
+                        onSortModeChange = viewModel::onSortModeChange,
                         infoOptions = entries.map {
-                            // KUN -->
-                            // `SourceManager.getOrStub` is suspend in this fork and this is
-                            // composition, so read the already-loaded source snapshot instead.
-                            InfoOption(it.manga, sourceManager.getOrStubOrNull(it.reference.mangaSourceId)?.toString().orEmpty())
-                            // KUN <--
+                            InfoOption(it.manga, it.source.toString())
                         },
-                        infoIndex = entries.indexOfFirst { it.reference.isInfoManga }.coerceAtLeast(0),
-                        onInfoIndexChange = { selected ->
-                            val infoId = entries.getOrNull(selected)?.reference?.id
-                            entries.toList().forEach { entry ->
-                                updateEntry(entry.reference.id) { it.copy(isInfoManga = it.id == infoId) }
-                            }
-                        },
+                        infoIndex = ready.infoIndex,
+                        onInfoIndexChange = viewModel::onInfoIndexChange,
                         canReorder = isPriorityOrder,
                     )
                 }
@@ -163,14 +142,11 @@ fun EditMergedSettingsDialog(
                     ReorderableItem(reorderableState, key = entry.reference.id) {
                         MergedEntryItem(
                             entry = entry,
-                            // KUN -->
-                            sourceName = sourceManager.getOrStubOrNull(entry.reference.mangaSourceId)?.toString().orEmpty(),
-                            onOpenEntryClick = { onOpenEntryClick(entry.reference) },
-                            // KUN <--
                             canReorder = isPriorityOrder,
-                            onDeleteClick = { pendingConfirm = PendingConfirm.Delete(entry.reference) },
-                            onToggleDownloadsClick = { pendingConfirm = PendingConfirm.Downloads(entry.reference.id) },
-                            onToggleUpdatesClick = { pendingConfirm = PendingConfirm.Updates(entry.reference.id) },
+                            onMangaClick = { onMangaClick(entry.reference) },
+                            onDeleteClick = { viewModel.requestDelete(entry.reference) },
+                            onToggleDownloadsClick = { viewModel.requestToggleDownloads(entry.reference.id) },
+                            onToggleUpdatesClick = { viewModel.requestToggleUpdates(entry.reference.id) },
                         )
                     }
                 }
@@ -178,8 +154,8 @@ fun EditMergedSettingsDialog(
             HorizontalDivider()
             Button(
                 onClick = {
-                    onPositiveClick(listOfNotNull(mergeReference) + entries.map { it.reference })
-                    onDismissRequest()
+                    viewModel.save()
+                    dismiss()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -190,24 +166,15 @@ fun EditMergedSettingsDialog(
         }
     }
 
-    pendingConfirm?.let { confirm ->
+    ready.pendingConfirm?.let { confirm ->
         ConfirmDialog(
             title = confirm.title,
             text = confirm.text,
-            onDismissRequest = { pendingConfirm = null },
+            onDismissRequest = viewModel::dismissPending,
             onConfirm = {
-                when (confirm) {
-                    is PendingConfirm.Delete -> {
-                        onDeleteClick(confirm.reference)
-                        onDismissRequest()
-                    }
-                    is PendingConfirm.Downloads -> updateEntry(confirm.id) {
-                        it.copy(downloadChapters = !it.downloadChapters)
-                    }
-                    is PendingConfirm.Updates -> updateEntry(confirm.id) {
-                        it.copy(getChapterUpdates = !it.getChapterUpdates)
-                    }
-                }
+                val isDelete = confirm is EditMergedSettingsViewModel.PendingConfirm.Delete
+                viewModel.confirmPending()
+                if (isDelete) dismiss()
             },
         )
     }
@@ -222,10 +189,7 @@ private fun MergedSettingsHeader(
     onInfoIndexChange: (Int) -> Unit,
     canReorder: Boolean,
 ) {
-    // KUN -->
-    // "Keep all" is the only dedupe-off state here: the fork dropped the separate "No dedupe" mode
-    // (Komikku #1194), so the mode list has one entry fewer than upstream's.
-    // KUN <--
+    // "Keep all" covers both the dedupe-off state and the legacy "No dedupe" mode, which behave the same
     val selectedMode = DedupeModes.firstOrNull { sortMode in it.sortModes } ?: DedupeModes.first()
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(text = stringResource(SYMR.strings.merge_duplicate_chapters))
@@ -386,12 +350,9 @@ private fun EntryTitle(
 
 @Composable
 private fun ReorderableCollectionItemScope.MergedEntryItem(
-    entry: MergedEntry,
-    sourceName: String,
+    entry: EditMergedSettingsViewModel.Entry,
     canReorder: Boolean,
-    // KUN -->
-    onOpenEntryClick: () -> Unit,
-    // KUN <--
+    onMangaClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onToggleDownloadsClick: () -> Unit,
     onToggleUpdatesClick: () -> Unit,
@@ -417,13 +378,11 @@ private fun ReorderableCollectionItemScope.MergedEntryItem(
                 data = entry.manga,
                 modifier = Modifier.size(width = 40.dp, height = 56.dp),
                 shape = RoundedCornerShape(4.dp),
-                // KUN -->
-                onClick = onOpenEntryClick,
-                // KUN <--
+                onClick = { onMangaClick() },
             )
             EntryTitle(
                 title = entry.manga?.title.orEmpty(),
-                sourceName = sourceName,
+                sourceName = entry.source.toString(),
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp),
@@ -512,17 +471,6 @@ private fun ConfirmDialog(
     )
 }
 
-private data class MergedEntry(val manga: Manga?, val reference: MergedMangaReference)
-
-private sealed class PendingConfirm(val title: StringResource, val text: StringResource) {
-    data class Delete(val reference: MergedMangaReference) :
-        PendingConfirm(SYMR.strings.delete_merged_entry, SYMR.strings.delete_merged_entry_desc)
-    data class Downloads(val id: Long) :
-        PendingConfirm(SYMR.strings.download_merged_entry, SYMR.strings.download_merged_entry_desc)
-    data class Updates(val id: Long) :
-        PendingConfirm(SYMR.strings.chapter_updates_merged_entry, SYMR.strings.chapter_updates_merged_entry_desc)
-}
-
 private data class InfoOption(val manga: Manga?, val sourceName: String)
 
 private class DedupeMode(
@@ -535,8 +483,8 @@ private class DedupeMode(
 private val DedupeModes = listOf(
     DedupeMode(
         // KUN -->
-        // No CHAPTER_SORT_NO_DEDUPE: the fork removed that mode, and its numbering has no gap
-        // (see MergeSettings' mode constants).
+        // No CHAPTER_SORT_NO_DEDUPE: the fork dropped that mode (Komikku #1194), so its numbering
+        // has no gap and "Keep all" is the only dedupe-off state.
         sortModes = listOf(MergedMangaReference.CHAPTER_SORT_NONE),
         // KUN <--
         label = SYMR.strings.merge_dedupe_keep_all,

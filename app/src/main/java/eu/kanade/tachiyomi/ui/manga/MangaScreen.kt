@@ -81,6 +81,7 @@ import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.merged.EditMergedSettingsDialog
+import eu.kanade.tachiyomi.ui.manga.merged.EditMergedSettingsViewModel
 import eu.kanade.tachiyomi.ui.manga.notes.MangaNotesScreen
 import eu.kanade.tachiyomi.ui.manga.track.TrackInfoDialogHomeScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
@@ -665,18 +666,19 @@ class MangaScreen(
                     onPositiveClick = viewModel::updateMangaInfo,
                 )
             }
-
-            is MangaViewModel.Dialog.EditMergedSettings -> {
+            MangaViewModel.Dialog.EditMergedSettings -> {
+                val mergedVM =
+                    assistedMetroViewModel<EditMergedSettingsViewModel, EditMergedSettingsViewModel.Factory> {
+                        create(mangaId = mangaId)
+                    }
                 EditMergedSettingsDialog(
-                    mergedData = dialog.mergedData,
+                    viewModel = mergedVM,
+                    onMangaClick = { navigator.push(MangaScreen(it.mangaId ?: return@EditMergedSettingsDialog)) },
                     onDismissRequest = viewModel::dismissDialog,
-                    onDeleteClick = viewModel::deleteMerge,
-                    onPositiveClick = viewModel::updateMergeSettings,
-                    // KMK -->
-                    onOpenEntryClick = { merge ->
-                        merge.mangaId?.let { navigator.push(MangaScreen(it)) }
-                    },
-                    // KMK <--
+                    // KUN -->
+                    // Opening an entry from the settings sheet is upstream's `onMangaClick` now;
+                    // Komikku had the same action through the removed `onOpenEntryClick`.
+                    // KUN <--
                 )
             }
             // SY <--
