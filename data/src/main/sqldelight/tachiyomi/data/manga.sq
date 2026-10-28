@@ -248,8 +248,14 @@ SELECT
     user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 -- KUN -->
--- An entry removed from the library is no longer a favorite, so it is only uploaded through the
--- removal tombstone it left behind.
+-- Ever-favorited rows are uploaded unconditionally: `favorite_modified_at` is stamped when an entry is
+-- unfavorited and is never reset, so a manga removed from the library is still carried here. That is
+-- the fork's rule and the single source of truth (`5d0a67227d`, `3991bd8537`, `c96b78491f`).
+-- The `library_removal` term below is belt-and-braces, kept for SY parity (`78e6a65248`): its
+-- `record_library_removal` guard is a strict subset of `update_last_favorited_at_mangas`'s, so every
+-- row it names is already covered by the term above. Do not treat it as what makes removals
+-- uploadable, and do not port SY's `c54092f4b3` / `570974114c` (they drop `favorite_modified_at`)
+-- without promoting the tombstone to the primary mechanism in the same change.
 WHERE favorite_modified_at IS NOT NULL OR user_favorite_at IS NOT NULL
 OR id IN (SELECT manga_id FROM library_removal WHERE removed_at >= :removedSince);
 -- KUN <--
