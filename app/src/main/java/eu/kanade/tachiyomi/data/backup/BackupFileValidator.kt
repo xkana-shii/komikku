@@ -4,6 +4,7 @@ import android.net.Uri
 import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.models.BackupTracking
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import tachiyomi.domain.source.service.SourceManager
@@ -26,6 +27,9 @@ class BackupFileValidator(
             backupDecoder.decodeMetadata(uri, TrackedManga.serializer()) { manga ->
                 manga.tracking.mapTo(trackerIds) { it.syncId }
             }.backup
+        } catch (e: CancellationException) {
+            // A cancelled restore is not a broken backup: rethrow so the caller sees the cancellation.
+            throw e
         } catch (e: Exception) {
             throw IllegalStateException(e)
         }
