@@ -45,11 +45,27 @@ class NewUpdateViewModel(
         fun create(changelogInfo: String, downloadLink: String): NewUpdateViewModel
     }
 
-    val state: StateFlow<NewUpdateViewModel.State>
-        field = MutableStateFlow<NewUpdateViewModel.State>(State(changelogInfo = changelogInfo))
-
     private val apkFile: File
         get() = AppUpdateDownloadJob.updateApk(context)
+
+    // KUN -->
+    // The notification path and the scheduled auto-update still fetch the APK through
+    // [AppUpdateDownloadJob]. When that already landed, the screen must offer Install instead of a
+    // redundant download; an empty file is an interrupted download, not an installable APK.
+    private val apkAlreadyDownloaded: Boolean
+        get() = apkFile.isFile && apkFile.length() > 0
+    // KUN <--
+
+    val state: StateFlow<NewUpdateViewModel.State>
+        field = MutableStateFlow<NewUpdateViewModel.State>(
+            State(
+                changelogInfo = changelogInfo,
+                // KUN -->
+                downloadProgress = if (apkAlreadyDownloaded) 100 else 0,
+                stage = if (apkAlreadyDownloaded) Stage.Downloaded else Stage.Available,
+                // KUN <--
+            ),
+        )
 
     private var downloadJob: Job? = null
 
