@@ -2,6 +2,7 @@ fragment MangaFragment on Media {
   id
   staff {
     edges {
+      id
       role
       node {
         name {
