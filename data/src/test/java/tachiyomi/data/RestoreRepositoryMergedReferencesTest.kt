@@ -4,6 +4,7 @@ package tachiyomi.data
 import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
@@ -329,6 +330,45 @@ class RestoreRepositoryMergedReferencesTest {
         }
     }
 
+    /**
+     * A pre-split payload lists the merge itself as an entry. Resolving it turns it into the merge
+     * parent's own row, and storing it made the merge its own child — the shape 61.sqm drops and
+     * `MergedSource` cannot handle.
+     */
+    @Test
+    fun `a reference that resolves to the merge parent is never stored as its own child`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val repository = restoreRepository(database)
+                driver.insertManga(id = 1L, sourceId = MERGED_SOURCE, url = "/merge", version = 5L)
+                driver.insertManga(id = 2L, sourceId = SOURCE, url = "/child/a")
+                driver.insertMerge(mergeId = 1L)
+                driver.insertEntry(mergeId = 1L, mangaId = 2L, priority = 1)
+
+                restore(
+                    repository = repository,
+                    mergedMangaReferencesIncluded = true,
+                    entries = listOf(
+                        // The merge's own row: same source and url as the merge parent.
+                        entry(mangaUrl = "/merge", mangaSourceId = MERGED_SOURCE, priority = 0),
+                        entry(mangaUrl = "/child/a", priority = 3),
+                    ),
+                )
+
+                val restored = entries(database, mergeId = 1L)
+                restored.map { it.mangaId } shouldBe listOf(2L)
+                // No row of any merge points at its own merge parent.
+                driver.scalarLong("SELECT count(*) FROM merged_entry WHERE merge_id = manga_id") shouldBe 0L
+                // The payload could not be used whole, so it added nothing and rewrote nothing.
+                restored.single().chapterPriority shouldBe 1
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
     private suspend fun restore(
         repository: RestoreRepositoryImpl,
         isSync: Boolean = true,
@@ -380,12 +420,13 @@ class RestoreRepositoryMergedReferencesTest {
 
     private fun entry(
         mangaUrl: String,
+        mangaSourceId: Long = SOURCE,
         fetchChapterUpdates: Boolean = true,
         downloadChapters: Boolean = false,
         priority: Int = 1,
     ) = RestoredMergedEntry(
         mangaUrl = mangaUrl,
-        mangaSourceId = SOURCE,
+        mangaSourceId = mangaSourceId,
         fetchChapterUpdates = fetchChapterUpdates,
         downloadChapters = downloadChapters,
         chapterPriority = priority,
@@ -467,6 +508,11 @@ class RestoreRepositoryMergedReferencesTest {
             0,
         ).await()
     }
+
+    private fun SqlDriver.scalarLong(sql: String): Long? =
+        executeQuery(null, sql, { cursor ->
+            QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else null)
+        }, 0).value
 
     private companion object {
         const val SOURCE = 10L

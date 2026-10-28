@@ -434,6 +434,35 @@ class MangaRestorerTest {
         assertEquals(SOURCE, settings.infoMangaSourceId)
     }
 
+    /**
+     * The same self-reference is not a child of the merge: storing it made the merge list itself,
+     * let it pick itself as its info entry, and 61.sqm drops exactly that shape.
+     */
+    @Test
+    fun `a pre-split self-reference is not restored as a child entry`() = runTest {
+        val restorer = createRestorer(isSync = false)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = false,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(preSplitMerge()),
+            backupCategories = emptyList(),
+        )
+
+        val restored = entriesSlot.captured.single()
+        assertEquals(listOf("/child/a", "/child/b"), restored.mergedEntries.map { it.mangaUrl })
+        assertEquals(listOf(SOURCE, SOURCE), restored.mergedEntries.map { it.mangaSourceId })
+    }
+
     private fun preSplitMerge() = BackupManga(
         url = "/merge",
         title = "Merged",

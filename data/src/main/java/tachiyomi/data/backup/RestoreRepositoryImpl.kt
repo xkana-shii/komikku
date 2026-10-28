@@ -8,6 +8,7 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import exh.metadata.metadata.base.FlatMetadata
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import logcat.LogPriority
@@ -848,19 +849,30 @@ class RestoreRepositoryImpl(
 
         // Resolve every incoming entry to a local child first: the identity of an entry is the
         // manga row, not the (source, url) pair the payload carries.
-        val resolved = backupMergedEntries.mapNotNull { incoming ->
+        // KUN -->
+        // A pre-split payload also lists the merge itself as a `manga_source = 6969` reference. It
+        // carries the merge-level settings, not a child, and 61.sqm drops exactly that shape, so it
+        // is removed before the count that decides whether this payload may delete.
+        val incomingEntries = backupMergedEntries.filterNot { it.mangaSourceId == MERGED_SOURCE_ID }
+        // KUN <--
+        val resolved = incomingEntries.mapNotNull { incoming ->
             val childId = database.mangaQueries
                 .getMangaByUrlAndSource(incoming.mangaSourceId, incoming.mangaUrl, MangaMapper::mapManga)
                 .awaitAsOneOrNull()
                 ?.id
                 ?: return@mapNotNull null
+            // KUN -->
+            // A reference that resolves to the merge parent itself must never become its own entry:
+            // the merge would list itself as a child and be its own info entry.
+            if (childId == mergeMangaId) return@mapNotNull null
+            // KUN <--
             childId to incoming
         }
         // An incoming child this device does not have means the payload was built against another
         // library, so it may neither delete nor rewrite what is here: add-only, like a payload that
         // lost the version comparison.
-        val addOnly = !payloadWins || resolved.size != backupMergedEntries.size
-        if (addOnly && payloadWins && resolved.size != backupMergedEntries.size) {
+        val addOnly = !payloadWins || resolved.size != incomingEntries.size
+        if (addOnly && payloadWins && resolved.size != incomingEntries.size) {
             logcat(LogPriority.DEBUG) {
                 "Sync kept merged entries of manga $mergeMangaId: an incoming child is not local"
             }

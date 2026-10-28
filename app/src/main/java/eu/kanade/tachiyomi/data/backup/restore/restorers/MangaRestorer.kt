@@ -127,16 +127,23 @@ class MangaRestorer(
                 tracks = backupManga.tracking.map { it.getTrackImpl() },
                 excludedScanlators = backupManga.excludedScanlators,
                 // SY -->
-                mergedEntries = backupManga.mergedEntries.map { ref ->
-                    val migrated = EXHMigrations.migrateBackupMergedEntry(ref)
-                    RestoredMergedEntry(
-                        mangaUrl = migrated.mangaUrl,
-                        mangaSourceId = migrated.mangaSourceId,
-                        fetchChapterUpdates = migrated.fetchChapterUpdates,
-                        downloadChapters = migrated.downloadChapters,
-                        chapterPriority = migrated.chapterPriority,
-                    )
-                },
+                mergedEntries = backupManga.mergedEntries
+                    // KUN -->
+                    // A pre-split payload also lists the merge itself as a `manga_source = 6969`
+                    // reference carrying the merge-level settings; it is not a child, and storing it
+                    // would make the merge its own entry (61.sqm drops exactly that shape).
+                    .filterNot { it.mangaSourceId == MERGED_SOURCE_ID }
+                    // KUN <--
+                    .map { ref ->
+                        val migrated = EXHMigrations.migrateBackupMergedEntry(ref)
+                        RestoredMergedEntry(
+                            mangaUrl = migrated.mangaUrl,
+                            mangaSourceId = migrated.mangaSourceId,
+                            fetchChapterUpdates = migrated.fetchChapterUpdates,
+                            downloadChapters = migrated.downloadChapters,
+                            chapterPriority = migrated.chapterPriority,
+                        )
+                    },
                 mergeSettings = resolveMergeSettings(backupManga),
                 // KUN -->
                 mergedMangaReferencesIncluded = backupManga.mergedMangaReferencesIncluded,
