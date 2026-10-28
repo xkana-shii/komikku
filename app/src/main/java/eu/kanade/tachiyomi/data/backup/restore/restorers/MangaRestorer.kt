@@ -192,7 +192,13 @@ class MangaRestorer(
         }
         val refs = backupManga.mergedEntries
         if (refs.isEmpty()) return null
-        val sortMode = refs.firstOrNull()?.chapterSortMode ?: 0
+        // KUN -->
+        // A pre-split payload carries the merge's sort mode only on its self-reference
+        // (`manga_source = 6969`), which is appended last; a child row's mode is always 0, so the
+        // first row would silently reset the merge to "no dedupe".
+        val sortMode = (refs.firstOrNull { it.mangaSourceId == MERGED_SOURCE_ID } ?: refs.firstOrNull())
+            ?.chapterSortMode ?: 0
+        // KUN <--
         val infoRef = refs.firstOrNull { it.isInfoManga }
         return RestoredMergeSettings(
             chapterSortMode = sortMode,

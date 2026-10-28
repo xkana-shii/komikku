@@ -3,6 +3,8 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupMergedEntry
+import exh.source.MERGED_SOURCE_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -16,6 +18,7 @@ import tachiyomi.domain.backup.repository.RestoreRepository
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.manga.interactor.FetchInterval
+import tachiyomi.domain.manga.model.MergeSettings
 
 class MangaRestorerTest {
 
@@ -399,6 +402,58 @@ class MangaRestorerTest {
         assertEquals(null, entriesSlot.captured.single().mergedMangaReferencesIncluded)
     }
 
+    /**
+     * A pre-split payload stores the merge-level settings on a `manga_source = 6969` self-reference
+     * row, which the creator appends last. The children's own `chapterSortMode` is always 0, so
+     * taking the first row silently reset every restored merge to "no dedupe".
+     */
+    @Test
+    fun `a pre-split payload takes the sort mode from its self-reference, not the first child`() = runTest {
+        val restorer = createRestorer(isSync = false)
+        coEvery { getCategories.await() } returns emptyList()
+
+        val entriesSlot = slot<List<RestoredManga>>()
+        coEvery {
+            restoreRepository.restoreManga(
+                capture(entriesSlot),
+                isSync = false,
+                restoreCategories = true,
+                update = any(),
+            )
+        } returns Unit
+
+        restorer.restore(
+            backupMangas = listOf(preSplitMerge()),
+            backupCategories = emptyList(),
+        )
+
+        val settings = entriesSlot.captured.single().mergeSettings!!
+        assertEquals(MergeSettings.CHAPTER_SORT_PRIORITY, settings.chapterSortMode)
+        // The info flag stays on the child row that carries it, as before the split.
+        assertEquals("/child/b", settings.infoMangaUrl)
+        assertEquals(SOURCE, settings.infoMangaSourceId)
+    }
+
+    private fun preSplitMerge() = BackupManga(
+        url = "/merge",
+        title = "Merged",
+        mergedEntries = listOf(
+            BackupMergedEntry(mangaUrl = "/child/a", mangaSourceId = SOURCE, chapterPriority = 1),
+            BackupMergedEntry(
+                mangaUrl = "/child/b",
+                mangaSourceId = SOURCE,
+                chapterPriority = 2,
+                isInfoManga = true,
+            ),
+            // The merge's own row: the only one carrying the merge-level sort mode.
+            BackupMergedEntry(
+                mangaUrl = "/merge",
+                mangaSourceId = MERGED_SOURCE_ID,
+                chapterSortMode = MergeSettings.CHAPTER_SORT_PRIORITY,
+            ),
+        ),
+    )
+
     @Test
     fun `Category nameToUid generates deterministic positive 63-bit UIDs`() {
         val uid1 = Category.nameToUid("Action")
@@ -408,6 +463,10 @@ class MangaRestorerTest {
         assertEquals(uid1, uid2)
         assertEquals(uid1, uid3)
         org.junit.jupiter.api.Assertions.assertTrue(uid1 > 0L)
+    }
+
+    private companion object {
+        const val SOURCE = 10L
     }
 }
 // KUN <--
