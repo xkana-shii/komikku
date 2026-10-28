@@ -217,6 +217,54 @@ class MigrationTest {
         }
     }
 
+    /**
+     * The pre-split `merged` table was keyed on `_id` alone, so one child could be listed twice under
+     * the same merge entry. The split's `merged_entry` has `UNIQUE(merge_id, manga_id)`, which turned
+     * such a pair into an aborted upgrade (SY 9955747216).
+     */
+    @Test
+    fun `migration from version 49 keeps one merged_entry per merge and manga pair`() {
+        runBlocking {
+            val dbFile = Files.createTempFile("komikku-migration-merged-entry-test", ".db")
+            Files.copy(Path.of("src/main/sqldelight/49.db"), dbFile, REPLACE_EXISTING)
+            val driver = JdbcSqliteDriver("jdbc:sqlite:$dbFile")
+            try {
+                populateOldSchema(driver)
+                // A merge parent and its child, neither a duplicate of anything in the seed, so the
+                // group merge cannot collapse the pair on its own.
+                driver.execute(
+                    null,
+                    "INSERT INTO mangas(_id,source,url,title,status,favorite,initialized,viewer,chapter_flags,cover_last_modified,date_added) " +
+                        "VALUES (50,6969,'https://merge50','Merge 50',0,1,1,0,0,0,1100)," +
+                        "(51,100,'https://child51','Child 51',0,1,1,0,0,0,1101)",
+                    0,
+                ).await()
+                // The same pair twice, with different entry settings: `_id` 10 is the older row.
+                driver.execute(
+                    null,
+                    "INSERT INTO merged(_id,info_manga,get_chapter_updates,chapter_sort_mode,chapter_priority,download_chapters,merge_id,merge_url,manga_id,manga_url,manga_source) " +
+                        "VALUES (10,0,1,0,5,0,50,'https://merge50',51,'https://child51',100)," +
+                        "(11,0,0,0,9,1,50,'https://merge50',51,'https://child51',100)",
+                    0,
+                ).await()
+
+                Database.Schema.migrate(driver, 49L, Database.Schema.version).await()
+
+                // The upgrade completes and keeps exactly one row for the duplicated pair
+                driver.scalarLong("SELECT count(*) FROM merged_entry WHERE merge_id = 50 AND manga_id = 51") shouldBe 1
+                // ... the one from the lowest `_id`, carrying that row's own entry settings (the new
+                // table allocates fresh ids, so `_id` itself cannot be checked here)
+                driver.scalarLong("SELECT chapter_priority FROM merged_entry WHERE merge_id = 50 AND manga_id = 51") shouldBe 5
+                driver.scalarLong("SELECT download_chapters FROM merged_entry WHERE merge_id = 50 AND manga_id = 51") shouldBe 0
+                // The merge row itself is still built from the pair's merge id
+                driver.scalarLong("SELECT count(*) FROM merge WHERE manga_id = 50") shouldBe 1
+                driver.foreignKeyViolations() shouldBe 0
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
     private fun populateOldSchema(driver: SqlDriver) = runBlocking {
         // The old schema's triggers would otherwise bump version/last_modified_at while seeding
         listOf(

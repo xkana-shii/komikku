@@ -51,10 +51,20 @@ SELECT
      LIMIT 1)
 FROM (SELECT DISTINCT merge_id FROM merged) m;
 
+-- KUN -->
+-- Port of 9955747216. The old table was keyed on `_id` alone, so the same (merge_id, manga_id) pair
+-- could be stored more than once and the new UNIQUE constraint would abort the upgrade on it. Keep
+-- the lowest `_id` of each pair, i.e. the reference the user created first.
 INSERT INTO merged_entry(merge_id, manga_id, fetch_chapter_updates, download_chapters, chapter_priority)
-SELECT merge_id, manga_id, get_chapter_updates, download_chapters, chapter_priority
-FROM merged
-WHERE manga_source <> 6969 AND manga_id IS NOT NULL;
+SELECT m.merge_id, m.manga_id, m.get_chapter_updates, m.download_chapters, m.chapter_priority
+FROM merged AS m
+WHERE m.manga_source <> 6969 AND m.manga_id IS NOT NULL
+AND m._id = (
+    SELECT MIN(m2._id) FROM merged AS m2
+    WHERE m2.merge_id = m.merge_id AND m2.manga_id = m.manga_id
+    AND m2.manga_source <> 6969 AND m2.manga_id IS NOT NULL
+);
+-- KUN <--
 
 DROP TABLE merged;
 -- KUN <--
