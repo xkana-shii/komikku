@@ -59,6 +59,7 @@ import eu.kanade.presentation.components.SOURCE_SEARCH_BOX_HEIGHT
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.system.LocaleHelper
+import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -459,6 +460,9 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 // KMK <--
                 .asSequence()
                 .filterIsInstance<HttpSource>()
+                // SY -->
+                .filterNot { it.id == MERGED_SOURCE_ID }
+                // SY <--
                 .filter { it.lang in languages }
                 .map {
                     val source = Source(
