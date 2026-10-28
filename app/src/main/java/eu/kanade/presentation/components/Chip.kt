@@ -337,41 +337,6 @@ object SuggestionChipDefaults {
         disabledBorderColor = disabledBorderColor,
         borderWidth = borderWidth,
     )
-
-    /**
-     * Creates a [ChipColors] that represents the default container, label, and icon colors used in
-     * an elevated [SuggestionChip].
-     *
-     * @param containerColor the container color of this chip when enabled
-     * @param labelColor the label color of this chip when enabled
-     * @param iconContentColor the color of this chip's icon when enabled
-     * @param disabledContainerColor the container color of this chip when not enabled
-     * @param disabledLabelColor the label color of this chip when not enabled
-     * @param disabledIconContentColor the color of this chip's icon when not enabled
-     */
-    // KUN -->
-    // Kept: NamespaceTags' elevated tags (KMK) are the only consumer.
-    @Composable
-    fun elevatedSuggestionChipColors(
-        containerColor: Color = MaterialTheme.colorScheme.surface,
-        labelColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-        iconContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-        disabledContainerColor: Color = MaterialTheme.colorScheme.onSurface
-            .copy(alpha = 0.12f),
-        disabledLabelColor: Color = MaterialTheme.colorScheme.onSurface
-            .copy(alpha = 0.38f),
-        disabledIconContentColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-    ): ChipColors = ChipColors(
-        containerColor = containerColor,
-        labelColor = labelColor,
-        leadingIconContentColor = iconContentColor,
-        trailingIconContentColor = Color.Unspecified,
-        disabledContainerColor = disabledContainerColor,
-        disabledLabelColor = disabledLabelColor,
-        disabledLeadingIconContentColor = disabledIconContentColor,
-        disabledTrailingIconContentColor = Color.Unspecified,
-    )
-    // KUN <--
 }
 
 /**
