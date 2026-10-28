@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.assist.AssistContent
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -10,48 +9,55 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.View.LAYER_TYPE_HARDWARE
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
-import androidx.core.graphics.Insets
 import androidx.core.net.toUri
-import androidx.core.transition.doOnEnd
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
@@ -60,7 +66,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
-import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.hippo.unifile.UniFile
 import dev.zacsweers.metro.Inject
 import eu.kanade.domain.base.BasePreferences
@@ -71,6 +76,8 @@ import eu.kanade.presentation.reader.ChapterListDialog
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
 import eu.kanade.presentation.reader.ReaderContentOverlay
+import eu.kanade.presentation.reader.ReaderNavigationOverlay
+import eu.kanade.presentation.reader.ReaderNavigationOverlayState
 import eu.kanade.presentation.reader.ReaderPageActionsDialog
 import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.ReadingModeSelectDialog
@@ -84,7 +91,6 @@ import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
-import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -97,14 +103,12 @@ import eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
-import eu.kanade.tachiyomi.ui.reader.setting.GeneralSettings
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsViewModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
-import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
+import eu.kanade.tachiyomi.ui.reader.viewer.LocalPageColorFilter
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
-import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
@@ -147,6 +151,7 @@ import tachiyomi.domain.manga.model.asMangaCover
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
+import tachiyomi.presentation.core.components.CombinedCircularProgressIndicator
 import tachiyomi.presentation.core.util.collectAsState
 import java.io.ByteArrayOutputStream
 import kotlin.time.Duration.Companion.seconds
@@ -189,8 +194,6 @@ class ReaderActivity : BaseActivity() {
     @Inject private lateinit var connectionsPreferences: ConnectionsPreferences
     // <-- AM (CONNECTIONS)
 
-    lateinit var binding: ReaderActivityBinding
-
     val viewModel by viewModels<ReaderViewModel> { graph.viewModelFactory }
     val settingsViewModel by viewModels<ReaderSettingsViewModel> {
         viewModelFactory {
@@ -224,9 +227,17 @@ class ReaderActivity : BaseActivity() {
     private val displayRefreshHost by lazy { DisplayRefreshHost() }
     // KUN <--
 
+    // KUN -->
+    private val navigationOverlayState = ReaderNavigationOverlayState()
+    // KUN <--
+
     private val windowInsetsController by lazy { WindowInsetsControllerCompat(window, window.decorView) }
 
-    private var loadingIndicator: ReaderProgressIndicator? = null
+    // KUN -->
+    // Whether the viewer is still being loaded. The Compose root draws the loading chrome over it
+    // (upstream 00335b2a70) instead of the activity adding a progress view to its container.
+    private var isLoadingViewer by mutableStateOf(false)
+    // KUN <--
 
     /**
      * Viewer used to display the pages (pager, webtoon, ...).
@@ -262,9 +273,13 @@ class ReaderActivity : BaseActivity() {
 
         super.onCreate(savedInstanceState)
 
-        binding = ReaderActivityBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        binding.setComposeOverlay()
+        // KUN -->
+        // Upstream 00335b2a70 draws the reader through Compose: one Compose root holds the viewer,
+        // the chrome and the dialogs, replacing the XML binding the activity used to inflate.
+        setComposeContent {
+            ReaderScreen()
+        }
+        // KUN <--
 
         if (!viewModel.hasValidArgs) {
             finish()
@@ -277,11 +292,25 @@ class ReaderActivity : BaseActivity() {
             Notifications.ID_NEW_CHAPTERS,
         )
 
-        settingsViewModel.general.collectChanges(lifecycleScope, ::applyGeneralSettings)
         settingsViewModel.brightness
             .onEach(::setCustomBrightnessValue)
             .launchIn(lifecycleScope)
         // KUN -->
+        // The tap zones are drawn by the Compose overlay: the viewer publishes its navigator into
+        // `settingsViewModel.navigation` (upstream 00335b2a70) and this pushes it into the overlay.
+        // The fork reads the "new user" flag here rather than through the settings view model, so the
+        // overlay is still shown once to a reader new to the app.
+        val showOverlayForNewUser = readerPreferences.showNavigationOverlayNewUser.get().also { first ->
+            if (first) readerPreferences.showNavigationOverlayNewUser.set(false)
+        }
+        settingsViewModel.navigation
+            .filterNotNull()
+            .onEach { navigation ->
+                val showOnStart = showOverlayForNewUser ||
+                    settingsViewModel.general.value.navigationOverlayOnStart
+                navigationOverlayState.setNavigation(navigation, showOnStart)
+            }
+            .launchIn(lifecycleScope)
         // The display profile is a loaded image the SSIV decoders read (KMK), not a value in the
         // settings plane, so it keeps its own observer.
         preferences.displayProfile.changes()
@@ -389,8 +418,11 @@ class ReaderActivity : BaseActivity() {
             .launchIn(lifecycleScope)
     }
 
-    private fun ReaderActivityBinding.setComposeOverlay(): Unit = composeOverlay.setComposeContent {
-        // KMK -->
+    // KUN -->
+    // KMK: the reader's chrome is drawn in the cover-seeded theme (R19). `setComposeOverlay` wrapped
+    // the old `ComposeView` in it; the Compose root does the same, so the seed survives the move.
+    @Composable
+    private fun ReaderScreen() {
         TachiyomiTheme(
             seedColor = seedColorState().takeIf { themeCoverBased },
             typography = MaterialTheme.typography.copy(
@@ -400,9 +432,47 @@ class ReaderActivity : BaseActivity() {
             val context = LocalContext.current
             // KMK <--
             val state by viewModel.state.collectAsState()
+            val general by settingsViewModel.general.collectAsState()
             val showPageNumber by readerPreferences.showPageNumber.collectAsState()
+            val flashOnPageChange by readerPreferences.flashOnPageChange.collectAsState()
+            val colorOverlayEnabled by readerPreferences.colorFilter.collectAsState()
+            val colorOverlay by readerPreferences.colorFilterValue.collectAsState()
+            val colorOverlayMode by readerPreferences.colorFilterMode.collectAsState()
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            val backgroundColor = remember(general.theme) {
+                ComposeColor(baseContext.readerBackgroundColor(general.theme))
+            }
+            val colorOverlayBlendMode = remember(colorOverlayMode) {
+                ReaderPreferences.ColorFilterMode.getOrNull(colorOverlayMode)?.second
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backgroundColor)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            navigationOverlayState.hide()
+                        }
+                    }
+                    .then(if (general.keepScreenOn) Modifier.keepScreenOn() else Modifier),
+            ) {
+                ReaderViewer()
+
+                if (isLoadingViewer) {
+                    // KUN --> R20: the fork's seeded, always-rotating indicator, not a bare LoadingScreen
+                    LoadingChrome()
+                    // KUN <--
+                    return@Box
+                }
+
+                ReaderContentOverlay(
+                    brightness = state.brightnessOverlayValue,
+                    color = colorOverlay.takeIf { colorOverlayEnabled },
+                    colorBlendMode = colorOverlayBlendMode,
+                )
+
                 if (!state.menuVisible && showPageNumber) {
                     ReaderPageIndicator(
                         // SY -->
@@ -415,7 +485,11 @@ class ReaderActivity : BaseActivity() {
                     )
                 }
 
-                ContentOverlay(state = state)
+                if (flashOnPageChange) {
+                    DisplayRefreshHost(hostState = displayRefreshHost)
+                }
+
+                ReaderNavigationOverlay(state = navigationOverlayState)
 
                 AppBars(state = state)
             }
@@ -715,27 +789,50 @@ class ReaderActivity : BaseActivity() {
         return handled || super.dispatchGenericMotionEvent(event)
     }
 
+    // KUN -->
+    /**
+     * Hosts the current viewer (upstream 00335b2a70). The reader's grayscale and inverted colours
+     * reach the page images through [LocalPageColorFilter]; transition, loading and error pages keep
+     * their own colours.
+     */
     @Composable
-    private fun ContentOverlay(state: ReaderViewModel.State) {
-        val flashOnPageChange by readerPreferences.flashOnPageChange.collectAsState()
-
-        val colorOverlayEnabled by readerPreferences.colorFilter.collectAsState()
-        val colorOverlay by readerPreferences.colorFilterValue.collectAsState()
-        val colorOverlayMode by readerPreferences.colorFilterMode.collectAsState()
-        val colorOverlayBlendMode = remember(colorOverlayMode) {
-            ReaderPreferences.ColorFilterMode.getOrNull(colorOverlayMode)?.second
+    private fun ReaderViewer() {
+        val viewer by viewerFlow.collectAsState()
+        val general by settingsViewModel.general.collectAsState()
+        val insets = when {
+            !general.fullscreen -> WindowInsets.systemBars
+            !general.drawUnderCutout -> WindowInsets.displayCutout
+            else -> WindowInsets(0)
+        }
+        val colorFilter = remember(general.grayscale, general.invertedColors) {
+            viewerColorFilter(general.grayscale, general.invertedColors)
         }
 
-        ReaderContentOverlay(
-            brightness = state.brightnessOverlayValue,
-            color = colorOverlay.takeIf { colorOverlayEnabled },
-            colorBlendMode = colorOverlayBlendMode,
-        )
-
-        if (flashOnPageChange) {
-            DisplayRefreshHost(hostState = displayRefreshHost)
+        CompositionLocalProvider(LocalPageColorFilter provides colorFilter) {
+            key(viewer) {
+                viewer?.Content(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(insets),
+                )
+            }
         }
     }
+
+    /**
+     * R20: the reader's loading chrome. The fork's indicator always rotates and takes the reader's
+     * seeded theme from [ReaderScreen], which a bare `LoadingScreen()` would drop.
+     */
+    @Composable
+    private fun LoadingChrome() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CombinedCircularProgressIndicator(progress = { 0f })
+        }
+    }
+    // KUN <--
 
     @Composable
     fun AppBars(state: ReaderViewModel.State) {
@@ -1057,34 +1154,27 @@ class ReaderActivity : BaseActivity() {
      */
     private fun updateViewer() {
         val prevViewer = viewer
+        // KUN --> the reading mode the viewer is made from is also the one the tap zones resolve
+        // (upstream 00335b2a70), so `settingsViewModel.navigation` matches this viewer.
+        val readingMode = viewModel.getMangaReadingMode()
+        settingsViewModel.setViewerReadingMode(ReadingMode.fromPreference(readingMode))
         val newViewer = ReadingMode.toViewer(
-            viewModel.getMangaReadingMode(),
+            readingMode,
             this,
             // KMK -->
             seedColor = seedColorStatic()?.toArgb(),
             // KMK <--
         )
 
-        if (window.sharedElementEnterTransition is MaterialContainerTransform) {
-            // Wait until transition is complete to avoid crash on API 26
-            window.sharedElementEnterTransition.doOnEnd {
-                setOrientation(viewModel.getMangaOrientation())
-            }
-        } else {
-            setOrientation(viewModel.getMangaOrientation())
-        }
+        setOrientation(viewModel.getMangaOrientation())
+        // KUN <--
 
         // KNS -->
         automation.stop()
         // KNS <--
         // Destroy previous viewer if there was one
-        if (prevViewer != null) {
-            prevViewer.destroy()
-            binding.viewerContainer.removeAllViews()
-        }
+        prevViewer?.destroy()
         viewerFlow.value = newViewer
-        updateViewerInset(readerPreferences.fullscreen.get(), readerPreferences.drawUnderCutout.get())
-        binding.viewerContainer.addView(newViewer.getView())
 
         // SY -->
         if (newViewer is PagerViewer) {
@@ -1113,15 +1203,7 @@ class ReaderActivity : BaseActivity() {
             showReadingModeToast(viewModel.getMangaReadingMode())
         }
 
-        loadingIndicator = ReaderProgressIndicator(
-            context = this,
-            // KMK -->
-            seedColor = seedColorStatic()?.toArgb(),
-            // KMK <--
-        )
-        binding.readerContainer.addView(loadingIndicator)
-
-        startPostponedEnterTransition()
+        isLoadingViewer = true
     }
 
     private fun openChapterInWebView() {
@@ -1160,9 +1242,8 @@ class ReaderActivity : BaseActivity() {
      * method to the current viewer, but also set the subtitle on the toolbar, and
      * hides or disables the reader prev/next buttons if there's a prev or next chapter
      */
-    @SuppressLint("RestrictedApi")
     private fun setChapters(viewerChapters: ViewerChapters) {
-        binding.readerContainer.removeView(loadingIndicator)
+        isLoadingViewer = false
         // SY -->
         val state = viewModel.state.value
         if (state.indexChapterToShift != null && state.indexPageToShift != null) {
@@ -1402,74 +1483,6 @@ class ReaderActivity : BaseActivity() {
         }
     }
 
-    /**
-     * Updates viewer inset depending on fullscreen reader preferences.
-     */
-    private fun updateViewerInset(fullscreen: Boolean, drawUnderCutout: Boolean) {
-        if (!::binding.isInitialized) return
-        val view = binding.viewerContainer
-
-        view.applyInsetsPadding(ViewCompat.getRootWindowInsets(view), fullscreen, drawUnderCutout)
-        ViewCompat.setOnApplyWindowInsetsListener(view) { view, windowInsets ->
-            view.applyInsetsPadding(windowInsets, fullscreen, drawUnderCutout)
-            windowInsets
-        }
-    }
-
-    private fun View.applyInsetsPadding(
-        windowInsets: WindowInsetsCompat?,
-        fullscreen: Boolean,
-        drawUnderCutout: Boolean,
-    ) {
-        val insets = when {
-            !fullscreen -> windowInsets?.getInsets(WindowInsetsCompat.Type.systemBars())
-            !drawUnderCutout -> windowInsets?.getInsets(WindowInsetsCompat.Type.displayCutout())
-            else -> null
-        }
-            ?: Insets.NONE
-
-        setPadding(insets.left, insets.top, insets.right, insets.bottom)
-    }
-
-    private fun applyGeneralSettings(old: GeneralSettings?, new: GeneralSettings) {
-        if (old?.theme != new.theme) {
-            binding.readerContainer.setBackgroundColor(baseContext.readerBackgroundColor(new.theme))
-        }
-        if (old?.keepScreenOn != new.keepScreenOn) {
-            setKeepScreenOn(new.keepScreenOn)
-        }
-        if (old?.grayscale != new.grayscale || old?.invertedColors != new.invertedColors) {
-            setLayerPaint(new.grayscale, new.invertedColors)
-        }
-        if (old?.fullscreen != new.fullscreen || old?.drawUnderCutout != new.drawUnderCutout) {
-            updateViewerInset(new.fullscreen, new.drawUnderCutout)
-        }
-    }
-
-    private fun getCombinedPaint(grayscale: Boolean, invertedColors: Boolean): Paint {
-        return Paint().apply {
-            colorFilter = ColorMatrixColorFilter(
-                ColorMatrix().apply {
-                    if (grayscale) {
-                        setSaturation(0f)
-                    }
-                    if (invertedColors) {
-                        postConcat(
-                            ColorMatrix(
-                                floatArrayOf(
-                                    -1f, 0f, 0f, 0f, 255f,
-                                    0f, -1f, 0f, 0f, 255f,
-                                    0f, 0f, -1f, 0f, 255f,
-                                    0f, 0f, 0f, 1f, 0f,
-                                ),
-                            ),
-                        )
-                    }
-                },
-            )
-        }
-    }
-
     // KMK -->
     /**
      * Sets the display profile to [path].
@@ -1491,17 +1504,6 @@ class ReaderActivity : BaseActivity() {
     // KMK <--
 
     /**
-     * Sets the keep screen on mode according to [enabled].
-     */
-    private fun setKeepScreenOn(enabled: Boolean) {
-        if (enabled) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
-
-    /**
      * Sets the brightness of the screen. Range is [-75, 100].
      * From -75 to -1 a semi-transparent black view is overlaid with the minimum brightness.
      * From 1 to 100 it sets that value as brightness.
@@ -1521,11 +1523,6 @@ class ReaderActivity : BaseActivity() {
         window.attributes = window.attributes.apply { screenBrightness = readerBrightness }
 
         viewModel.setBrightnessOverlayValue(value)
-    }
-
-    private fun setLayerPaint(grayscale: Boolean, invertedColors: Boolean) {
-        val paint = if (grayscale || invertedColors) getCombinedPaint(grayscale, invertedColors) else null
-        binding.viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)
     }
 
     // KMK -->
@@ -1572,3 +1569,28 @@ class ReaderActivity : BaseActivity() {
     }
     // KMK <--
 }
+
+// KUN -->
+/**
+ * The reader's grayscale and inverted colours, for page images only: transition, loading and error
+ * pages keep theirs. Null when both are off (upstream 00335b2a70).
+ */
+private fun viewerColorFilter(grayscale: Boolean, invertedColors: Boolean): ColorFilter? {
+    if (!grayscale && !invertedColors) return null
+    val matrix = ColorMatrix()
+    if (invertedColors) {
+        matrix *= ColorMatrix(
+            floatArrayOf(
+                -1f, 0f, 0f, 0f, 255f,
+                0f, -1f, 0f, 0f, 255f,
+                0f, 0f, -1f, 0f, 255f,
+                0f, 0f, 0f, 1f, 0f,
+            ),
+        )
+    }
+    if (grayscale) {
+        matrix *= ColorMatrix().apply { setToSaturation(0f) }
+    }
+    return ColorFilter.colorMatrix(matrix)
+}
+// KUN <--

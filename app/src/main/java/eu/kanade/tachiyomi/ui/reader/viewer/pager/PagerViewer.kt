@@ -28,16 +28,12 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderItem
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.GeneralSettings
-import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.LocalPageColorFilter
 import eu.kanade.tachiyomi.ui.reader.viewer.PagedSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPosition
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
-import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
-import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
-import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.position
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -86,14 +82,6 @@ abstract class PagerViewer(
      */
     val general: GeneralSettings
         get() = settingsViewModel.general.value
-
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose. Until then the tap zones are still
-    // pushed into the activity's overlay view, which is what draws them.
-    private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
-
-    private var navigator = paged.navigation.navigator(::defaultNavigation)
-    // KUN <--
 
     val imageZoomType: ZoomStartPosition
         get() = paged.page.zoomStart.position(
@@ -202,7 +190,9 @@ abstract class PagerViewer(
                 (event.rawX - viewPosition[0] + viewPositionRelativeToWindow[0]) / pager.width,
                 (event.rawY - viewPosition[1] + viewPositionRelativeToWindow[1]) / pager.height,
             )
-            when (navigator.getAction(pos)) {
+            // KUN --> the tap zones come from the settings view model (upstream 00335b2a70)
+            when (activity.settingsViewModel.navigation.value?.getAction(pos) ?: NavigationRegion.MENU) {
+                // KUN <--
                 NavigationRegion.MENU -> activity.toggleMenu()
                 NavigationRegion.NEXT -> moveToNext()
                 NavigationRegion.PREV -> moveToPrevious()
@@ -249,29 +239,8 @@ abstract class PagerViewer(
             if (old != null && old.page != new.page) {
                 refreshAdapter()
             }
-            // KUN -->
-            // bridge: removed when ReaderActivity draws through Compose.
-            if (old?.navigation != new.navigation) {
-                navigator = new.navigation.navigator(::defaultNavigation)
-                val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
-                activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
-            }
-            // KUN <--
         }
     }
-
-    // KUN -->
-    // KMK: the tap zones (R31) travel with the navigator.
-    private fun defaultNavigation(
-        invertMode: ReaderPreferences.TappingInvertMode,
-        smallerTapZone: Boolean,
-    ): ViewerNavigation {
-        return when (this) {
-            is VerticalPagerViewer -> LNavigation(invertMode, smallerTapZone)
-            else -> RightAndLeftNavigation(invertMode, smallerTapZone)
-        }
-    }
-    // KUN <--
 
     override fun destroy() {
         super.destroy()

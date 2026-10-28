@@ -49,11 +49,8 @@ import eu.kanade.tachiyomi.ui.reader.viewer.LongStripSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.PagedSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPosition
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
-import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
-import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
-import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.position
 import eu.kanade.tachiyomi.util.system.createReaderThemeContext
 import eu.kanade.tachiyomi.util.system.readerBackgroundColor
@@ -318,14 +315,6 @@ open class WebGpuViewer(
      */
     val general: GeneralSettings
         get() = settingsViewModel.general.value
-
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose. Until then the tap zones are still
-    // pushed into the activity's overlay view, which is what draws them.
-    private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
-
-    private var navigator = paged.navigation.navigator(::defaultNavigation)
-    // KUN <--
 
     val imageZoomType: ZoomStartPosition
         get() = paged.page.zoomStart.position(
@@ -844,7 +833,10 @@ open class WebGpuViewer(
             }
 
             onTap = { offset ->
-                when (navigator.getAction(PointF(offset.x, offset.y))) {
+                // KUN --> the tap zones come from the settings view model (upstream 00335b2a70)
+                val region = activity.settingsViewModel.navigation.value?.getAction(PointF(offset.x, offset.y))
+                when (region ?: NavigationRegion.MENU) {
+                    // KUN <--
                     NavigationRegion.MENU -> activity.toggleMenu()
                     NavigationRegion.NEXT -> moveToNext()
                     NavigationRegion.PREV -> moveToPrevious()
@@ -912,30 +904,8 @@ open class WebGpuViewer(
             if (old != null && old.page != new.page) {
                 onPageSettingsChanged()
             }
-            // KUN -->
-            // bridge: removed when ReaderActivity draws through Compose.
-            if (old?.navigation != new.navigation) {
-                navigator = new.navigation.navigator(::defaultNavigation)
-                val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
-                activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
-            }
-            // KUN <--
         }
     }
-
-    // KUN -->
-    // KMK: the tap zones (R31) travel with the navigator.
-    private fun defaultNavigation(
-        invertMode: ReaderPreferences.TappingInvertMode,
-        smallerTapZone: Boolean,
-    ): ViewerNavigation {
-        return if (isVertical) {
-            LNavigation(invertMode, smallerTapZone)
-        } else {
-            RightAndLeftNavigation(invertMode, smallerTapZone)
-        }
-    }
-    // KUN <--
 
     /**
      * Applies what the pages are made with and remakes them.

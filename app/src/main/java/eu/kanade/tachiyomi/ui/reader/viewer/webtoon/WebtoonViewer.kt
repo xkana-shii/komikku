@@ -31,10 +31,8 @@ import eu.kanade.tachiyomi.ui.reader.viewer.LocalPageColorFilter
 import eu.kanade.tachiyomi.ui.reader.viewer.LongStripSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
-import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
 import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
-import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -107,14 +105,6 @@ class WebtoonViewer(
      */
     val general: GeneralSettings
         get() = settingsViewModel.general.value
-
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose. Until then the tap zones are still
-    // pushed into the activity's overlay view, which is what draws them.
-    private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
-
-    private var navigator = simpleLongStrip.navigation.navigator(::defaultNavigation)
-    // KUN <--
 
     // KUN -->
     /**
@@ -192,7 +182,9 @@ class WebtoonViewer(
                 (event.rawX - viewPosition[0] + viewPositionRelativeToWindow[0]) / recycler.width,
                 (event.rawY - viewPosition[1] + viewPositionRelativeToWindow[1]) / recycler.originalHeight,
             )
-            when (navigator.getAction(pos)) {
+            // KUN --> the tap zones come from the settings view model (upstream 00335b2a70)
+            when (activity.settingsViewModel.navigation.value?.getAction(pos) ?: NavigationRegion.MENU) {
+                // KUN <--
                 NavigationRegion.MENU -> activity.toggleMenu()
                 NavigationRegion.NEXT, NavigationRegion.RIGHT -> scrollDown()
                 NavigationRegion.PREV, NavigationRegion.LEFT -> scrollUp()
@@ -240,14 +232,6 @@ class WebtoonViewer(
             if (old?.doubleTapZoom != new.doubleTapZoom) {
                 frame.doubleTapZoom = new.doubleTapZoom
             }
-            // KUN -->
-            // bridge: removed when ReaderActivity draws through Compose.
-            if (old?.navigation != new.navigation) {
-                navigator = new.navigation.navigator(::defaultNavigation)
-                val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
-                activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
-            }
-            // KUN <--
             // KUN -->
             // KMK: pinch to zoom (R26) and the long strip scale type (R24) still drive the recycler.
             if (old?.pinchToZoom != new.pinchToZoom) {
@@ -301,14 +285,6 @@ class WebtoonViewer(
                 }
             }
         }
-    }
-
-    // KMK: the tap zones (R31) travel with the navigator.
-    private fun defaultNavigation(
-        invertMode: ReaderPreferences.TappingInvertMode,
-        smallerTapZone: Boolean,
-    ): ViewerNavigation {
-        return LNavigation(invertMode, smallerTapZone)
     }
 
     private fun checkAllowPreload(page: ReaderPage?): Boolean {
