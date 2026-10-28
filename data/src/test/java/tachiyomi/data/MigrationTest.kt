@@ -265,6 +265,7 @@ class MigrationTest {
         }
     }
 
+    // KUN -->
     /**
      * Migration from version 49 for a pre-split merge.
      *
@@ -320,6 +321,7 @@ class MigrationTest {
             }
         }
     }
+    // KUN <--
 
     private fun populateOldSchema(driver: SqlDriver) = runBlocking {
         // The old schema's triggers would otherwise bump version/last_modified_at while seeding
