@@ -511,5 +511,6 @@ abstract class PagerViewer(
         adapter.splitDoublePages(currentPage)
     }
 
+    fun getShiftedPage(): ReaderPage? = adapter.pageToShift
     // SY <--
 }
