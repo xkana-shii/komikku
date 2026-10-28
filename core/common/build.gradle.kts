@@ -64,6 +64,5 @@ dependencies {
 
     // SY -->
     implementation(sylibs.xlog)
-    implementation(libs.injekt)
     // SY <--
 }
