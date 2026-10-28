@@ -57,6 +57,21 @@ All commands accept `--config PATH` (default: `config.json` next to the script) 
 
 Only **Status** and **Notes** are yours to edit. Every other cell, the order of the rows and the header are rewritten on each run.
 
+## Status semantics in this fork
+
+An empty or `?` status means **"no pick was detected"**, not "not in the tree".
+
+Ports in this fork land as **squash merges**, so they carry no `cherry picked from commit <sha>`
+trailer and the `hash of` detector never fires; the fork's history was also vendored, so `mihon/main`
+is not an ancestor and `in history as …` never fires either. A blank row is the script reporting that it
+could not *see* the pick — it is not evidence the change is missing. Decide presence by content: see
+"Verify presence by content, not by the log" in the `upstream-port` skill.
+
+Because of that, **mark the rows of every squash-merged port** with
+`mark HASH --status O --note "…"` as part of the port, not as a later cleanup. Re-adjudicating the blank
+rows from scratch after each squash merge is the waste this note exists to prevent, and it is what
+turns the blank count in the summary table into a phantom backlog.
+
 ## Rules
 
 ### Which commits are listed

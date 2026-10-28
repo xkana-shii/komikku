@@ -455,6 +455,8 @@ main upstream `mihon/main`, additional `tachiyomiSY/master`, `komikku/master` (d
 - Never hand-edit columns other than Status and Notes; use the script's `mark` command.
 - Port Komikku with the `komikku-sync` skill and Mihon/TachiyomiSY/Komi-kun with `upstream-port`
   (`.agents/skills/`); keep `git cherry-pick -x` provenance and record skipped/adapted commits.
+- **A blank or `?` status is not proof of absence**: a squash-merged port carries no pick trailer, so
+  decide whether an upstream change is present by its content (see the `upstream-port` skill).
 
 ---
 
