@@ -84,6 +84,26 @@ class MangaSyncQueriesTest {
     }
 
     @Test
+    fun `a favourite unchanged inside the window is left out of the delta`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                driver.insertManga(id = 1, inLibrary = true)
+                // Already uploaded: favorited, but nothing about it changed inside the window.
+                driver.execute("UPDATE manga SET last_modified_at = 1000 WHERE id = 1")
+
+                // The favorite check must only narrow the window, not bypass it: `A OR (B AND C)`
+                // would return every favourited entry the delta has already seen.
+                database.mangaQueries.getMangasModifiedSince(5000, MangaMapper::mapManga).awaitAsList()
+                    .shouldBeEmpty()
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
     fun `a library removal rides the full upload`() {
         runBlocking {
             val driver = newDriver()

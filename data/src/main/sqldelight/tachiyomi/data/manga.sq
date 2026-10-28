@@ -257,17 +257,17 @@ OR id IN (SELECT manga_id FROM library_removal WHERE removed_at >= :removedSince
 getMangasModifiedSince:
 SELECT M.*
 FROM manga M
-WHERE (
-    -- KUN -->
-    -- A manga inserted while the favorite-timestamp trigger was missing can have
-    -- user_favorite_at set with favorite_modified_at NULL. Treat currently favorited rows as
-    -- ever-favorited too, or they stay invisible to every sync upload query.
-    M.favorite_modified_at IS NOT NULL OR M.user_favorite_at IS NOT NULL
-    -- KUN <--
-    AND (M.last_modified_at >= :since
-    OR EXISTS (SELECT 1 FROM chapter C WHERE C.manga_id = M.id AND C.last_modified_at >= :since))
-)
+-- KUN -->
+-- A manga inserted while the favorite-timestamp trigger was missing can have
+-- user_favorite_at set with favorite_modified_at NULL. Treat currently favorited rows as
+-- ever-favorited too, or they stay invisible to every sync upload query.
+WHERE (M.favorite_modified_at IS NOT NULL OR M.user_favorite_at IS NOT NULL)
+-- KUN <--
+AND (M.last_modified_at >= :since
+OR EXISTS (SELECT 1 FROM chapter C WHERE C.manga_id = M.id AND C.last_modified_at >= :since))
+-- KUN -->
 OR M.id IN (SELECT manga_id FROM library_removal WHERE removed_at >= :since);
+-- KUN <--
 -- SY <--
 
 getSourceIdWithFavoriteCount:
