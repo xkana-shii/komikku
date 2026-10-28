@@ -239,6 +239,13 @@ class WebtoonViewer(
 
         frame.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
         frame.addView(recycler)
+        // KUN -->
+        // The per-field blocks above write through to the frame's recycler, which only exists after
+        // `addView`, so their first values were dropped: re-apply them now that it can receive them.
+        frame.pinchToZoom = simpleLongStrip.pinchToZoom
+        frame.doubleTapZoom = simpleLongStrip.doubleTapZoom
+        frame.zoomOutDisabled = longStrip.zoomOutDisabled
+        // KUN <--
     }
 
     // KUN -->
