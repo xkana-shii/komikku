@@ -1,10 +1,13 @@
 package mihon.telemetry
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import exh.log.xLogE
+import exh.log.xLogW
 
 object TelemetryConfig {
     private var analytics: FirebaseAnalytics? = null
@@ -14,15 +17,39 @@ object TelemetryConfig {
         // To stop forks/test builds from polluting our data
         if (!context.isMihonProductionApp()) return
 
-        analytics = FirebaseAnalytics.getInstance(context)
-        analytics?.setUserProperty("preferred_abi", Build.SUPPORTED_ABIS[0])
-        FirebaseApp.initializeApp(context)
-        crashlytics = FirebaseCrashlytics.getInstance()
+        // Check if Google Play Services is available before initializing Firebase
+        if (!isGooglePlayServicesAvailable(context)) {
+            xLogW("Google Play Services not available, skipping Firebase initialization")
+            return
+        }
+
+        try {
+            analytics = FirebaseAnalytics.getInstance(context)
+            analytics?.setUserProperty("preferred_abi", Build.SUPPORTED_ABIS[0])
+            FirebaseApp.initializeApp(context)
+            crashlytics = FirebaseCrashlytics.getInstance()
+        } catch (e: Exception) {
+            xLogE("Failed to initialize Firebase", e)
+        }
         // KMK -->
         if (isNightlyBuildType) {
             analytics?.setUserProperty("nightly_version", commitCount)
         }
         // KMK <--
+    }
+
+    // GMS availability is detected through the package manager rather than a GMS API call,
+    // which would itself try to prompt the user to install/enable Play Services.
+    @Suppress("DEPRECATION")
+    private fun isGooglePlayServicesAvailable(context: Context): Boolean {
+        return try {
+            context.packageManager
+                .getPackageInfo("com.google.android.gms", PackageManager.GET_META_DATA)
+                .applicationInfo
+                ?.enabled == true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
     }
 
     fun setAnalyticsEnabled(enabled: Boolean) {
