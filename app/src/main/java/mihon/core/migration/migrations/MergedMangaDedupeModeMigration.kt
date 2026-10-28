@@ -21,12 +21,18 @@ class MergedMangaDedupeModeMigration(
         // KUN -->
         // The sort mode moved from the shared `merged` self-reference row to one `merge` row per
         // merge, so the shift is applied per merge instead of per reference.
-        val mergedMangas = mangaMergeRepository.getMergedManga()
+        //
+        // The parents are the distinct merge ids of the entries: `getMergedManga()` lists the
+        // entries' children and never a merge parent, so it found no settings at all and the
+        // renumbering below never ran.
+        val mergeIds = mangaMergeRepository.getAllEntries()
+            .map { it.mergeId }
+            .distinct()
 
-        mergedMangas.forEach { mergedManga ->
-            val settings = mangaMergeRepository.getMergeSettings(mergedManga.id) ?: return@forEach
+        mergeIds.forEach { mergeId ->
+            val settings = mangaMergeRepository.getMergeSettings(mergeId) ?: return@forEach
             updateMergedSettings.awaitMerge(
-                mergeId = mergedManga.id,
+                mergeId = mergeId,
                 chapterSortMode = (settings.chapterSortMode - 1).coerceAtLeast(0),
                 infoMangaId = settings.infoMangaId,
             )
