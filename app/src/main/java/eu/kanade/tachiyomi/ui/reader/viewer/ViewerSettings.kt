@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 // KUN -->
-// Destination plane for the step-2 (8124d324a1) settings migration: the viewers move onto these
-// settings objects then, and that step deletes ViewerConfig.kt.
+// The step-2 (8124d324a1) settings plane: every viewer reads these instead of the retired
+// ViewerConfig / PagerConfig / WebtoonConfig / WebGpuConfig objects.
 // KUN <--
 /**
  * A viewer's tap zones, as the preferences store them.

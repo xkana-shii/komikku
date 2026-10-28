@@ -18,8 +18,16 @@ import eu.kanade.tachiyomi.ui.reader.model.InsertPage
 import eu.kanade.tachiyomi.ui.reader.model.ReaderItem
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
+import eu.kanade.tachiyomi.ui.reader.setting.GeneralSettings
+import eu.kanade.tachiyomi.ui.reader.viewer.PagedSettings
+import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPosition
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
+import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
+import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.position
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import mihon.app.di.appGraph
@@ -39,7 +47,11 @@ abstract class PagerViewer(
 
     val graph by lazy { activity.appGraph }
     val downloadManager by lazy { graph.downloadManager }
+    // KUN -->
+    // This fork's navigator classes still take the preferences, for the tap-zone size (step 3
+    // gives them `(invertMode, isReversed)`).
     val readerPreferences by lazy { graph.readerPreferences }
+    // KUN <--
 
     val scope = MainScope()
 
@@ -49,10 +61,63 @@ abstract class PagerViewer(
      */
     val pager = createPager()
 
+    private val settingsViewModel = activity.settingsViewModel
+
     /**
-     * Configuration used by the pager, like allow taps, scale mode on images, page transitions...
+     * Settings every paged viewer uses, like scale mode on images or tap zones.
      */
-    val config = PagerConfig(this, scope, readerPreferences)
+    val paged: PagedSettings
+        get() = settingsViewModel.paged.value
+
+    /**
+     * Settings only the pager viewers use, like splitting double pages.
+     */
+    val simplePaged: SimplePagedSettings
+        get() = settingsViewModel.simplePaged.value
+
+    /**
+     * Settings shared by every viewer, like allow taps or page transitions.
+     */
+    val general: GeneralSettings
+        get() = settingsViewModel.general.value
+
+    private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
+
+    private var navigator = paged.navigation.navigator(::defaultNavigation)
+
+    val imageZoomType: ZoomStartPosition
+        get() = paged.page.zoomStart.position(
+            auto = when (this) {
+                is L2RPagerViewer -> ZoomStartPosition.LEFT
+                is R2LPagerViewer -> ZoomStartPosition.RIGHT
+                else -> ZoomStartPosition.CENTER
+            },
+        )
+
+    // KUN -->
+    /**
+     * SY: the runtime half of the dual page engine, until step 4 rebuilds it. `doublePages` starts
+     * from the layout preference and the activity flips it (bottom-bar layout toggle, orientation
+     * in automatic mode, "split wide pages"); `shiftDoublePage` is the pairing parity the activity
+     * computes on chapter load and the adapter consumes. [autoDoublePages] and
+     * [invertDoublePages] are pure functions of the preference, as they were.
+     */
+    var doublePages: Boolean = simplePaged.doublePages
+        set(value) {
+            field = value
+            if (!value) {
+                shiftDoublePage = false
+            }
+        }
+
+    var shiftDoublePage: Boolean = false
+
+    val autoDoublePages: Boolean
+        get() = simplePaged.autoDoublePages
+
+    val invertDoublePages: Boolean
+        get() = simplePaged.invertDoublePages
+    // KUN <--
 
     /**
      * Adapter of the pager.
@@ -127,7 +192,7 @@ abstract class PagerViewer(
                 (event.rawX - viewPosition[0] + viewPositionRelativeToWindow[0]) / pager.width,
                 (event.rawY - viewPosition[1] + viewPositionRelativeToWindow[1]) / pager.height,
             )
-            when (config.navigator.getAction(pos)) {
+            when (navigator.getAction(pos)) {
                 NavigationRegion.MENU -> activity.toggleMenu()
                 NavigationRegion.NEXT -> moveToNext()
                 NavigationRegion.PREV -> moveToPrevious()
@@ -136,7 +201,7 @@ abstract class PagerViewer(
             }
         }
         pager.longTapListener = f@{
-            if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
+            if (activity.viewModel.state.value.menuVisible || general.longTapEnabled) {
                 val item = adapter.joinedItems.getOrNull(pager.currentItem)
                 val firstPage = item?.first as? ReaderPage
                 val secondPage = item?.second as? ReaderPage
@@ -148,23 +213,46 @@ abstract class PagerViewer(
             false
         }
 
-        config.dualPageSplitChangedListener = { enabled ->
-            if (!enabled) {
-                cleanupPageSplit()
+        settingsViewModel.general.collectChanges(scope) { old, new ->
+            if (old != null && old.theme != new.theme) {
+                refreshAdapter()
             }
         }
-
-        config.reloadChapterListener = {
-            activity.reloadChapters(it)
+        settingsViewModel.simplePaged.collectChanges(scope) { old, new ->
+            if (old != null) {
+                refreshAdapter()
+            }
+            if (old?.dualPageSplit != new.dualPageSplit && !new.dualPageSplit) {
+                cleanupPageSplit()
+            }
+            // KUN -->
+            // SY: a layout change re-pairs the pages, as `PagerConfig`'s pageLayout listener did.
+            if (old != null && old.pageLayout != new.pageLayout) {
+                if (!new.autoDoublePages) {
+                    doublePages = new.doublePages
+                }
+                activity.reloadChapters(new.doublePages)
+            }
+            // KUN <--
         }
-
-        config.imagePropertyChangedListener = {
-            refreshAdapter()
+        settingsViewModel.paged.collectChanges(scope) { old, new ->
+            if (old != null && old.page != new.page) {
+                refreshAdapter()
+            }
+            if (old?.navigation != new.navigation) {
+                navigator = new.navigation.navigator(::defaultNavigation)
+                val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
+                activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
+            }
         }
+    }
 
-        config.navigationModeChangedListener = {
-            val showOnStart = config.navigationOverlayOnStart || config.forceNavigationOverlay
-            activity.binding.navigationOverlay.setNavigation(config.navigator, showOnStart)
+    private fun defaultNavigation(): ViewerNavigation {
+        return when (this) {
+            // KUN -->
+            is VerticalPagerViewer -> LNavigation(readerPreferences)
+            else -> RightAndLeftNavigation(readerPreferences)
+            // KUN <--
         }
     }
 
@@ -304,7 +392,7 @@ abstract class PagerViewer(
         // If we don't the size change could put us on a new chapter
         pager.removeOnPageChangeListener(pagerListener)
 
-        val forceTransition = config.alwaysShowChapterTransition ||
+        val forceTransition = general.alwaysShowChapterTransition ||
             adapter.joinedItems.getOrNull(pager.currentItem)?.first is ChapterTransition
         adapter.setChapters(chapters, forceTransition)
 
@@ -367,10 +455,10 @@ abstract class PagerViewer(
     protected open fun moveRight() {
         if (pager.currentItem != adapter.count - 1) {
             val holder = (currentPage as? ReaderPage)?.let(::getPageHolder)
-            if (holder != null && config.navigateToPan && holder.canPanRight()) {
+            if (holder != null && paged.navigateToPan && holder.canPanRight()) {
                 holder.panRight()
             } else {
-                pager.setCurrentItem(pager.currentItem + 1, config.usePageTransitions)
+                pager.setCurrentItem(pager.currentItem + 1, general.usePageTransitions)
             }
         }
     }
@@ -381,10 +469,10 @@ abstract class PagerViewer(
     protected open fun moveLeft() {
         if (pager.currentItem != 0) {
             val holder = (currentPage as? ReaderPage)?.let(::getPageHolder)
-            if (holder != null && config.navigateToPan && holder.canPanLeft()) {
+            if (holder != null && paged.navigateToPan && holder.canPanLeft()) {
                 holder.panLeft()
             } else {
-                pager.setCurrentItem(pager.currentItem - 1, config.usePageTransitions)
+                pager.setCurrentItem(pager.currentItem - 1, general.usePageTransitions)
             }
         }
     }
@@ -438,17 +526,17 @@ abstract class PagerViewer(
 
         when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
+                if (!general.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
                     return false
                 } else if (isUp) {
-                    if (!config.volumeKeysInverted) moveDown() else moveUp()
+                    if (!general.volumeKeysInverted) moveDown() else moveUp()
                 }
             }
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
+                if (!general.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
                     return false
                 } else if (isUp) {
-                    if (!config.volumeKeysInverted) moveUp() else moveDown()
+                    if (!general.volumeKeysInverted) moveUp() else moveDown()
                 }
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> {

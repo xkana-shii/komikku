@@ -5,9 +5,8 @@ import android.graphics.Color
 // KUN <--
 
 // KUN -->
-// Destination plane for the step-2 (8124d324a1) settings migration: the activity and every viewer move
-// onto this then, and that step deletes ViewerConfig.kt / PagerConfig.kt / WebtoonConfig.kt /
-// WebGpuConfig.kt.
+// The step-2 (8124d324a1) settings plane: the activity and every viewer read this instead of the
+// retired ViewerConfig / PagerConfig / WebtoonConfig / WebGpuConfig.
 // KUN <--
 /**
  * Settings for the reader as a whole and for every viewer alike.
@@ -37,10 +36,7 @@ data class GeneralSettings(
     val autoscrollInterval: Float,
     /** SY: glide a screen per autoscroll step instead of jumping one page. */
     val smoothAutoScroll: Boolean,
-    /** SY: two-finger tap / long-press / swipe autoscroll gestures. */
-    val autoscrollGesturesEnabled: Boolean,
-    /** SY: toast what an autoscroll gesture did. */
-    val autoscrollGestureToastsEnabled: Boolean,
+    // KNS: TachiyomiSY's autoscroll gesture switches are not part of this fork (excluded with PR #80)
     // KUN <--
 ) {
     val automaticBackground: Boolean

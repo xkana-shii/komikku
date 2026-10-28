@@ -14,7 +14,6 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.Companion.zoomWideImagesAllowedList
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.WebtoonScaleType
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
-import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.util.system.hasDisplayCutout
 import mihon.app.di.appGraph
 import tachiyomi.i18n.MR
@@ -719,7 +718,7 @@ object SettingsReaderScreen : SearchableSettings {
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.invertDoublePages,
                     title = stringResource(SYMR.strings.invert_double_pages),
-                    visible = pageLayout != PagerConfig.PageLayout.SINGLE_PAGE,
+                    visible = pageLayout != ReaderPreferences.PageLayout.SINGLE_PAGE.value,
                 ),
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.centerMarginType,

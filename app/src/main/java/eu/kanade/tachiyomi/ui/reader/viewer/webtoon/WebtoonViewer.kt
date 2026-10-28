@@ -18,9 +18,15 @@ import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
+import eu.kanade.tachiyomi.ui.reader.setting.GeneralSettings
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import eu.kanade.tachiyomi.ui.reader.viewer.LongStripSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
+import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
+import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
+import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import mihon.app.di.appGraph
@@ -67,10 +73,38 @@ class WebtoonViewer(
      */
     private val layoutManager = WebtoonLayoutManager(activity, scrollDistance)
 
+    private val settingsViewModel = activity.settingsViewModel
+
     /**
-     * Configuration used by this viewer, like allow taps, or crop image borders.
+     * Settings every long strip viewer uses, like crop image borders.
      */
-    val config = WebtoonConfig(scope, readerPreferences)
+    val longStrip: LongStripSettings
+        get() = settingsViewModel.longStrip.value
+
+    /**
+     * Settings only the webtoon viewers use, like side padding or tap zones.
+     */
+    val simpleLongStrip: SimpleLongStripSettings
+        get() = settingsViewModel.simpleLongStrip.value
+
+    /**
+     * Settings shared by every viewer, like allow taps or page transitions.
+     */
+    val general: GeneralSettings
+        get() = settingsViewModel.general.value
+
+    private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
+
+    private var navigator = simpleLongStrip.navigation.navigator(::defaultNavigation)
+
+    // KUN -->
+    /**
+     * SY: the webtoon half of the page transition split. [GeneralSettings.usePageTransitions]
+     * carries the pager's toggle, which this viewer must not read.
+     */
+    private val usePageTransitions: Boolean
+        get() = general.usePageTransitionsWebtoon
+    // KUN <--
 
     /**
      * Adapter of the recycler view.
@@ -97,7 +131,7 @@ class WebtoonViewer(
             .threshold
 
     init {
-        recycler.sidePaddingPercent = config.sidePadding
+        recycler.sidePaddingPercent = simpleLongStrip.page.sidePadding
         recycler.setItemViewCacheSize(RECYCLER_VIEW_CACHE_SIZE)
         recycler.isVisible = false // Don't let the recycler layout yet
         recycler.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
@@ -139,14 +173,14 @@ class WebtoonViewer(
                 (event.rawX - viewPosition[0] + viewPositionRelativeToWindow[0]) / recycler.width,
                 (event.rawY - viewPosition[1] + viewPositionRelativeToWindow[1]) / recycler.originalHeight,
             )
-            when (config.navigator.getAction(pos)) {
+            when (navigator.getAction(pos)) {
                 NavigationRegion.MENU -> activity.toggleMenu()
                 NavigationRegion.NEXT, NavigationRegion.RIGHT -> scrollDown()
                 NavigationRegion.PREV, NavigationRegion.LEFT -> scrollUp()
             }
         }
         recycler.longTapListener = f@{ event ->
-            if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
+            if (activity.viewModel.state.value.menuVisible || general.longTapEnabled) {
                 val child = recycler.findChildViewUnder(event.x, event.y)
                 if (child != null) {
                     val position = recycler.getChildAdapterPosition(child)
@@ -160,65 +194,90 @@ class WebtoonViewer(
             false
         }
 
-        config.imagePropertyChangedListener = {
-            recycler.sidePaddingPercent = config.sidePadding
-            refreshAdapter()
-        }
-
-        config.themeChangedListener = {
-            ActivityCompat.recreate(activity)
-        }
-
-        config.doubleTapZoomChangedListener = {
-            frame.doubleTapZoom = it
-        }
-
-        // KMK -->
-        config.pinchToZoomChangedListener = {
-            frame.pinchToZoom = it
-        }
-
-        config.webtoonScaleTypeChangedListener = f@{ scaleType ->
-            if (!isContinuous && !readerPreferences.longStripGapSmartScale.get()) return@f
-
-            recycler.post {
-                recycler.doOnLayout doOnLayout@{
-                    val currentWidth = recycler.width
-                    val currentHeight = recycler.originalHeight
-                    if (currentWidth <= 0 || currentHeight <= 0) return@doOnLayout
-
-                    if (scaleType == ReaderPreferences.WebtoonScaleType.FIT) {
-                        recycler.scaleTo(1f)
-                        return@doOnLayout
-                    }
-
-                    val desiredRatio = scaleType.ratio
-                    val screenRatio = currentWidth.toFloat() / currentHeight
-                    val desiredWidth = currentHeight * desiredRatio
-                    val desiredScale = desiredWidth / currentWidth
-
-                    if (screenRatio > desiredRatio) {
-                        recycler.scaleTo(desiredScale)
-                    } else {
-                        recycler.scaleTo(1f)
-                    }
-                }
+        settingsViewModel.general.collectChanges(scope) { old, new ->
+            if (old != null && old.theme != new.theme) {
+                ActivityCompat.recreate(activity)
             }
         }
-        // KMK <--
-
-        config.zoomPropertyChangedListener = {
-            frame.zoomOutDisabled = it
+        settingsViewModel.longStrip.collectChanges(scope) { old, new ->
+            if (old != null && old.cropBorders != new.cropBorders) {
+                refreshAdapter()
+            }
+            // KUN -->
+            // SY: the continuous vertical viewer crops on its own preference (R50).
+            if (old != null && old.continuousCropBorders != new.continuousCropBorders) {
+                refreshAdapter()
+            }
+            // KUN <--
+            if (old?.zoomOutDisabled != new.zoomOutDisabled) {
+                frame.zoomOutDisabled = new.zoomOutDisabled
+            }
         }
-
-        config.navigationModeChangedListener = {
-            val showOnStart = config.navigationOverlayOnStart || config.forceNavigationOverlay
-            activity.binding.navigationOverlay.setNavigation(config.navigator, showOnStart)
+        settingsViewModel.simpleLongStrip.collectChanges(scope) { old, new ->
+            if (old != null && old.page != new.page) {
+                recycler.sidePaddingPercent = new.page.sidePadding
+                refreshAdapter()
+            }
+            if (old?.doubleTapZoom != new.doubleTapZoom) {
+                frame.doubleTapZoom = new.doubleTapZoom
+            }
+            if (old?.navigation != new.navigation) {
+                navigator = new.navigation.navigator(::defaultNavigation)
+                val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
+                activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
+            }
+            // KUN -->
+            // KMK: pinch to zoom (R26) and the long strip scale type (R24) still drive the recycler.
+            if (old?.pinchToZoom != new.pinchToZoom) {
+                frame.pinchToZoom = new.pinchToZoom
+            }
+            if (old?.webtoonScaleType != new.webtoonScaleType) {
+                onWebtoonScaleTypeChanged(new.webtoonScaleType)
+            }
+            // KUN <--
         }
 
         frame.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
         frame.addView(recycler)
     }
+
+    // KUN -->
+    /**
+     * KMK: scales the long strip to the width the scale type asks for (R24), when the gap-aware
+     * scale applies to this viewer.
+     */
+    private fun onWebtoonScaleTypeChanged(scaleType: ReaderPreferences.WebtoonScaleType) {
+        if (!isContinuous && !simpleLongStrip.longStripGapSmartScale) return
+
+        recycler.post {
+            recycler.doOnLayout doOnLayout@{
+                val currentWidth = recycler.width
+                val currentHeight = recycler.originalHeight
+                if (currentWidth <= 0 || currentHeight <= 0) return@doOnLayout
+
+                if (scaleType == ReaderPreferences.WebtoonScaleType.FIT) {
+                    recycler.scaleTo(1f)
+                    return@doOnLayout
+                }
+
+                val desiredRatio = scaleType.ratio
+                val screenRatio = currentWidth.toFloat() / currentHeight
+                val desiredWidth = currentHeight * desiredRatio
+                val desiredScale = desiredWidth / currentWidth
+
+                if (screenRatio > desiredRatio) {
+                    recycler.scaleTo(desiredScale)
+                } else {
+                    recycler.scaleTo(1f)
+                }
+            }
+        }
+    }
+
+    private fun defaultNavigation(): ViewerNavigation {
+        return LNavigation(readerPreferences)
+    }
+    // KUN <--
 
     private fun checkAllowPreload(page: ReaderPage?): Boolean {
         // Page is transition page - preload allowed
@@ -294,7 +353,7 @@ class WebtoonViewer(
      * Tells this viewer to set the given [chapters] as active.
      */
     override fun setChapters(chapters: ViewerChapters) {
-        val forceTransition = config.alwaysShowChapterTransition || currentPage is ChapterTransition
+        val forceTransition = general.alwaysShowChapterTransition || currentPage is ChapterTransition
         adapter.setChapters(chapters, forceTransition)
 
         if (recycler.isGone) {
@@ -337,7 +396,7 @@ class WebtoonViewer(
      * Scrolls up by [scrollDistance].
      */
     private fun scrollUp() {
-        if (config.usePageTransitions) {
+        if (usePageTransitions) {
             recycler.smoothScrollBy(0, -scrollDistance)
         } else {
             recycler.scrollBy(0, -scrollDistance)
@@ -368,7 +427,7 @@ class WebtoonViewer(
                 val position = adapter.items.indexOf(currentPage)
                 val nextItem = adapter.items.getOrNull(position + 1)
                 if (nextItem is ReaderPage) {
-                    if (config.usePageTransitions) {
+                    if (usePageTransitions) {
                         recycler.smoothScrollToPosition(position + 1)
                     } else {
                         recycler.scrollToPosition(position + 1)
@@ -392,7 +451,7 @@ class WebtoonViewer(
 
     private fun scrollDownBy() {
         // SY <--
-        if (config.usePageTransitions) {
+        if (usePageTransitions) {
             recycler.smoothScrollBy(0, scrollDistance)
         } else {
             recycler.scrollBy(0, scrollDistance)
@@ -408,17 +467,17 @@ class WebtoonViewer(
 
         when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
+                if (!general.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
                     return false
                 } else if (isUp) {
-                    if (!config.volumeKeysInverted) scrollDown() else scrollUp()
+                    if (!general.volumeKeysInverted) scrollDown() else scrollUp()
                 }
             }
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                if (!config.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
+                if (!general.volumeKeysEnabled || activity.viewModel.state.value.menuVisible) {
                     return false
                 } else if (isUp) {
-                    if (!config.volumeKeysInverted) scrollUp() else scrollDown()
+                    if (!general.volumeKeysInverted) scrollUp() else scrollDown()
                 }
             }
             KeyEvent.KEYCODE_MENU -> if (isUp) activity.toggleMenu()

@@ -232,3 +232,98 @@ Run from the worktree root, in this order:
 All five pass on this change. The plane is unreferenced by production code in this phase, so no unit
 test covers it: the values are a direct translation of the preferences, and the behavioural checks
 (dual page parity, autoscroll, zoom cluster) belong to the steps that wire them.
+
+## 6. Phase B (final)
+
+Phase B is on top of phase A: every consumer moved onto the plane and the four retired classes are
+gone. The plane is now the only path from a preference to a viewer.
+
+### 6.1 Mechanism: how a viewer gets its settings
+
+As upstream, and it is the mechanism step 3 depends on: `ReaderActivity` owns the settings view model
+as an activity-scoped `ViewModel`, and the viewers read it through the activity they are already
+constructed with.
+
+```kotlin
+// ReaderActivity.kt
+val settingsViewModel by viewModels<ReaderSettingsViewModel> {
+    viewModelFactory { initializer { ReaderSettingsViewModel(…) } }
+}
+```
+
+```kotlin
+// PagerViewer.kt / WebtoonViewer.kt / WebGpuViewer.kt
+private val settingsViewModel = activity.settingsViewModel
+val paged: PagedSettings get() = settingsViewModel.paged.value
+```
+
+`ReadingMode.toViewer()` is unchanged and still takes only the activity: no settings object is passed
+into a viewer's constructor, so the plane does not constrain how step 3 builds them. Each viewer
+exposes `paged` / `longStrip` / `simplePaged` / `simpleLongStrip` / `webgpuPaged` / `webgpuLongStrip` /
+`general` as getters onto the current `StateFlow` value (always fresh, never a copy), and subscribes
+with `collectChanges` for the parts it reacts to:
+
+- pager: `general.theme` → `refreshAdapter`, `simplePaged` → refresh / `cleanupPageSplit` / re-pair,
+  `paged.page` → refresh, `paged.navigation` → new navigator + overlay.
+- webtoon: `general.theme` → `ActivityCompat.recreate`, `longStrip` → crop refresh + zoom-out,
+  `simpleLongStrip.page` → side padding + refresh, plus double tap / pinch / scale type, and
+  `simpleLongStrip.navigation` → new navigator + overlay.
+- WebGPU: `general.theme`, `webgpuPaged.page`, `paged.page`, and (continuous only) `longStrip` /
+  `webgpuLongStrip.page` → `onPageSettingsChanged()`; the `common` half (`doubleTapGesturesDisabled`,
+  `imageFilters`, `tileFilters`) from whichever of `webgpuPaged` / `webgpuLongStrip` applies;
+  `paged.navigation` → navigator + overlay.
+
+`ReaderSettingsViewModel` lost its `viewerFlow` parameter (every consumer that used it now asks
+`isWebGpu` / `readingMode` instead) and keeps the fork's
+`(readerState, setter, setter, preferences, basePreferences)` constructor rather than upstream's
+`(ReaderViewModel, …)`, so `readingMode`'s initial value stays the stored one and auto-webtoon
+resolution (R45) stays in `ReaderViewModel.getMangaReadingMode`.
+
+### 6.2 Consumers migrated
+
+`ReaderActivity` (its `ReaderConfig` inner class is replaced by `applyGeneralSettings` +
+`getCombinedPaint` + `setKeepScreenOn` + `setCustomBrightnessValue` + `setLayerPaint`),
+`ReaderViewModel.saveImages`/`shareImages`, `viewer/pager/{PagerViewer,PagerViewerAdapter,
+PagerPageHolder}`, `viewer/webtoon/{WebtoonViewer,WebtoonPageHolder}`,
+`viewer/webgpu/{WebGpuViewer,WebGpuViewerSettings}`, `setting/ReaderPreferences` (the `pageLayout` /
+`centerMarginType` defaults), `presentation/reader/{OrientationSelectDialog,ReadingModeSelectDialog,
+settings/ReadingModePage}` and `presentation/more/settings/screen/SettingsReaderScreen`.
+
+Deleted: `viewer/ViewerConfig.kt`, `viewer/pager/PagerConfig.kt`, `viewer/webtoon/WebtoonConfig.kt`,
+`viewer/webgpu/WebGpuConfig.kt` (68 fields, §2).
+
+### 6.3 Knobs whose home moved again in phase B
+
+- `doublePages`, `shiftDoublePage`, `autoDoublePages`, `invertDoublePages` were `PagerConfig`
+  fields. They now live on `PagerViewer` (KUN block): `doublePages`/`shiftDoublePage` are runtime
+  state the activity writes (bottom-bar layout toggle, orientation in automatic mode, split-wide,
+  chapter-load parity) and the adapter reads; `autoDoublePages`/`invertDoublePages` are derived from
+  `simplePaged`. Still step 4's to rebuild — this keeps the engine compiling and wired, not finished.
+- `PagerConfig.PageLayout` / `PagerConfig.CenterMarginType` (int constants) are gone: the
+  preferences now default from and are read as `ReaderPreferences.PageLayout` /
+  `ReaderPreferences.CenterMarginType`, and the two `centerMarginType and <mask> > 0` tests became
+  `hasWidePageMargin` / `hasDoublePageMargin` in `PagerPageHolder`.
+- The webtoon viewers read `GeneralSettings.usePageTransitionsWebtoon`, not `usePageTransitions`
+  (§3.1), behind a `WebtoonViewer.usePageTransitions` property.
+
+### 6.4 What phase B deliberately did not move
+
+The autoscroll loop and its gesture plumbing (R2, R4, R5, R8) still read `ReaderPreferences` directly
+in `ReaderActivity.enableExhAutoScroll()` and `WebtoonViewer`, so `GeneralSettings.autoscrollInterval`,
+`smoothAutoScroll`, `autoscrollGesturesEnabled` and `autoscrollGestureToastsEnabled` have no consumer
+yet; `LongStripSettings.alwaysDecodeLongStripWithSSIV` likewise, because `ReaderPageImageView` reads
+that preference itself (R23). Cover-seeded theming (R19, R20) is untouched.
+
+### 6.5 Compromises phase B accepts
+
+- `ReadingModePage` picks the WebGPU settings page from `isWebGpu`, i.e. from the
+  `highQualityRenderer` preference (as upstream does), where it used to ask the viewer
+  (`viewer is WebGpuViewer`). On a device where the renderer is unavailable and `ReadingMode.toViewer`
+  fell back to the SSIV viewer (KUN capability gate), the sheet now shows the WebGPU page for an SSIV
+  viewer. Cosmetic, and the fix belongs with the capability gate, not the settings plane.
+- A pager theme change now only refreshes the adapter (upstream). `PagerConfig` used to route it
+  through `reloadChapterListener` → `ReaderActivity.reloadChapters`, which also recomputed
+  `shiftDoublePage`; a theme change no longer disturbs a manually shifted spread. Layout changes still
+  go through `reloadChapters` (KUN branch in `PagerViewer`).
+
+

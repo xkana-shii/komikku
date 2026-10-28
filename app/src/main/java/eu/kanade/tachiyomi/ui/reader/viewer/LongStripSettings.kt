@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.ui.reader.viewer
 
 // KUN -->
-// Destination plane for the step-2 (8124d324a1) settings migration: the long strip viewers move onto
-// this then, and that step deletes WebtoonConfig.kt / WebGpuConfig.kt (with them the fork's fields below).
+// The step-2 (8124d324a1) settings plane: the long strip viewers read this instead of the retired
+// WebtoonConfig / WebGpuConfig, and it carries the fork's fields below.
 // KUN <--
 /**
  * Settings every long strip viewer uses.

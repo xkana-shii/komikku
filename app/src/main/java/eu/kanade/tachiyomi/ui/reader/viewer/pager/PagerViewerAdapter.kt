@@ -52,8 +52,8 @@ class PagerViewerAdapter(
     var pageToShift: ReaderPage? = null
 
     /** Varibles used to check if config of the pages have changed */
-    private var shifted = viewer.config.shiftDoublePage
-    private var doubledUp = viewer.config.doublePages
+    private var shifted = viewer.shiftDoublePage
+    private var doubledUp = viewer.doublePages
     // SY <--
 
     /**
@@ -132,13 +132,13 @@ class PagerViewerAdapter(
         subItems = newItems.toMutableList()
 
         var useSecondPage = false
-        if (shifted != viewer.config.shiftDoublePage || (doubledUp != viewer.config.doublePages && doubledUp)) {
-            if (shifted && (doubledUp == viewer.config.doublePages)) {
+        if (shifted != viewer.shiftDoublePage || (doubledUp != viewer.doublePages && doubledUp)) {
+            if (shifted && (doubledUp == viewer.doublePages)) {
                 useSecondPage = true
             }
-            shifted = viewer.config.shiftDoublePage
+            shifted = viewer.shiftDoublePage
         }
-        doubledUp = viewer.config.doublePages
+        doubledUp = viewer.doublePages
         setJoinedItems(useSecondPage)
 
         // The pager only follows the pages it has created, so before its first layout it would stay at the same
@@ -254,7 +254,7 @@ class PagerViewerAdapter(
     // SY -->
     private fun setJoinedItems(useSecondPage: Boolean = false) {
         val oldCurrent = joinedItems.getOrNull(viewer.pager.currentItem)
-        if (!viewer.config.doublePages) {
+        if (!viewer.doublePages) {
             // If not in double mode, set up items like before
             subItems.forEach { readerItem ->
                 if (readerItem is ReaderPage) {
@@ -295,7 +295,7 @@ class PagerViewerAdapter(
                 items.forEach { it?.shiftedPage = false }
 
                 // Step 3: If pages have been shifted,
-                if (viewer.config.shiftDoublePage) {
+                if (viewer.shiftDoublePage) {
                     val index = items.indexOf(pageToShift)
                     // Go from the current page and work your way back to the first page,
                     // or the first page that's a full page.

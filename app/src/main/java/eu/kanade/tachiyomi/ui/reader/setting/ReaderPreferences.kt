@@ -7,7 +7,6 @@ import dev.icerock.moko.resources.StringResource
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuShader
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuShaders
 import tachiyomi.core.common.preference.Preference
@@ -258,11 +257,16 @@ class ReaderPreferences(
 
     val readerBottomButtons: Preference<Set<String>> = preferenceStore.getStringSet("reader_bottom_buttons", ReaderBottomButton.BUTTONS_DEFAULTS)
 
-    val pageLayout = preferenceStore.getInt("page_layout", PagerConfig.PageLayout.AUTOMATIC)
+    // KUN -->
+    // `PagerConfig.PageLayout` / `CenterMarginType` were deleted in step 2; these are the same constants.
+    val pageLayout = preferenceStore.getInt("page_layout", ReaderPreferences.PageLayout.AUTOMATIC.value)
+    // KUN <--
 
     val invertDoublePages = preferenceStore.getBoolean("invert_double_pages", false)
 
-    val centerMarginType = preferenceStore.getInt("center_margin_type", PagerConfig.CenterMarginType.NONE)
+    // KUN -->
+    val centerMarginType = preferenceStore.getInt("center_margin_type", ReaderPreferences.CenterMarginType.NONE.value)
+    // KUN <--
 
     val archiveReaderMode = preferenceStore.getInt("archive_reader_mode", ArchiveReaderMode.LOAD_FROM_FILE)
     // SY <--
@@ -393,8 +397,7 @@ class ReaderPreferences(
 
     // KUN -->
     /**
-     * The SY [pageLayout] preference, stored as its [value]. `PagerConfig.PageLayout` holds the same
-     * constants until step 4 replaces the pager's dual page engine.
+     * The SY [pageLayout] preference, stored as its [value].
      */
     enum class PageLayout(val value: Int) {
         SINGLE_PAGE(0),
@@ -408,8 +411,7 @@ class ReaderPreferences(
     }
 
     /**
-     * The SY [centerMarginType] preference, stored as its [value]. `PagerConfig.CenterMarginType` holds
-     * the same constants until step 4 replaces the pager's dual page engine.
+     * The SY [centerMarginType] preference, stored as its [value].
      */
     enum class CenterMarginType(val value: Int) {
         NONE(0),

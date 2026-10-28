@@ -4,8 +4,8 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.NavigationSettings
 
 // KUN -->
-// Destination plane for the step-2 (8124d324a1) settings migration: the webtoon viewers move onto
-// this then, and that step deletes WebtoonConfig.kt (with it the fork's fields below).
+// The step-2 (8124d324a1) settings plane: the webtoon viewers read this instead of the retired
+// WebtoonConfig, and it carries the fork's fields below.
 // KUN <--
 /**
  * Settings only the webtoon viewers use.

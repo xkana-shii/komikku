@@ -3,8 +3,8 @@ package eu.kanade.tachiyomi.ui.reader.viewer.pager
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 
 // KUN -->
-// Destination plane for the step-2 (8124d324a1) settings migration: the pager viewers move onto this
-// then, and that step deletes PagerConfig.kt (with it the fork's dual page fields below).
+// The step-2 (8124d324a1) settings plane: the pager viewers read this instead of the retired
+// PagerConfig, and it carries the fork's dual page fields below.
 // KUN <--
 /**
  * Settings only the pager viewers use, all of them part of what the pages are made with.

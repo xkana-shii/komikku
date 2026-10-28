@@ -57,6 +57,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.hippo.unifile.UniFile
@@ -95,13 +97,14 @@ import eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
+import eu.kanade.tachiyomi.ui.reader.setting.GeneralSettings
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsViewModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
-import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
+import eu.kanade.tachiyomi.ui.reader.viewer.collectChanges
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
@@ -127,7 +130,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.app.di.AppGraph
@@ -190,12 +192,25 @@ class ReaderActivity : BaseActivity() {
     lateinit var binding: ReaderActivityBinding
 
     val viewModel by viewModels<ReaderViewModel> { graph.viewModelFactory }
+    val settingsViewModel by viewModels<ReaderSettingsViewModel> {
+        viewModelFactory {
+            initializer {
+                ReaderSettingsViewModel(
+                    readerState = viewModel.state,
+                    // KUN -->
+                    // The fork's settings view model takes the reader state and the manga's setters
+                    // rather than the ReaderViewModel itself, so `readingMode`'s initial value stays
+                    // the stored one (auto-webtoon resolution stays in ReaderViewModel).
+                    onChangeReadingMode = viewModel::setMangaReadingMode,
+                    onChangeOrientation = viewModel::setMangaOrientationType,
+                    // KUN <--
+                    preferences = readerPreferences,
+                    basePreferences = preferences,
+                )
+            }
+        }
+    }
     private var assistUrl: String? = null
-
-    /**
-     * Configuration at reader level, like background color or forced orientation.
-     */
-    private var config: ReaderConfig? = null
 
     private var menuToggleToast: Toast? = null
     private var readingModeToast: Toast? = null
@@ -258,7 +273,50 @@ class ReaderActivity : BaseActivity() {
             Notifications.ID_NEW_CHAPTERS,
         )
 
-        config = ReaderConfig()
+        settingsViewModel.general.collectChanges(lifecycleScope, ::applyGeneralSettings)
+        settingsViewModel.brightness
+            .onEach(::setCustomBrightnessValue)
+            .launchIn(lifecycleScope)
+        // KUN -->
+        // The display profile is a loaded image the SSIV decoders read (KMK), not a value in the
+        // settings plane, so it keeps its own observer.
+        preferences.displayProfile.changes()
+            .onEach { setDisplayProfile(it) }
+            .launchIn(lifecycleScope)
+        // The dual page engine's own reactions to the SY layout preferences. Step 4 rebuilds it.
+        readerPreferences.pageLayout.changes()
+            .drop(1)
+            .onEach {
+                viewModel.setDoublePages(
+                    // KUN --> the viewer is owned by the activity (upstream ca028cb657)
+                    (viewer as? PagerViewer)
+                        ?.doublePages
+                        ?: false,
+                    // KUN <--
+                )
+            }
+            .launchIn(lifecycleScope)
+
+        readerPreferences.dualPageSplitPaged.changes()
+            .drop(1)
+            .onEach {
+                // KUN --> the viewer is owned by the activity (upstream ca028cb657)
+                if (viewer !is PagerViewer) return@onEach
+                // KUN <--
+                reloadChapters(
+                    !it &&
+                        when (ReaderPreferences.PageLayout.fromValue(readerPreferences.pageLayout.get())) {
+                            ReaderPreferences.PageLayout.DOUBLE_PAGES -> true
+                            ReaderPreferences.PageLayout.AUTOMATIC ->
+                                resources.configuration.orientation ==
+                                    Configuration.ORIENTATION_LANDSCAPE
+                            else -> false
+                        },
+                    true,
+                )
+            }
+            .launchIn(lifecycleScope)
+        // KUN <--
         setMenuVisibility(viewModel.state.value.menuVisible)
 
         // EXH -->
@@ -339,19 +397,6 @@ class ReaderActivity : BaseActivity() {
             // KMK <--
             val state by viewModel.state.collectAsState()
             val showPageNumber by readerPreferences.showPageNumber.collectAsState()
-            val settingsViewModel = remember {
-                ReaderSettingsViewModel(
-                    readerState = viewModel.state,
-                    viewerFlow = viewerFlow,
-                    onChangeReadingMode = viewModel::setMangaReadingMode,
-                    onChangeOrientation = viewModel::setMangaOrientationType,
-                    preferences = readerPreferences,
-                    // KUN -->
-                    // 8124d324a1: `isWebGpu` reads the high quality renderer preference.
-                    basePreferences = preferences,
-                    // KUN <--
-                )
-            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 if (!state.menuVisible && showPageNumber) {
@@ -569,12 +614,11 @@ class ReaderActivity : BaseActivity() {
     }
 
     /**
-     * Called when the activity is destroyed. Cleans up the viewer, configuration and any view.
+     * Called when the activity is destroyed. Cleans up the viewer and any view.
      */
     override fun onDestroy() {
         super.onDestroy()
         viewer?.destroy()
-        config = null
         menuToggleToast?.cancel()
         readingModeToast?.cancel()
     }
@@ -804,11 +848,13 @@ class ReaderActivity : BaseActivity() {
             doublePages = state.doublePages,
             onClickChapterList = viewModel::openChapterListDialog,
             onClickPageLayout = {
-                if (readerPreferences.pageLayout.get() == PagerConfig.PageLayout.AUTOMATIC) {
+                if (ReaderPreferences.PageLayout.fromValue(readerPreferences.pageLayout.get()) ==
+                    ReaderPreferences.PageLayout.AUTOMATIC
+                ) {
                     // KUN --> the viewer is owned by the activity (upstream ca028cb657)
-                    (viewer as? PagerViewer)?.config?.let { config ->
-                        config.doublePages = !config.doublePages
-                        reloadChapters(config.doublePages, true)
+                    (viewer as? PagerViewer)?.let { pagerViewer ->
+                        pagerViewer.doublePages = !pagerViewer.doublePages
+                        reloadChapters(pagerViewer.doublePages, true)
                     }
                     // KUN <--
                 } else {
@@ -949,17 +995,17 @@ class ReaderActivity : BaseActivity() {
         val viewer = this.viewer as? PagerViewer ?: return
         // KUN <--
         viewer.updateShifting()
-        if (!force && viewer.config.autoDoublePages) {
+        if (!force && viewer.autoDoublePages) {
             setDoublePageMode(viewer)
         } else {
-            viewer.config.doublePages = doublePages
-            viewModel.setDoublePages(viewer.config.doublePages)
+            viewer.doublePages = doublePages
+            viewModel.setDoublePages(viewer.doublePages)
         }
         val currentChapter = viewModel.state.value.currentChapter
         if (doublePages) {
             // If we're moving from singe to double, we want the current page to be the first page
             val currentPage = viewModel.state.value.currentPage
-            viewer.config.shiftDoublePage = (
+            viewer.shiftDoublePage = (
                 currentPage + (currentChapter?.pages?.take(currentPage)?.count { it.fullPage || it.isolatedPage } ?: 0)
                 ) % 2 != 0
         }
@@ -970,21 +1016,19 @@ class ReaderActivity : BaseActivity() {
 
     private fun setDoublePageMode(viewer: PagerViewer) {
         val currentOrientation = resources.configuration.orientation
-        viewer.config.doublePages = currentOrientation == Configuration.ORIENTATION_LANDSCAPE
-        viewModel.setDoublePages(viewer.config.doublePages)
+        viewer.doublePages = currentOrientation == Configuration.ORIENTATION_LANDSCAPE
+        viewModel.setDoublePages(viewer.doublePages)
     }
 
     private fun shiftDoublePages() {
         // KUN --> the viewer is owned by the activity (upstream ca028cb657)
         val viewer = this.viewer as? PagerViewer ?: return
         // KUN <--
-        viewer.config.let { config ->
-            config.shiftDoublePage = !config.shiftDoublePage
-            viewModel.state.value.viewerChapters?.let {
-                viewer.updateShifting()
-                viewer.setChaptersInternal(it)
-                invalidateOptionsMenu()
-            }
+        viewer.shiftDoublePage = !viewer.shiftDoublePage
+        viewModel.state.value.viewerChapters?.let {
+            viewer.updateShifting()
+            viewer.setChaptersInternal(it)
+            invalidateOptionsMenu()
         }
     }
     // EXH <--
@@ -1040,10 +1084,12 @@ class ReaderActivity : BaseActivity() {
 
         // SY -->
         if (newViewer is PagerViewer) {
-            if (readerPreferences.pageLayout.get() == PagerConfig.PageLayout.AUTOMATIC) {
+            if (ReaderPreferences.PageLayout.fromValue(readerPreferences.pageLayout.get()) ==
+                ReaderPreferences.PageLayout.AUTOMATIC
+            ) {
                 setDoublePageMode(newViewer)
             }
-            viewModel.state.value.lastShiftDoubleState?.let { newViewer.config.shiftDoublePage = it }
+            viewModel.state.value.lastShiftDoubleState?.let { newViewer.shiftDoublePage = it }
         }
 
         val manga = viewModel.state.value.manga
@@ -1128,7 +1174,7 @@ class ReaderActivity : BaseActivity() {
         } else if (state.lastShiftDoubleState != null) {
             val currentChapter = viewerChapters.currChapter
             // KUN --> the viewer is owned by the activity (upstream ca028cb657)
-            (viewer as? PagerViewer)?.config?.shiftDoublePage = (
+            (viewer as? PagerViewer)?.shiftDoublePage = (
                 currentChapter.requestedPage +
                     (
                         currentChapter.pages?.take(currentChapter.requestedPage)
@@ -1217,7 +1263,7 @@ class ReaderActivity : BaseActivity() {
         // SY -->
         val currentPageText = if (hasExtraPage) {
             // KUN --> the viewer is owned by the activity (upstream ca028cb657)
-            val invertDoublePage = (viewer as? PagerViewer)?.config?.invertDoublePages ?: false
+            val invertDoublePage = (viewer as? PagerViewer)?.invertDoublePages ?: false
             // KUN <--
             if ((resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_LTR) xor
                 invertDoublePage
@@ -1381,188 +1427,101 @@ class ReaderActivity : BaseActivity() {
         setPadding(insets.left, insets.top, insets.right, insets.bottom)
     }
 
-    /**
-     * Class that handles the user preferences of the reader.
-     */
-    private inner class ReaderConfig {
-
-        private fun getCombinedPaint(grayscale: Boolean, invertedColors: Boolean): Paint {
-            return Paint().apply {
-                colorFilter = ColorMatrixColorFilter(
-                    ColorMatrix().apply {
-                        if (grayscale) {
-                            setSaturation(0f)
-                        }
-                        if (invertedColors) {
-                            postConcat(
-                                ColorMatrix(
-                                    floatArrayOf(
-                                        -1f, 0f, 0f, 0f, 255f,
-                                        0f, -1f, 0f, 0f, 255f,
-                                        0f, 0f, -1f, 0f, 255f,
-                                        0f, 0f, 0f, 1f, 0f,
-                                    ),
-                                ),
-                            )
-                        }
-                    },
-                )
-            }
+    private fun applyGeneralSettings(old: GeneralSettings?, new: GeneralSettings) {
+        if (old?.theme != new.theme) {
+            binding.readerContainer.setBackgroundColor(baseContext.readerBackgroundColor(new.theme))
         }
-
-        /*
-         * Initializes the reader subscriptions.
-         */
-        init {
-            readerPreferences.readerTheme.changes()
-                .onEach { theme ->
-                    binding.readerContainer.setBackgroundColor(
-                        // KUN -->
-                        // `readerBackgroundColor` takes the typed reader theme as of 8124d324a1;
-                        // the viewer-side call sites move onto GeneralSettings in step 2.
-                        baseContext.readerBackgroundColor(ReaderPreferences.ReaderTheme.fromValue(theme)),
-                        // KUN <--
-                    )
-                }
-                .launchIn(lifecycleScope)
-
-            preferences.displayProfile.changes()
-                .onEach { setDisplayProfile(it) }
-                .launchIn(lifecycleScope)
-
-            readerPreferences.keepScreenOn.changes()
-                .onEach(::setKeepScreenOn)
-                .launchIn(lifecycleScope)
-
-            readerPreferences.customBrightness.changes()
-                .onEach(::setCustomBrightness)
-                .launchIn(lifecycleScope)
-
-            combine(
-                readerPreferences.grayscale.changes(),
-                readerPreferences.invertedColors.changes(),
-            ) { grayscale, invertedColors -> grayscale to invertedColors }
-                .onEach { (grayscale, invertedColors) ->
-                    setLayerPaint(grayscale, invertedColors)
-                }
-                .launchIn(lifecycleScope)
-
-            combine(
-                readerPreferences.fullscreen.changes(),
-                readerPreferences.drawUnderCutout.changes(),
-            ) { fullscreen, drawUnderCutout -> fullscreen to drawUnderCutout }
-                .onEach { (fullscreen, drawUnderCutout) ->
-                    updateViewerInset(fullscreen, drawUnderCutout)
-                }
-                .launchIn(lifecycleScope)
-
-            // SY -->
-            readerPreferences.pageLayout.changes()
-                .drop(1)
-                .onEach {
-                    viewModel.setDoublePages(
-                        // KUN --> the viewer is owned by the activity (upstream ca028cb657)
-                        (viewer as? PagerViewer)
-                            ?.config
-                            ?.doublePages
-                            ?: false,
-                        // KUN <--
-                    )
-                }
-                .launchIn(lifecycleScope)
-
-            readerPreferences.dualPageSplitPaged.changes()
-                .drop(1)
-                .onEach {
-                    // KUN --> the viewer is owned by the activity (upstream ca028cb657)
-                    if (viewer !is PagerViewer) return@onEach
-                    // KUN <--
-                    reloadChapters(
-                        !it &&
-                            when (readerPreferences.pageLayout.get()) {
-                                PagerConfig.PageLayout.DOUBLE_PAGES -> true
-                                PagerConfig.PageLayout.AUTOMATIC ->
-                                    resources.configuration.orientation ==
-                                        Configuration.ORIENTATION_LANDSCAPE
-                                else -> false
-                            },
-                        true,
-                    )
-                }
-                .launchIn(lifecycleScope)
-            // SY <--
+        if (old?.keepScreenOn != new.keepScreenOn) {
+            setKeepScreenOn(new.keepScreenOn)
         }
+        if (old?.grayscale != new.grayscale || old?.invertedColors != new.invertedColors) {
+            setLayerPaint(new.grayscale, new.invertedColors)
+        }
+        if (old?.fullscreen != new.fullscreen || old?.drawUnderCutout != new.drawUnderCutout) {
+            updateViewerInset(new.fullscreen, new.drawUnderCutout)
+        }
+    }
 
-        // KMK -->
-        /**
-         * Sets the display profile to [path].
-         */
-        private fun setDisplayProfile(path: String) {
-            val file = UniFile.fromUri(baseContext, path.toUri())
-            if (file != null && file.exists()) {
-                val inputStream = file.openInputStream()
-                val outputStream = ByteArrayOutputStream()
-                inputStream.use { input ->
-                    outputStream.use { output ->
-                        input.copyTo(output)
+    private fun getCombinedPaint(grayscale: Boolean, invertedColors: Boolean): Paint {
+        return Paint().apply {
+            colorFilter = ColorMatrixColorFilter(
+                ColorMatrix().apply {
+                    if (grayscale) {
+                        setSaturation(0f)
                     }
+                    if (invertedColors) {
+                        postConcat(
+                            ColorMatrix(
+                                floatArrayOf(
+                                    -1f, 0f, 0f, 0f, 255f,
+                                    0f, -1f, 0f, 0f, 255f,
+                                    0f, 0f, -1f, 0f, 255f,
+                                    0f, 0f, 0f, 1f, 0f,
+                                ),
+                            ),
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    // KMK -->
+    /**
+     * Sets the display profile to [path].
+     */
+    private fun setDisplayProfile(path: String) {
+        val file = UniFile.fromUri(baseContext, path.toUri())
+        if (file != null && file.exists()) {
+            val inputStream = file.openInputStream()
+            val outputStream = ByteArrayOutputStream()
+            inputStream.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
                 }
-                val data = outputStream.toByteArray()
-                SubsamplingScaleImageView.setDisplayProfile(data)
             }
+            val data = outputStream.toByteArray()
+            SubsamplingScaleImageView.setDisplayProfile(data)
         }
-        // KMK <--
+    }
+    // KMK <--
 
-        /**
-         * Sets the keep screen on mode according to [enabled].
-         */
-        private fun setKeepScreenOn(enabled: Boolean) {
-            if (enabled) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            } else {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    /**
+     * Sets the keep screen on mode according to [enabled].
+     */
+    private fun setKeepScreenOn(enabled: Boolean) {
+        if (enabled) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    /**
+     * Sets the brightness of the screen. Range is [-75, 100].
+     * From -75 to -1 a semi-transparent black view is overlaid with the minimum brightness.
+     * From 1 to 100 it sets that value as brightness.
+     * 0 sets system brightness and hides the overlay.
+     */
+    private fun setCustomBrightnessValue(value: Int) {
+        // Calculate and set reader brightness.
+        val readerBrightness = when {
+            value > 0 -> {
+                value / 100f
             }
-        }
-
-        /**
-         * Sets the custom brightness overlay according to [enabled].
-         */
-        private fun setCustomBrightness(enabled: Boolean) {
-            if (enabled) {
-                readerPreferences.customBrightnessValue.changes()
-                    .sample(0.1.seconds)
-                    .onEach(::setCustomBrightnessValue)
-                    .launchIn(lifecycleScope)
-            } else {
-                setCustomBrightnessValue(0)
+            value < 0 -> {
+                0.01f
             }
+            else -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
+        window.attributes = window.attributes.apply { screenBrightness = readerBrightness }
 
-        /**
-         * Sets the brightness of the screen. Range is [-75, 100].
-         * From -75 to -1 a semi-transparent black view is overlaid with the minimum brightness.
-         * From 1 to 100 it sets that value as brightness.
-         * 0 sets system brightness and hides the overlay.
-         */
-        private fun setCustomBrightnessValue(value: Int) {
-            // Calculate and set reader brightness.
-            val readerBrightness = when {
-                value > 0 -> {
-                    value / 100f
-                }
-                value < 0 -> {
-                    0.01f
-                }
-                else -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-            }
-            window.attributes = window.attributes.apply { screenBrightness = readerBrightness }
+        viewModel.setBrightnessOverlayValue(value)
+    }
 
-            viewModel.setBrightnessOverlayValue(value)
-        }
-        private fun setLayerPaint(grayscale: Boolean, invertedColors: Boolean) {
-            val paint = if (grayscale || invertedColors) getCombinedPaint(grayscale, invertedColors) else null
-            binding.viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)
-        }
+    private fun setLayerPaint(grayscale: Boolean, invertedColors: Boolean) {
+        val paint = if (grayscale || invertedColors) getCombinedPaint(grayscale, invertedColors) else null
+        binding.viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)
     }
 
     // KMK -->

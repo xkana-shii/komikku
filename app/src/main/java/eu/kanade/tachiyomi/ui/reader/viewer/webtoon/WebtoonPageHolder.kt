@@ -203,11 +203,13 @@ class WebtoonPageHolder(
                     source,
                     isAnimated,
                     ReaderPageImageView.Config(
-                        zoomDuration = viewer.config.doubleTapAnimDuration,
+                        zoomDuration = viewer.general.doubleTapAnimDuration,
                         minimumScaleType = SubsamplingScaleImageView.SCALE_TYPE_FIT_WIDTH,
-                        cropBorders =
-                        (viewer.config.imageCropBorders && viewer.isContinuous) ||
-                            (viewer.config.continuousCropBorders && !viewer.isContinuous),
+                        // KUN -->
+                        // SY: each long strip mode crops on its own preference (R50).
+                        cropBorders = (viewer.longStrip.cropBorders && viewer.isContinuous) ||
+                            (viewer.longStrip.continuousCropBorders && !viewer.isContinuous),
+                        // KUN <--
                     ),
                 )
                 removeErrorLayout()
@@ -221,14 +223,14 @@ class WebtoonPageHolder(
     }
 
     private fun process(imageSource: BufferedSource): BufferedSource {
-        if (viewer.config.dualPageRotateToFit) {
+        if (viewer.simpleLongStrip.page.dualPageRotateToFit) {
             return rotateDualPage(imageSource)
         }
 
-        if (viewer.config.dualPageSplit) {
+        if (viewer.simpleLongStrip.page.dualPageSplit) {
             val isDoublePage = ImageUtil.isWideImage(imageSource)
             if (isDoublePage) {
-                val upperSide = if (viewer.config.dualPageInvert) ImageUtil.Side.LEFT else ImageUtil.Side.RIGHT
+                val upperSide = if (viewer.simpleLongStrip.page.dualPageInvert) ImageUtil.Side.LEFT else ImageUtil.Side.RIGHT
                 return ImageUtil.splitAndMerge(imageSource, upperSide)
             }
         }
@@ -239,7 +241,7 @@ class WebtoonPageHolder(
     private fun rotateDualPage(imageSource: BufferedSource): BufferedSource {
         val isDoublePage = ImageUtil.isWideImage(imageSource)
         return if (isDoublePage) {
-            val rotation = if (viewer.config.dualPageRotateToFitInvert) -90f else 90f
+            val rotation = if (viewer.simpleLongStrip.page.dualPageRotateToFitInvert) -90f else 90f
             ImageUtil.rotateImage(imageSource, rotation)
         } else {
             imageSource

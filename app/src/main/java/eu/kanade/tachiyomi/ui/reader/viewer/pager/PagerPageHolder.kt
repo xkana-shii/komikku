@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.databinding.ReaderErrorBinding
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
@@ -197,14 +198,14 @@ class PagerPageHolder(
             val (source, isAnimated, background) = withContext(Dispatchers.Default) {
                 // SY -->
                 // A single page can still need rotating when it's wide
-                val source = if (viewer.config.dualPageSplit || (viewer.config.dualPageRotateToFit && buffer2 == null)) {
+                val source = if (viewer.simplePaged.dualPageSplit || (viewer.simplePaged.dualPageRotateToFit && buffer2 == null)) {
                     process(item.first, buffer)
                 } else {
                     mergePages(buffer, buffer2)
                 }
                 // SY <--
                 val isAnimated = ImageUtil.isAnimatedAndSupported(source)
-                val background = if (!isAnimated && viewer.config.automaticBackground) {
+                val background = if (!isAnimated && viewer.general.automaticBackground) {
                     ImageUtil.chooseBackground(context, source.peek())
                 } else {
                     null
@@ -216,15 +217,15 @@ class PagerPageHolder(
                     source,
                     isAnimated,
                     Config(
-                        zoomDuration = viewer.config.doubleTapAnimDuration,
-                        minimumScaleType = viewer.config.imageScaleType,
-                        cropBorders = viewer.config.imageCropBorders,
-                        zoomStartPosition = viewer.config.imageZoomType,
-                        landscapeZoom = viewer.config.landscapeZoom,
+                        zoomDuration = viewer.general.doubleTapAnimDuration,
+                        minimumScaleType = viewer.paged.page.imageScaleType.value,
+                        cropBorders = viewer.paged.page.cropBorders,
+                        zoomStartPosition = viewer.imageZoomType,
+                        landscapeZoom = viewer.paged.page.landscapeZoom,
                         // KMK -->
-                        disableZoomIn = viewer.config.disableZoomIn,
-                        doubleTapZoom = viewer.config.doubleTapZoom,
-                        landscapeZoomScaleType = viewer.config.landscapeZoomScaleType,
+                        disableZoomIn = viewer.paged.page.disableZoomIn,
+                        doubleTapZoom = viewer.paged.page.doubleTapZoom,
+                        landscapeZoomScaleType = viewer.paged.page.landscapeZoomScaleType,
                         // KMK <--
                     ),
                 )
@@ -242,11 +243,11 @@ class PagerPageHolder(
     }
 
     private fun process(page: ReaderPage, imageSource: BufferedSource): BufferedSource {
-        if (viewer.config.dualPageRotateToFit) {
+        if (viewer.simplePaged.dualPageRotateToFit) {
             return rotateDualPage(imageSource)
         }
 
-        if (!viewer.config.dualPageSplit) {
+        if (!viewer.simplePaged.dualPageSplit) {
             return imageSource
         }
 
@@ -267,7 +268,7 @@ class PagerPageHolder(
     private fun rotateDualPage(imageSource: BufferedSource): BufferedSource {
         val isDoublePage = ImageUtil.isWideImage(imageSource)
         return if (isDoublePage) {
-            val rotation = if (viewer.config.dualPageRotateToFitInvert) -90f else 90f
+            val rotation = if (viewer.simplePaged.dualPageRotateToFitInvert) -90f else 90f
             ImageUtil.rotateImage(imageSource, rotation)
         } else {
             imageSource
@@ -328,13 +329,13 @@ class PagerPageHolder(
             return imageSource
         }
 
-        val isLTR = (viewer !is R2LPagerViewer) xor viewer.config.invertDoublePages
+        val isLTR = (viewer !is R2LPagerViewer) xor viewer.simplePaged.invertDoublePages
         val centerMargin = calculateCenterMargin(imageBitmap.height, imageBitmap2.height)
 
         imageSource.close()
         imageSource2.close()
 
-        return ImageUtil.mergeBitmaps(imageBitmap, imageBitmap2, isLTR, centerMargin, viewer.config.pageCanvasColor) {
+        return ImageUtil.mergeBitmaps(imageBitmap, imageBitmap2, isLTR, centerMargin, viewer.general.pageCanvasColor) {
             updateProgress(it)
         }
     }
@@ -343,8 +344,8 @@ class PagerPageHolder(
         return if (
             !ImageUtil.isAnimatedAndSupported(imageSource) &&
             ImageUtil.isWideImage(imageSource) &&
-            viewer.config.centerMarginType and PagerConfig.CenterMarginType.WIDE_PAGE_CENTER_MARGIN > 0 &&
-            !viewer.config.imageCropBorders
+            viewer.paged.page.centerMarginType.hasWidePageMargin &&
+            !viewer.paged.page.cropBorders
         ) {
             ImageUtil.addHorizontalCenterMargin(imageSource, height, context)
         } else {
@@ -368,8 +369,8 @@ class PagerPageHolder(
     }
 
     private fun calculateCenterMargin(height: Int, height2: Int): Int {
-        return if (viewer.config.centerMarginType and PagerConfig.CenterMarginType.DOUBLE_PAGE_CENTER_MARGIN > 0 &&
-            !viewer.config.imageCropBorders
+        return if (viewer.paged.page.centerMarginType.hasDoublePageMargin &&
+            !viewer.paged.page.cropBorders
         ) {
             96 / (this.height.coerceAtLeast(1) / max(height, height2).coerceAtLeast(1)).coerceAtLeast(1)
         } else {
@@ -406,17 +407,16 @@ class PagerPageHolder(
             else -> error("We should choose a side!")
         }
 
-        if (viewer.config.dualPageInvert) {
+        if (viewer.simplePaged.dualPageInvert) {
             side = when (side) {
                 ImageUtil.Side.RIGHT -> ImageUtil.Side.LEFT
                 ImageUtil.Side.LEFT -> ImageUtil.Side.RIGHT
             }
         }
 
-        val sideMargin = if ((viewer.config.centerMarginType and PagerConfig.CenterMarginType.DOUBLE_PAGE_CENTER_MARGIN) >
-            0 &&
-            viewer.config.doublePages &&
-            !viewer.config.imageCropBorders
+        val sideMargin = if (viewer.paged.page.centerMarginType.hasDoublePageMargin &&
+            viewer.doublePages &&
+            !viewer.paged.page.cropBorders
         ) {
             48
         } else {
@@ -498,3 +498,15 @@ class PagerPageHolder(
         errorLayout = null
     }
 }
+
+// KUN -->
+// SY: the centre-margin preference is one value of four; these are the two bits `PagerConfig`'s
+// `and <mask> > 0` tests read out of it.
+private val ReaderPreferences.CenterMarginType.hasWidePageMargin: Boolean
+    get() = this == ReaderPreferences.CenterMarginType.WIDE_PAGE ||
+        this == ReaderPreferences.CenterMarginType.DOUBLE_AND_WIDE
+
+private val ReaderPreferences.CenterMarginType.hasDoublePageMargin: Boolean
+    get() = this == ReaderPreferences.CenterMarginType.DOUBLE_PAGE ||
+        this == ReaderPreferences.CenterMarginType.DOUBLE_AND_WIDE
+// KUN <--
