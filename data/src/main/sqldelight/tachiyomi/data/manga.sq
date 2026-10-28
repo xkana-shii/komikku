@@ -112,11 +112,9 @@ CREATE TRIGGER update_manga_version AFTER UPDATE ON manga
 BEGIN
     UPDATE manga SET version = version + 1
     WHERE id = new.id AND new.is_syncing = 0 AND (
-        -- KUN -->
         -- `!=` is never true against NULL, so clearing a nullable field never bumped the version
         new.remote_url IS NOT old.remote_url OR
         new.remote_description IS NOT old.remote_description OR
-        -- KUN <--
         new.user_favorite_at IS NOT old.user_favorite_at OR
         new.user_reader_flags != old.user_reader_flags OR
         new.user_chapter_flags != old.user_chapter_flags OR
