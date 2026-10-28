@@ -62,7 +62,6 @@ import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
-import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import eu.kanade.tachiyomi.util.chapter.filterDownloaded
@@ -807,12 +806,6 @@ class ReaderViewModel(
         eventChannel.trySend(Event.ReloadViewerChapters)
     }
 
-    fun onViewerLoaded(viewer: Viewer?) {
-        mutableState.update {
-            it.copy(viewer = viewer)
-        }
-    }
-
     /**
      * Called every time a page changes on the reader. Used to mark the flag of chapters being
      * read, update tracking services, enqueue downloaded chapter deletion, and updating the active chapter if this
@@ -1545,9 +1538,16 @@ class ReaderViewModel(
     }
 
     // SY -->
-    fun saveImages() {
+    fun saveImages(
+        // KUN -->
+        // The viewer is owned by the activity (upstream ca028cb657 takes it out of the state).
+        currentViewer: PagerViewer?,
+        // KUN <--
+    ) {
         val (firstPage, secondPage) = (state.value.dialog as? Dialog.PageActions ?: return)
-        val viewer = state.value.viewer as? PagerViewer ?: return
+        // KUN -->
+        val viewer = currentViewer ?: return
+        // KUN <--
         val isLTR = (viewer !is R2LPagerViewer) xor (viewer.config.invertDoublePages)
         val bg = viewer.config.pageCanvasColor
 
@@ -1672,9 +1672,17 @@ class ReaderViewModel(
     }
 
     // SY -->
-    fun shareImages(copyToClipboard: Boolean) {
+    fun shareImages(
+        copyToClipboard: Boolean,
+        // KUN -->
+        // The viewer is owned by the activity (upstream ca028cb657 takes it out of the state).
+        currentViewer: PagerViewer?,
+        // KUN <--
+    ) {
         val (firstPage, secondPage) = (state.value.dialog as? Dialog.PageActions ?: return)
-        val viewer = state.value.viewer as? PagerViewer ?: return
+        // KUN -->
+        val viewer = currentViewer ?: return
+        // KUN <--
         val isLTR = (viewer !is R2LPagerViewer) xor (viewer.config.invertDoublePages)
         val bg = viewer.config.pageCanvasColor
 
@@ -1816,11 +1824,6 @@ class ReaderViewModel(
         // KNS <--
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
-
-        /**
-         * Viewer used to display the pages (pager, webtoon, ...).
-         */
-        val viewer: Viewer? = null,
         val dialog: Dialog? = null,
         val menuVisible: Boolean = false,
         @field:IntRange(from = -100, to = 100) val brightnessOverlayValue: Int = 0,
