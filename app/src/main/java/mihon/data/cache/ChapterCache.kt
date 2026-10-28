@@ -58,6 +58,15 @@ class ChapterCache(
         images.maxSize = { readerPreferences.cacheSize.get().toLongOrNull()?.times(1024 * 1024) }
         // KUN <--
         scope.launch {
+            // KUN -->
+            // Master kept the reader's page-list and image cache in `cacheDir/chapter_disk_cache`
+            // (Mihon's DiskLruCache tree). Nothing reads or sizes that tree any more, so
+            // `autoClearChapterCache` would never reclaim it: drop it once here. Best-effort — a
+            // file the system still holds open just stays for the next start.
+            withContext(Dispatchers.IO) {
+                File(context.cacheDir, "chapter_disk_cache").deleteRecursively()
+            }
+            // KUN <--
             pageLists.warmUp()
             images.warmUp()
         }
