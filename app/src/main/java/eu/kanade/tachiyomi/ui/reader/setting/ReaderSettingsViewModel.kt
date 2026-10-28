@@ -39,19 +39,12 @@ class ReaderSettingsViewModel(
     val onChangeOrientation: (ReaderOrientation) -> Unit,
     val preferences: ReaderPreferences,
     private val basePreferences: BasePreferences,
-) : ViewModel() {
-
     // KUN -->
-    // First WebGPU use: adopt TachiyomiSY/Komikku's `pageLayout` dual page choice into `dualPageView`,
-    // which is what the WebGPU renderer reads and what its settings chip edits. Without this, enabling
-    // the high quality renderer silently reset a dual page layout to single pages (the new pref
-    // defaults to NEVER). Seeded once; the user's later `dualPageView` choice wins.
-    init {
-        if (!preferences.dualPageView.isSet()) {
-            preferences.dualPageView.set(legacyDualPageView())
-        }
-    }
+    // Supplied by the activity as `ReaderViewModel.getMangaReadingMode`, so the settings page picks the
+    // same viewer the activity builds, the fork's auto-webtoon resolution (R45) included.
+    private val resolveReadingMode: () -> ReadingMode,
     // KUN <--
+) : ViewModel() {
 
     val mangaFlow = readerState
         .map { it.manga }
@@ -61,18 +54,17 @@ class ReaderSettingsViewModel(
     /**
      * The reading mode the viewer is made for, with the default resolved.
      */
-    val readingMode = combine(mangaFlow, preferences.defaultReadingMode.changes()) { manga, default ->
-        ReadingMode.fromPreference(manga?.readingMode?.toInt())
-            .takeIf { it != ReadingMode.DEFAULT }
-            ?: ReadingMode.fromPreference(default)
-    }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            // KUN -->
-            resolveReadingMode(readerState.value),
-            // KUN <--
-        )
+    // KUN -->
+    // Resolved through [resolveReadingMode] rather than from the stored mode, so the page rendered for
+    // this manga is the one its viewer is: an auto-webtoon manga (R45) shows the webtoon settings.
+    // Re-evaluated whenever the manga, the default mode or the auto-webtoon switch changes.
+    val readingMode = combine(
+        mangaFlow,
+        preferences.defaultReadingMode.changes(),
+        preferences.useAutoWebtoon.changes(),
+    ) { _, _, _ -> resolveReadingMode() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, resolveReadingMode())
+    // KUN <--
 
     /**
      * Whether the viewers are the WebGPU ones.
@@ -371,39 +363,4 @@ class ReaderSettingsViewModel(
             .map { preferences.read() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, preferences.read())
     }
-
-    // KUN -->
-    /**
-     * The reading mode [readerState] holds now, resolved the way [readingMode] resolves it. The fork's
-     * auto-webtoon resolution (R45) stays in `ReaderViewModel.getMangaReadingMode`, which the activity
-     * uses; this only reads the stored value, like the flow.
-     */
-    private fun resolveReadingMode(state: ReaderViewModel.State): ReadingMode {
-        return ReadingMode.fromPreference(state.manga?.readingMode?.toInt())
-            .takeIf { it != ReadingMode.DEFAULT }
-            ?: ReadingMode.fromPreference(preferences.defaultReadingMode.get())
-    }
-
-    /**
-     * TachiyomiSY/Komikku's pager dual page choice, as the SSIV viewers see it: `pageLayout` plus the
-     * "split wide pages" flag (`dualPageSplitPaged` disables pairing, as `PagerConfig` did).
-     *
-     * The WebGPU renderer never reads `pageLayout`; it reads the newer `dualPageView` pref. This maps
-     * the legacy choice onto that pref so a user's dual page layout survives enabling the high quality
-     * renderer. Long strip / webtoon layout prefs have no WebGPU counterpart upstream.
-     */
-    private fun legacyDualPageView(): ReaderPreferences.DualPageView {
-        return when (ReaderPreferences.PageLayout.fromValue(preferences.pageLayout.get())) {
-            ReaderPreferences.PageLayout.DOUBLE_PAGES -> {
-                if (preferences.dualPageSplitPaged.get()) {
-                    ReaderPreferences.DualPageView.NEVER
-                } else {
-                    ReaderPreferences.DualPageView.ALWAYS
-                }
-            }
-            ReaderPreferences.PageLayout.AUTOMATIC -> ReaderPreferences.DualPageView.WIDE
-            ReaderPreferences.PageLayout.SINGLE_PAGE -> ReaderPreferences.DualPageView.NEVER
-        }
-    }
-    // KUN <--
 }

@@ -60,7 +60,7 @@ the later step that owns it.
 | R<n> | Knob | Old location | Home | Note |
 |---|---|---|---|---|
 | R16 | `pageCanvasColor` | `viewer/pager/PagerConfig.kt:81` | `setting/GeneralSettings.kt:55` | derived from `theme`, like `themeToColor` was; keeps the old `0x202125` gray (no alpha) rather than `Color.rgb`'s `0xFF202125` |
-| R18 | `pageLayout` → `dualPageView` seed | `viewer/webgpu/WebGpuConfig.kt:88`-`:98`, helper `:228`-`:240` | `setting/ReaderSettingsViewModel.kt:50`-`:53`, helper `:383` | one-shot, guarded by `dualPageView.isSet()`; survives the deletion of `WebGpuConfig` |
+| R18 | `pageLayout` → `dualPageView` seed | `viewer/webgpu/WebGpuConfig.kt:88`-`:98`, helper `:228`-`:240` | `setting/ReadingMode.kt:156`-`:161` (`toViewer()`'s WebGPU branch), helper `:129`, mapping `:108` | one-shot, guarded by `dualPageView.isSet()`; survives the deletion of `WebGpuConfig` |
 | R13 | `doublePages` | `viewer/pager/PagerConfig.kt:67` | `viewer/pager/SimplePagedSettings.kt:21` | reintroduces the fork's custom setter clearing `shiftDoublePage` only as data |
 | R13 | `autoDoublePages` | `viewer/pager/PagerConfig.kt:78` | `viewer/pager/SimplePagedSettings.kt:23` | |
 | R37 | `usePageTransitions` (pager) | `viewer/pager/PagerConfig.kt:63` | `setting/GeneralSettings.kt:23` | |
@@ -275,9 +275,12 @@ with `collectChanges` for the parts it reacts to:
 
 `ReaderSettingsViewModel` lost its `viewerFlow` parameter (every consumer that used it now asks
 `isWebGpu` / `readingMode` instead) and keeps the fork's
-`(readerState, setter, setter, preferences, basePreferences)` constructor rather than upstream's
-`(ReaderViewModel, …)`, so `readingMode`'s initial value stays the stored one and auto-webtoon
-resolution (R45) stays in `ReaderViewModel.getMangaReadingMode`.
+`(readerState, setter, setter, preferences, basePreferences, resolveReadingMode)` constructor rather
+than upstream's `(ReaderViewModel, …)`. `readingMode` is not resolved from the stored mode: the
+activity passes `{ ReadingMode.fromPreference(viewModel.getMangaReadingMode()) }` — the same call
+`updateViewer()` builds the viewer from — and the flow re-runs it when the manga, the default reading
+mode or `useAutoWebtoon` changes, so the settings page and the viewer agree, R45's auto-webtoon
+resolution included.
 
 ### 6.2 Consumers migrated
 
@@ -305,6 +308,11 @@ Deleted: `viewer/ViewerConfig.kt`, `viewer/pager/PagerConfig.kt`, `viewer/webtoo
   `hasWidePageMargin` / `hasDoublePageMargin` in `PagerPageHolder`.
 - The webtoon viewers read `GeneralSettings.usePageTransitionsWebtoon`, not `usePageTransitions`
   (§3.1), behind a `WebtoonViewer.usePageTransitions` property.
+- The R18 `pageLayout` → `dualPageView` seed left `ReaderSettingsViewModel`'s `init` (where phase A put
+  it, which made it run on every reader open, not just for the renderer that reads the pref) and is
+  applied by `ReadingMode.toViewer()`'s WebGPU branch again, once, before it constructs a WebGPU
+  viewer. A session that builds no WebGPU viewer leaves `dualPageView` unset, so a later layout change
+  is still adopted when the renderer is first used.
 
 ### 6.4 What phase B deliberately did not move
 

@@ -14,6 +14,7 @@ data class LongStripSettings(
     /** SY: crop borders while reading the continuous-vertical ("webtoon with gaps") mode. */
     val continuousCropBorders: Boolean,
     /** KMK: decode long-strip pages with SubsamplingScaleImageView instead of the mpreg decoder. */
+    // KUN: populated but read by the preference owner (`ReaderPageImageView`) until step 5.
     val alwaysDecodeLongStripWithSSIV: Boolean,
     // KUN <--
 )

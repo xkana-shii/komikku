@@ -199,13 +199,17 @@ class ReaderActivity : BaseActivity() {
                     readerState = viewModel.state,
                     // KUN -->
                     // The fork's settings view model takes the reader state and the manga's setters
-                    // rather than the ReaderViewModel itself, so `readingMode`'s initial value stays
-                    // the stored one (auto-webtoon resolution stays in ReaderViewModel).
+                    // rather than the ReaderViewModel itself. `readingMode` is resolved through the same
+                    // `getMangaReadingMode` this activity builds the viewer from, so the settings page
+                    // and the viewer agree, auto-webtoon resolution (R45) included.
                     onChangeReadingMode = viewModel::setMangaReadingMode,
                     onChangeOrientation = viewModel::setMangaOrientationType,
                     // KUN <--
                     preferences = readerPreferences,
                     basePreferences = preferences,
+                    // KUN -->
+                    resolveReadingMode = { ReadingMode.fromPreference(viewModel.getMangaReadingMode()) },
+                    // KUN <--
                 )
             }
         }

@@ -96,6 +96,41 @@ enum class ReadingMode(
             logcat(LogPriority.WARN, it) { "High quality renderer probe failed" }
             false
         }
+
+        /**
+         * TachiyomiSY/Komikku's pager dual page choice, as the SSIV viewers see it: `pageLayout` plus the
+         * "split wide pages" flag (`dualPageSplitPaged` disables pairing, as `PagerConfig` did).
+         *
+         * The WebGPU renderer never reads `pageLayout`; it reads the newer `dualPageView` pref. This maps
+         * the legacy choice onto that pref so a user's dual page layout survives enabling the high quality
+         * renderer. Long strip / webtoon layout prefs have no WebGPU counterpart upstream.
+         */
+        private fun legacyDualPageView(preferences: ReaderPreferences): ReaderPreferences.DualPageView {
+            return when (ReaderPreferences.PageLayout.fromValue(preferences.pageLayout.get())) {
+                ReaderPreferences.PageLayout.DOUBLE_PAGES -> {
+                    if (preferences.dualPageSplitPaged.get()) {
+                        ReaderPreferences.DualPageView.NEVER
+                    } else {
+                        ReaderPreferences.DualPageView.ALWAYS
+                    }
+                }
+                ReaderPreferences.PageLayout.AUTOMATIC -> ReaderPreferences.DualPageView.WIDE
+                ReaderPreferences.PageLayout.SINGLE_PAGE -> ReaderPreferences.DualPageView.NEVER
+            }
+        }
+
+        /**
+         * First WebGPU use: adopt the legacy `pageLayout` choice into `dualPageView`, which is what the
+         * WebGPU renderer reads and what its settings chip edits. Without this, enabling the high quality
+         * renderer silently reset a dual page layout to single pages (the new pref defaults to NEVER).
+         * Called where a WebGPU viewer is actually built, so a session that never gets one leaves the pref
+         * unset; seeded once, and the user's later `dualPageView` choice wins.
+         */
+        private fun seedDualPageView(preferences: ReaderPreferences) {
+            if (!preferences.dualPageView.isSet()) {
+                preferences.dualPageView.set(legacyDualPageView(preferences))
+            }
+        }
         // KUN <--
 
         fun toViewer(
@@ -119,6 +154,11 @@ enum class ReadingMode(
                 }
             }
             if (useHighQualityRenderer) {
+                // KUN -->
+                // Seeded here rather than on reader open: only a WebGPU viewer reads `dualPageView`, and a
+                // device that falls back to the SSIV viewer must not freeze the pref from its layout.
+                seedDualPageView(activity.appGraph.readerPreferences)
+                // KUN <--
                 return when (fromPreference(preference)) {
                     LEFT_TO_RIGHT -> WebGpuViewer(activity, isReversed = false, isVertical = false)
                     RIGHT_TO_LEFT -> WebGpuViewer(activity, isReversed = true, isVertical = false)

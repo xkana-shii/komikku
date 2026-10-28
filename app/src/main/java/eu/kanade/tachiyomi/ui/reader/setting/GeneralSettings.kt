@@ -33,8 +33,10 @@ data class GeneralSettings(
      */
     val usePageTransitionsWebtoon: Boolean,
     /** SY: seconds between autoscroll steps, `-1` when autoscroll is off. */
+    // KUN: populated but read by the preference owner until step 5 wires autoscroll onto the plane.
     val autoscrollInterval: Float,
     /** SY: glide a screen per autoscroll step instead of jumping one page. */
+    // KUN: populated but read by the preference owner until step 5 wires autoscroll onto the plane.
     val smoothAutoScroll: Boolean,
     // KNS: TachiyomiSY's autoscroll gesture switches are not part of this fork (excluded with PR #80)
     // KUN <--
