@@ -89,9 +89,13 @@ open class WebGpuViewer(
 
     val readerPreferences by lazy { activity.appGraph.readerPreferences }
 
-    internal fun readerBackgroundColor(): Int =
-        cachedBackgroundColor ?: activity.baseContext.readerBackgroundColor(config.theme)
-            .also { cachedBackgroundColor = it }
+    // KUN -->
+    // `readerBackgroundColor` takes the typed reader theme as of 8124d324a1; this call site moves onto
+    // GeneralSettings.theme in step 2.
+    internal fun readerBackgroundColor(): Int = cachedBackgroundColor ?: activity.baseContext
+        .readerBackgroundColor(ReaderPreferences.ReaderTheme.fromValue(config.theme))
+        .also { cachedBackgroundColor = it }
+    // KUN <--
 
     @Volatile
     private var cachedThemedContext: Context? = null

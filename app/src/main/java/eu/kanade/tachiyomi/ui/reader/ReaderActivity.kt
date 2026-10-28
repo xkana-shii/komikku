@@ -346,6 +346,10 @@ class ReaderActivity : BaseActivity() {
                     onChangeReadingMode = viewModel::setMangaReadingMode,
                     onChangeOrientation = viewModel::setMangaOrientationType,
                     preferences = readerPreferences,
+                    // KUN -->
+                    // 8124d324a1: `isWebGpu` reads the high quality renderer preference.
+                    basePreferences = preferences,
+                    // KUN <--
                 )
             }
 
@@ -1412,7 +1416,13 @@ class ReaderActivity : BaseActivity() {
         init {
             readerPreferences.readerTheme.changes()
                 .onEach { theme ->
-                    binding.readerContainer.setBackgroundColor(baseContext.readerBackgroundColor(theme))
+                    binding.readerContainer.setBackgroundColor(
+                        // KUN -->
+                        // `readerBackgroundColor` takes the typed reader theme as of 8124d324a1;
+                        // the viewer-side call sites move onto GeneralSettings in step 2.
+                        baseContext.readerBackgroundColor(ReaderPreferences.ReaderTheme.fromValue(theme)),
+                        // KUN <--
+                    )
                 }
                 .launchIn(lifecycleScope)
 
