@@ -14,11 +14,12 @@ interface RestoreRepository {
      */
     suspend fun restoreManga(
         entries: List<RestoredManga>,
-        // KMK/SY -->
+        // KUN -->
         // Whether this restore is applying a SyncYomi sync delta. A sync must not stamp the restored
         // rows as local changes, so the raw inserts/updates go through with is_syncing set.
-        isSync: Boolean,
-        // KMK/SY <--
+        // KUN <--
+        /* SY --> */
+        isSync: Boolean /* SY <-- */,
         // KUN -->
         restoreCategories: Boolean = true,
         // Section flags for the manga payload. A disabled section must not be read or written at
@@ -36,11 +37,11 @@ interface RestoreRepository {
         update: suspend (Manga) -> MangaUpdate,
     )
 
-    // KMK/SY -->
+    // KMK -->
     /**
      * Writes [manga] with the backup/sync update query. Used by SyncManager to reconcile the favorite
      * status of non-library entries without stamping them as locally changed.
      */
-    suspend fun updateManga(manga: Manga, isSync: Boolean)
-    // KMK/SY <--
+    suspend fun updateManga(manga: Manga, /* SY --> */ isSync: Boolean /* SY <-- */)
+    // KMK <--
 }

@@ -59,7 +59,8 @@ class RestoreRepositoryImpl(
 
     override suspend fun restoreManga(
         entries: List<RestoredManga>,
-        isSync: Boolean,
+        /* SY --> */
+        isSync: Boolean /* SY <-- */,
         // KUN -->
         restoreCategories: Boolean,
         restoreTracking: Boolean,
@@ -107,8 +108,9 @@ class RestoreRepositoryImpl(
 
     private suspend fun restore(
         entry: RestoredManga,
+        /* SY --> */
         isSync: Boolean,
-        syncingFlag: Long,
+        syncingFlag: Long /* SY <-- */,
         // KUN -->
         restoreCategories: Boolean,
         restoreTracking: Boolean,
@@ -219,8 +221,9 @@ class RestoreRepositoryImpl(
     private suspend fun restoreExistingManga(
         manga: Manga,
         dbManga: Manga,
+        /* SY --> */
         isSync: Boolean,
-        syncingFlag: Long,
+        syncingFlag: Long /* SY <-- */,
     ): Manga {
         // KUN -->
         val incomingIsNewer = manga.version > dbManga.version ||
@@ -277,7 +280,7 @@ class RestoreRepositoryImpl(
         )
     }
 
-    private suspend fun updateManga(manga: Manga, isSync: Boolean, syncingFlag: Long): Manga {
+    private suspend fun updateManga(manga: Manga, /* SY --> */ isSync: Boolean, syncingFlag: Long /* SY <-- */): Manga {
         database.mangaQueries.updateFromBackup(
             source = manga.source,
             url = manga.url,
@@ -331,7 +334,7 @@ class RestoreRepositoryImpl(
      *
      * @return id of [Manga], null if not found
      */
-    private suspend fun insertManga(manga: Manga, isSync: Boolean, syncingFlag: Long): Long {
+    private suspend fun insertManga(manga: Manga, /* SY --> */ isSync: Boolean, syncingFlag: Long /* SY <-- */): Long {
         return database.mangaQueries.insert(
             sourceId = manga.source,
             remoteUrl = manga.url,
@@ -378,8 +381,9 @@ class RestoreRepositoryImpl(
     private suspend fun restoreChapters(
         manga: Manga,
         restoredChapters: List<Chapter>,
+        /* SY --> */
         isSync: Boolean,
-        syncingFlag: Long,
+        syncingFlag: Long /* SY <-- */,
         // KUN -->
         removeMissingChaptersBefore: Long?,
         // KUN <--
