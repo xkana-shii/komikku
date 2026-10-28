@@ -308,7 +308,7 @@ komi-kun owns this block. No upstream uses `>= 1000`, so a collision can be avoi
 | `10300-10399` | `BackupTracking` |
 | `10400-10499` | `BackupHistory` |
 | `10500-10599` | `Backup` root |
-| `10600-10699` | `BackupMergedMangaReference` |
+| `10600-10699` | `BackupMergedEntry` / `BackupMergeSettings` |
 | `10700-10799` | `BackupFlatMetadata` / metadata |
 | `10800-10899` | Saved search / feed / extension store / source / preference |
 | `10900-10999` | New models / overflow |
@@ -317,6 +317,7 @@ Current komi-kun allocations:
 
 - `BackupManga.customInfoIncluded` = `10000`
 - `BackupManga.mergedMangaReferencesIncluded` = `10001`
+- `BackupManga.mergeSettings` = `10002` (upstream's `604` is claimed by an open SY PR for a different wire type)
 
 ### This fork's (KNS) fields
 
