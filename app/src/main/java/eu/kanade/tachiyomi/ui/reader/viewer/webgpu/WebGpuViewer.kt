@@ -304,9 +304,13 @@ open class WebGpuViewer(
     val general: GeneralSettings
         get() = settingsViewModel.general.value
 
+    // KUN -->
+    // bridge: removed when ReaderActivity draws through Compose. Until then the tap zones are still
+    // pushed into the activity's overlay view, which is what draws them.
     private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
 
     private var navigator = paged.navigation.navigator(::defaultNavigation)
+    // KUN <--
 
     val imageZoomType: ZoomStartPosition
         get() = paged.page.zoomStart.position(
@@ -893,22 +897,27 @@ open class WebGpuViewer(
             if (old != null && old.page != new.page) {
                 onPageSettingsChanged()
             }
+            // KUN -->
+            // bridge: removed when ReaderActivity draws through Compose.
             if (old?.navigation != new.navigation) {
                 navigator = new.navigation.navigator(::defaultNavigation)
                 val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
                 activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
             }
+            // KUN <--
         }
     }
 
     // KUN -->
-    // This fork's navigator classes still take the preferences, for the tap-zone size (step 3 gives
-    // them `(invertMode, isReversed)`).
-    private fun defaultNavigation(): ViewerNavigation {
+    // KMK: the tap zones (R31) travel with the navigator.
+    private fun defaultNavigation(
+        invertMode: ReaderPreferences.TappingInvertMode,
+        smallerTapZone: Boolean,
+    ): ViewerNavigation {
         return if (isVertical) {
-            LNavigation(activity.appGraph.readerPreferences)
+            LNavigation(invertMode, smallerTapZone)
         } else {
-            RightAndLeftNavigation(activity.appGraph.readerPreferences)
+            RightAndLeftNavigation(invertMode, smallerTapZone)
         }
     }
     // KUN <--

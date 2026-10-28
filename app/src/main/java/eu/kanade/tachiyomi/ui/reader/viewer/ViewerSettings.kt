@@ -24,28 +24,23 @@ data class NavigationSettings(
     // KUN -->
     /** KMK: shrink the prev/next tap zones from 33% to 25%, growing the menu region. */
     val smallerTapZone: Boolean,
-    /**
-     * KMK: this fork's [ViewerNavigation] subclasses still take the preferences because the tap-zone
-     * size above is read inside them; step 3 gives them `(invertMode, isReversed)` instead and this
-     * property goes with it.
-     */
-    val readerPreferences: ReaderPreferences,
     // KUN <--
 ) {
 
-    fun navigator(default: () -> ViewerNavigation): ViewerNavigation {
-        val navigation = when (mode) {
-            ReaderPreferences.NavigationMode.DEFAULT -> default()
-            // KUN -->
-            ReaderPreferences.NavigationMode.L_SHAPED -> LNavigation(readerPreferences)
-            ReaderPreferences.NavigationMode.KINDLISH -> KindlishNavigation(readerPreferences)
-            ReaderPreferences.NavigationMode.EDGE -> EdgeNavigation(readerPreferences)
-            ReaderPreferences.NavigationMode.RIGHT_AND_LEFT -> RightAndLeftNavigation(readerPreferences)
-            ReaderPreferences.NavigationMode.DISABLED -> DisabledNavigation(readerPreferences)
-            // KUN <--
+    // KUN -->
+    // KMK: upstream's value-based navigator, plus the tap-zone size (R31) as a second value every
+    // navigator needs for its geometry.
+    fun navigator(default: (ReaderPreferences.TappingInvertMode, Boolean) -> ViewerNavigation): ViewerNavigation {
+        return when (mode) {
+            ReaderPreferences.NavigationMode.DEFAULT -> default(inverted, smallerTapZone)
+            ReaderPreferences.NavigationMode.L_SHAPED -> LNavigation(inverted, smallerTapZone)
+            ReaderPreferences.NavigationMode.KINDLISH -> KindlishNavigation(inverted, smallerTapZone)
+            ReaderPreferences.NavigationMode.EDGE -> EdgeNavigation(inverted, smallerTapZone)
+            ReaderPreferences.NavigationMode.RIGHT_AND_LEFT -> RightAndLeftNavigation(inverted, smallerTapZone)
+            ReaderPreferences.NavigationMode.DISABLED -> DisabledNavigation(inverted, smallerTapZone)
         }
-        return navigation.also { it.invertMode = inverted }
     }
+    // KUN <--
 }
 
 /**

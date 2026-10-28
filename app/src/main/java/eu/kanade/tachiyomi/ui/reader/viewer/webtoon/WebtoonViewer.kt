@@ -93,9 +93,13 @@ class WebtoonViewer(
     val general: GeneralSettings
         get() = settingsViewModel.general.value
 
+    // KUN -->
+    // bridge: removed when ReaderActivity draws through Compose. Until then the tap zones are still
+    // pushed into the activity's overlay view, which is what draws them.
     private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
 
     private var navigator = simpleLongStrip.navigation.navigator(::defaultNavigation)
+    // KUN <--
 
     // KUN -->
     /**
@@ -221,11 +225,14 @@ class WebtoonViewer(
             if (old?.doubleTapZoom != new.doubleTapZoom) {
                 frame.doubleTapZoom = new.doubleTapZoom
             }
+            // KUN -->
+            // bridge: removed when ReaderActivity draws through Compose.
             if (old?.navigation != new.navigation) {
                 navigator = new.navigation.navigator(::defaultNavigation)
                 val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
                 activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
             }
+            // KUN <--
             // KUN -->
             // KMK: pinch to zoom (R26) and the long strip scale type (R24) still drive the recycler.
             if (old?.pinchToZoom != new.pinchToZoom) {
@@ -281,10 +288,13 @@ class WebtoonViewer(
         }
     }
 
-    private fun defaultNavigation(): ViewerNavigation {
-        return LNavigation(readerPreferences)
+    // KMK: the tap zones (R31) travel with the navigator.
+    private fun defaultNavigation(
+        invertMode: ReaderPreferences.TappingInvertMode,
+        smallerTapZone: Boolean,
+    ): ViewerNavigation {
+        return LNavigation(invertMode, smallerTapZone)
     }
-    // KUN <--
 
     private fun checkAllowPreload(page: ReaderPage?): Boolean {
         // Page is transition page - preload allowed

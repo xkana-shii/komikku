@@ -8,6 +8,9 @@ import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
 import eu.kanade.tachiyomi.ui.reader.viewer.LongStripSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.NavigationSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.PagedSettings
+import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.SimplePagedSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuLongStripSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuPagedSettings
@@ -16,6 +19,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuZoomGestures
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.SimpleLongStripSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -165,7 +169,6 @@ class ReaderSettingsViewModel(
                 pagerNavInverted.get(),
                 // KUN -->
                 smallerTapZone = smallerTapZone.get(),
-                readerPreferences = preferences,
                 // KUN <--
             ),
         )
@@ -256,7 +259,6 @@ class ReaderSettingsViewModel(
                 webtoonNavInverted.get(),
                 // KUN -->
                 smallerTapZone = smallerTapZone.get(),
-                readerPreferences = preferences,
                 // KUN <--
             ),
             // KUN -->
@@ -336,6 +338,44 @@ class ReaderSettingsViewModel(
         )
     }
 
+    private val viewerMode = MutableStateFlow<ViewerMode?>(null)
+
+    /**
+     * Tap zones of the open viewer. Null until a viewer is made.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val navigation: StateFlow<ViewerNavigation?> = viewerMode
+        .flatMapLatest { viewerMode ->
+            if (viewerMode == null) return@flatMapLatest flowOf(null)
+
+            val usesWebtoonZones = viewerMode.readingMode.type == ReadingMode.ViewerType.Webtoon &&
+                !viewerMode.isWebGpu
+            val settings = if (usesWebtoonZones) {
+                simpleLongStrip.map { it.navigation }
+            } else {
+                paged.map { it.navigation }
+            }
+            // KUN -->
+            // KMK: the navigators take the tap-zone size (R31) with the inversion, so the flow
+            // re-emits when either changes.
+            val defaultNavigation: (ReaderPreferences.TappingInvertMode, Boolean) -> ViewerNavigation =
+                if (viewerMode.readingMode.direction == ReadingMode.Direction.Vertical) {
+                    ::LNavigation
+                } else {
+                    ::RightAndLeftNavigation
+                }
+            // KUN <--
+            settings.distinctUntilChanged().map { it.navigator(defaultNavigation) }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Called when a viewer is made for [readingMode].
+     */
+    fun setViewerReadingMode(readingMode: ReadingMode) {
+        viewerMode.value = ViewerMode(readingMode, isWebGpu.get())
+    }
+
     // KUN -->
     fun setReadingMode(readingMode: ReadingMode) = onChangeReadingMode(readingMode)
 
@@ -363,4 +403,9 @@ class ReaderSettingsViewModel(
             .map { preferences.read() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, preferences.read())
     }
+
+    private data class ViewerMode(
+        val readingMode: ReadingMode,
+        val isWebGpu: Boolean,
+    )
 }

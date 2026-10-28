@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.navigation
 
 import android.graphics.RectF
-import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.TappingInvertMode
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 
 /**
@@ -14,9 +14,15 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
  * | N | M | P |   N: Move Left
  * +---+---+---+
  */
-class RightAndLeftNavigation(readerPreferences: ReaderPreferences) : ViewerNavigation(readerPreferences) {
+class RightAndLeftNavigation(
+    invertMode: TappingInvertMode,
+    // KUN -->
+    // KMK: the tap-zone size (R31) travels with the navigator.
+    smallerTapZone: Boolean = false,
+    // KUN <--
+) : ViewerNavigation(invertMode, smallerTapZone) {
 
-    override var regionList: List<Region> = listOf(
+    override val regionList: List<Region> = listOf(
         Region(
             rectF = RectF(0f, 0f, regionSize1, 1f),
             type = NavigationRegion.LEFT,

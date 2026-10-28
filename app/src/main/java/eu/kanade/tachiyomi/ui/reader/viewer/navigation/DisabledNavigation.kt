@@ -1,6 +1,6 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.navigation
 
-import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.TappingInvertMode
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
 
 /**
@@ -13,7 +13,13 @@ import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
  * | M | M | M |   N: Next
  * +---+---+---+
 */
-class DisabledNavigation(readerPreferences: ReaderPreferences) : ViewerNavigation(readerPreferences) {
+class DisabledNavigation(
+    invertMode: TappingInvertMode,
+    // KUN -->
+    // KMK: the tap-zone size (R31) travels with the navigator.
+    smallerTapZone: Boolean = false,
+    // KUN <--
+) : ViewerNavigation(invertMode, smallerTapZone) {
 
-    override var regionList: List<Region> = emptyList()
+    override val regionList: List<Region> = emptyList()
 }

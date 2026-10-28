@@ -19,6 +19,7 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderItem
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.GeneralSettings
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.PagedSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView.ZoomStartPosition
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
@@ -47,11 +48,6 @@ abstract class PagerViewer(
 
     val graph by lazy { activity.appGraph }
     val downloadManager by lazy { graph.downloadManager }
-    // KUN -->
-    // This fork's navigator classes still take the preferences, for the tap-zone size (step 3
-    // gives them `(invertMode, isReversed)`).
-    val readerPreferences by lazy { graph.readerPreferences }
-    // KUN <--
 
     val scope = MainScope()
 
@@ -81,9 +77,13 @@ abstract class PagerViewer(
     val general: GeneralSettings
         get() = settingsViewModel.general.value
 
+    // KUN -->
+    // bridge: removed when ReaderActivity draws through Compose. Until then the tap zones are still
+    // pushed into the activity's overlay view, which is what draws them.
     private val forceNavigationOverlay = settingsViewModel.takeNavigationOverlayForNewUser()
 
     private var navigator = paged.navigation.navigator(::defaultNavigation)
+    // KUN <--
 
     val imageZoomType: ZoomStartPosition
         get() = paged.page.zoomStart.position(
@@ -239,22 +239,29 @@ abstract class PagerViewer(
             if (old != null && old.page != new.page) {
                 refreshAdapter()
             }
+            // KUN -->
+            // bridge: removed when ReaderActivity draws through Compose.
             if (old?.navigation != new.navigation) {
                 navigator = new.navigation.navigator(::defaultNavigation)
                 val showOnStart = general.navigationOverlayOnStart || forceNavigationOverlay
                 activity.binding.navigationOverlay.setNavigation(navigator, showOnStart)
             }
-        }
-    }
-
-    private fun defaultNavigation(): ViewerNavigation {
-        return when (this) {
-            // KUN -->
-            is VerticalPagerViewer -> LNavigation(readerPreferences)
-            else -> RightAndLeftNavigation(readerPreferences)
             // KUN <--
         }
     }
+
+    // KUN -->
+    // KMK: the tap zones (R31) travel with the navigator.
+    private fun defaultNavigation(
+        invertMode: ReaderPreferences.TappingInvertMode,
+        smallerTapZone: Boolean,
+    ): ViewerNavigation {
+        return when (this) {
+            is VerticalPagerViewer -> LNavigation(invertMode, smallerTapZone)
+            else -> RightAndLeftNavigation(invertMode, smallerTapZone)
+        }
+    }
+    // KUN <--
 
     override fun destroy() {
         super.destroy()

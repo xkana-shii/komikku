@@ -9,8 +9,11 @@ import eu.kanade.tachiyomi.util.lang.invert
 import tachiyomi.i18n.MR
 
 abstract class ViewerNavigation(
+    val invertMode: ReaderPreferences.TappingInvertMode,
     // KUN -->
-    protected val readerPreferences: ReaderPreferences,
+    // KMK: the tap-zone size (R31) travels with the navigator, as a value the settings plane
+    // rebuilds it with, instead of being read from the preferences inside it.
+    private val smallerTapZone: Boolean,
     // KUN <--
 ) {
 
@@ -36,9 +39,7 @@ abstract class ViewerNavigation(
 
     private var constantMenuRegion: RectF = RectF(0f, 0f, 1f, 0.05f)
 
-    var invertMode: ReaderPreferences.TappingInvertMode = ReaderPreferences.TappingInvertMode.NONE
-
-    protected abstract var regionList: List<Region>
+    protected abstract val regionList: List<Region>
 
     /** Returns regions with applied inversion. */
     fun getRegions(): List<Region> {
@@ -56,9 +57,22 @@ abstract class ViewerNavigation(
         }
     }
 
+    // KUN -->
+    override fun equals(other: Any?): Boolean =
+        other is ViewerNavigation && other.javaClass == javaClass && other.invertMode == invertMode &&
+            other.smallerTapZone == smallerTapZone
+
+    // The tap-zone size is part of the value: a navigator held in a StateFlow must re-emit when it
+    // alone changes, or the reader keeps the old geometry (R31).
+    override fun hashCode(): Int = 31 * javaClass.hashCode() + 31 * invertMode.hashCode() + smallerTapZone.hashCode()
+    // KUN <--
+
     // KMK -->
+    // KUN -->
+    // The geometry reads the navigator's own tap-zone size (R31), not the preference.
     protected val regionSize1
-        get() = if (readerPreferences.smallerTapZone.get()) 0.25f else 0.33f
+        get() = if (smallerTapZone) 0.25f else 0.33f
     protected val regionSize2 = 1f - regionSize1
+    // KUN <--
     // KMK <--
 }
