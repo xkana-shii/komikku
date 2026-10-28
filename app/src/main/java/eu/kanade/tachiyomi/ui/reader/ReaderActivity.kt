@@ -151,7 +151,7 @@ import tachiyomi.domain.manga.model.asMangaCover
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
-import tachiyomi.presentation.core.components.CombinedCircularProgressIndicator
+import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.util.collectAsState
 import java.io.ByteArrayOutputStream
 import kotlin.time.Duration.Companion.seconds
@@ -423,6 +423,7 @@ class ReaderActivity : BaseActivity() {
     // the old `ComposeView` in it; the Compose root does the same, so the seed survives the move.
     @Composable
     private fun ReaderScreen() {
+        // KMK -->
         TachiyomiTheme(
             seedColor = seedColorState().takeIf { themeCoverBased },
             typography = MaterialTheme.typography.copy(
@@ -461,8 +462,8 @@ class ReaderActivity : BaseActivity() {
                 ReaderViewer()
 
                 if (isLoadingViewer) {
-                    // KUN --> R20: the fork's seeded, always-rotating indicator, not a bare LoadingScreen
-                    LoadingChrome()
+                    // KUN --> R20: the seed reaches this spinner from ReaderScreen's ambient theme
+                    LoadingScreen()
                     // KUN <--
                     return@Box
                 }
@@ -690,6 +691,7 @@ class ReaderActivity : BaseActivity() {
             }
         }
     }
+    // KUN <--
 
     /**
      * Called when the activity is destroyed. Cleans up the viewer and any view.
@@ -816,20 +818,6 @@ class ReaderActivity : BaseActivity() {
                         .windowInsetsPadding(insets),
                 )
             }
-        }
-    }
-
-    /**
-     * R20: the reader's loading chrome. The fork's indicator always rotates and takes the reader's
-     * seeded theme from [ReaderScreen], which a bare `LoadingScreen()` would drop.
-     */
-    @Composable
-    private fun LoadingChrome() {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            CombinedCircularProgressIndicator(progress = { 0f })
         }
     }
     // KUN <--
@@ -1157,7 +1145,6 @@ class ReaderActivity : BaseActivity() {
         // KUN --> the reading mode the viewer is made from is also the one the tap zones resolve
         // (upstream 00335b2a70), so `settingsViewModel.navigation` matches this viewer.
         val readingMode = viewModel.getMangaReadingMode()
-        settingsViewModel.setViewerReadingMode(ReadingMode.fromPreference(readingMode))
         val newViewer = ReadingMode.toViewer(
             readingMode,
             this,
@@ -1165,6 +1152,14 @@ class ReaderActivity : BaseActivity() {
             seedColor = seedColorStatic()?.toArgb(),
             // KMK <--
         )
+        // KUN -->
+        // Passed rather than read from the preference: `toViewer`'s capability gate may have fallen
+        // back from the WebGPU renderer, so only the viewer it actually made says which tap zones apply.
+        settingsViewModel.setViewerReadingMode(
+            ReadingMode.fromPreference(readingMode),
+            isWebtoonViewer = newViewer is WebtoonViewer,
+        )
+        // KUN <--
 
         setOrientation(viewModel.getMangaOrientation())
         // KUN <--
