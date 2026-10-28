@@ -279,7 +279,14 @@ class MangaMergeRepositoryImpl(
             }
 
             // Create the merge-level settings row only for a fresh merge; preserve it when reusing
-            if (database.mergedQueries.selectMerge(mangaId = inserted.id).executeAsOneOrNull() == null) {
+            // KUN -->
+            // The driver is asynchronous, so the query must be awaited: `executeAsOneOrNull()`
+            // throws IllegalStateException and the first merge a user creates never lands.
+            val hasMergeSettings = database.mergedQueries
+                .selectMerge(mangaId = inserted.id)
+                .awaitAsOneOrNull() != null
+            // KUN <--
+            if (!hasMergeSettings) {
                 database.mergedQueries.insertMerge(
                     mangaId = inserted.id,
                     chapterSortMode = chapterSortMode.toLong(),
