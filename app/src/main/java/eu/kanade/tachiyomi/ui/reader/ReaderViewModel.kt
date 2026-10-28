@@ -1082,14 +1082,21 @@ class ReaderViewModel(
                     chapter.chapterNumber == readerChapter.chapter.chapterNumber
                 ) {
                     ChapterUpdate(chapter.id) { read = true }
-                        // KMK -->
-                        .also { deleteDupChapterIfNeeded(ReaderChapter(chapter.copy(read = true))) }
-                    // KMK <--
                 } else {
                     null
                 }
             }
         updateChapter.awaitAll(duplicateUnreadChapters)
+        // SY -->
+        duplicateUnreadChapters.forEach { chapterUpdate ->
+            val chapter = unfilteredChapterList.first { it.id == chapterUpdate.id }
+            // KUN -->
+            // Komikku removes the duplicate itself and ignores chapters flagged unread, so pass it
+            // as read: the list above was loaded before these were marked read.
+            deleteDupChapterIfNeeded(ReaderChapter(chapter.copy(read = true)))
+            // KUN <--
+        }
+        // SY <--
     }
 
     fun restartReadTimer() {
