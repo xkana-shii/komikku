@@ -109,6 +109,7 @@ class WebtoonAdapter(
         return when (viewType) {
             PAGE_VIEW -> {
                 val view = ReaderPageImageView(readerThemedContext, isWebtoon = true)
+                viewer.onPageViewCreated(view)
                 WebtoonPageHolder(
                     view,
                     viewer,

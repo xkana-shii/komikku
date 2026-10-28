@@ -3,6 +3,10 @@ package eu.kanade.tachiyomi.ui.reader.viewer
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 
@@ -12,9 +16,19 @@ import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 interface Viewer {
 
     /**
+     * Draws this viewer.
+     */
+    @Composable
+    fun Content(modifier: Modifier)
+
+    // KUN -->
+    // bridge: removed when ReaderActivity draws through Compose. Until then the activity still adds
+    // this view to its container (`ReaderActivity.updateViewer`).
+    /**
      * Returns the view this viewer uses.
      */
     fun getView(): View
+    // KUN <--
 
     /**
      * Destroys this viewer. Called when leaving the reader or swapping viewers.
@@ -43,3 +57,9 @@ interface Viewer {
      */
     fun handleGenericMotionEvent(event: MotionEvent): Boolean
 }
+
+/**
+ * The reader's grayscale and inverted colours, for page images only: transition, loading and error pages keep
+ * theirs. Null when both are off.
+ */
+val LocalPageColorFilter = compositionLocalOf<ColorFilter?> { null }

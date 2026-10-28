@@ -8,6 +8,9 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
 import ca.mpreg.imagedecoder.ImageDecoder
 import ca.mpreg.webgpuviewer.ImageView
 import ca.mpreg.webgpuviewer.closeTo
@@ -29,7 +32,9 @@ import ca.mpreg.webgpuviewer.transition.TransitionStackRight
 import ca.mpreg.webgpuviewer.transition.TransitionStackUp
 import ca.mpreg.webgpuviewer.viewer.AnimationFrame
 import ca.mpreg.webgpuviewer.viewer.ImagePage
+import ca.mpreg.webgpuviewer.viewer.ImageViewer
 import ca.mpreg.webgpuviewer.viewer.ImageViewerContinuousState
+import ca.mpreg.webgpuviewer.viewer.ImageViewerState
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.loader.HttpPageLoader
@@ -88,8 +93,18 @@ open class WebGpuViewer(
     val activity: ReaderActivity,
     val isReversed: Boolean,
     val isVertical: Boolean,
+    // KUN -->
+    // bridge: removed when ReaderActivity draws through Compose. The WebGPU surface is a Compose
+    // view, so until the activity hosts Compose it still needs one to add to its container; the
+    // state below is the one that view draws, so both paths show the same pages.
     val pager: ImageView = ImageView(activity, isVertical = isVertical, isReversed = isReversed),
+    // KUN <--
 ) : Viewer {
+
+    // KUN -->
+    /** What the pages are drawn from; upstream's constructor parameter, taken from [pager] here. */
+    val viewerState: ImageViewerState = pager.state
+    // KUN <--
 
     open val isContinuous: Boolean = false
 
@@ -668,7 +683,7 @@ open class WebGpuViewer(
     }
 
     /** Read live: these pages are built before the surface has a size, and outlive a rotation. */
-    private fun viewportPageWidth(half: Boolean): Int = if (half) pager.state.width / 2 else pager.state.width
+    private fun viewportPageWidth(half: Boolean): Int = if (half) viewerState.width / 2 else viewerState.width
 
     /**
      * Check if dual page mode is currently active based on config and view dimensions.
@@ -680,8 +695,8 @@ open class WebGpuViewer(
             ReaderPreferences.DualPageView.NEVER -> false
             ReaderPreferences.DualPageView.ALWAYS -> true
             ReaderPreferences.DualPageView.WIDE -> {
-                val width = pager.state.width
-                val height = pager.state.height
+                val width = viewerState.width
+                val height = viewerState.height
                 width > 0 && height > 0 && width.toFloat() / height > 1f
             }
         }
@@ -809,7 +824,7 @@ open class WebGpuViewer(
     }
 
     init {
-        pager.state.apply {
+        viewerState.apply {
             fetchPage = fetch@{ index ->
                 val current = currentPage ?: return@fetch null
 
@@ -877,20 +892,20 @@ open class WebGpuViewer(
             // KNS --> double tap and pinch zoom follow the legacy settings; without double tap zoom
             // there is no double tap detection (its drag zoom would bypass the switch)
             if (old?.doubleTapGesturesDisabled != new.doubleTapGesturesDisabled || old.zoomGestures != new.zoomGestures) {
-                pager.state.doubleTapZoomEnabled = new.zoomGestures.doubleTapZoom
-                pager.state.pinchZoomEnabled = new.zoomGestures.pinchZoom
-                pager.state.doubleTapGesturesEnabled =
+                viewerState.doubleTapZoomEnabled = new.zoomGestures.doubleTapZoom
+                viewerState.pinchZoomEnabled = new.zoomGestures.pinchZoom
+                viewerState.doubleTapGesturesEnabled =
                     new.zoomGestures.doubleTapGestures(new.doubleTapGesturesDisabled)
             }
             // KNS <--
             if (old?.imageFilters != new.imageFilters) {
                 // Else an older, slower load could land last.
                 imageFiltersJob?.cancel()
-                imageFiltersJob = scope.launch { pager.state.imageFilters = loadFilters(new.imageFilters) }
+                imageFiltersJob = scope.launch { viewerState.imageFilters = loadFilters(new.imageFilters) }
             }
             if (old?.tileFilters != new.tileFilters) {
                 tileFiltersJob?.cancel()
-                tileFiltersJob = scope.launch { pager.state.tileFilters = loadFilters(new.tileFilters) }
+                tileFiltersJob = scope.launch { viewerState.tileFilters = loadFilters(new.tileFilters) }
             }
         }
         settingsViewModel.paged.collectChanges(scope) { old, new ->
@@ -932,7 +947,7 @@ open class WebGpuViewer(
         cachedThemedContext = null
 
         val isDual = isDualPageMode()
-        pager.state.apply {
+        viewerState.apply {
             transition = when (if (isDual) pageSettings.transitionAnimationDual else pageSettings.transitionAnimation) {
                 TransitionAnimation.BASIC -> if (isVertical) TransitionBasic.Vertical else TransitionBasic
                 TransitionAnimation.FLIP -> TransitionFlip
@@ -999,7 +1014,7 @@ open class WebGpuViewer(
             currentPage?.let { preloadPages(it) }
         }
 
-        pager.state.invalidate()
+        viewerState.invalidate()
     }
 
     private var imageFiltersJob: Job? = null
@@ -1050,8 +1065,18 @@ open class WebGpuViewer(
     private val touchProxy by lazy {
         WebGpuDoubleTapZoomGateLayout(activity).apply {
             addViewer(pager)
-            shouldSwallowDoubleTap = { !pager.state.doubleTapZoomEnabled }
+            shouldSwallowDoubleTap = { !viewerState.doubleTapZoomEnabled }
         }
+    }
+
+    /**
+     * Komi-kun #81 draws [viewerState] with the library's `ImageViewer` composable. Here the surface
+     * stays inside the fork's double tap gate (a View), so the Compose reader hosts that gate: a
+     * second tap of a disabled double tap, and a finger added to it, never reach the surface.
+     */
+    @Composable
+    override fun Content(modifier: Modifier) {
+        AndroidView(factory = { touchProxy }, modifier = modifier)
     }
 
     override fun getView(): View = touchProxy
@@ -1091,7 +1116,7 @@ open class WebGpuViewer(
         synchronized(lock) {
             if (pageInCache(page)) queueForDecode(page, prioritize = true)
         }
-        pager.state.invalidate()
+        viewerState.invalidate()
     }
 
     /** Downloads [page] if needed, then re-queues it for decode once ready. */
@@ -1163,7 +1188,7 @@ open class WebGpuViewer(
                         if (old is ProgressPage) {
                             page.imagePage = ErrorPage(this@WebGpuViewer, page, status.error)
                             cleanupImage(old)
-                            pager.state.invalidate()
+                            viewerState.invalidate()
                         }
                     }
                     if (pageInCache(page) && page.state == PageState.LOADING) {
@@ -1303,7 +1328,7 @@ open class WebGpuViewer(
                         page.preview = null
                         page.imagePage = ErrorPage(this@WebGpuViewer, page, status.error)
                         cleanupImage(preview)
-                        pager.state.invalidate()
+                        viewerState.invalidate()
                     }
                     if (pageInCache(page) && !page.isDecoded && page.state == PageState.IDLE &&
                         page.page.status == Page.State.Ready
@@ -1415,7 +1440,7 @@ open class WebGpuViewer(
                         cleanupImage(old)
                         if (old.isOnScreen) single.fadeIn()
                         if (!isDualPageMode() && !applyWideZoomIfNeeded(single)) applyFitModeAnchor(single)
-                        pager.state.invalidate()
+                        viewerState.invalidate()
                     }
                 }
                 if (installed) preview = single else single.cleanup()
@@ -1430,7 +1455,7 @@ open class WebGpuViewer(
                 shown.image?.update(f.image, rect)
                 shown.invalidate()
                 // A spread's page isn't on screen itself.
-                pager.state.invalidate()
+                viewerState.invalidate()
             }
         }
 
@@ -1570,7 +1595,7 @@ open class WebGpuViewer(
                         }
                     }
                     noteIfLone(page)
-                    pager.state.invalidate()
+                    viewerState.invalidate()
                 }
             }
         } finally {
@@ -1608,8 +1633,8 @@ open class WebGpuViewer(
     private fun applyWideZoomIfNeeded(page: ImagePage.ImageSingle): Boolean {
         if (!paged.page.landscapeZoom) return false
 
-        val screenW = pager.state.width
-        val screenH = pager.state.viewportHeight
+        val screenW = viewerState.width
+        val screenH = viewerState.viewportHeight
         if (screenW <= 0 || screenH <= 0) return false
 
         // don't zoom if it fits at original scale
@@ -1632,7 +1657,7 @@ open class WebGpuViewer(
             (aspectRatio > 2f * screenW.toFloat() / screenH)
         if (!isWide) return false
 
-        page.parent = pager.state
+        page.parent = viewerState
 
         // Half the image width fills the screen width.
         page.homeScale = screenW.toFloat() / (page.trimWidth / 2f)
@@ -1663,15 +1688,15 @@ open class WebGpuViewer(
             return
         }
 
-        val screenW = pager.state.width
-        val screenH = pager.state.viewportHeight
+        val screenW = viewerState.width
+        val screenH = viewerState.viewportHeight
         if (screenW <= 0 || screenH <= 0) return
 
         val w = page.trimWidth.toFloat()
         val h = page.trimHeight.toFloat()
         if (w <= 0f || h <= 0f) return
 
-        page.parent = pager.state
+        page.parent = viewerState
 
         page.homeScale = when (scaleType) {
             ReaderPreferences.ScaleType.FIT_WIDTH -> screenW / w
@@ -1814,7 +1839,7 @@ open class WebGpuViewer(
         progressPage(anchor)?.let { activity.onPageSelected(it.page) }
         preloadPages(anchor)
 
-        pager.state.apply {
+        viewerState.apply {
             onPageChange = onPageChange@{ delta ->
                 // The viewer already showed the page at fetchPage(delta).
                 // We need to update currentPage to match that.
@@ -1920,14 +1945,14 @@ open class WebGpuViewer(
         if (direction != 0 && fromSpread != null) {
             animateTurn(direction, fromSpread)
         } else {
-            pager.state.invalidate()
+            viewerState.invalidate()
         }
     }
 
     /** How a [moveToPage] turn is shown. [direction] is 1 forward through the pages, -1 back. */
     protected open fun animateTurn(direction: Int, fromSpread: ImagePage) {
-        pager.state.transitionFromPage = fromSpread
-        pager.state.animatePageTurn(if (isReversed) direction else -direction)
+        viewerState.transitionFromPage = fromSpread
+        viewerState.animatePageTurn(if (isReversed) direction else -direction)
     }
 
     // moveRight/moveLeft are screen directions, so a right-to-left book's next is to the left.
@@ -1940,7 +1965,7 @@ open class WebGpuViewer(
     }
 
     protected open fun moveRight() {
-        pager.state.getPage(0)?.let { page ->
+        viewerState.getPage(0)?.let { page ->
             if (paged.navigateToPan) {
                 val minX = page.minX(page.scale)
                 val maxX = page.maxX(page.scale)
@@ -1961,7 +1986,7 @@ open class WebGpuViewer(
     }
 
     protected open fun moveLeft() {
-        pager.state.getPage(0)?.let { page ->
+        viewerState.getPage(0)?.let { page ->
             if (paged.navigateToPan) {
                 val minX = page.minX(page.scale)
                 val maxX = page.maxX(page.scale)
