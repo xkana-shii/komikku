@@ -36,7 +36,6 @@ import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.sync.repository.SyncRepository
 import tachiyomi.i18n.kmk.KMR
 import java.io.File

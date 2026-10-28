@@ -33,7 +33,6 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.repository.HistoryRepository
-import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.sync.repository.SyncRepository
 import java.util.concurrent.TimeUnit
 
