@@ -6,7 +6,6 @@ import android.graphics.PointF
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewGroup.LayoutParams
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
@@ -270,16 +269,6 @@ abstract class PagerViewer(
             modifier = modifier,
         )
     }
-
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose.
-    /**
-     * Returns the view this viewer uses.
-     */
-    override fun getView(): View {
-        return pager
-    }
-    // KUN <--
 
     /**
      * Returns the PagerPageHolder for the provided page

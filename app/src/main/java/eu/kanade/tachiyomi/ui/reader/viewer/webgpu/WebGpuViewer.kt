@@ -7,12 +7,11 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidView
 import ca.mpreg.imagedecoder.ImageDecoder
-import ca.mpreg.webgpuviewer.ImageView
 import ca.mpreg.webgpuviewer.closeTo
 import ca.mpreg.webgpuviewer.renderer.GainmapInput
 import ca.mpreg.webgpuviewer.renderer.Image
@@ -90,18 +89,8 @@ open class WebGpuViewer(
     val activity: ReaderActivity,
     val isReversed: Boolean,
     val isVertical: Boolean,
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose. The WebGPU surface is a Compose
-    // view, so until the activity hosts Compose it still needs one to add to its container; the
-    // state below is the one that view draws, so both paths show the same pages.
-    val pager: ImageView = ImageView(activity, isVertical = isVertical, isReversed = isReversed),
-    // KUN <--
+    val viewerState: ImageViewerState = ImageViewerState(isVertical = isVertical, isReversed = isReversed),
 ) : Viewer {
-
-    // KUN -->
-    /** What the pages are drawn from; upstream's constructor parameter, taken from [pager] here. */
-    val viewerState: ImageViewerState = pager.state
-    // KUN <--
 
     open val isContinuous: Boolean = false
 
@@ -1034,7 +1023,9 @@ open class WebGpuViewer(
     // KNS --> Adapted from Houri 7e06ee89b8: keep a prohibited second tap away from WebGPU.
     private val touchProxy by lazy {
         WebGpuDoubleTapZoomGateLayout(activity).apply {
-            addViewer(pager)
+            // Komi-kun #81 dropped the library's ImageView wrapper; the gate now holds the composable
+            // that draws the same state, so every touch still passes the gate first.
+            addViewer(ComposeView(activity).apply { setContent { ImageViewer(state = viewerState) } })
             shouldSwallowDoubleTap = { !viewerState.doubleTapZoomEnabled }
         }
     }
@@ -1049,7 +1040,6 @@ open class WebGpuViewer(
         AndroidView(factory = { touchProxy }, modifier = modifier)
     }
 
-    override fun getView(): View = touchProxy
     // KNS <--
 
     private val cropBorders: Boolean

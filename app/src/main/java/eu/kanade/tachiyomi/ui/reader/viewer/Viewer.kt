@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.ui.reader.viewer
 
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
@@ -20,15 +19,6 @@ interface Viewer {
      */
     @Composable
     fun Content(modifier: Modifier)
-
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose. Until then the activity still adds
-    // this view to its container (`ReaderActivity.updateViewer`).
-    /**
-     * Returns the view this viewer uses.
-     */
-    fun getView(): View
-    // KUN <--
 
     /**
      * Destroys this viewer. Called when leaving the reader or swapping viewers.

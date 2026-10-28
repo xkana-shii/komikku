@@ -4,7 +4,6 @@ import android.graphics.ColorFilter
 import android.graphics.PointF
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.animation.LinearInterpolator
@@ -328,16 +327,6 @@ class WebtoonViewer(
         }
         AndroidView(factory = { frame }, modifier = modifier)
     }
-
-    // KUN -->
-    // bridge: removed when ReaderActivity draws through Compose.
-    /**
-     * Returns the view this viewer uses.
-     */
-    override fun getView(): View {
-        return frame
-    }
-    // KUN <--
 
     /**
      * Destroys this viewer. Called when leaving the reader or swapping viewers.

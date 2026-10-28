@@ -383,17 +383,6 @@ class ReaderSettingsViewModel(
     // KUN <--
 
     /**
-     * Whether a viewer must show its tap zones because the reader is new to the user, which it is only once.
-     */
-    fun takeNavigationOverlayForNewUser(): Boolean {
-        val show = preferences.showNavigationOverlayNewUser.get()
-        if (show) {
-            preferences.showNavigationOverlayNewUser.set(false)
-        }
-        return show
-    }
-
-    /**
      * A value [read] from [sources], kept current as any of them changes. Started eagerly, so a viewer reading it
      * before collecting gets what the preferences hold now.
      */
