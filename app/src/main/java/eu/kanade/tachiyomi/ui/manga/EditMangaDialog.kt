@@ -68,12 +68,16 @@ import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.track.components.TrackLogoIcon
-import eu.kanade.tachiyomi.data.track.EnhancedTracker
 import eu.kanade.tachiyomi.data.track.Tracker
+import eu.kanade.tachiyomi.data.track.model.autofillEligible
+import eu.kanade.tachiyomi.data.track.model.autofillStatusSelection
+import eu.kanade.tachiyomi.data.track.model.hasAutofillData
+import eu.kanade.tachiyomi.data.track.model.mergeAutofillTags
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.system.toast
 import exh.util.dropBlank
 import exh.util.trimOrNull
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.app.di.appGraph
@@ -89,6 +93,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.track.model.Track
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
@@ -161,11 +166,28 @@ fun EditMangaDialog(
     suspend fun autofillFromTracker(track: Track, tracker: Tracker) {
         try {
             val metadata = tracker.getMangaMetadata(track)
-            metadata?.title?.takeIf { it.isNotBlank() }?.let { title.setTextAndPlaceCursorAtEnd(it) }
-            metadata?.authors?.takeIf { it.isNotBlank() }?.let { author.setTextAndPlaceCursorAtEnd(it) }
-            metadata?.artists?.takeIf { it.isNotBlank() }?.let { artist.setTextAndPlaceCursorAtEnd(it) }
-            metadata?.thumbnailUrl?.takeIf { it.isNotBlank() }?.let { thumbnailUrl.setTextAndPlaceCursorAtEnd(it) }
-            metadata?.description?.takeIf { it.isNotBlank() }?.let { description.setTextAndPlaceCursorAtEnd(it) }
+            // KNS --> say so when the tracker has nothing to fill in
+            if (metadata == null || !metadata.hasAutofillData()) {
+                context.toast(context.stringResource(KMR.strings.autofill_no_metadata, tracker.name))
+                return
+            }
+            // KNS <--
+            metadata.title?.takeIf { it.isNotBlank() }?.let { title.setTextAndPlaceCursorAtEnd(it) }
+            metadata.authors?.takeIf { it.isNotBlank() }?.let { author.setTextAndPlaceCursorAtEnd(it) }
+            metadata.artists?.takeIf { it.isNotBlank() }?.let { artist.setTextAndPlaceCursorAtEnd(it) }
+            metadata.thumbnailUrl?.takeIf { it.isNotBlank() }?.let { thumbnailUrl.setTextAndPlaceCursorAtEnd(it) }
+            metadata.description?.takeIf { it.isNotBlank() }?.let { description.setTextAndPlaceCursorAtEnd(it) }
+            // KNS --> fetched tags join the current ones, and a known publication status is selected
+            if (!metadata.tags.isNullOrEmpty()) {
+                val merged = mergeAutofillTags(tags.toList(), metadata.tags)
+                tags.clear()
+                tags.addAll(merged)
+            }
+            autofillStatusSelection(metadata.status)?.let { statusIndex = it }
+        } catch (e: CancellationException) {
+            // The dialog was closed while fetching: nothing to report.
+            throw e
+            // KNS <--
         } catch (e: Throwable) {
             tracker.logcat(LogPriority.ERROR, e)
             context.toast(context.stringResource(MR.strings.track_error, tracker.name, e.message ?: ""))
@@ -181,12 +203,17 @@ fun EditMangaDialog(
                             .mapNotNull { track ->
                                 track to (context.appGraph.trackerManager.get(track.trackerId) ?: return@mapNotNull null)
                             }
-                            .filterNot { (_, tracker) -> tracker is EnhancedTracker }
+                        // KNS --> by capability and login, so MangaBaka is offered and trackers without
+                        // series metadata (Komga, Kavita, Suwayomi, ...) are not
+                        val eligible = tracks.autofillEligible()
                         when {
                             tracks.isEmpty() -> context.toast(context.stringResource(SYMR.strings.entry_not_tracked))
-                            tracks.size > 1 -> trackerChoices = tracks
-                            else -> autofillFromTracker(tracks.first().first, tracks.first().second)
+                            eligible.isEmpty() ->
+                                context.toast(context.stringResource(KMR.strings.autofill_no_eligible_tracker))
+                            eligible.size > 1 -> trackerChoices = eligible
+                            else -> autofillFromTracker(eligible.first().first, eligible.first().second)
                         }
+                        // KNS <--
                     }
                 },
                 onResetInfoClick = {
