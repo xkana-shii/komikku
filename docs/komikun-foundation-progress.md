@@ -355,3 +355,21 @@ failures; 1 pre-existing `@Disabled` `Tester.stripBackup`), `assembleDebug`, `as
 Ported commit by commit on `codex/komikun-pr80-safe-port` (from `main` `e9b1006cb6`). Migrations
 61–63 are Komi-kun's 59–61 after the fork's shipped 59/60; the old-fork converter also splits
 `merged`. Ledger, conflicts and KNS adaptations: [`komikun-pr80-integration.md`](komikun-pr80-integration.md).
+
+## Legacy reader zoom gating (Houri f7ae110, zoom changes only)
+
+Which setting owns which gesture, so one never rides in through the other:
+
+- Webtoon: a quick scale is a double-tap-zoom gesture and a pinch is a pinch-to-zoom gesture. `WebtoonFrame`
+  captures the pointer count of the event the scale detector is processing and passes it to
+  `WebtoonRecyclerView.onScaleBegin`/`onScale`; `WebtoonScaleGesture` (KNS) resolves it. Quick scale needs one
+  finger, a double tap in progress and double-tap zoom; a pinch needs two or more fingers and pinch-to-zoom. The
+  Boolean returned from `onScaleBegin` that rejects forbidden gestures before scaling starts is kept.
+- Pager: `ReaderPageImageView.setupZoom` writes `isZoomEnabled` both ways and ties SSIV quick scale to Double tap
+  to zoom. Animated pages (PhotoView) get `setZoomable` and the double-tap listener on every bind, because the view
+  is rebound, not recreated. Disable zoom in blocks a programmatic double-tap zoom in as well.
+- Not ported: the onboarding/backstack crash fix from the same commit, the HQ/WebGPU reader (already carries its
+  own gesture fixes). Disable zoom out stays the KNS `zoomOutDisabled` implementation.
+
+Verification: resolver and per-bind settings are covered by `WebtoonScaleGestureTest` and `ReaderPageZoomTest`.
+No multi-finger or real-device gesture testing was done (adb cannot inject a pinch and the emulator library is empty).

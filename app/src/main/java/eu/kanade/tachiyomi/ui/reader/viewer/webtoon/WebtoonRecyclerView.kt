@@ -200,9 +200,13 @@ class WebtoonRecyclerView @JvmOverloads constructor(
         x = getPositionX(x)
     }
 
-    fun onScale(scaleFactor: Float) {
+    fun onScale(scaleFactor: Float, pointerCount: Int) {
         // KMK -->
-        if (!detector.isQuickScaling && !pinchToZoom) return
+        // KNS -->
+        // A pinch needs pinch-to-zoom; a one-finger step needs a quick scale armed by onScaleBegin. Checked per
+        // step: a pinch that follows a double tap used to pass here because the double tap was still in progress.
+        if (!WebtoonScaleGesture.allowsScale(pointerCount, pinchToZoom, detector.isQuickScaling)) return
+        // KNS <--
 
         scaleTo(currentScale * scaleFactor)
     }
@@ -237,11 +241,12 @@ class WebtoonRecyclerView @JvmOverloads constructor(
     }
 
     // KNS -->
-    fun onScaleBegin(): Boolean {
+    fun onScaleBegin(pointerCount: Int): Boolean {
         val gesture = WebtoonScaleGesture.resolve(
             doubleTapInProgress = detector.isDoubleTapping,
             doubleTapZoomEnabled = doubleTapZoom,
             pinchZoomEnabled = pinchToZoom,
+            pointerCount = pointerCount,
         )
         detector.isQuickScaling = gesture.quickScale
         return gesture.accepted
