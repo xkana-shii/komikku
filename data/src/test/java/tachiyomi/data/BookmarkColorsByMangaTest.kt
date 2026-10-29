@@ -71,17 +71,10 @@ class BookmarkColorsByMangaTest {
         ).await()
     }
 
+    // Komi-kun #80 split `merged` into a merge row and one merged_entry per member
     private suspend fun insertMerged(mergeId: Long, mangaId: Long) {
-        driver.execute(
-            null,
-            """
-            INSERT INTO merged(
-                info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority, download_chapters,
-                merge_id, merge_url, manga_id, manga_url, manga_source
-            ) VALUES (0, 1, 0, 0, 1, $mergeId, '/manga/$mergeId', $mangaId, '/manga/$mangaId', 1)
-            """.trimIndent(),
-            0,
-        ).await()
+        driver.execute(null, "INSERT OR IGNORE INTO merge(manga_id) VALUES ($mergeId)", 0).await()
+        driver.execute(null, "INSERT INTO merged_entry(merge_id, manga_id) VALUES ($mergeId, $mangaId)", 0).await()
     }
 }
 // KNS <--

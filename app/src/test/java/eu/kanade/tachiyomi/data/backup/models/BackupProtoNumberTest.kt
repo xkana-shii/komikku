@@ -21,6 +21,10 @@ class BackupProtoNumberTest {
 
         assertEquals(10000, numbers["customInfoIncluded"])
         assertEquals(10001, numbers["mergedMangaReferencesIncluded"])
+        // KNS --> Komi-kun #80: merge settings at 10002; 600 keeps carrying the merge entries
+        assertEquals(10002, numbers["mergeSettings"])
+        assertEquals(600, numbers["mergedEntries"])
+        // KNS <--
     }
 
     // KNS -->
