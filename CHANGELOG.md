@@ -13,7 +13,6 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ## [Unreleased]
 ### Added
 - From Komi-kun #80: manual merging of library entries; merged-manga settings, edit info, the recommendation search sheet and extension source preferences are now Compose screens (edit info gains tag reordering, tag collation for merged entries, cover editing and a Cancel button). The fork's tracker autofill (MangaBaka/AniList/MAL/MangaUpdates tags and status, eligible trackers only) and the panorama cover are kept in the new edit sheet.
-- From Komi-kun #80: gestures for the classic long-strip autoscroll (tap to pause, swipe to change speed or start/stop), off by default. Their switches are in Settings → Reader → Automation, as this fork has no E-Hentai tools panel.
 - From Komi-kun #80: the app checks for updates every 6 hours while open, downloads an update from the update screen and offers Install for an already-downloaded APK; Sui is recognised as a Shizuku provider; a failed extension replacement keeps the installed one; the second page can be set as the cover in double-page mode; AniList requests staff edge ids.
 - Ported Komi-kun/TachiyomiSY PR #70's delegated-source and reader work: LANraragi metadata,
   NineHentai and HentaiNexus support, delegated Hitomi with previews, source feed-tab integration,
@@ -81,6 +80,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Bookmark-color filters now use the same Bookmarked row and Edit-button tri-state editor as category filters in Library, Updates and each manga's chapter settings. Colors can be included, excluded or ignored independently; existing saved Library and per-manga selections are retained as included colors. Color filtering only refines the Bookmarked state, so disabled and Not bookmarked filters keep their prior behavior.
 
 ### Other
+- Komi-kun #80's TachiyomiSY long-strip autoscroll gestures are not included: the reader keeps a single automation, this fork's.
 - Database: migrations 61–63 (Komi-kun's 59–61): library-removal tombstones, merge-deduped views, and `merged` split into `merge` + `merged_entry` (one entry per merge and manga, the self-reference and its sort mode moved to the merge). Colored bookmarks, edited details, blacklist and scanlator settings, excluded scanlators, reading progress and history are kept, and the old-fork database converter now converts merges as well. Backups gain `mergeSettings` (field 10002); older backups restore their merges unchanged.
 - The chapter cache is a TTL disk cache (old cache directory removed once); the encrypted database uses the AndroidX SQLite driver; backups decode only the needed fields and restore entries in one pass; seven Weblate translation updates.
 - Integrated the 47 chronological commits from Komi-kun PR #70, plus its subsequent tracking-log
