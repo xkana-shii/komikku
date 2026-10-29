@@ -31,7 +31,7 @@ Paths below are relative to `app/src/main/java/eu/kanade/` unless they start wit
 | App bars | `AppBars(state)` inside the old `ComposeView`'s `Box` | same composable, now a sibling of the viewer inside the root | `ReaderActivity.kt:486`, `:813`; `ReaderAppBars` at `presentation/reader/appbars/ReaderAppBars.kt:46` |
 | Loading chrome | `ReaderProgressIndicator` view added to `reader_container` by `updateViewer`, removed by `setChapters` (`bf3c73dfee:ReaderActivity.kt:1156`, `:1211`) | `isLoadingViewer` state plus `LoadingScreen()` under the seeded theme | `ReaderActivity.kt:230`, set `:1235`, cleared `:1287`, drawn `:457` |
 | Viewer content path | `binding.viewerContainer.addView(newViewer.getView())` (`bf3c73dfee:ReaderActivity.kt:1121`) | `Viewer.Content(modifier)` inside `key(viewer)` | `viewer/Viewer.kt:20`; host `ReaderActivity.kt:788-808`; pager `viewer/pager/PagerViewer.kt:259`; long strip `viewer/webtoon/WebtoonViewer.kt:347`; WebGPU `viewer/webgpu/WebGpuViewer.kt:1016`, `viewer/webgpu/WebGpuViewerContinuous.kt:28` |
-| Page colour filter | `setLayerPaint` put a `ColorMatrixColorFilter` layer on the whole `viewerContainer` (`bf3c73dfee:ReaderActivity.kt:1572-1575`) | a composition local, applied to page images only | `viewer/Viewer.kt:55`; provided `ReaderActivity.kt:800`; built `:1619`; consumed `viewer/ReaderPageImageView.kt:81`, `:89-99` |
+| Page colour filter | `setLayerPaint` put a `ColorMatrixColorFilter` layer on the whole `viewerContainer` (`bf3c73dfee:ReaderActivity.kt:1572-1575`) | a composition local the page views read, plus a hardware layer over the WebGPU viewer below API 34 (§3.6); transitions, loading and error chrome keep their colours | `viewer/Viewer.kt:55`; provided `ReaderActivity.kt:802`; consumed `viewer/ReaderPageImageView.kt:81`, `:88-99`; layer `ReaderActivity.kt:813`, `:832-858` |
 | XML + overlay view | `reader_activity.xml`, `ReaderNavigationOverlayView.kt` | deleted (§4) | `viewer/Viewer.kt:15-49` has no `getView()` left |
 
 ### 1.1 What the root does that the XML binding used to
@@ -99,10 +99,11 @@ was dropped by the port.
    still computed in `seedColorState`/`seedColorStatic` (`:954-965`) and gated on `uiPreferences.themeCoverBased`
    (`:181`), and the Android-side holders still take `seedColor` through `ReadingMode.toViewer` (`:1186`) for R20.
 
-3. **Tap zones come from the viewer that was built, not from the renderer preference.** `updateViewer` builds the
-   viewer and then passes `isWebtoonViewer = newViewer is WebtoonViewer` to
-   `settingsViewModel.setViewerReadingMode` (`ReaderActivity.kt:1182-1196`); the settings view model stores that
-   flag (`setting/ReaderSettingsViewModel.kt:361-367`) and resolves long-strip zones from it (`:337-338`).
+3. **Tap zones and the settings sheet come from the viewer that was built, not from the renderer preference.**
+   `updateViewer` builds the viewer and then passes `isWebtoonViewer = newViewer is WebtoonViewer` and
+   `isWebGpuViewer = newViewer is WebGpuViewer` to `settingsViewModel.setViewerReadingMode`
+   (`ReaderActivity.kt:1182-1196`); the settings view model stores those flags in one `ViewerMode`
+   (`setting/ReaderSettingsViewModel.kt:400`) and resolves long-strip zones from them (`:337-338`).
    Upstream calls `setViewerReadingMode(readingMode)` and the setting view model reads `isWebGpu.get()` instead.
    The fork resolves again because `ReadingMode.toViewer` has the R21 capability gate
    (`setting/ReadingMode.kt:143-157`): with `highQualityRenderer` on and the GPU unavailable it returns a
@@ -110,6 +111,23 @@ was dropped by the port.
    gives that SSIV long-strip viewer the *paged* navigator. The order matters and is deliberate: the mode is set
    before `viewerFlow.value = newViewer` (`:1203`), so the first tap already sees the right zones. Commit
    `68c74b6e07` is this fix.
+
+   The sheet follows the same flags. `ReadingModePage` renders `WebGpuViewerSettings` off
+   `ReaderSettingsViewModel.isWebGpuViewer` (`presentation/reader/settings/ReadingModePage.kt:34`), not off
+   `highQualityRenderer`: the flow is the built viewer's identity (`setting/ReaderSettingsViewModel.kt:83-85`),
+   and the preference is only its value until a viewer exists (`:84`), so a reading-mode page opened before the
+   first viewer still shows something. A device the gate falls back on keeps the pager or long-strip knobs its
+   viewer reads, instead of WebGPU knobs that write `dualPageView`. Commit `9bae801d66` is this fix.
+
+   The WebGPU sheet's dual-page `WIDE` case reads the box the viewer is drawn in, not the window
+   (`viewer/webgpu/WebGpuViewerSettings.kt:147-153`): the viewer publishes `width > height` for its own
+   post-inset size (`viewer/webgpu/WebGpuViewer.kt:1035-1037`) into
+   `ReaderSettingsViewModel.viewerWideViewport` (`setting/ReaderSettingsViewModel.kt:87-106`), which is null
+   again whenever a viewer is rebuilt (`:402`) and reads as not wide until one is drawn. Foldables, split screen
+   and cutout / system-bar padding can leave `LocalConfiguration` landscape over a portrait viewer, which would
+   offer a spread the viewer does not open, or hide one it does. The comparison lives once, in `isWideViewport`
+   (`WebGpuViewer.kt:687`), which both `isDualPageMode` (`:677`) and the published fact call. Commit
+   `b01b41d1da` is this fix.
 
 4. **`ReaderAppBars` keeps its fork arguments.** The composable's parameter list is the fork's
    (`presentation/reader/appbars/ReaderAppBars.kt:45-106`), including the whole `// SY` block upstream does not
@@ -127,10 +145,23 @@ was dropped by the port.
    observers (`:311-342`), the display-profile observer (`:307-309`) and the Discord calls (`:697`, `:712`,
    `:1323`). `updateViewer` likewise keeps the `seedColor` argument (`:1186`), the webtoon autoscroll hand-off
    (`:1204-1206`), the SY double-page block (`:1208-1216`) and the auto-webtoon toast (`:1222-1233`) around
-   upstream's `readingMode`/`setViewerReadingMode`/`isLoadingViewer` sequence. The loading chrome changed twice:
-   `12e7f16bb5` wrapped `CombinedCircularProgressIndicator(progress = { 0f })` in a private `LoadingChrome`, and
-   `68c74b6e07` replaced it with upstream's `LoadingScreen()` (`:457`) because the wrapper only reproduced the
-   indeterminate spinner and the seed already arrives from the ambient `TachiyomiTheme`.
+   upstream's `readingMode`/`setViewerReadingMode`/`isLoadingViewer` sequence. The loading chrome changed three
+   times: `12e7f16bb5` wrapped `CombinedCircularProgressIndicator(progress = { 0f })` in a private
+   `LoadingChrome`, `68c74b6e07` replaced it with upstream's `LoadingScreen()` (`:457`) because the wrapper only
+   reproduced the indeterminate spinner and the seed already arrives from the ambient `TachiyomiTheme`, and
+   `78316baaf0` made the flag unable to latch: `isLoadingViewer` is raised only immediately before the chapters
+   the state already holds are handed to the new viewer (`ReaderActivity.kt:1292-1293`), and `setChapters`
+   (`:1345-1346`) is still its only clear, so a rebuild that receives no chapters cannot leave the reader behind
+   a loading screen with no bars.
+
+6. **The colour filter covers page content only, and the WebGPU viewer only below API 34.** The root provides
+   `LocalPageColorFilter` (`ReaderActivity.kt:802`) and only `ReaderPageImageView` reads it (`:81`, `:88-99`), so
+   transitions, loading and error pages keep their colours instead of inheriting a layer over the whole
+   container. The WebGPU viewer's pages are the `webgpuviewer` surface and read nothing, so `78316baaf0` hosts
+   that viewer in a `ComposeView` of the reader's own below API 34 (`ReaderActivity.kt:813`, `:832-858`) and puts
+   the same paint on it as a `LAYER_TYPE_HARDWARE` layer, cleared to `LAYER_TYPE_NONE` on release. From API 34
+   on the surface is a `SurfaceView` in a layer of its own, which no ancestor can filter — the pre-port
+   `viewerContainer` layer never filtered it either — so that path takes no layer and no claim is made about it.
 
 ## 4. What was deleted, and what replaced it
 
@@ -169,8 +200,8 @@ Manual pass owed before step 4:
 | Insets / cutout | fullscreen on and off, `drawUnderCutout` on, notched device, gesture nav bar shown and hidden | padding moved from the viewer container (`ViewCompat.setOnApplyWindowInsetsListener`) to the viewer's `Content` modifier (`ReaderActivity.kt:791-795`, `:802-806`), where it is derived from `general` in composition; check the viewer still re-pads when the bars change and that the chrome sits where it did |
 | Keep screen on | reading with the setting on, then off | `Modifier.keepScreenOn()` (`ReaderActivity.kt:451`) replaces the window flag the activity used to set |
 | Autoscroll at first open | open a long strip with autoscroll already enabled, then a pager; open and close the menu | the loop starts in `onCreate` (`:347`) before a viewer exists and re-reads `viewer` each iteration (`:1008`), and the webtoon pause/resume goes through `setAutoScrollUiBlocked` (`:1165`) |
-| Grayscale / inverted on pages only | transition, loading and error pages must keep their colours; animated pages and SSIV pages must take the filter | the filter is applied per page view (`ReaderPageImageView.kt:89-99`), including a hardware layer for SSIV, rather than as one layer over the whole container |
-| HDR / colour mode on the WebGPU path | grayscale and inverted with the high-quality renderer on an API 26-33 device (an emulator is enough), then on API 34+ | The paged and long-strip path is intact: `setting/ReaderSettingsViewModel.kt:80-81` → `setting/GeneralSettings.kt:17-18` → `viewerColorFilter(...)` (`ReaderActivity.kt:796-797`, definition `:1619-1636`) → `LocalPageColorFilter` (`:800`) → `PagerViewer.kt:259-265`/`PagerPageHolder.kt:81` and `WebtoonViewer.kt:347-353`/`WebtoonPageHolder.kt:98` → applied in `ReaderPageImageView.kt:88-100`. The WebGPU path is what changed: the removed pre-port call was `binding.viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)` over the whole viewer container (`bf3c73dfee:ReaderActivity.kt:1572-1574`), and webgpuviewer 53's `ViewerSurface` branches on `Build.VERSION.SDK_INT` (`gradle/libs.versions.toml:19`) — ≥34 draws through `AndroidExternalSurface` (a `SurfaceView`, its own SurfaceFlinger layer, which a parent's layer paint cannot reach), <34 through `AndroidEmbeddedExternalSurface` (a `TextureView` on the ordinary view pipeline, which that paint did filter). So the old filter reached WebGPU pages only on **API 26-33**; on API 34+ it never applied and this step changed nothing there. Nothing under `viewer/webgpu/` reads `LocalPageColorFilter` today (`WebGpuViewer.kt:1015-1018`, `WebGpuViewerContinuous.kt:26-30`), so on API 26-33 those pages lost it — an open decision for step 6, scoped to that range. Proven: the removed call and its target, the SDK-34 branch in webgpuviewer 53, and the platform semantics. Unproven: that any API 26-33 device actually satisfies `WebGpuRenderer.isAvailable`, so the loss is conditional on the high-quality renderer running there; nothing was run on a device |
+| Grayscale / inverted on pages only | transition, loading and error pages must keep their colours; animated pages and SSIV pages must take the filter | the filter is applied per page view (`ReaderPageImageView.kt:88-99`), including a hardware layer for SSIV, rather than as one layer over the whole container; the WebGPU viewer is the one exception and takes a layer instead (§3.6) |
+| HDR / colour mode on the WebGPU path | grayscale and inverted with the high-quality renderer on an API 26-33 device (an emulator is enough), then on API 34+ | The paged and long-strip path is intact: `setting/ReaderSettingsViewModel.kt:80-81` → `setting/GeneralSettings.kt:17-18` → `viewerColorFilter(...)` (`ReaderActivity.kt:796-797`, definition `:1619-1636`) → `LocalPageColorFilter` (`:802`) → `PagerViewer.kt:254-265`/`PagerPageHolder.kt:81` and `WebtoonViewer.kt:335-353`/`WebtoonPageHolder.kt:98` → applied in `ReaderPageImageView.kt:88-99`. The WebGPU path is what changed: the removed pre-port call was `binding.viewerContainer.setLayerType(LAYER_TYPE_HARDWARE, paint)` over the whole viewer container (`bf3c73dfee:ReaderActivity.kt:1572-1574`), and webgpuviewer 53's `ViewerSurface` branches on `Build.VERSION.SDK_INT` (`gradle/libs.versions.toml:19`) — ≥34 draws through `AndroidExternalSurface` (a `SurfaceView`, its own SurfaceFlinger layer, which a parent's layer paint cannot reach), <34 through `AndroidEmbeddedExternalSurface` (a `TextureView` on the ordinary view pipeline, which that paint did filter). So the old filter reached WebGPU pages only on **API 26-33**; on API 34+ it never applied and nothing applies it there. `78316baaf0` gives the **API 26-33** range its layer back (§3.6): the hosting `ComposeView` takes the paint as a hardware layer (`ReaderActivity.kt:848-851`), cleared on release (`:853-855`), while nothing under `viewer/webgpu/` reads `LocalPageColorFilter` (`WebGpuViewer.kt:1024-1041`, `WebGpuViewerContinuous.kt:26-30`). Proven: the removed call and its target, the SDK-34 branch in webgpuviewer 53, the replacement call site, and the platform semantics. Unproven: that the layer actually reaches that surface on a device — nothing was run on one, and the range is conditional on `WebGpuRenderer.isAvailable` and on the viewer being the WebGPU one |
 
 ## 6. Next steps
 
@@ -179,5 +210,6 @@ Manual pass owed before step 4:
 - **Step 5 — R32 pan before page turn**: give the navigation/viewer API a pan action so the surviving
   `PagerViewer.moveUp`/`moveDown` (`viewer/pager/PagerViewer.kt:480`, `:494`) is reachable from the reduced
   action set, not only from the key handler.
-- **Step 6 — R19/R20 full cover-seeded theming**: complete the seeding of the reader chrome and page surfaces,
-  including the WebGPU colour-filter decision for API 26-33 recorded in §5.
+- **Step 6 — R19/R20 full cover-seeded theming**: complete the seeding of the reader chrome and page surfaces.
+  The WebGPU colour filter is settled in §3.6 (a layer over that viewer below API 34, nothing from API 34 on);
+  its API 26-33 path is on the manual pass in §5.
