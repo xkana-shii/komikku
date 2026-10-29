@@ -56,6 +56,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Feeds now invalidate their active search configuration when a referenced saved search is overwritten, updating results without restarting the app. Search requests retain the source, query, filters and generation used to start them, so results from an outdated request cannot replace those produced by the updated saved search.
 
 ### Changed
+- The reader is drawn through Compose, on Mihon's and Komi-kun's new reader architecture (Komi-kun #81): the reader screen owns its viewer, settings reach the open reader reactively instead of through listeners, and the navigation overlay, loading UI and viewer content are Compose. Komi-kun's follow-up fixes are included (reading mode resolved like the viewer, the settings sheet following the viewer actually built, WebGPU fallback, webtoon zoom settings once the strip exists, dual page decided from the viewer's own area, page colour filters, the loading chrome, cover-coloured chrome). The fork's reader layout, action row, colored bookmarks, automation, zoom restrictions and 100-page preload are kept; the High Quality zoom settings now come from the new settings plane, and its double tap gate keeps holding the WebGPU surface.
 - Manga metadata overrides (title, author, artist, cover, description, genres and status) are now
   stored in the manga row and used throughout the app. Legacy `edits.json` data imports into those
   fields; backups retain their legacy next-update fallback.
@@ -83,6 +84,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Bookmark-color filters now use the same Bookmarked row and Edit-button tri-state editor as category filters in Library, Updates and each manga's chapter settings. Colors can be included, excluded or ignored independently; existing saved Library and per-manga selections are retained as included colors. Color filtering only refines the Bookmarked state, so disabled and Not bookmarked filters keep their prior behavior.
 
 ### Other
+- TachiyomiSY's old reader autoscroll (its loop, help dialog and the "Smooth auto scroll" switch in the reader settings sheet), which nothing could start any more; the reader's only automation is this fork's.
 - Komi-kun #80's TachiyomiSY long-strip autoscroll gestures are not included: the reader keeps a single automation, this fork's.
 - Database: migrations 61–63 (Komi-kun's 59–61): library-removal tombstones, merge-deduped views, and `merged` split into `merge` + `merged_entry` (one entry per merge and manga, the self-reference and its sort mode moved to the merge). Colored bookmarks, edited details, blacklist and scanlator settings, excluded scanlators, reading progress and history are kept, and the old-fork database converter now converts merges as well. Backups gain `mergeSettings` (field 10002); older backups restore their merges unchanged.
 - The chapter cache is a TTL disk cache (old cache directory removed once); the encrypted database uses the AndroidX SQLite driver; backups decode only the needed fields and restore entries in one pass; seven Weblate translation updates.

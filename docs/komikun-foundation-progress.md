@@ -373,3 +373,9 @@ Which setting owns which gesture, so one never rides in through the other:
 
 Verification: resolver and per-bind settings are covered by `WebtoonScaleGestureTest` and `ReaderPageZoomTest`.
 No multi-finger or real-device gesture testing was done (adb cannot inject a pinch and the emulator library is empty).
+
+## Komi-kun PR #81 (2026-10-29)
+
+Compose reader (Mihon steps 1–3) ported commit by commit on `codex/komikun-pr81-compose-reader` from
+`main` `6ffd8272e7`. KNS adaptations, removed TachiyomiSY autoscroll and the preservation matrix:
+[`reader/kns-pr81-preservation.md`](reader/kns-pr81-preservation.md).

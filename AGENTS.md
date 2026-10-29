@@ -170,9 +170,13 @@ Every new addition or change authored for `xkana-shii/komikku` **must** be marke
 - **Network:** OkHttp 5 with DNS-over-HTTPS
 - **Serialization:** Kotlinx Serialization (JSON/Protobuf); Apollo GraphQL for AniList/Kitsu/Shikimori/Suwayomi
 - **Reader:** WebGPU renderer (`ca.mpreg:webgpuviewer`) + `ca.mpreg:imagedecoder` progressive decoding,
-  SSIV fallback. Fork gesture routing adapts webgpuviewer 53 in
-  `app/src/main/java/ca/mpreg/webgpuviewer/viewer/KnsImageViewer*.kt`; keep those copies aligned when upgrading the
-  dependency.
+  SSIV fallback. The reader is drawn through Compose (Komi-kun #81 / Mihon `ca028cb657`, `8124d324a1`,
+  `00335b2a70`): `ReaderActivity` owns the viewer, viewers read reactive settings from
+  `ReaderSettingsViewModel` (`*Settings` classes; the old `*Config` listeners are gone), and each viewer
+  draws itself in `Content()`. The WebGPU viewers keep the fork's double tap gate
+  (`WebGpuDoubleTapZoomGateLayout`) around their surface; the reader's only automation is KNS
+  `ui/reader/automation/` (TachiyomiSY's autoscroll is not part of this fork). See
+  `docs/reader/kns-pr81-preservation.md`.
 - **JS engine:** QuickJS (used by sources)
 - **Concurrency:** Kotlin coroutines + Flow for new code; RxJava 1 remains in `source-api` for extension compatibility
 - **Toolchain:** JDK 21 to build (`.github/.java-version`; the daemon JVM is pinned in
@@ -435,7 +439,7 @@ The in-app updater reads `v*` releases from `xkana-shii/komikku` and `r<count>` 
 
 - `App.kt` – Metro graph bootstrap, logging setup, Coil initialization
 - `MainActivity.kt` – Voyager navigation host
-- `app/src/main/java/ca/mpreg/webgpuviewer/viewer/KnsImageViewer*.kt` – webgpuviewer 53 rendering with KNS pointer routing
+- `docs/reader/` – reader architecture (Komi-kun's inventory and steps, `kns-pr81-preservation.md`)
 - `app/src/main/java/mihon/app/di/AppGraph.kt` / `AppBindings.kt` – the DI graph and its bindings
 - `data/src/main/java/tachiyomi/data/DatabaseBindings.kt` – database wiring
 - `buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`, `AndroidConfig.kt` – flags, SDK versions
