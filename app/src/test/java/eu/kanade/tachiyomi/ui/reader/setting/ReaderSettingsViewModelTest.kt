@@ -15,6 +15,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.navigation.EdgeNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.KindlishNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuZoomGestures
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -376,6 +377,51 @@ class ReaderSettingsViewModelTest {
             )
         }
     }
+
+    // KNS -->
+    @Test
+    fun `the High Quality pager follows the paged zoom settings while reading`() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+        assertEquals(WebGpuZoomGestures(doubleTapZoom = true, pinchZoom = true), viewModel.webgpuPaged.value.common.zoomGestures)
+
+        preferences.pagedDoubleTapZoomEnabled.set(false)
+        advanceUntilIdle()
+        assertEquals(WebGpuZoomGestures(doubleTapZoom = false, pinchZoom = true), viewModel.webgpuPaged.value.common.zoomGestures)
+        // Without double tap zoom no double tap is detected, so its drag zoom cannot bypass the switch.
+        assertEquals(false, viewModel.webgpuPaged.value.common.zoomGestures.doubleTapGestures(false))
+
+        preferences.pagedDoubleTapZoomEnabled.set(true)
+        preferences.pagedDisableZoomIn.set(true)
+        advanceUntilIdle()
+        assertEquals(WebGpuZoomGestures(doubleTapZoom = false, pinchZoom = false), viewModel.webgpuPaged.value.common.zoomGestures)
+    }
+
+    @Test
+    fun `the High Quality long strip follows the webtoon double tap and pinch settings independently`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            preferences.webtoonPinchToZoomEnabled.set(false)
+            advanceUntilIdle()
+            assertEquals(
+                WebGpuZoomGestures(doubleTapZoom = true, pinchZoom = false),
+                viewModel.webgpuLongStrip.value.common.zoomGestures,
+            )
+
+            preferences.webtoonDoubleTapZoomEnabled.set(false)
+            preferences.webtoonPinchToZoomEnabled.set(true)
+            advanceUntilIdle()
+            assertEquals(
+                WebGpuZoomGestures(doubleTapZoom = false, pinchZoom = true),
+                viewModel.webgpuLongStrip.value.common.zoomGestures,
+            )
+            // The general "disable double tap gestures" setting still applies on top.
+            preferences.webtoonDoubleTapZoomEnabled.set(true)
+            preferences.disableDoubleTapGestures.set(true)
+            advanceUntilIdle()
+            val common = viewModel.webgpuLongStrip.value.common
+            assertEquals(false, common.zoomGestures.doubleTapGestures(common.doubleTapGesturesDisabled))
+        }
+    // KNS <--
 
     private fun createViewModel() = ReaderSettingsViewModel(
         readerState = MutableStateFlow(ReaderViewModel.State()),
