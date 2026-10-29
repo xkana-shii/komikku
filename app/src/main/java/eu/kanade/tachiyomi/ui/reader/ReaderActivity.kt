@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -827,7 +828,14 @@ class ReaderActivity : BaseActivity() {
                 // this replaced could not filter it either.
                 val currentViewer = viewer
                 if (currentViewer is WebGpuViewer && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    WebGpuViewerHost(currentViewer, colorFilter, modifier)
+                    // The cover seed travels with the viewer: its own chrome is composed in the
+                    // host's nested composition, which starts from an unseeded `TachiyomiTheme`.
+                    WebGpuViewerHost(
+                        viewer = currentViewer,
+                        pageColorFilter = colorFilter,
+                        modifier = modifier,
+                        seedColor = seedColorState().takeIf { themeCoverBased },
+                    )
                 } else {
                     currentViewer?.Content(modifier)
                 }
@@ -848,21 +856,34 @@ class ReaderActivity : BaseActivity() {
      * loading screen, app bars and overlays are siblings of this view in the reader root, not inside
      * it, so they stay unfiltered. The SSIV viewers are not hosted here at all: their pages keep
      * [LocalPageColorFilter], so their transitions, spinners and error views keep their own colours.
+     *
+     * [seedColor] is the reader's cover seed (R19). The nested composition starts from
+     * `setComposeContent`'s unseeded `TachiyomiTheme`, so without re-providing it here the pages this
+     * viewer draws itself - its error page, which reads `MaterialTheme.colorScheme.onBackground`, and
+     * its transition page - would be drawn in the default palette on API 26-33 only. It is wrapped the
+     * way [ReaderTransitionView] wraps its own Compose content, and kept current through
+     * [rememberUpdatedState] so a seed that arrives after the host is created still reaches it.
      */
     @Composable
     private fun WebGpuViewerHost(
         viewer: WebGpuViewer,
         pageColorFilter: ColorFilter?,
         modifier: Modifier,
+        seedColor: ComposeColor?,
     ) {
         val paint = remember(pageColorFilter) {
             pageColorFilter?.asAndroidColorFilter()?.let { Paint().apply { colorFilter = it } }
         }
+        val currentSeed by rememberUpdatedState(seedColor)
         AndroidView(
             modifier = modifier,
             factory = { context ->
                 ComposeView(context).apply {
-                    setComposeContent { viewer.Content(Modifier.fillMaxSize()) }
+                    setComposeContent {
+                        TachiyomiTheme(seedColor = currentSeed) {
+                            viewer.Content(Modifier.fillMaxSize())
+                        }
+                    }
                 }
             },
             update = { view ->
