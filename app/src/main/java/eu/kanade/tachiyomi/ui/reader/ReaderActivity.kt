@@ -1154,10 +1154,12 @@ class ReaderActivity : BaseActivity() {
         )
         // KUN -->
         // Passed rather than read from the preference: `toViewer`'s capability gate may have fallen
-        // back from the WebGPU renderer, so only the viewer it actually made says which tap zones apply.
+        // back from the WebGPU renderer, so only the viewer it actually made says which tap zones
+        // apply and which settings page the sheet shows.
         settingsViewModel.setViewerReadingMode(
             ReadingMode.fromPreference(readingMode),
             isWebtoonViewer = newViewer is WebtoonViewer,
+            isWebGpuViewer = newViewer is WebGpuViewer,
         )
         // KUN <--
 

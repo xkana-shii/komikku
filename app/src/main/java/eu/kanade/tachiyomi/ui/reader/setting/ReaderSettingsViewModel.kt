@@ -70,10 +70,21 @@ class ReaderSettingsViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, resolveReadingMode())
     // KUN <--
 
+    // KUN -->
+    private val viewerMode = MutableStateFlow<ViewerMode?>(null)
+
     /**
-     * Whether the viewers are the WebGPU ones.
+     * Whether the settings page shows the WebGPU viewer's knobs.
+     *
+     * Read from the viewer the activity built, not from the high quality renderer preference: when
+     * [ReadingMode.toViewer]'s capability gate falls back to a pager or webtoon viewer, the knobs
+     * that viewer reads are the ones the page must offer. Until a viewer is built - the sheet can be
+     * opened first - the preference is all there is, so that is what the page shows.
      */
-    val isWebGpu = basePreferences.highQualityRenderer
+    val isWebGpuViewer: StateFlow<Boolean> = viewerMode
+        .map { it?.isWebGpuViewer ?: basePreferences.highQualityRenderer.get() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, basePreferences.highQualityRenderer.get())
+    // KUN <--
 
     val general = settings(
         preferences.readerTheme,
@@ -338,8 +349,6 @@ class ReaderSettingsViewModel(
         )
     }
 
-    private val viewerMode = MutableStateFlow<ViewerMode?>(null)
-
     /**
      * Tap zones of the open viewer. Null until a viewer is made.
      */
@@ -372,13 +381,18 @@ class ReaderSettingsViewModel(
     /**
      * Called when a viewer is made for [readingMode].
      */
-    fun setViewerReadingMode(readingMode: ReadingMode, isWebtoonViewer: Boolean) {
-        // KUN -->
-        // `isWebtoonViewer` is the viewer `ReadingMode.toViewer` built, not the high quality renderer
-        // preference: a device that falls back from WebGPU still gets a `WebtoonViewer` for a long strip.
-        viewerMode.value = ViewerMode(readingMode, isWebtoonViewer)
-        // KUN <--
+    // KUN -->
+    // `isWebtoonViewer` and `isWebGpuViewer` are the viewer `ReadingMode.toViewer` built, not the
+    // high quality renderer preference: a device that falls back from WebGPU still gets a
+    // `WebtoonViewer` for a long strip, and the sheet follows the viewer it actually made.
+    fun setViewerReadingMode(
+        readingMode: ReadingMode,
+        isWebtoonViewer: Boolean,
+        isWebGpuViewer: Boolean,
+    ) {
+        viewerMode.value = ViewerMode(readingMode, isWebtoonViewer, isWebGpuViewer)
     }
+    // KUN <--
 
     // KUN -->
     fun setReadingMode(readingMode: ReadingMode) = onChangeReadingMode(readingMode)
@@ -401,6 +415,7 @@ class ReaderSettingsViewModel(
         val readingMode: ReadingMode,
         // KUN --> the viewer `ReadingMode.toViewer` made, not the renderer preference
         val isWebtoonViewer: Boolean,
+        val isWebGpuViewer: Boolean,
         // KUN <--
     )
 }

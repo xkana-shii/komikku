@@ -27,11 +27,16 @@ import java.text.NumberFormat
 
 @Composable
 internal fun ReadingModePage(viewModel: ReaderSettingsViewModel) {
-    val isWebGpu by viewModel.isWebGpu.collectAsState()
-    if (isWebGpu) {
+    // KUN -->
+    // Keyed off the viewer the activity built (see ReaderSettingsViewModel.isWebGpuViewer), not the
+    // `highQualityRenderer` preference: when the capability gate falls back to a pager or webtoon
+    // viewer, those are the knobs that work, and the WebGPU ones write preferences it never reads.
+    val isWebGpuViewer by viewModel.isWebGpuViewer.collectAsState()
+    if (isWebGpuViewer) {
         WebGpuViewerSettings(viewModel)
         return
     }
+    // KUN <--
 
     HeadingItem(MR.strings.pref_category_for_this_series)
     val manga by viewModel.mangaFlow.collectAsState()
