@@ -320,16 +320,15 @@ open class ReaderPageImageView @JvmOverloads constructor(
         // 5x zoom
         maxScale = scale * MAX_ZOOM_SCALE
         // KMK -->
-        if (config?.disableZoomIn == true) {
-            isZoomEnabled = false
-        } else {
-            if (config?.doubleTapZoom == false) {
-                setDoubleTapZoomScale(scale)
-            } else {
-                // KMK <--
-                setDoubleTapZoomScale(scale * 2)
-            }
-        }
+        // KNS -->
+        // Houri f7ae110: written both ways, because this view survives a rebind and a setting that was off has to
+        // be able to come back on, and quick scale (double tap and drag) goes with the double-tap-zoom setting.
+        val zoom = ReaderPageZoom.pager(config)
+        isZoomEnabled = zoom.zoomEnabled
+        setQuickScaleEnabled(zoom.quickScaleEnabled)
+        setDoubleTapZoomScale(if (zoom.doubleTapZoomsIn) scale * 2 else scale)
+        // KNS <--
+        // KMK <--
 
         when (config?.zoomStartPosition) {
             ZoomStartPosition.LEFT -> setScaleAndCenter(scale, PointF(0F, 0F))
@@ -434,24 +433,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
 
             if (this is PhotoView) {
                 setScaleLevels(1F, 2F, MAX_ZOOM_SCALE)
-                // Force 2 scale levels on double tap
-                setOnDoubleTapListener(
-                    object : GestureDetector.SimpleOnGestureListener() {
-                        override fun onDoubleTap(e: MotionEvent): Boolean {
-                            if (scale > 1F) {
-                                setScale(1F, e.x, e.y, true)
-                            } else {
-                                setScale(2F, e.x, e.y, true)
-                            }
-                            return true
-                        }
-
-                        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                            this@ReaderPageImageView.onViewClicked()
-                            return super.onSingleTapConfirmed(e)
-                        }
-                    },
-                )
+                // KNS: the double-tap listener is set per bind in setAnimatedImage, from the current config
                 setOnScaleChangeListener { _, _, _ ->
                     this@ReaderPageImageView.onScaleChanged(scale)
                 }
@@ -466,6 +448,26 @@ open class ReaderPageImageView @JvmOverloads constructor(
     ) = (pageView as? AppCompatImageView)?.apply {
         if (this is PhotoView) {
             setZoomTransitionDuration(config.zoomDuration.getSystemScaledDuration())
+            // KNS -->
+            // PhotoView owns its gestures, so the zoom settings are applied here on every bind (Houri f7ae110):
+            // this view is reused, and a config change has to take effect either way without leaving a stale
+            // listener behind.
+            setZoomable(ReaderPageZoom.animatedZoomable(config))
+            // Force 2 scale levels on double tap
+            setOnDoubleTapListener(
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDoubleTap(e: MotionEvent): Boolean {
+                        ReaderPageZoom.animatedDoubleTapScale(config, scale)?.let { setScale(it, e.x, e.y, true) }
+                        return true
+                    }
+
+                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                        this@ReaderPageImageView.onViewClicked()
+                        return super.onSingleTapConfirmed(e)
+                    }
+                },
+            )
+            // KNS <--
         }
 
         val request = ImageRequest.Builder(context)

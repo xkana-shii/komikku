@@ -127,15 +127,15 @@ class RestoredMainBehaviorTest {
 
     @Test
     fun `Legacy scale routing keeps double tap zoom and pinch zoom independent`() {
-        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = true, pinchZoomEnabled = false) shouldBe
+        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = true, pinchZoomEnabled = false, pointerCount = 1) shouldBe
             WebtoonScaleGesture(accepted = true, quickScale = true)
-        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = false, pinchZoomEnabled = true) shouldBe
+        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = false, pinchZoomEnabled = true, pointerCount = 2) shouldBe
             WebtoonScaleGesture(accepted = true, quickScale = false)
-        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = false, pinchZoomEnabled = false) shouldBe
+        WebtoonScaleGesture.resolve(true, doubleTapZoomEnabled = false, pinchZoomEnabled = false, pointerCount = 2) shouldBe
             WebtoonScaleGesture(accepted = false, quickScale = false)
-        WebtoonScaleGesture.resolve(false, doubleTapZoomEnabled = true, pinchZoomEnabled = false) shouldBe
+        WebtoonScaleGesture.resolve(false, doubleTapZoomEnabled = true, pinchZoomEnabled = false, pointerCount = 2) shouldBe
             WebtoonScaleGesture(accepted = false, quickScale = false)
-        WebtoonScaleGesture.resolve(false, doubleTapZoomEnabled = false, pinchZoomEnabled = true) shouldBe
+        WebtoonScaleGesture.resolve(false, doubleTapZoomEnabled = false, pinchZoomEnabled = true, pointerCount = 2) shouldBe
             WebtoonScaleGesture(accepted = true, quickScale = false)
     }
 

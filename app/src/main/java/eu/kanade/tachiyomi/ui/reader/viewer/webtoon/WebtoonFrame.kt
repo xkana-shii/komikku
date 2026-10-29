@@ -47,6 +47,15 @@ class WebtoonFrame(context: Context) : FrameLayout(context) {
             recycler?.zoomOutDisabled = value
         }
 
+    // KNS -->
+    /**
+     * Fingers on the screen for the event most recently handed to [scaleDetector]. Every scale callback arrives
+     * synchronously from inside scaleDetector.onTouchEvent, so at callback time this describes the event that
+     * produced it; it is what tells a one-finger quick scale from a pinch (Houri f7ae110).
+     */
+    private var scalePointerCount = 0
+    // KNS <--
+
     /**
      * Recycler view added in this frame.
      */
@@ -57,6 +66,12 @@ class WebtoonFrame(context: Context) : FrameLayout(context) {
      * Dispatches a touch event to the detectors.
      */
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        // KNS -->
+        scalePointerCount = WebtoonScaleGesture.effectivePointerCount(
+            pointerCount = ev.pointerCount,
+            isPointerUp = ev.actionMasked == MotionEvent.ACTION_POINTER_UP,
+        )
+        // KNS <--
         scaleDetector.onTouchEvent(ev)
         flingDetector.onTouchEvent(ev)
 
@@ -84,12 +99,14 @@ class WebtoonFrame(context: Context) : FrameLayout(context) {
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
             // KNS --> Refuse the detector before it can scale when neither route is enabled.
-            return recycler?.onScaleBegin() == true
+            return recycler?.onScaleBegin(scalePointerCount) == true
             // KNS <--
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            recycler?.onScale(detector.scaleFactor)
+            // KNS -->
+            recycler?.onScale(detector.scaleFactor, scalePointerCount)
+            // KNS <--
             return true
         }
 
