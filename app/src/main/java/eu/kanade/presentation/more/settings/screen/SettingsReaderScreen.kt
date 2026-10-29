@@ -107,7 +107,6 @@ object SettingsReaderScreen : SearchableSettings {
     private fun getAutomationGroup(readerPreferences: ReaderPreferences): Preference.PreferenceGroup {
         val autoScroll by readerPreferences.autoScroll.collectAsState()
         val autoFlip by readerPreferences.autoFlip.collectAsState()
-        val autoScrollGestures by readerPreferences.autoscrollGesturesEnabled.collectAsState()
         return Preference.PreferenceGroup(
             title = stringResource(KMR.strings.pref_reader_automation),
             preferenceItems = listOf(
@@ -159,19 +158,6 @@ object SettingsReaderScreen : SearchableSettings {
                         }
                     },
                     visible = autoScroll || autoFlip,
-                ),
-                // Komi-kun #80's long-strip autoscroll gestures (classic reader). The fork has no E-Hentai
-                // tools panel, so their switches live here; the help text is their description.
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = readerPreferences.autoscrollGesturesEnabled,
-                    title = stringResource(SYMR.strings.eh_autoscroll_gestures),
-                    subtitle = stringResource(SYMR.strings.eh_autoscroll_gestures_help_message),
-                ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = readerPreferences.autoscrollGestureToastsEnabled,
-                    title = stringResource(SYMR.strings.eh_autoscroll_gesture_toasts),
-                    subtitle = stringResource(SYMR.strings.eh_autoscroll_gesture_toasts_help_message),
-                    visible = autoScrollGestures,
                 ),
             ),
         )
