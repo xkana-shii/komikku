@@ -5,6 +5,10 @@ import android.graphics.Color
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.DisabledNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.EdgeNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.KindlishNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
 import io.mockk.every
 import io.mockk.mockk
@@ -70,6 +74,10 @@ class ReaderSettingsViewModelTest {
         // throws in these unit tests; the colour is not what is under test.
         mockkStatic(Color::class)
         every { Color.argb(any<Int>(), any<Int>(), any<Int>(), any<Int>()) } returns 0
+        // Constructing a navigator in these tests initialises `NavigationRegion` on the way, and its data
+        // objects compute their preview colour once, through the stub: they cache 0 for the rest of this JVM
+        // worker, and `unmockkAll()` cannot undo that. A test that asserts a region colour must not run after
+        // this class - it needs its own class (or this class needs to stop mocking `Color`).
     }
 
     @AfterEach
@@ -113,6 +121,49 @@ class ReaderSettingsViewModelTest {
     }
 
     @Test
+    fun `the smaller tap zone re-emits the long strip navigation`() = runTest(dispatcher) {
+        // The webtoon twin of the paged test: same fixed tap-zone shape, resolved from the long strip
+        // settings because the built viewer is a webtoon one.
+        preferences.navigationModeWebtoon.set(ReaderPreferences.NavigationMode.RIGHT_AND_LEFT.value)
+        preferences.webtoonNavInverted.set(ReaderPreferences.TappingInvertMode.VERTICAL)
+        val viewModel = createViewModel()
+        viewModel.setViewerReadingMode(ReadingMode.WEBTOON, isWebtoonViewer = true, isWebGpuViewer = false)
+        advanceUntilIdle()
+
+        val emitted = mutableListOf<ViewerNavigation?>()
+        backgroundScope.launch { viewModel.navigation.toList(emitted) }
+        advanceUntilIdle()
+
+        assertEquals(1, emitted.size)
+        val before = emitted.single()
+        assertInstanceOf(RightAndLeftNavigation::class.java, before)
+        assertEquals(
+            RightAndLeftNavigation(ReaderPreferences.TappingInvertMode.VERTICAL, smallerTapZone = false),
+            before,
+        )
+
+        preferences.smallerTapZone.set(true)
+        advanceUntilIdle()
+
+        assertEquals(2, emitted.size)
+        val after = emitted.last()
+        assertInstanceOf(RightAndLeftNavigation::class.java, after)
+        assertEquals(
+            RightAndLeftNavigation(ReaderPreferences.TappingInvertMode.VERTICAL, smallerTapZone = true),
+            after,
+        )
+        assertNotEquals(before, after)
+
+        // An unrelated long strip preference rebuilds the settings but not the zones.
+        preferences.webtoonSidePadding.set(64)
+        advanceUntilIdle()
+
+        assertEquals(64, viewModel.simpleLongStrip.value.page.sidePadding)
+        assertEquals(2, emitted.size)
+        assertEquals(after, emitted.last())
+    }
+
+    @Test
     fun `an unrelated paged preference does not re-emit the navigation`() = runTest(dispatcher) {
         preferences.navigationModePager.set(ReaderPreferences.NavigationMode.RIGHT_AND_LEFT.value)
         preferences.pagerNavInverted.set(ReaderPreferences.TappingInvertMode.VERTICAL)
@@ -144,16 +195,64 @@ class ReaderSettingsViewModelTest {
         val viewModel = createViewModel()
 
         // No viewer yet: the sheet has only the preference.
+        advanceUntilIdle()
         assertTrue(viewModel.isWebGpuViewer.value)
 
         // A viewer that fell back from WebGPU wins over the preference it disagrees with.
         viewModel.setViewerReadingMode(ReadingMode.RIGHT_TO_LEFT, isWebtoonViewer = false, isWebGpuViewer = false)
+        advanceUntilIdle()
         assertFalse(viewModel.isWebGpuViewer.value)
 
         // And a WebGPU viewer is WebGPU whatever the preference says.
         highQualityRenderer.set(false)
         viewModel.setViewerReadingMode(ReadingMode.RIGHT_TO_LEFT, isWebtoonViewer = false, isWebGpuViewer = true)
+        advanceUntilIdle()
         assertTrue(viewModel.isWebGpuViewer.value)
+    }
+
+    @Test
+    fun `the tap zones follow the navigation mode and the pager direction`() = runTest(dispatcher) {
+        // Which navigator the settings plane builds: upstream's mode dispatch, whose DEFAULT arm is the
+        // viewer's own direction - horizontal pager gives right/left zones, the vertical one L-shaped ones.
+        val cases = listOf(
+            Triple(
+                ReadingMode.RIGHT_TO_LEFT,
+                ReaderPreferences.NavigationMode.DEFAULT,
+                RightAndLeftNavigation::class.java,
+            ),
+            Triple(ReadingMode.VERTICAL, ReaderPreferences.NavigationMode.DEFAULT, LNavigation::class.java),
+            Triple(ReadingMode.RIGHT_TO_LEFT, ReaderPreferences.NavigationMode.L_SHAPED, LNavigation::class.java),
+            Triple(
+                ReadingMode.RIGHT_TO_LEFT,
+                ReaderPreferences.NavigationMode.KINDLISH,
+                KindlishNavigation::class.java,
+            ),
+            Triple(ReadingMode.RIGHT_TO_LEFT, ReaderPreferences.NavigationMode.EDGE, EdgeNavigation::class.java),
+            Triple(
+                ReadingMode.RIGHT_TO_LEFT,
+                ReaderPreferences.NavigationMode.RIGHT_AND_LEFT,
+                RightAndLeftNavigation::class.java,
+            ),
+            Triple(
+                ReadingMode.RIGHT_TO_LEFT,
+                ReaderPreferences.NavigationMode.DISABLED,
+                DisabledNavigation::class.java,
+            ),
+        )
+
+        for ((readingMode, mode, expected) in cases) {
+            preferences.navigationModePager.set(mode.value)
+            val viewModel = createViewModel()
+            viewModel.setViewerReadingMode(readingMode, isWebtoonViewer = false, isWebGpuViewer = false)
+            advanceUntilIdle()
+
+            val navigator = viewModel.navigation.value
+            assertEquals(
+                expected,
+                navigator?.javaClass,
+                "$mode for a $readingMode viewer made a $navigator",
+            )
+        }
     }
 
     private fun createViewModel() = ReaderSettingsViewModel(
