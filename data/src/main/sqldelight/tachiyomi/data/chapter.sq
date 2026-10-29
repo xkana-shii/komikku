@@ -258,7 +258,7 @@ FROM chapter
 WHERE user_bookmark
 UNION
 SELECT M.merge_id, C.user_bookmark_color
-FROM merged M
+FROM merged_entry M
 JOIN chapter C ON C.manga_id = M.manga_id
 WHERE C.user_bookmark;
 -- KNS <--
