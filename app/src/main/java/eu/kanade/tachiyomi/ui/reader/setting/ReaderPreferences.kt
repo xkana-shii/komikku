@@ -247,7 +247,7 @@ class ReaderPreferences(
     val smoothAutoScroll = preferenceStore.getBoolean("smooth_auto_scroll", true)
 
     val autoscrollGesturesEnabled: Preference<Boolean> =
-        preferenceStore.getBoolean("eh_util_autoscroll_gestures", false)
+        preferenceStore.getBoolean("eh_util_autoscroll_gestures", true)
 
     val autoscrollGestureToastsEnabled: Preference<Boolean> =
         preferenceStore.getBoolean("eh_util_autoscroll_gesture_toasts", true)
