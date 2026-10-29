@@ -182,6 +182,16 @@ out) moved into `ReaderNavigationOverlayState`. `ReaderProgressIndicator` itself
 transitions still use it (`viewer/pager/PagerPageHolder.kt:101`, `viewer/webtoon/WebtoonPageHolder.kt:271`,
 `viewer/ReaderTransitionView.kt:87`); it just stopped being the activity's loading chrome.
 
+The overlay's navigator is a flow value instead of a push, which is the guarantee the port buys: the activity
+collects `settingsViewModel.navigation` (`setting/ReaderSettingsViewModel.kt:363-386`, which re-emits whenever the
+viewer or a tap-zone setting changes) into the state holder (`ReaderActivity.kt:299-304`), so the first navigator
+cannot be missed for want of an assigned listener and every later tap-zone change travels the same path. It is
+not a change to *when* the overlay appears: master pushed its initial navigator from the preference registration
+that runs after the listener is assigned (`85d7d1fade:viewer/pager/PagerConfig.kt:119-120`, `:246-247`;
+`viewer/pager/PagerViewer.kt:113-169`), and both sides show it at start under the same
+`showNavigationOverlayOnStart` / new-user rule (`ReaderNavigationOverlay.kt:77-86`,
+`85d7d1fade:ReaderNavigationOverlayView.kt:25-33`).
+
 ## 5. What is compile-only
 
 No device or emulator run was made for this step, and no test covers it. `spotlessCheck` passes on this commit;
