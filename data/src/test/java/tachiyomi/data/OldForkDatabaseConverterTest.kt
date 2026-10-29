@@ -61,6 +61,9 @@ class OldForkDatabaseConverterTest {
             "library_visibility_generation",
             "library_visibility_revision",
             "manga_chapter_stats",
+            // KNS --> split into merge + merged_entry (Komi-kun #80)
+            "merged",
+            // KNS <--
         )
         db.longValue("PRAGMA user_version") shouldBe Database.Schema.version
         converter.isOldForkLineage(db) shouldBe false
@@ -178,6 +181,27 @@ class OldForkDatabaseConverterTest {
 
     private lateinit var freshConnection: RawSqlConnection
 
+    // KNS -->
+    @Test
+    fun `an old fork merge is converted into merge and merged_entry`() {
+        val db = jdbc(dbFile)
+        createOldForkDatabase(db)
+        seed(db)
+        OldForkDatabaseConverter(now = { NOW }).convert(db, freshSchema(), Database.Schema.version)
+
+        db.longValue("SELECT count(*) FROM merge") shouldBe 1L
+        db.longValue("SELECT chapter_sort_mode FROM merge WHERE manga_id = 3") shouldBe 2L
+        db.longValue("SELECT info_manga_id FROM merge WHERE manga_id = 3") shouldBe 2L
+        // The self-reference is no entry; the duplicated child keeps its older row's settings.
+        db.longValue("SELECT count(*) FROM merged_entry WHERE merge_id = 3") shouldBe 2L
+        db.longValue("SELECT count(*) FROM merged_entry WHERE merge_id = 3 AND manga_id = 3") shouldBe 0L
+        db.longValue("SELECT chapter_priority FROM merged_entry WHERE merge_id = 3 AND manga_id = 1") shouldBe 1L
+        db.longValue("SELECT download_chapters FROM merged_entry WHERE merge_id = 3 AND manga_id = 1") shouldBe 0L
+        db.longValue("SELECT fetch_chapter_updates FROM merged_entry WHERE merge_id = 3 AND manga_id = 2") shouldBe 0L
+        db.query("PRAGMA foreign_key_check").size shouldBe 0
+    }
+    // KNS <--
+
     private fun freshSchema(into: RawSqlConnection = jdbcMemory()): List<SchemaObject> {
         freshConnection = into
         return FreshSchemaCapture.capture(Database.Schema, into)
@@ -215,6 +239,19 @@ class OldForkDatabaseConverterTest {
             "INSERT INTO manga_track(id, manga_id, tracker_id, remote_id, library_id, title, last_chapter_read, total_chapters, " +
                 "status, score, remote_url, start_date, finish_date) VALUES (1, 1, 2, 42, NULL, 'Manga One', 12, 100, 1, 8.0, 'u', 0, 0)",
             "INSERT INTO excluded_scanlator(manga_id, scanlator) VALUES (1, 'Gamma')",
+            // KNS --> a merge (id 3) of manga 1 and 2: its self-reference carries the sort mode, manga 2
+            // is the info entry, and manga 1 is listed twice (the older row's settings must win)
+            "INSERT INTO manga(id, source_id, remote_url, remote_title, remote_status, user_favorite_at, state_initialized, " +
+                "user_reader_flags, user_chapter_flags, state_cover_last_modified, state_date_added, state_last_modified_at, " +
+                "state_version, user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules) VALUES " +
+                "(3, 6969, '/m1', 'Merged', 1, 1700000000000, 1, 0, 0, 0, 0, 0, 0, '', '', '')",
+            "INSERT INTO merged(_id, info_manga, get_chapter_updates, chapter_sort_mode, chapter_priority, download_chapters, " +
+                "merge_id, merge_url, manga_id, manga_url, manga_source) VALUES " +
+                "(1, 0, 1, 2, 0, 1, 3, '/m1', 3, '/m1', 6969)," +
+                "(2, 0, 1, 0, 1, 0, 3, '/m1', 1, '/m1', 100)," +
+                "(3, 1, 0, 0, 2, 1, 3, '/m1', 2, '/m2', 100)," +
+                "(4, 0, 0, 0, 9, 1, 3, '/m1', 1, '/m1', 100)",
+            // KNS <--
         ).forEach { db.execute(it) }
     }
 

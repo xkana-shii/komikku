@@ -100,6 +100,12 @@ class OldForkDatabaseConverter(private val now: () -> Long = System::currentTime
                 db.execute(table.sql)
             }
         }
+        // The old fork kept merges in one `merged` table, which the current schema splits into `merge`
+        // and `merged_entry` (Komi-kun #80, this fork's 63.sqm). Convert it the same way before it is
+        // dropped, or every merge would be lost.
+        if ("merged" in oldTables && targetTables.any { it.name == "merged_entry" }) {
+            MERGED_SPLIT.forEach(db::execute)
+        }
         val dropped = (oldTables - targetTables.map { it.name }.toSet()).sorted()
         dropped.forEach { db.execute("DROP TABLE IF EXISTS ${it.quoted()}") }
 
@@ -122,6 +128,35 @@ class OldForkDatabaseConverter(private val now: () -> Long = System::currentTime
             droppedTables = dropped,
             convertedFillermarks = fillermarks.size,
             foreignKeyViolations = violations,
+        )
+    }
+
+    private companion object {
+        /** The statements of 63.sqm that move `merged` into `merge` + `merged_entry`; keep them identical. */
+        val MERGED_SPLIT = listOf(
+            """
+            INSERT INTO merge(manga_id, chapter_sort_mode, info_manga_id)
+            SELECT
+                m.merge_id,
+                coalesce((SELECT s.chapter_sort_mode FROM merged s
+                          WHERE s.merge_id = m.merge_id AND s.manga_source = 6969
+                          LIMIT 1), 0),
+                (SELECT i.manga_id FROM merged i
+                 WHERE i.merge_id = m.merge_id AND i.info_manga = 1 AND i.manga_id IS NOT NULL
+                 LIMIT 1)
+            FROM (SELECT DISTINCT merge_id FROM merged) m
+            """.trimIndent(),
+            """
+            INSERT INTO merged_entry(merge_id, manga_id, fetch_chapter_updates, download_chapters, chapter_priority)
+            SELECT m.merge_id, m.manga_id, m.get_chapter_updates, m.download_chapters, m.chapter_priority
+            FROM merged AS m
+            WHERE m.manga_source <> 6969 AND m.manga_id IS NOT NULL
+            AND m._id = (
+                SELECT MIN(m2._id) FROM merged AS m2
+                WHERE m2.merge_id = m.merge_id AND m2.manga_id = m.manga_id
+                AND m2.manga_source <> 6969 AND m2.manga_id IS NOT NULL
+            )
+            """.trimIndent(),
         )
     }
 
