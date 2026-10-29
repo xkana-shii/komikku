@@ -870,9 +870,15 @@ open class WebGpuViewer(
             settingsViewModel.webgpuPaged.map { it.common }
         }
         common.distinctUntilChanged().collectChanges(scope) { old, new ->
-            if (old?.doubleTapGesturesDisabled != new.doubleTapGesturesDisabled) {
-                pager.state.doubleTapGesturesEnabled = !new.doubleTapGesturesDisabled
+            // KNS --> double tap and pinch zoom follow the legacy settings; without double tap zoom
+            // there is no double tap detection (its drag zoom would bypass the switch)
+            if (old?.doubleTapGesturesDisabled != new.doubleTapGesturesDisabled || old.zoomGestures != new.zoomGestures) {
+                pager.state.doubleTapZoomEnabled = new.zoomGestures.doubleTapZoom
+                pager.state.pinchZoomEnabled = new.zoomGestures.pinchZoom
+                pager.state.doubleTapGesturesEnabled =
+                    new.zoomGestures.doubleTapGestures(new.doubleTapGesturesDisabled)
             }
+            // KNS <--
             if (old?.imageFilters != new.imageFilters) {
                 // Else an older, slower load could land last.
                 imageFiltersJob?.cancel()

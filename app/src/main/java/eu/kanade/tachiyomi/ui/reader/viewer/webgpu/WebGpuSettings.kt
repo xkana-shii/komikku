@@ -10,6 +10,9 @@ package eu.kanade.tachiyomi.ui.reader.viewer.webgpu
  */
 data class WebGpuSettings(
     val doubleTapGesturesDisabled: Boolean,
+    // KNS --> the zoom settings the legacy viewers honour, for the High Quality viewers too
+    val zoomGestures: WebGpuZoomGestures,
+    // KNS <--
     val imageFilters: List<WebGpuShader>,
     val tileFilters: List<WebGpuShader>,
 )

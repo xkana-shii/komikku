@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.SimplePagedSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuLongStripSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuPagedSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuSettings
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuZoomGestures
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.SimpleLongStripSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -286,6 +287,10 @@ class ReaderSettingsViewModel(
         preferences.disableDoubleTapGestures,
         preferences.imageFilters,
         preferences.tileFilters,
+        // KNS -->
+        preferences.pagedDoubleTapZoomEnabled,
+        preferences.pagedDisableZoomIn,
+        // KNS <--
     ) {
         WebGpuPagedSettings(
             page = WebGpuPagedSettings.Page(
@@ -297,6 +302,9 @@ class ReaderSettingsViewModel(
             ),
             common = WebGpuSettings(
                 doubleTapGesturesDisabled = disableDoubleTapGestures.get(),
+                // KNS -->
+                zoomGestures = WebGpuZoomGestures.paged(pagedDoubleTapZoomEnabled.get(), pagedDisableZoomIn.get()),
+                // KNS <--
                 imageFilters = imageFilters.get(),
                 tileFilters = tileFilters.get(),
             ),
@@ -312,6 +320,10 @@ class ReaderSettingsViewModel(
         preferences.disableDoubleTapGestures,
         preferences.imageFilters,
         preferences.tileFilters,
+        // KNS -->
+        preferences.webtoonDoubleTapZoomEnabled,
+        preferences.webtoonPinchToZoomEnabled,
+        // KNS <--
     ) {
         WebGpuLongStripSettings(
             page = WebGpuLongStripSettings.Page(
@@ -320,6 +332,12 @@ class ReaderSettingsViewModel(
             ),
             common = WebGpuSettings(
                 doubleTapGesturesDisabled = disableDoubleTapGestures.get(),
+                // KNS -->
+                zoomGestures = WebGpuZoomGestures.continuous(
+                    webtoonDoubleTapZoomEnabled.get(),
+                    webtoonPinchToZoomEnabled.get(),
+                ),
+                // KNS <--
                 imageFilters = imageFilters.get(),
                 tileFilters = tileFilters.get(),
             ),
