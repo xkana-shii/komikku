@@ -241,9 +241,8 @@ class ReaderPreferences(
 
     val cacheSize = preferenceStore.getString("eh_cache_size", "75")
 
-    val autoscrollInterval = preferenceStore.getFloat("eh_util_autoscroll_interval", 3f)
-
-    val smoothAutoScroll = preferenceStore.getBoolean("smooth_auto_scroll", true)
+    // KNS: TachiyomiSY's autoscroll (eh_util_autoscroll_interval, smooth_auto_scroll) is not part of this
+    // fork; the reader's only automation is ReaderAutomation (pref_auto_scroll / pref_auto_flip).
 
     val preserveReadingPosition = preferenceStore.getBoolean("eh_preserve_reading_position", false)
 

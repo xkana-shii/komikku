@@ -32,7 +32,11 @@ class ReaderAutomationOnlyTest {
             .filter { it.contains("autoscrollGesture", ignoreCase = true) }
             .shouldBeEmpty()
         WebtoonViewer::class.java.declaredMethods.map { it.name }
-            .filter { it.contains("AutoScrollGesture") || it == "performAutoScrollStep" }
+            .filter { it.contains("AutoScrollGesture") || it == "performAutoScrollStep" || it == "linearScroll" }
+            .shouldBeEmpty()
+        // Nor TachiyomiSY's older autoscroll loop: its interval and smooth-scroll settings are gone too.
+        ReaderPreferences::class.java.declaredMethods.map { it.name }
+            .filter { it == "getAutoscrollInterval" || it == "getSmoothAutoScroll" }
             .shouldBeEmpty()
     }
 }

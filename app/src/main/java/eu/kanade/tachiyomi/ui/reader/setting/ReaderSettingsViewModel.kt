@@ -123,8 +123,6 @@ class ReaderSettingsViewModel(
         preferences.showNavigationOverlayOnStart,
         // KUN -->
         preferences.pageTransitionsWebtoon,
-        preferences.autoscrollInterval,
-        preferences.smoothAutoScroll,
         // KUN <--
     ) {
         GeneralSettings(
@@ -143,8 +141,6 @@ class ReaderSettingsViewModel(
             navigationOverlayOnStart = showNavigationOverlayOnStart.get(),
             // KUN -->
             usePageTransitionsWebtoon = pageTransitionsWebtoon.get(),
-            autoscrollInterval = autoscrollInterval.get(),
-            smoothAutoScroll = smoothAutoScroll.get(),
             // KUN <--
         )
     }

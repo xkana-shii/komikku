@@ -427,18 +427,6 @@ class WebtoonViewer(
     }
 
     /**
-     * Scrolls one screen over a period of time
-     */
-    fun linearScroll(duration: Duration) {
-        recycler.smoothScrollBy(
-            0,
-            activity.resources.displayMetrics.heightPixels,
-            LinearInterpolator(),
-            duration.inWholeMilliseconds.toInt(),
-        )
-    }
-
-    /**
      * Scrolls down by [scrollDistance].
      */
     /* [EXH] private */

@@ -279,11 +279,6 @@ private fun WebtoonViewerSettings(
 
     // SY -->
     CheckboxItem(
-        label = stringResource(SYMR.strings.pref_smooth_scroll),
-        pref = viewModel.preferences.smoothAutoScroll,
-    )
-
-    CheckboxItem(
         label = stringResource(MR.strings.pref_page_transitions),
         pref = viewModel.preferences.pageTransitionsWebtoon,
     )
