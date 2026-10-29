@@ -688,6 +688,15 @@ open class WebGpuViewer(
      */
     private fun isWideViewport(width: Int, height: Int): Boolean =
         width > 0 && height > 0 && width.toFloat() / height > 1f
+
+    /**
+     * Publishes the box the viewer is drawn in to the settings sheet, which cannot measure the
+     * viewer itself. Every [Content] override takes it, the long strip's included, so no viewer
+     * leaves the sheet on a stale or a missing answer.
+     */
+    protected fun Modifier.publishViewerViewport(): Modifier = onSizeChanged { size ->
+        settingsViewModel.setViewerWideViewport(isWideViewport(size.width, size.height))
+    }
     // KUN <--
 
     /** The half a spread opens on: right reading right-to-left, left otherwise. */
@@ -1030,12 +1039,20 @@ open class WebGpuViewer(
         }
     }
 
+    // KNS -->
+    /** The WebGPU surface the double tap gate holds; the long strip draws its own. */
+    @Composable
+    protected open fun Surface() {
+        ImageViewer(state = viewerState)
+    }
+    // KNS <--
+
     // KNS --> Adapted from Houri 7e06ee89b8: keep a prohibited second tap away from WebGPU.
     private val touchProxy by lazy {
         WebGpuDoubleTapZoomGateLayout(activity).apply {
             // Komi-kun #81 dropped the library's ImageView wrapper; the gate now holds the composable
             // that draws the same state, so every touch still passes the gate first.
-            addViewer(ComposeView(activity).apply { setContent { ImageViewer(state = viewerState) } })
+            addViewer(ComposeView(activity).apply { setContent { Surface() } })
             shouldSwallowDoubleTap = { !viewerState.doubleTapZoomEnabled }
         }
     }
@@ -1058,9 +1075,7 @@ open class WebGpuViewer(
         // KNS --> the box is the fork's double tap gate, which fills it with the surface
         AndroidView(
             factory = { touchProxy },
-            modifier = modifier.onSizeChanged { size ->
-                settingsViewModel.setViewerWideViewport(isWideViewport(size.width, size.height))
-            },
+            modifier = modifier.publishViewerViewport(),
         )
         // KNS <--
     }

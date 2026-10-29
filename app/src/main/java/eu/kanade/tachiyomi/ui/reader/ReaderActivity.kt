@@ -796,8 +796,10 @@ class ReaderActivity : BaseActivity() {
     // KUN -->
     /**
      * Hosts the current viewer (upstream 00335b2a70). The reader's grayscale and inverted colours
-     * reach the page images through [LocalPageColorFilter] or, on a WebGPU viewer, through the layer
-     * [WebGpuViewerHost] puts over it; transition, loading and error pages keep their own colours.
+     * reach the SSIV page images through [LocalPageColorFilter], and the WebGPU viewer - its pages
+     * and its own transition, progress and error pages alike - through the layer
+     * [WebGpuViewerHost] puts over its composition. The reader's own loading screen, bars and
+     * overlays are outside both, and the SSIV transitions, spinners and error views keep theirs.
      */
     @Composable
     private fun ReaderViewer() {
@@ -819,7 +821,8 @@ class ReaderActivity : BaseActivity() {
                     .windowInsetsPadding(insets)
                 // A WebGPU viewer's pages are the `webgpuviewer` surface, which reads no
                 // [LocalPageColorFilter], so below API 34 the reader's colours are a hardware layer
-                // over the viewer instead (`WebGpuViewerHost`). From API 34 on, the surface is a
+                // over the viewer instead (`WebGpuViewerHost`), which takes that viewer's own
+                // transition, progress and error pages with it. From API 34 on, the surface is a
                 // `SurfaceView` in a layer of its own, which no ancestor can filter - the mechanism
                 // this replaced could not filter it either.
                 val currentViewer = viewer
@@ -834,12 +837,17 @@ class ReaderActivity : BaseActivity() {
 
     /**
      * Hosts [viewer] in a View of the reader's own, so the grayscale and inverted colours are a
-     * hardware layer over its pages, as master's `viewerContainer.setLayerType` was.
+     * hardware layer over it, as master's `viewerContainer.setLayerType` was.
      *
      * On API 26-33 the `webgpuviewer` surface is an `AndroidEmbeddedExternalSurface`, a TextureView
-     * drawn into the hierarchy, so a layer paint on its host filters it. Only the WebGPU case takes
-     * this layer: the SSIV page views keep [LocalPageColorFilter], and the transition, loading and
-     * error pages keep their own colours.
+     * drawn into the hierarchy, so a layer paint on its host filters it.
+     *
+     * The layer is the WebGPU-only fallback, and what it covers is that viewer's whole composition:
+     * its own chapter transition, progress and error pages are pages it draws, so they are filtered
+     * along with the surface, exactly as master's container layer filtered them. The reader's own
+     * loading screen, app bars and overlays are siblings of this view in the reader root, not inside
+     * it, so they stay unfiltered. The SSIV viewers are not hosted here at all: their pages keep
+     * [LocalPageColorFilter], so their transitions, spinners and error views keep their own colours.
      */
     @Composable
     private fun WebGpuViewerHost(
@@ -1626,8 +1634,8 @@ class ReaderActivity : BaseActivity() {
 
 // KUN -->
 /**
- * The reader's grayscale and inverted colours, for page images only: transition, loading and error
- * pages keep theirs. Null when both are off (upstream 00335b2a70).
+ * The reader's grayscale and inverted colours, for page images only: the SSIV transitions, spinners
+ * and error views keep theirs. Null when both are off (upstream 00335b2a70).
  */
 private fun viewerColorFilter(grayscale: Boolean, invertedColors: Boolean): ColorFilter? {
     if (!grayscale && !invertedColors) return null

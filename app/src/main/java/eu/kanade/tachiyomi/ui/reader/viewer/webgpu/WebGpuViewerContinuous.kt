@@ -25,9 +25,12 @@ class WebGpuViewerContinuous(activity: ReaderActivity, val useGap: Boolean = fal
     private val state get() = viewerState as ImageViewerContinuousState
 
     @Composable
-    override fun Content(modifier: Modifier) {
-        ImageViewerContinuous(modifier = modifier, state = state)
+    // KNS --> the base class's Content draws the fork's double tap gate and publishes the box the
+    // viewer is drawn in (Komi-kun #81's viewport fix); the gate holds this strip's surface.
+    override fun Surface() {
+        ImageViewerContinuous(state = state)
     }
+    // KNS <--
 
     init {
         state.backgroundColor = readerBackgroundColor()
