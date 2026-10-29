@@ -28,7 +28,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -138,14 +137,21 @@ internal fun WebGpuViewerSettings(viewModel: ReaderSettingsViewModel) {
 
     HeadingItem(MR.strings.webgpu_viewer)
 
-    // As the viewer decides it, with the activity's window in place of the viewer's size. Not the sheet's own window.
-    val configuration = LocalConfiguration.current
+    // KUN -->
+    // The WIDE rule is the viewer's, answered for the box the viewer is drawn in and published by
+    // it - not `LocalConfiguration`: the window can be landscape over a portrait viewer on a
+    // foldable, in a split-screen pane, or behind the cutout and system bar insets, which would
+    // offer the dual-page controls to a single-page viewer, or hide them from a dual-page one.
+    // Null before any viewer has been drawn (the sheet can be opened first), which reads as not
+    // wide - the answer the viewer's own WIDE test gives a viewport with no size yet.
+    val viewerWideViewport by viewModel.viewerWideViewport.collectAsState()
     val isDual = resolved.type is ReadingMode.ViewerType.Pager &&
         when (dualPageView) {
             ReaderPreferences.DualPageView.NEVER -> false
             ReaderPreferences.DualPageView.ALWAYS -> true
-            ReaderPreferences.DualPageView.WIDE -> configuration.screenWidthDp > configuration.screenHeightDp
+            ReaderPreferences.DualPageView.WIDE -> viewerWideViewport == true
         }
+    // KUN <--
 
     val navigationModePager by viewModel.preferences.navigationModePager.collectAsState()
     val pagerNavInverted by viewModel.preferences.pagerNavInverted.collectAsState()

@@ -84,6 +84,27 @@ class ReaderSettingsViewModel(
     val isWebGpuViewer: StateFlow<Boolean> = viewerMode
         .map { it?.isWebGpuViewer ?: basePreferences.highQualityRenderer.get() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, basePreferences.highQualityRenderer.get())
+
+    private val wideViewport = MutableStateFlow<Boolean?>(null)
+
+    /**
+     * Whether the built viewer's own box is wider than it is tall - the
+     * [ReaderPreferences.DualPageView.WIDE] rule's answer for the WebGPU pager, so the settings
+     * sheet offers the dual-page controls exactly while the viewer is in dual page mode.
+     *
+     * The viewer's own box, not the window: on a foldable, in a split-screen pane, or behind the
+     * cutout and system bar insets the viewer is padded by, the window can be landscape while the
+     * viewer is portrait, or the reverse.
+     *
+     * Null until a viewer has been drawn and published its box, which is where the sheet can be
+     * opened before; a null reads as not wide, as the viewer's own WIDE test also answers a
+     * viewport with no size yet.
+     */
+    val viewerWideViewport: StateFlow<Boolean?> = wideViewport
+
+    fun setViewerWideViewport(wide: Boolean) {
+        wideViewport.value = wide
+    }
     // KUN <--
 
     val general = settings(
@@ -391,6 +412,8 @@ class ReaderSettingsViewModel(
         isWebGpuViewer: Boolean,
     ) {
         viewerMode.value = ViewerMode(readingMode, isWebtoonViewer, isWebGpuViewer)
+        // Unknown again, until the viewer just built is drawn and publishes its own box.
+        wideViewport.value = null
     }
     // KUN <--
 
