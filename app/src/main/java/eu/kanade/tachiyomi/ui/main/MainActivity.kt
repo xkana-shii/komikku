@@ -88,6 +88,8 @@ import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
+import eu.kanade.tachiyomi.ui.base.delegate.applyCompatSplashTheme
+import eu.kanade.tachiyomi.ui.base.delegate.keepSplashThemePersisted
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.feed.SourceFeedScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
@@ -237,10 +239,19 @@ class MainActivity : BaseActivity() {
         graph.inject(this)
         val isLaunch = savedInstanceState == null
 
+        // KNS -->
+        // Before Android 12 the compat splash is drawn from the theme set before installing it
+        if (isLaunch) applyCompatSplashTheme()
+        // KNS <--
         // Prevent splash screen showing up on configuration changes
         val splashScreen = if (isLaunch) installSplashScreen() else null
 
         super.onCreate(savedInstanceState)
+
+        // KNS -->
+        // From Android 12 the system chooses the splash style of the next cold start
+        keepSplashThemePersisted()
+        // KNS <--
 
         lifecycleScope.launch {
             // KUN -->

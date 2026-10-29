@@ -137,7 +137,8 @@ private fun getThemeColorScheme(
     )
 }
 
-private val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
+// KNS: internal so SplashThemesTest can check the startup splash colours against these palettes
+internal val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
     AppTheme.DEFAULT to TachiyomiColorScheme,
     AppTheme.CATPPUCCIN to CatppuccinColorScheme,
     AppTheme.TOKYONIGHT to TokyoNightColorScheme,

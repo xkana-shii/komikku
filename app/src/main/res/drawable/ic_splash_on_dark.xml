@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KNS: same icon as ic_splash, but fixed to the background it is used on instead of the device mode -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:drawable="@drawable/ic_komikku"
+        android:gravity="center" />
+</layer-list>

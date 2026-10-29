@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- KNS -->
+    <!-- Generated per-theme startup splash colours; see SplashThemes.kt. The _light and _dark colours are fixed so
+         the splash can follow the app's selected mode; _auto follows the device mode; _auto_amoled is black in dark. -->
+    <color name="splash_tachiyomi_auto">#1B1B1F</color>
+    <color name="splash_tachiyomi_auto_amoled">#000000</color>
+    <color name="splash_catppuccin_auto">#181825</color>
+    <color name="splash_catppuccin_auto_amoled">#000000</color>
+    <color name="splash_tokyonight_auto">#222436</color>
+    <color name="splash_tokyonight_auto_amoled">#000000</color>
+    <color name="splash_greenapple_auto">#0F1510</color>
+    <color name="splash_greenapple_auto_amoled">#000000</color>
+    <color name="splash_lavender_auto">#111129</color>
+    <color name="splash_lavender_auto_amoled">#000000</color>
+    <color name="splash_midnightdusk_auto">#16151D</color>
+    <color name="splash_midnightdusk_auto_amoled">#000000</color>
+    <color name="splash_monochrome_auto">#000000</color>
+    <color name="splash_monochrome_auto_amoled">#000000</color>
+    <color name="splash_nord_auto">#2E3440</color>
+    <color name="splash_nord_auto_amoled">#000000</color>
+    <color name="splash_strawberry_auto">#201A1A</color>
+    <color name="splash_strawberry_auto_amoled">#000000</color>
+    <color name="splash_tako_auto">#21212E</color>
+    <color name="splash_tako_auto_amoled">#000000</color>
+    <color name="splash_tealturquoise_auto">#202125</color>
+    <color name="splash_tealturquoise_auto_amoled">#000000</color>
+    <color name="splash_tidalwave_auto">#001C3B</color>
+    <color name="splash_tidalwave_auto_amoled">#000000</color>
+    <color name="splash_yinyang_auto">#1E1E1E</color>
+    <color name="splash_yinyang_auto_amoled">#000000</color>
+    <color name="splash_yotsuba_auto">#211A18</color>
+    <color name="splash_yotsuba_auto_amoled">#000000</color>
+    <color name="splash_cloudflare_auto">#1B1B22</color>
+    <color name="splash_cloudflare_auto_amoled">#000000</color>
+    <color name="splash_cottoncandy_auto">#1A1111</color>
+    <color name="splash_cottoncandy_auto_amoled">#000000</color>
+    <color name="splash_doom_auto">#1B1B1B</color>
+    <color name="splash_doom_auto_amoled">#000000</color>
+    <color name="splash_matrix_auto">#111111</color>
+    <color name="splash_matrix_auto_amoled">#000000</color>
+    <color name="splash_mocha_auto">#19120C</color>
+    <color name="splash_mocha_auto_amoled">#000000</color>
+    <color name="splash_sapphire_auto">#212121</color>
+    <color name="splash_sapphire_auto_amoled">#000000</color>
+    <color name="splash_monet_auto">#1B1B1F</color>
+    <color name="splash_monet_auto_amoled">#000000</color>
+    <color name="splash_custom_auto">#1A0A0A</color>
+    <color name="splash_custom_auto_amoled">#000000</color>
+</resources>

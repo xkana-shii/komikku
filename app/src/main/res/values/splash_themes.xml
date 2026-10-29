@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- KNS -->
+    <!-- Generated per-theme startup splash colours; see SplashThemes.kt. The _light and _dark colours are fixed so
+         the splash can follow the app's selected mode; _auto follows the device mode; _auto_amoled is black in dark. -->
+    <color name="splash_tachiyomi_light">#FEFBFF</color>
+    <color name="splash_tachiyomi_dark">#1B1B1F</color>
+    <color name="splash_tachiyomi_auto">#FEFBFF</color>
+    <color name="splash_tachiyomi_auto_amoled">#FEFBFF</color>
+    <color name="splash_catppuccin_light">#E6E9EF</color>
+    <color name="splash_catppuccin_dark">#181825</color>
+    <color name="splash_catppuccin_auto">#E6E9EF</color>
+    <color name="splash_catppuccin_auto_amoled">#E6E9EF</color>
+    <color name="splash_tokyonight_light">#E1E2E7</color>
+    <color name="splash_tokyonight_dark">#222436</color>
+    <color name="splash_tokyonight_auto">#E1E2E7</color>
+    <color name="splash_tokyonight_auto_amoled">#E1E2E7</color>
+    <color name="splash_greenapple_light">#F6FBF2</color>
+    <color name="splash_greenapple_dark">#0F1510</color>
+    <color name="splash_greenapple_auto">#F6FBF2</color>
+    <color name="splash_greenapple_auto_amoled">#F6FBF2</color>
+    <color name="splash_lavender_light">#EDE2FF</color>
+    <color name="splash_lavender_dark">#111129</color>
+    <color name="splash_lavender_auto">#EDE2FF</color>
+    <color name="splash_lavender_auto_amoled">#EDE2FF</color>
+    <color name="splash_midnightdusk_light">#FFFBFF</color>
+    <color name="splash_midnightdusk_dark">#16151D</color>
+    <color name="splash_midnightdusk_auto">#FFFBFF</color>
+    <color name="splash_midnightdusk_auto_amoled">#FFFBFF</color>
+    <color name="splash_monochrome_light">#FFFFFF</color>
+    <color name="splash_monochrome_dark">#000000</color>
+    <color name="splash_monochrome_auto">#FFFFFF</color>
+    <color name="splash_monochrome_auto_amoled">#FFFFFF</color>
+    <color name="splash_nord_light">#ECEFF4</color>
+    <color name="splash_nord_dark">#2E3440</color>
+    <color name="splash_nord_auto">#ECEFF4</color>
+    <color name="splash_nord_auto_amoled">#ECEFF4</color>
+    <color name="splash_strawberry_light">#FAFAFA</color>
+    <color name="splash_strawberry_dark">#201A1A</color>
+    <color name="splash_strawberry_auto">#FAFAFA</color>
+    <color name="splash_strawberry_auto_amoled">#FAFAFA</color>
+    <color name="splash_tako_light">#F7F5FF</color>
+    <color name="splash_tako_dark">#21212E</color>
+    <color name="splash_tako_auto">#F7F5FF</color>
+    <color name="splash_tako_auto_amoled">#F7F5FF</color>
+    <color name="splash_tealturquoise_light">#FAFAFA</color>
+    <color name="splash_tealturquoise_dark">#202125</color>
+    <color name="splash_tealturquoise_auto">#FAFAFA</color>
+    <color name="splash_tealturquoise_auto_amoled">#FAFAFA</color>
+    <color name="splash_tidalwave_light">#FDFBFF</color>
+    <color name="splash_tidalwave_dark">#001C3B</color>
+    <color name="splash_tidalwave_auto">#FDFBFF</color>
+    <color name="splash_tidalwave_auto_amoled">#FDFBFF</color>
+    <color name="splash_yinyang_light">#FDFDFD</color>
+    <color name="splash_yinyang_dark">#1E1E1E</color>
+    <color name="splash_yinyang_auto">#FDFDFD</color>
+    <color name="splash_yinyang_auto_amoled">#FDFDFD</color>
+    <color name="splash_yotsuba_light">#FCFCFC</color>
+    <color name="splash_yotsuba_dark">#211A18</color>
+    <color name="splash_yotsuba_auto">#FCFCFC</color>
+    <color name="splash_yotsuba_auto_amoled">#FCFCFC</color>
+    <color name="splash_cloudflare_light">#EFF2F5</color>
+    <color name="splash_cloudflare_dark">#1B1B22</color>
+    <color name="splash_cloudflare_auto">#EFF2F5</color>
+    <color name="splash_cloudflare_auto_amoled">#EFF2F5</color>
+    <color name="splash_cottoncandy_light">#FFF8F7</color>
+    <color name="splash_cottoncandy_dark">#1A1111</color>
+    <color name="splash_cottoncandy_auto">#FFF8F7</color>
+    <color name="splash_cottoncandy_auto_amoled">#FFF8F7</color>
+    <color name="splash_doom_light">#212121</color>
+    <color name="splash_doom_dark">#1B1B1B</color>
+    <color name="splash_doom_auto">#212121</color>
+    <color name="splash_doom_auto_amoled">#212121</color>
+    <color name="splash_matrix_light">#000000</color>
+    <color name="splash_matrix_dark">#111111</color>
+    <color name="splash_matrix_auto">#000000</color>
+    <color name="splash_matrix_auto_amoled">#000000</color>
+    <color name="splash_mocha_light">#FFF8F5</color>
+    <color name="splash_mocha_dark">#19120C</color>
+    <color name="splash_mocha_auto">#FFF8F5</color>
+    <color name="splash_mocha_auto_amoled">#FFF8F5</color>
+    <color name="splash_sapphire_light">#FFFFFF</color>
+    <color name="splash_sapphire_dark">#212121</color>
+    <color name="splash_sapphire_auto">#FFFFFF</color>
+    <color name="splash_sapphire_auto_amoled">#FFFFFF</color>
+    <color name="splash_monet_light">#FEFBFF</color>
+    <color name="splash_monet_dark">#1B1B1F</color>
+    <color name="splash_monet_auto">#FEFBFF</color>
+    <color name="splash_monet_auto_amoled">#FEFBFF</color>
+    <color name="splash_custom_light">#FBEDED</color>
+    <color name="splash_custom_dark">#1A0A0A</color>
+    <color name="splash_custom_auto">#FBEDED</color>
+    <color name="splash_custom_auto_amoled">#FBEDED</color>
+
+    <!-- Pure black for AMOLED when the app is forced to dark mode. -->
+    <color name="splash_amoled">#000000</color>
+
+    <style name="Theme.Tachiyomi.SplashScreen.Default.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tachiyomi_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Default.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tachiyomi_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Default.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tachiyomi_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Default.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tachiyomi_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Catppuccin.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_catppuccin_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Catppuccin.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_catppuccin_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Catppuccin.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_catppuccin_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Catppuccin.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_catppuccin_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TokyoNight.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tokyonight_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TokyoNight.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tokyonight_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TokyoNight.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tokyonight_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TokyoNight.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tokyonight_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.GreenApple.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_greenapple_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.GreenApple.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_greenapple_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.GreenApple.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_greenapple_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.GreenApple.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_greenapple_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Lavender.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_lavender_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Lavender.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_lavender_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Lavender.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_lavender_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Lavender.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_lavender_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.MidnightDusk.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_midnightdusk_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.MidnightDusk.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_midnightdusk_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.MidnightDusk.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_midnightdusk_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.MidnightDusk.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_midnightdusk_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monochrome.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monochrome_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monochrome.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monochrome_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monochrome.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monochrome_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monochrome.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monochrome_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Nord.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_nord_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Nord.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_nord_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Nord.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_nord_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Nord.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_nord_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.StrawberryDaiquiri.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_strawberry_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.StrawberryDaiquiri.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_strawberry_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.StrawberryDaiquiri.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_strawberry_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.StrawberryDaiquiri.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_strawberry_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Tako.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tako_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Tako.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tako_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Tako.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tako_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Tako.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tako_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TealTurquoise.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tealturquoise_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TealTurquoise.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tealturquoise_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TealTurquoise.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tealturquoise_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TealTurquoise.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tealturquoise_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TidalWave.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tidalwave_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TidalWave.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tidalwave_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TidalWave.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tidalwave_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.TidalWave.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_tidalwave_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.YinYang.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yinyang_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.YinYang.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yinyang_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.YinYang.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yinyang_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.YinYang.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yinyang_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Yotsuba.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yotsuba_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Yotsuba.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yotsuba_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Yotsuba.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yotsuba_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Yotsuba.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_yotsuba_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Cloudflare.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cloudflare_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Cloudflare.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cloudflare_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Cloudflare.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cloudflare_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Cloudflare.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cloudflare_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.CottonCandy.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cottoncandy_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.CottonCandy.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cottoncandy_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.CottonCandy.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cottoncandy_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.CottonCandy.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_cottoncandy_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Doom.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_doom_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Doom.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_doom_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Doom.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_doom_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Doom.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_doom_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Matrix.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_matrix_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Matrix.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_matrix_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Matrix.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_matrix_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Matrix.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_matrix_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Mocha.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_mocha_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Mocha.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_mocha_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Mocha.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_mocha_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Mocha.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_mocha_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Sapphire.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_sapphire_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Sapphire.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_sapphire_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Sapphire.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_sapphire_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Sapphire.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_sapphire_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monet.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monet_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monet.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monet_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monet.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monet_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Monet.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_monet_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Custom.Auto" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_custom_auto</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Custom.Light" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_custom_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_light</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Custom.Dark" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_custom_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+    <style name="Theme.Tachiyomi.SplashScreen.Custom.AutoAmoled" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_custom_auto_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+
+    <style name="Theme.Tachiyomi.SplashScreen.Black" parent="Theme.Tachiyomi.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_amoled</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_on_dark</item>
+    </style>
+</resources>

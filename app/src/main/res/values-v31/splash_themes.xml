@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- KNS -->
+    <!-- Generated per-theme startup splash colours; see SplashThemes.kt. The _light and _dark colours are fixed so
+         the splash can follow the app's selected mode; _auto follows the device mode; _auto_amoled is black in dark. -->
+    <color name="splash_monet_light">@color/m3_sys_color_dynamic_light_background</color>
+    <color name="splash_monet_dark">@color/m3_sys_color_dynamic_dark_background</color>
+    <color name="splash_monet_auto">@color/m3_sys_color_dynamic_light_background</color>
+    <color name="splash_monet_auto_amoled">@color/m3_sys_color_dynamic_light_background</color>
+</resources>
