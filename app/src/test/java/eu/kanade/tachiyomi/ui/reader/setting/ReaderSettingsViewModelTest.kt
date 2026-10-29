@@ -4,7 +4,12 @@ package eu.kanade.tachiyomi.ui.reader.setting
 import android.graphics.Color
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.ui.reader.ReaderViewModel
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.NavigationMode
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences.TappingInvertMode
+import eu.kanade.tachiyomi.ui.reader.viewer.NavigationSettings
 import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation
+import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.NavigationRegion
+import eu.kanade.tachiyomi.ui.reader.viewer.ViewerNavigation.Region
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.DisabledNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.EdgeNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.KindlishNavigation
@@ -37,6 +42,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -163,31 +170,146 @@ class ReaderSettingsViewModelTest {
         assertEquals(after, emitted.last())
     }
 
+    /**
+     * What this test proves, and what it does not: `navigation` is a `StateFlow`, which conflates equal values, so
+     * a navigator rebuilt downstream for an equal one never reaches a collector either way - the
+     * `.distinctUntilChanged()` in `ReaderSettingsViewModel` (`ReaderSettingsViewModel.kt:384`) is therefore not
+     * observable from the flow's public surface, and deleting it leaves this test green (checked). What it does
+     * assert is the behaviour the overlay and the viewers depend on: an unrelated preference rebuilds the paged
+     * settings, and the published navigator is still the instance that was there - an unrelated preference
+     * cannot leak into the zones, and no new navigator is published for one.
+     */
     @Test
-    fun `an unrelated paged preference does not re-emit the navigation`() = runTest(dispatcher) {
-        preferences.navigationModePager.set(ReaderPreferences.NavigationMode.RIGHT_AND_LEFT.value)
-        preferences.pagerNavInverted.set(ReaderPreferences.TappingInvertMode.VERTICAL)
+    fun `an unrelated paged preference rebuilds the paged settings without replacing the navigator`() =
+        runTest(dispatcher) {
+            preferences.navigationModePager.set(ReaderPreferences.NavigationMode.RIGHT_AND_LEFT.value)
+            preferences.pagerNavInverted.set(ReaderPreferences.TappingInvertMode.VERTICAL)
+            val viewModel = createViewModel()
+            viewModel.setViewerReadingMode(ReadingMode.RIGHT_TO_LEFT, isWebtoonViewer = false, isWebGpuViewer = false)
+
+            // The navigator the overlay draws and the viewers tap against.
+            val before = viewModel.navigation.value
+            assertInstanceOf(RightAndLeftNavigation::class.java, before)
+
+            assertFalse(viewModel.paged.value.page.cropBorders)
+
+            preferences.cropBorders.set(true)
+            advanceUntilIdle()
+
+            // The pages were rebuilt - the preference did reach the paged settings - but the navigator the
+            // viewer and the overlay hold is the one they had: an unrelated preference cannot leak into the
+            // zones.
+            assertTrue(viewModel.paged.value.page.cropBorders)
+            val after = viewModel.navigation.value
+            assertSame(before, after)
+            assertEquals(
+                RightAndLeftNavigation(ReaderPreferences.TappingInvertMode.VERTICAL, smallerTapZone = false),
+                after,
+            )
+        }
+
+    @Test
+    fun `a viewer publishes the wide viewport it is drawn in`() = runTest(dispatcher) {
         val viewModel = createViewModel()
-        viewModel.setViewerReadingMode(ReadingMode.RIGHT_TO_LEFT, isWebtoonViewer = false, isWebGpuViewer = false)
+        // Nothing has drawn yet, so the sheet reads not-wide.
+        assertNull(viewModel.viewerWideViewport.value)
 
-        val emitted = mutableListOf<ViewerNavigation?>()
-        backgroundScope.launch { viewModel.navigation.toList(emitted) }
+        val published = mutableListOf<Boolean?>()
+        backgroundScope.launch { viewModel.viewerWideViewport.toList(published) }
         advanceUntilIdle()
+        assertEquals(listOf(null), published)
 
-        assertFalse(viewModel.paged.value.page.cropBorders)
-
-        preferences.cropBorders.set(true)
+        // Both answers reach the sheet, and each is the one the viewer published.
+        viewModel.setViewerWideViewport(true)
         advanceUntilIdle()
-
-        // The pages were rebuilt - the preference did reach the paged settings - but the zones did not
-        // change, so the navigator the viewer holds is left alone.
-        assertTrue(viewModel.paged.value.page.cropBorders)
-        assertEquals(1, emitted.size)
-        assertEquals(
-            RightAndLeftNavigation(ReaderPreferences.TappingInvertMode.VERTICAL, smallerTapZone = false),
-            emitted.single(),
-        )
+        assertEquals(true, viewModel.viewerWideViewport.value)
+        viewModel.setViewerWideViewport(false)
+        advanceUntilIdle()
+        assertEquals(false, viewModel.viewerWideViewport.value)
+        assertEquals(listOf(null, true, false), published)
     }
+
+    @Test
+    fun `a viewer rebuild clears the wide viewport before the new one publishes`() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setViewerReadingMode(ReadingMode.RIGHT_TO_LEFT, isWebtoonViewer = false, isWebGpuViewer = true)
+        viewModel.setViewerWideViewport(true)
+
+        val published = mutableListOf<Boolean?>()
+        backgroundScope.launch { viewModel.viewerWideViewport.toList(published) }
+        advanceUntilIdle()
+        assertEquals(listOf(true), published)
+
+        // The old viewer's box is forgotten as the new one is made: the sheet must not read a landscape
+        // answer for a viewer that has not drawn yet.
+        viewModel.setViewerReadingMode(ReadingMode.VERTICAL, isWebtoonViewer = false, isWebGpuViewer = true)
+        advanceUntilIdle()
+        assertNull(viewModel.viewerWideViewport.value)
+        assertEquals(listOf(true, null), published)
+
+        // And the new viewer's own answer is published on top of the reset.
+        viewModel.setViewerWideViewport(false)
+        advanceUntilIdle()
+        assertEquals(false, viewModel.viewerWideViewport.value)
+        assertEquals(listOf(true, null, false), published)
+    }
+
+    @Test
+    fun `the tap-zone fractions follow the smaller tap zone`() {
+        // R31: every navigator places its zones with these two fractions, 33% of the box normally and 25% with
+        // the smaller tap zone on, and the second is the first's complement.
+        assertEquals(0.33f to (1f - 0.33f), fractionsOf(smallerTapZone = false))
+        assertEquals(0.25f to (1f - 0.25f), fractionsOf(smallerTapZone = true))
+    }
+
+    @Test
+    fun `every navigation scheme builds its zones under both sizes and every inversion`() {
+        // The six schemes the settings plane dispatches, built the way it builds them (`DEFAULT` resolves
+        // through the viewer's own direction, horizontal here). What a zone exposes in these unit tests is its
+        // type and its place in the list - the order the overlay draws them in and `getAction` searches in -
+        // so that is what is pinned, per scheme, size and inversion.
+        val expected = mapOf(
+            NavigationMode.DEFAULT to listOf(NavigationRegion.LEFT, NavigationRegion.RIGHT),
+            NavigationMode.L_SHAPED to
+                listOf(NavigationRegion.PREV, NavigationRegion.PREV, NavigationRegion.NEXT, NavigationRegion.NEXT),
+            NavigationMode.KINDLISH to listOf(NavigationRegion.NEXT, NavigationRegion.PREV),
+            NavigationMode.EDGE to
+                listOf(NavigationRegion.NEXT, NavigationRegion.PREV, NavigationRegion.NEXT),
+            NavigationMode.RIGHT_AND_LEFT to listOf(NavigationRegion.LEFT, NavigationRegion.RIGHT),
+            NavigationMode.DISABLED to emptyList(),
+        )
+
+        for (smallerTapZone in listOf(false, true)) {
+            for ((mode, layout) in expected) {
+                for (invert in TappingInvertMode.entries) {
+                    val navigation = NavigationSettings(mode, invert, smallerTapZone)
+                        .navigator(::RightAndLeftNavigation)
+                    assertEquals(
+                        layout,
+                        navigation.getRegions().map { it.type },
+                        "$mode at smallerTapZone=$smallerTapZone with $invert",
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * The fractions [ViewerNavigation] places a zone with, `regionSize1` and `1 - regionSize1` (R31).
+     *
+     * The rectangles themselves are not readable here. The unit test classpath is AGP's mockable `android.jar`,
+     * which empties constructors: `RectF(0f, 0f, 0.33f, 1f)` constructs without throwing and then reads back as
+     * `0f, 0f, 0f, 0f` (the first version of the tests above asserted the real edges and failed with
+     * `[(LEFT, [0.0, 0.0, 0.0, 0.0]), (RIGHT, [0.0, 0.0, 0.0, 0.0])]`), and a `mockkConstructor` over `RectF`
+     * records no calls at all. So the coordinates each navigator passes in, and the mirroring `Region.invert`
+     * applies, stay on the manual pass - the values the navigators fill those rects with do not.
+     */
+    private fun fractionsOf(smallerTapZone: Boolean): Pair<Float, Float> =
+        object : ViewerNavigation(TappingInvertMode.NONE, smallerTapZone) {
+            override val regionList: List<Region> = emptyList()
+
+            fun fractions() = regionSize1 to regionSize2
+        }.fractions()
 
     @Test
     fun `the webgpu flag follows the viewer, the preference only until one is made`() = runTest(dispatcher) {
