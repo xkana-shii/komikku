@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -50,12 +51,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.asAndroidColorFilter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.keepScreenOn
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
@@ -114,7 +118,6 @@ import eu.kanade.tachiyomi.ui.reader.viewer.pager.R2LPagerViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
-import eu.kanade.tachiyomi.util.system.isNightMode
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.readerBackgroundColor
 import eu.kanade.tachiyomi.util.system.toShareIntent
@@ -142,7 +145,6 @@ import tachiyomi.core.common.Constants
 import tachiyomi.core.common.i18n.pluralStringResource
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
-import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.system.UrlUtils
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.BookmarkColor
@@ -794,8 +796,8 @@ class ReaderActivity : BaseActivity() {
     // KUN -->
     /**
      * Hosts the current viewer (upstream 00335b2a70). The reader's grayscale and inverted colours
-     * reach the page images through [LocalPageColorFilter]; transition, loading and error pages keep
-     * their own colours.
+     * reach the page images through [LocalPageColorFilter] or, on a WebGPU viewer, through the layer
+     * [WebGpuViewerHost] puts over it; transition, loading and error pages keep their own colours.
      */
     @Composable
     private fun ReaderViewer() {
@@ -812,13 +814,60 @@ class ReaderActivity : BaseActivity() {
 
         CompositionLocalProvider(LocalPageColorFilter provides colorFilter) {
             key(viewer) {
-                viewer?.Content(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .windowInsetsPadding(insets),
-                )
+                val modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(insets)
+                // A WebGPU viewer's pages are the `webgpuviewer` surface, which reads no
+                // [LocalPageColorFilter], so below API 34 the reader's colours are a hardware layer
+                // over the viewer instead (`WebGpuViewerHost`). From API 34 on, the surface is a
+                // `SurfaceView` in a layer of its own, which no ancestor can filter - the mechanism
+                // this replaced could not filter it either.
+                val currentViewer = viewer
+                if (currentViewer is WebGpuViewer && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    WebGpuViewerHost(currentViewer, colorFilter, modifier)
+                } else {
+                    currentViewer?.Content(modifier)
+                }
             }
         }
+    }
+
+    /**
+     * Hosts [viewer] in a View of the reader's own, so the grayscale and inverted colours are a
+     * hardware layer over its pages, as master's `viewerContainer.setLayerType` was.
+     *
+     * On API 26-33 the `webgpuviewer` surface is an `AndroidEmbeddedExternalSurface`, a TextureView
+     * drawn into the hierarchy, so a layer paint on its host filters it. Only the WebGPU case takes
+     * this layer: the SSIV page views keep [LocalPageColorFilter], and the transition, loading and
+     * error pages keep their own colours.
+     */
+    @Composable
+    private fun WebGpuViewerHost(
+        viewer: WebGpuViewer,
+        pageColorFilter: ColorFilter?,
+        modifier: Modifier,
+    ) {
+        val paint = remember(pageColorFilter) {
+            pageColorFilter?.asAndroidColorFilter()?.let { Paint().apply { colorFilter = it } }
+        }
+        AndroidView(
+            modifier = modifier,
+            factory = { context ->
+                ComposeView(context).apply {
+                    setComposeContent { viewer.Content(Modifier.fillMaxSize()) }
+                }
+            },
+            update = { view ->
+                view.setLayerType(
+                    if (paint == null) View.LAYER_TYPE_NONE else View.LAYER_TYPE_HARDWARE,
+                    paint,
+                )
+            },
+            onRelease = { view ->
+                view.setLayerType(View.LAYER_TYPE_NONE, null)
+                view.disposeComposition()
+            },
+        )
     }
     // KUN <--
 
@@ -1200,7 +1249,15 @@ class ReaderActivity : BaseActivity() {
             showReadingModeToast(viewModel.getMangaReadingMode())
         }
 
+        // KUN -->
+        // R20: the loading chrome shows until the new viewer has chapters. `setChapters` is the only
+        // place the flag is cleared and it is driven by the chapters stream, so the chapters the
+        // state already holds are handed to the new viewer right here: a manga emission that rebuilds
+        // the viewer without re-emitting chapters would otherwise leave the reader spinning behind
+        // the loading screen for ever, with no bars and no page indicator.
         isLoadingViewer = true
+        viewModel.state.value.viewerChapters?.let(::setChapters)
+        // KUN <--
     }
 
     private fun openChapterInWebView() {
