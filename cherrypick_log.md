@@ -4,22 +4,56 @@
 <!-- Only edit the Status and Notes columns; everything else is regenerated on every run. -->
 
 Commits from main upstream **mihon** and additional **tachiyomiSY**, **komikku**, **komikun** since **2024-01-01** (authors matching `renovate` excluded), checked against `codex/komikun-foundation`.
-Last updated **2026-10-25** from mihon `mihon/main` @ `d001e6f210`, tachiyomiSY `tachiyomiSY/master` @ `e08f5c10e7`, komikku `komikku/master` @ `1656575e8f`, komikun `komikun/master` @ `45c51d699f`.
+Last updated **2026-10-28** from mihon `mihon/main` @ `e588e04359`, tachiyomiSY `tachiyomiSY/master` @ `c1eb1e3cbf`, komikku `komikku/master` @ `1656575e8f`, komikun `komikun/master` @ `85d7d1fade`.
 How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills/cherrypick-log/README.md).
 
 **Status:** `O` cherry-picked · `?` maybe, needs review (includes commits that cancel each other out, flagged by the script) · empty = not found · `X` won't pick (set by hand, or version-bump-only commits). **Upstream** `↳ name` = copy of the mihon commit right below it. **Details** = how pairing / status was found (regenerated); **Notes** = yours, kept.
 
 | Upstream | O | ? | X | empty | other | total |
 |---|--:|--:|--:|--:|--:|--:|
-| mihon | 873 | 28 | 65 | 354 | 0 | 1320 |
-| tachiyomiSY | 867 | 2 | 16 | 431 | 0 | 1316 |
+| mihon | 873 | 30 | 65 | 367 | 0 | 1335 |
+| tachiyomiSY | 867 | 2 | 16 | 457 | 0 | 1342 |
 | komikku | 10 | 0 | 0 | 0 | 0 | 10 |
-| komikun | 34 | 0 | 9 | 4 | 0 | 47 |
+| komikun | 34 | 0 | 9 | 5 | 0 | 48 |
 
 ## Commits
 
 | Status | Commit | Upstream | Date | Title | Author | Details | Notes |
 |:-:|---|---|---|---|---|---|---|
+|   | [e588e04359](https://github.com/mihonapp/mihon/commit/e588e04359fe1058206a2cbac1b01018ad787359) | mihon | 2026-10-26 | Share the reader's page chrome and page logic between viewers (#4193) | AntsyLich |  |  |
+|   | [9079ad8c9a](https://github.com/mihonapp/mihon/commit/9079ad8c9ad57a3760eb87ccf56c15eb52d17017) | mihon | 2026-10-26 | Handle reader input and state in the activity (#4192) | AntsyLich |  |  |
+|   | [00335b2a70](https://github.com/mihonapp/mihon/commit/00335b2a70c89e2498c84e72e24118af5888169d) | mihon | 2026-10-27 | Draw the reader through Compose (#4191) | AntsyLich |  |  |
+| O | [85d7d1fade](https://github.com/komi-kun/komi-kun/commit/85d7d1fade36f160502d20af00f3d7b3791a6bdd) | ↳ komikun | 2026-10-28 | chore(upstream): port Mihon/SY/Komikku 2024-2026 backlog, translations, and reader-adjacent fixes (#80) | Luca Auer | pick of mihon `27994263da`, `ced89e3ae1`, `cdc7d69c92`, `3ed83a8d32`, `bd2ada2e82`, `d58130a5fc`, `0c1be369b0`, `449c4e08e7`, `385d076d43`, `51efde975b`, `cbafe9bf3f`, `0787678c12`, `9c3519046f`, `09ee38bb7a` [marker] | Ported as its 78 commits with -x (74 picked, 4 log-only commits not applicable); see docs/komikun-pr80-integration.md |
+|   | [27994263da](https://github.com/mihonapp/mihon/commit/27994263daaa84ac5f171038b5ae2444d39cc513) | mihon | 2026-10-27 | Replace the chapter cache's DiskLruCache with a TTL disk cache | AntsyLich |  |  |
+|   | [8124d324a1](https://github.com/mihonapp/mihon/commit/8124d324a1000cde071dcfe7e4a6719193125c6e) | mihon | 2026-10-27 | Replace reader config listeners with settings view model state | AntsyLich |  |  |
+|   | [ca028cb657](https://github.com/mihonapp/mihon/commit/ca028cb657a1388b712533430619859d1eba4f60) | mihon | 2026-10-27 | Move the reader viewer out of the ViewModel | AntsyLich |  |  |
+|   | [ced89e3ae1](https://github.com/mihonapp/mihon/commit/ced89e3ae1068edeb9e64d5eb4200cbca939cef7) | mihon | 2026-10-27 | Convert extension source preferences screen to Compose | AntsyLich |  |  |
+|   | [cfeccaf08b](https://github.com/mihonapp/mihon/commit/cfeccaf08baef4b38462ed6069b68afc82207c15) | mihon | 2026-10-26 | Remove unused code, resources and strings | AntsyLich |  |  |
+|   | [007ec9a868](https://github.com/mihonapp/mihon/commit/007ec9a868bfa9a335217e16fd96a7aba03bb0f0) | mihon | 2026-10-26 | Release v0.21.3 | AntsyLich |  |  |
+|   | [b19c8abeba](https://github.com/mihonapp/mihon/commit/b19c8abeba92a5c4e047751a1e050d9d8f0ee870) | mihon | 2026-10-26 | Keep tab badges visible when the tab label is too long | AntsyLich |  |  |
+| ? | [e8977b4a66](https://github.com/mihonapp/mihon/commit/e8977b4a666093005c3691703b8a444ef444b9ca) | mihon | 2026-10-26 | Revert "Keep tab badges visible when the tab label is too long (#4178)" | AntsyLich |  | Cancels out (script): reverts `7a5632c013` [was: empty] |
+|   | [c1eb1e3cbf](https://github.com/jobobby04/TachiyomiSY/commit/c1eb1e3cbfd7d5ab0156a75642222c59c764b9c9) | tachiyomiSY | 2026-10-28 | Fix merging | Jobobby04 |  |  |
+|   | [9955747216](https://github.com/jobobby04/TachiyomiSY/commit/99557472169f156e36a185eb8112638fefb7a79a) | tachiyomiSY | 2026-10-27 | Fix migration error | Jobobby04 |  |  |
+|   | [d9346ae10b](https://github.com/jobobby04/TachiyomiSY/commit/d9346ae10bcdabaa5c09738c81a609c4b8c44e7f) | tachiyomiSY | 2026-10-27 | Translations update from Hosted Weblate (#1677) | Weblate (bot) |  |  |
+|   | [bb52a5511d](https://github.com/jobobby04/TachiyomiSY/commit/bb52a5511d69f83676f25f76bc53255ca0cd0bf4) | tachiyomiSY | 2026-10-27 | fix(sync): keep restored server chapters from looking locally modified (#1681) | KaiserBh |  |  |
+|   | [c97ffb6025](https://github.com/jobobby04/TachiyomiSY/commit/c97ffb6025b763a1f5d9a5564ddac5d2c7d50ef3) | tachiyomiSY | 2026-10-27 | fix(sync): apply synced category positions without order conflicts (#1680) | KaiserBh |  |  |
+|   | [78e6a65248](https://github.com/jobobby04/TachiyomiSY/commit/78e6a652483fcd3ccc38ea1f7a0df35e83e7da9a) | tachiyomiSY | 2026-10-27 | fix(sync): sync library removals and unread chapters with SyncYomi (#1679) | KaiserBh |  |  |
+|   | [fc5c40ea19](https://github.com/jobobby04/TachiyomiSY/commit/fc5c40ea19c4d0cc8804d95c2ea7a066802e4a8b) | tachiyomiSY | 2026-10-27 | Add ability to re-order tags around | Jobobby04 |  |  |
+|   | [ba3fea6a72](https://github.com/jobobby04/TachiyomiSY/commit/ba3fea6a724b64bfb7d1e5fb92897422f89b3bfe) | tachiyomiSY | 2026-10-27 | Add ability to collate tags for merged manga | Jobobby04 |  |  |
+|   | [166e675baf](https://github.com/jobobby04/TachiyomiSY/commit/166e675baf2b643478fdd3134a3b5f9a9ee370d1) | tachiyomiSY | 2026-10-27 | Support reordering for Keep All chapters | Jobobby04 |  |  |
+|   | [7af7a1c136](https://github.com/jobobby04/TachiyomiSY/commit/7af7a1c136ee6289fac8541bbff9e21c5051a90b) | tachiyomiSY | 2026-10-27 | Improve Merged Manga database schema | Jobobby04 |  |  |
+|   | [74dae544f0](https://github.com/jobobby04/TachiyomiSY/commit/74dae544f06069539be9b2c6f54398fbf7f42765) | tachiyomiSY | 2026-10-27 | Move EditMergedSettingsDialog logic to a ViewModel and add open manga info | Jobobby04 |  |  |
+|   | [bfd8436f8b](https://github.com/jobobby04/TachiyomiSY/commit/bfd8436f8b2aca5f996d2c03376f16f608c3785f) | tachiyomiSY | 2026-10-26 | Disable autoscroll gestures by default | jobobby04 |  |  |
+|   | [4b879d1ceb](https://github.com/jobobby04/TachiyomiSY/commit/4b879d1cebbc8c405181cf031f48934d6978ec17) | tachiyomiSY | 2026-10-26 | Bump base Mihon version code | Jobobby04 |  |  |
+|   | [df84ab89ee](https://github.com/jobobby04/TachiyomiSY/commit/df84ab89eed8e2d42aac761c8e429ab3121c9ad5) | tachiyomiSY | 2026-10-26 | Fix build | Jobobby04 |  |  |
+|   | [2e3ea2a3f5](https://github.com/jobobby04/TachiyomiSY/commit/2e3ea2a3f5c5d4cd85591c13d9712501a36b50bf) | tachiyomiSY | 2026-10-26 | Keep tab badges visible when the tab label is too long | AntsyLich |  |  |
+|   | [8ba9296b82](https://github.com/jobobby04/TachiyomiSY/commit/8ba9296b8260c3daff93c68b71afa647da92450c) | ↳ tachiyomiSY | 2026-10-26 | Keep the installed extension when replacing it fails | AntsyLich | pick of mihon `cdc7d69c92` [title+author] |  |
+|   | [cdc7d69c92](https://github.com/mihonapp/mihon/commit/cdc7d69c92fb2655980fe67cb72f7a1ebbdc9f7d) | mihon | 2026-10-26 | Keep the installed extension when replacing it fails | AntsyLich |  |  |
+|   | [551311c2b0](https://github.com/jobobby04/TachiyomiSY/commit/551311c2b0993e56c73b6a4c61bb526a71c5cd8a) | ↳ tachiyomiSY | 2026-10-26 | Decode only needed backup fields and restore entries in one pass | AntsyLich | pick of mihon `3ed83a8d32` [title+author] |  |
+|   | [3ed83a8d32](https://github.com/mihonapp/mihon/commit/3ed83a8d329a10afe0e2ef5a8f9c7bf526ff0c73) | mihon | 2026-10-26 | Decode only needed backup fields and restore entries in one pass | AntsyLich |  |  |
+|   | [6e1a017682](https://github.com/jobobby04/TachiyomiSY/commit/6e1a017682fd3588cb1fc34df2cf44a65554a061) | ↳ tachiyomiSY | 2026-10-26 | Fix Sui not being detected as a Shizuku provider | AntsyLich | pick of mihon `bd2ada2e82` [title+author] |  |
+|   | [bd2ada2e82](https://github.com/mihonapp/mihon/commit/bd2ada2e82acdbbc02d294dd91336346b7e26782) | mihon | 2026-10-26 | Fix Sui not being detected as a Shizuku provider | AntsyLich |  |  |
+| ? | [7a5632c013](https://github.com/mihonapp/mihon/commit/7a5632c013eaf9fb11f469d3746e1600c173d9a1) | mihon | 2026-10-26 | Keep tab badges visible when the tab label is too long (#4178) | Sahil |  | Cancels out (script): reverted by `e8977b4a66` [was: empty] |
 | O | [71017a54cf](https://github.com/jobobby04/TachiyomiSY/commit/71017a54cfa2cdc572a0cc76a7fa1bbd5ca36544) | tachiyomiSY | 2026-10-22 | Redesign the E-Hentai browse list (#1667) | AntsyLich |  | ported in #70 |
 | O | [0a3624d396](https://github.com/jobobby04/TachiyomiSY/commit/0a3624d396ff4863978cd01b34731219a8ff8d3d) | tachiyomiSY | 2026-10-21 | Make SY view models collect only while subscribed | AntsyLich |  | ported in #70 |
 |   | [6bc0627b2d](https://github.com/jobobby04/TachiyomiSY/commit/6bc0627b2dca812bd9d1e027cfb4d4c3878fbb2d) | ↳ tachiyomiSY | 2026-10-21 | Move the download queue list to Compose | AntsyLich | pick of mihon `d001e6f210` [marker] |  |
@@ -160,6 +194,14 @@ How to update / review: [.agents/skills/cherrypick-log/README.md](.agents/skills
 |   | [f4c80adc17](https://github.com/jobobby04/TachiyomiSY/commit/f4c80adc17ceb360767098574bda12bb6a96105d) | ↳ tachiyomiSY | 2026-10-22 | Read extension stores on the app scope | AntsyLich | pick of mihon `8066b8dfc9` [marker] |  |
 |   | [c36e97f3e4](https://github.com/jobobby04/TachiyomiSY/commit/c36e97f3e4230697dea6540890530e8805a28ee4) | ↳ tachiyomiSY | 2026-10-21 | Read extension stores once at startup | AntsyLich | pick of mihon `8066b8dfc9` [marker] |  |
 | O | [8066b8dfc9](https://github.com/mihonapp/mihon/commit/8066b8dfc95a4c66c8d574fc078f101ac332910f) | mihon | 2026-10-11 | Read extension stores once at startup | AntsyLich |  |  |
+|   | [24ac64049a](https://github.com/jobobby04/TachiyomiSY/commit/24ac64049a0ab990b890012a9b61d113ddc7a876) | tachiyomiSY | 2026-10-26 | Update EHTags | Jobobby04 |  |  |
+|   | [e073ef6d84](https://github.com/jobobby04/TachiyomiSY/commit/e073ef6d848ecc88ab1eaf0bf6e42fdfe86ee8e1) | tachiyomiSY | 2026-10-26 | Lint | Jobobby04 |  |  |
+|   | [fc4855e5ea](https://github.com/jobobby04/TachiyomiSY/commit/fc4855e5ead1dd1a33701f4dc332574e00b3f808) | tachiyomiSY | 2026-10-26 | Translations update from Hosted Weblate (#1620) | Weblate (bot) |  |  |
+|   | [c5899ab776](https://github.com/jobobby04/TachiyomiSY/commit/c5899ab7768d98fa0d00f2f7c0bfcaf69e71f412) | tachiyomiSY | 2026-10-26 | Add gesture controls for vertical autoscroll (#1647) | neura |  |  |
+|   | [13f1c31216](https://github.com/jobobby04/TachiyomiSY/commit/13f1c312169cd27d0c1818d7a2cd6cfebf0fc208) | tachiyomiSY | 2026-10-26 | Fix Mihon backup compatibility | Jobobby04 |  |  |
+|   | [dec92e29e0](https://github.com/jobobby04/TachiyomiSY/commit/dec92e29e0f7f8ddc2dd066e52da4da61c138fdc) | tachiyomiSY | 2026-10-26 | Fix feed tab excess refreshes | Jobobby04 |  |  |
+|   | [18ad09a09e](https://github.com/jobobby04/TachiyomiSY/commit/18ad09a09eb9b79ab1a60427c1b882071f0720f6) | tachiyomiSY | 2026-10-26 | Implement feed re-ordering and feed backups | Jobobby04 |  |  |
+|   | [e7dc95dba1](https://github.com/jobobby04/TachiyomiSY/commit/e7dc95dba1dccdc6a7b217053bd3e9dd5c2f5dd1) | tachiyomiSY | 2026-10-26 | Fix possible foreign key errors in migration | Jobobby04 |  |  |
 |   | [e08f5c10e7](https://github.com/jobobby04/TachiyomiSY/commit/e08f5c10e70f6bba53aee75f3e82e25199e19387) | tachiyomiSY | 2026-10-24 | Re-add edit cover in edit info dialog | Jobobby04 |  |  |
 |   | [df041f0a04](https://github.com/jobobby04/TachiyomiSY/commit/df041f0a04e4c617fda45b41b37c6c80711ce5dd) | tachiyomiSY | 2026-10-24 | Lint | Jobobby04 |  |  |
 |   | [8d7a67bbb7](https://github.com/jobobby04/TachiyomiSY/commit/8d7a67bbb7ed8852b8f88ba397b134d1ff000662) | tachiyomiSY | 2026-10-24 | Merge dedupe in database | Jobobby04 |  |  |

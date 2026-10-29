@@ -12,6 +12,9 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 ### Added
+- From Komi-kun #80: manual merging of library entries; merged-manga settings, edit info, the recommendation search sheet and extension source preferences are now Compose screens (edit info gains tag reordering, tag collation for merged entries, cover editing and a Cancel button). The fork's tracker autofill (MangaBaka/AniList/MAL/MangaUpdates tags and status, eligible trackers only) and the panorama cover are kept in the new edit sheet.
+- From Komi-kun #80: gestures for the classic long-strip autoscroll (tap to pause, swipe to change speed or start/stop), off by default. Their switches are in Settings → Reader → Automation, as this fork has no E-Hentai tools panel.
+- From Komi-kun #80: the app checks for updates every 6 hours while open, downloads an update from the update screen and offers Install for an already-downloaded APK; Sui is recognised as a Shizuku provider; a failed extension replacement keeps the installed one; the second page can be set as the cover in double-page mode; AniList requests staff edge ids.
 - Ported Komi-kun/TachiyomiSY PR #70's delegated-source and reader work: LANraragi metadata,
   NineHentai and HentaiNexus support, delegated Hitomi with previews, source feed-tab integration,
   high-quality wide-page handling, and the SY icon modules. The fork's app identity and existing
@@ -23,6 +26,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Settings → Library → Automatically refresh opened manga is back from the previous personal fork (same saved keys, off by default): opening an entry that is already set up refreshes its details and chapters once, in the background, while the stored details show; the chapters are not downloaded. With it on, "Also reset chapter flags to default" appears and, separately, resets the entry's chapter sort and filters to the defaults when it is opened.
 
 ### Fixed
+- From Komi-kun #80: SyncYomi now syncs library removals, unread chapters and lower progress, history-only changes and category deletions (tombstones); merged entries no longer count or list chapters their sort mode hides in the library and Updates; feed tabs no longer refresh repeatedly; tab badges stay visible with long labels; duplicate downloaded chapters are deleted after being marked read; merged entries cannot be migrated; cancelling a backup no longer reports it as invalid.
 - Merged chapter continuation now applies the fork's blacklist and Smart Scanlator Merge visibility
   rules before choosing the next chapter, while retaining the preferred scanlator where applicable.
 - Restores preserve authoritative chapter timestamps and bookmarked-color state, restored stub
@@ -77,6 +81,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Bookmark-color filters now use the same Bookmarked row and Edit-button tri-state editor as category filters in Library, Updates and each manga's chapter settings. Colors can be included, excluded or ignored independently; existing saved Library and per-manga selections are retained as included colors. Color filtering only refines the Bookmarked state, so disabled and Not bookmarked filters keep their prior behavior.
 
 ### Other
+- Database: migrations 61–63 (Komi-kun's 59–61): library-removal tombstones, merge-deduped views, and `merged` split into `merge` + `merged_entry` (one entry per merge and manga, the self-reference and its sort mode moved to the merge). Colored bookmarks, edited details, blacklist and scanlator settings, excluded scanlators, reading progress and history are kept, and the old-fork database converter now converts merges as well. Backups gain `mergeSettings` (field 10002); older backups restore their merges unchanged.
+- The chapter cache is a TTL disk cache (old cache directory removed once); the encrypted database uses the AndroidX SQLite driver; backups decode only the needed fields and restore entries in one pass; seven Weblate translation updates.
 - Integrated the 47 chronological commits from Komi-kun PR #70, plus its subsequent tracking-log
   refresh and restored-stub-source-name fixes, using `git cherry-pick -x` on the local integration
   branch. The three PR merge commits are retained as verified, provenance-only empty picks.

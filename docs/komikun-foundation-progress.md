@@ -349,3 +349,9 @@ failures; 1 pre-existing `@Disabled` `Tester.stripBackup`), `assembleDebug`, `as
    the old `main`).
 6. After `main` is replaced, switch `target_branch` in `.agents/skills/cherrypick-log/config.json` to
    `main` and the docs' "foundation branch" wording to `main`.
+
+## Komi-kun PR #80 (2026-10-28)
+
+Ported commit by commit on `codex/komikun-pr80-safe-port` (from `main` `e9b1006cb6`). Migrations
+61–63 are Komi-kun's 59–61 after the fork's shipped 59/60; the old-fork converter also splits
+`merged`. Ledger, conflicts and KNS adaptations: [`komikun-pr80-integration.md`](komikun-pr80-integration.md).

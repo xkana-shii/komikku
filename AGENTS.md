@@ -260,10 +260,13 @@ columns) and keep SyncYomi's `version`/`is_syncing`/`last_modified_at` columns a
 4. `./gradlew :data:generateSqlDelightInterface :data:verifyDebugDatabaseMigration` and add a migration
    test in `data/src/test/java/tachiyomi/data/` (see `MigrationTest`, `FreshKomikkuInstallMigrationTest`).
 
-The schema version is the highest migration number + 1 (currently 61; `58.sqm` recreates
+The schema version is the highest migration number + 1 (currently 64; `58.sqm` recreates
 `updatesView` with the bookmark color, `59.sqm` updates merged-entry views, and `60.sqm` moves
-edited manga details onto the row; `57.sqm` holds the KNS
-columns). The previous personal `main` used an unrelated migration lineage up to version 57; such a
+edited manga details onto the row; `57.sqm` holds the KNS columns). `61.sqm`–`63.sqm` are Komi-kun
+#80's `59`–`61` renumbered after this fork's shipped 59/60: `61` adds `library_removal` and its
+tombstone triggers, `62` recreates the merge-deduped views, `63` splits `merged` into `merge` +
+`merged_entry`. A migration that recreates a view copies it from `view/*.sq` so fresh and upgraded
+databases match; keep the fork's columns (bookmark color, edited details) in those views. The previous personal `main` used an unrelated migration lineage up to version 57; such a
 database is converted on first open by `tachiyomi.data.compat.OldForkDatabaseConverter` (hooked in
 `mihon/app/di/OldForkDatabaseGate.kt`). Any new table or column needs no converter change unless an
 old-fork column maps to it under another name or meaning (`columnSources`); keep
