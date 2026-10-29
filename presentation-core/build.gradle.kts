@@ -47,4 +47,10 @@ dependencies {
 
     implementation(androidx.paging.runtime)
     implementation(androidx.paging.compose)
+
+    // KNS -->
+    testImplementation(libs.bundles.test)
+    testImplementation(kotlinx.coroutines.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    // KNS <--
 }

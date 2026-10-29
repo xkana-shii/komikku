@@ -34,14 +34,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -115,7 +111,7 @@ fun AdaptiveSheet(
         }
         val flingBehavior = AnchoredDraggableDefaults.flingBehavior(
             state = anchoredDraggableState,
-            positionalThreshold = { _: Float -> with(density) { 56.dp.toPx() } },
+            positionalThreshold = { _: Float -> with(density) { SHEET_POSITIONAL_THRESHOLD_DP.dp.toPx() } },
             animationSpec = sheetAnimationSpec,
         )
         val internalOnDismissRequest = {
@@ -151,10 +147,20 @@ fun AdaptiveSheet(
                     .then(
                         if (enableSwipeDismiss) {
                             Modifier.nestedScroll(
-                                remember(anchoredDraggableState) {
-                                    anchoredDraggableState.preUpPostDownNestedScrollConnection {
-                                        scope.launch { anchoredDraggableState.settle(sheetAnimationSpec) }
+                                remember(anchoredDraggableState, density) {
+                                    // KNS -->
+                                    // Settle with the fling velocity and the 56 dp / 125 dp/s thresholds
+                                    anchoredDraggableState.sheetNestedScrollConnection { velocity ->
+                                        scope.launch {
+                                            anchoredDraggableState.settleSheet(
+                                                velocity = velocity,
+                                                positionalThresholdPx = with(density) { SHEET_POSITIONAL_THRESHOLD_DP.dp.toPx() },
+                                                velocityThresholdPx = with(density) { SHEET_VELOCITY_THRESHOLD_DP.dp.toPx() },
+                                                animationSpec = sheetAnimationSpec,
+                                            )
+                                        }
                                     }
+                                    // KNS <--
                                 },
                             )
                         } else {
@@ -201,59 +207,6 @@ fun AdaptiveSheet(
             }
         }
     }
-}
-
-private fun <T> AnchoredDraggableState<T>.preUpPostDownNestedScrollConnection(
-    onFling: (velocity: Float) -> Unit,
-) = object : NestedScrollConnection {
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        val delta = available.toFloat()
-        return if (delta < 0 && source == NestedScrollSource.UserInput) {
-            dispatchRawDelta(delta).toOffset()
-        } else {
-            Offset.Zero
-        }
-    }
-
-    override fun onPostScroll(
-        consumed: Offset,
-        available: Offset,
-        source: NestedScrollSource,
-    ): Offset {
-        return if (source == NestedScrollSource.UserInput) {
-            dispatchRawDelta(available.toFloat()).toOffset()
-        } else {
-            Offset.Zero
-        }
-    }
-
-    override suspend fun onPreFling(available: Velocity): Velocity {
-        val toFling = available.toFloat()
-        return if (toFling < 0 && offset > anchors.minPosition()) {
-            onFling(toFling)
-            // since we go to the anchor with tween settling, consume all for the best UX
-            available
-        } else {
-            Velocity.Zero
-        }
-    }
-
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-        onFling(available.toFloat())
-        return if (targetValue != settledValue) {
-            available
-        } else {
-            Velocity.Zero
-        }
-    }
-
-    private fun Float.toOffset(): Offset = Offset(0f, this)
-
-    @JvmName("velocityToFloat")
-    private fun Velocity.toFloat() = this.y
-
-    @JvmName("offsetToFloat")
-    private fun Offset.toFloat(): Float = this.y
 }
 
 private val sheetAnimationSpec = tween<Float>(durationMillis = 350)
