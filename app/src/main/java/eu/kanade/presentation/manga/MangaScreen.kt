@@ -162,6 +162,9 @@ fun MangaScreen(
     onTagSearch: (String) -> Unit,
 
     onFilterButtonClicked: () -> Unit,
+    // KNS -->
+    onFilterLongClicked: () -> Unit,
+    // KNS <--
     onRefresh: () -> Unit,
     onContinueReading: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
@@ -247,6 +250,9 @@ fun MangaScreen(
             onTagSearch = onTagSearch,
             onCopyTagToClipboard = onCopyTagToClipboard,
             onFilterClicked = onFilterButtonClicked,
+            // KNS -->
+            onFilterLongClicked = onFilterLongClicked,
+            // KNS <--
             onRefresh = onRefresh,
             onContinueReading = onContinueReading,
             onSearch = onSearch,
@@ -314,6 +320,9 @@ fun MangaScreen(
             onTagSearch = onTagSearch,
             onCopyTagToClipboard = onCopyTagToClipboard,
             onFilterButtonClicked = onFilterButtonClicked,
+            // KNS -->
+            onFilterLongClicked = onFilterLongClicked,
+            // KNS <--
             onRefresh = onRefresh,
             onContinueReading = onContinueReading,
             onSearch = onSearch,
@@ -387,6 +396,9 @@ private fun MangaScreenSmallImpl(
     onCopyTagToClipboard: (tag: String) -> Unit,
 
     onFilterClicked: () -> Unit,
+    // KNS -->
+    onFilterLongClicked: () -> Unit,
+    // KNS <--
     onRefresh: () -> Unit,
     onContinueReading: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
@@ -813,6 +825,9 @@ private fun MangaScreenSmallImpl(
                             chapterCount = chapters.size,
                             missingChapterCount = state.missingChapterCount,
                             onClick = onFilterClicked,
+                            // KNS -->
+                            onLongClick = onFilterLongClicked,
+                            // KNS <--
                         )
                     }
 
@@ -859,6 +874,9 @@ private fun MangaScreenLargeImpl(
     onCopyTagToClipboard: (tag: String) -> Unit,
 
     onFilterButtonClicked: () -> Unit,
+    // KNS -->
+    onFilterLongClicked: () -> Unit,
+    // KNS <--
     onRefresh: () -> Unit,
     onContinueReading: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
@@ -1255,6 +1273,9 @@ private fun MangaScreenLargeImpl(
                                     chapterCount = chapters.size,
                                     missingChapterCount = state.missingChapterCount,
                                     onClick = onFilterButtonClicked,
+                                    // KNS -->
+                                    onLongClick = onFilterLongClicked,
+                                    // KNS <--
                                 )
                             }
 

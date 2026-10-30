@@ -1,6 +1,6 @@
 package eu.kanade.presentation.manga.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import tachiyomi.i18n.MR
@@ -25,16 +27,29 @@ fun ChapterHeader(
     chapterCount: Int?,
     missingChapterCount: Int,
     onClick: () -> Unit,
+    // KNS -->
+    /** Long press resets the chapter filters, sort and display to their defaults (TachiyomiSY-with-discord-RPC). */
+    onLongClick: () -> Unit,
+    // KNS <--
     modifier: Modifier = Modifier,
 ) {
+    // KNS -->
+    val haptic = LocalHapticFeedback.current
+    // KNS <--
     Row(
         // KMK <--
         modifier = modifier
             .fillMaxWidth()
-            .clickable(
+            // KNS -->
+            .combinedClickable(
                 enabled = enabled,
                 onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
             )
+            // KNS <--
             .padding(horizontal = 16.dp, vertical = 4.dp),
         // KMK -->
         horizontalArrangement = Arrangement.SpaceBetween,
