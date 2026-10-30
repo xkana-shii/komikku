@@ -347,6 +347,9 @@ class MangaScreen(
             },
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, viewModel.source!!) } },
             onFilterButtonClicked = viewModel::showSettingsDialog,
+            // KNS -->
+            onFilterLongClicked = viewModel::resetToDefaultSettings,
+            // KNS <--
             onRefresh = viewModel::fetchAllFromSource,
             onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter()) },
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
