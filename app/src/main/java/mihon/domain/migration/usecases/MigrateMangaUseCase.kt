@@ -18,6 +18,7 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
+import tachiyomi.domain.chapter.model.BookmarkColor
 import tachiyomi.domain.chapter.model.ChapterUpdate
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.interactor.UpsertHistory
@@ -121,6 +122,15 @@ class MigrateMangaUseCase(
                                 // SY <--
                                 dateFetch = prevChapter.dateFetch
                                 bookmark = prevChapter.bookmark
+                                // KNS -->
+                                // The color belongs to the bookmark: it moves with it, and an unbookmarked chapter
+                                // resets a color the destination chapter may have had
+                                bookmarkColor = if (prevChapter.bookmark) {
+                                    prevChapter.bookmarkColor
+                                } else {
+                                    BookmarkColor.DEFAULT_ID
+                                }
+                                // KNS <--
                                 lastPageRead = prevChapter.lastPageRead
                             }
                             // KMK -->
