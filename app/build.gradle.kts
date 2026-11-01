@@ -37,8 +37,8 @@ android {
         // .github/workflows/bump.yml via .github/scripts/bump_version.sh), not Komi-kun's.
         applicationId = "app.komikku.kns"
 
-        versionCode = 190
-        versionName = "1.26.4"
+        versionCode = 191
+        versionName = "1.26.5"
         // KNS <--
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")
