@@ -135,6 +135,9 @@ class MangaBakaApi(
                         finished_reading_date = parseIsoDateAsLocalStartOfDay(userData.finishDate) ?: 0
                         last_chapter_read = userData.progressChapter ?: 0.0
                         private = userData.isPrivate
+                        // KNS --> the chapter count was never read, so it stayed whatever the track was bound with
+                        total_chapters = additionalData.chapterCount() ?: 0
+                        // KNS <--
                     }
                 } catch (e: HttpException) {
                     if (e.code == 404) {
@@ -212,6 +215,7 @@ class MangaBakaApi(
             start_date = item.published.startDate.orEmpty()
             // KNS -->
             publishing_status = item.status.orEmpty()
+            total_chapters = item.chapterCount() ?: 0
             publishing_type = item.type.orEmpty().replaceFirstChar { c ->
                 if (c.isLowerCase()) c.titlecase(Locale.getDefault()) else c.toString()
             }

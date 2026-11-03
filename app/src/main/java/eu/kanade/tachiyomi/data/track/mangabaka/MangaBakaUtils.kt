@@ -44,3 +44,12 @@ internal fun MangaBakaItem.toAutofillMetadata(description: String?) = TrackManga
     },
 )
 // KNS <--
+
+// KNS -->
+internal object MangaBakaCompletion {
+    /** A series is finished by reading to its end only when MangaBaka lists it as completed. */
+    fun isFinished(seriesCompleted: Boolean, lastChapterRead: Double, totalChapters: Long): Boolean {
+        return seriesCompleted && totalChapters > 0 && lastChapterRead >= totalChapters
+    }
+}
+// KNS <--

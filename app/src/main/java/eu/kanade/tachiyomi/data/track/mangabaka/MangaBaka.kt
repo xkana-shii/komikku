@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.track.ReadingDates
 import eu.kanade.tachiyomi.data.track.mangabaka.dto.MangaBakaOAuth
 import eu.kanade.tachiyomi.data.track.model.TrackMangaMetadata
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import tachiyomi.domain.manga.model.SequelPrequelEntry
 import tachiyomi.i18n.MR
@@ -75,12 +76,52 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
     override fun displayScore(track: DomainTrack): String = track.score.toInt().toString()
 
+    // KNS -->
+    /**
+     * Whether the chapters read reach the end of the series. Reaching MangaBaka's chapter count only ends a series
+     * that MangaBaka lists as completed: a releasing, hiatus or upcoming one just has that many chapters so far,
+     * so reading all of them (or more than the count it last had) stays Reading. The series is fetched for this,
+     * which also refreshes the stored count; a failed request counts as not finished.
+     */
+    private suspend fun hasReachedEnd(track: Track): Boolean {
+        if (track.total_chapters <= 0 || track.last_chapter_read < track.total_chapters) return false
+        val series = try {
+            api.getSeries(track.remote_id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        } ?: return false
+        series.chapterCount()?.let { track.total_chapters = it }
+        return MangaBakaCompletion.isFinished(series.isFinished(), track.last_chapter_read, track.total_chapters)
+    }
+
+    override suspend fun setRemoteLastChapterRead(track: Track, chapterNumber: Int): Track {
+        if (
+            track.last_chapter_read == 0.0 &&
+            track.last_chapter_read < chapterNumber &&
+            track.status != getRereadingStatus()
+        ) {
+            track.status = getReadingStatus()
+        }
+        track.last_chapter_read = chapterNumber.toDouble()
+        if (hasReachedEnd(track)) {
+            track.status = getCompletionStatus()
+            track.finished_reading_date = ReadingDates.finished(track.finished_reading_date, System.currentTimeMillis())
+        }
+        updateRemote(track)
+        return track
+    }
+    // KNS <--
+
     override suspend fun update(
         track: Track,
         didReadChapter: Boolean,
     ): Track {
         if (track.status != COMPLETED && didReadChapter) {
-            if (track.total_chapters > 0 && track.last_chapter_read.toLong() == track.total_chapters) {
+            // KNS --> only a series MangaBaka lists as completed is finished by its last chapter
+            if (hasReachedEnd(track)) {
+                // KNS <--
                 track.status = COMPLETED
                 // KNS --> completing (also a reread) keeps an existing finish date
                 track.finished_reading_date = ReadingDates.finished(track.finished_reading_date, System.currentTimeMillis())
@@ -107,6 +148,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
             track.copyPersonalFrom(remoteTrack, copyRemotePrivate = false)
             track.title = remoteTrack.title
             track.remote_id = remoteTrack.remote_id
+            // KNS -->
+            if (remoteTrack.total_chapters > 0) track.total_chapters = remoteTrack.total_chapters
+            // KNS <--
 
             if (track.status != COMPLETED) {
                 val isRereading = track.status == REREADING
@@ -138,6 +182,9 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
         track.copyPersonalFrom(remoteTrack)
         track.remote_id = remoteTrack.remote_id
         track.title = remoteTrack.title
+        // KNS --> keep the chapter count current: it is what the progress display and completion check use
+        if (remoteTrack.total_chapters > 0) track.total_chapters = remoteTrack.total_chapters
+        // KNS <--
         return track
     }
 
