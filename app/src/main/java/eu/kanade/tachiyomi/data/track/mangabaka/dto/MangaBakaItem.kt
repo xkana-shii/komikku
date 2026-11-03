@@ -2,6 +2,9 @@ package eu.kanade.tachiyomi.data.track.mangabaka.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 private val TITLE_PRIORITIES = listOf("en", "ja-Latn", "ja", "ko-Latn", "ko", "zh-Latn", "zh")
 
@@ -38,8 +41,23 @@ data class MangaBakaItem(
     val mergedWith: Long? = null,
     @SerialName("relationships_v2")
     val relationships: List<MangaBakaRelationship>? = null,
+    // The API sends the chapter counts as strings ("29"), and as null while unknown
+    @SerialName("total_chapters")
+    val totalChapters: JsonElement? = null,
+    @SerialName("final_chapter")
+    val finalChapter: JsonElement? = null,
     // KNS <--
 ) {
+    // KNS -->
+    /** The chapter count MangaBaka lists (its total, else the final chapter), or null when it has none. */
+    fun chapterCount(): Long? {
+        return (totalChapters.asCount() ?: finalChapter.asCount())?.takeIf { it > 0 }
+    }
+
+    /** Only a series MangaBaka lists as completed is over: releasing, hiatus and upcoming ones keep getting chapters. */
+    fun isFinished(): Boolean = status?.trim()?.lowercase() == "completed"
+    // KNS <--
+
     fun chooseBestTitle(): String {
         // based on https://mangabaka.org/pages/announcements/15-titles-v2#finding-the-title-you-want
         // extended with zh-Latn and zh
@@ -63,6 +81,10 @@ data class MangaBakaItem(
 }
 
 // KNS -->
+private fun JsonElement?.asCount(): Long? {
+    return (this as? JsonPrimitive)?.contentOrNull?.trim()?.toDoubleOrNull()?.takeIf { it.isFinite() }?.toLong()
+}
+
 @Serializable
 data class MangaBakaRelationship(
     @SerialName("to_series_id")

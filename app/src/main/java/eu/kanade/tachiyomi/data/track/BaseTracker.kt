@@ -182,7 +182,8 @@ abstract class BaseTracker(
     }
     // SY <--
 
-    private suspend fun updateRemote(track: Track): Unit = withContext(Dispatchers.IO) {
+    // KNS: protected so MangaBaka can decide completion itself in setRemoteLastChapterRead
+    protected suspend fun updateRemote(track: Track): Unit = withContext(Dispatchers.IO) {
         try {
             update(track)
             track.toDomainTrack(idRequired = false)?.let {
