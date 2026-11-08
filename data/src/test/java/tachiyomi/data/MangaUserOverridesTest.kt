@@ -107,7 +107,15 @@ class MangaUserOverridesTest {
                 driver.insertHistory()
 
                 val history = HistoryRepositoryImpl(database)
-                    .getHistory("", unfinishedManga = null, unfinishedChapter = null, nonLibraryEntries = null)
+                    .getHistory(
+                        "",
+                        unfinishedManga = null,
+                        unfinishedChapter = null,
+                        nonLibraryEntries = null,
+                        includedCategories = emptyList(),
+                        excludedCategories = emptyList(),
+                        inclusionWins = false,
+                    )
                     .first()
                     .single()
                 history.title shouldBe "Edited title"

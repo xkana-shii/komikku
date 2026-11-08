@@ -211,4 +211,9 @@
     <string name="pref_webdav_url">URL do servidor WebDAV</string>
     <string name="pref_sync_pinned_sources">Sincronizar fontes fixadas</string>
     <string name="pref_sync_pinned_sources_summary">Desativado: as fontes fixadas permanecem neste dispositivo. Ativado: elas são sincronizadas e o conjunto mesclado substitui as fontes fixadas em todos os dispositivos.</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">Toque em uma categoria uma vez para incluí-la e duas vezes para excluí-la; um terceiro toque a remove do filtro. «Redefinir filtro» esvazia as duas listas. O botão acima decide qual lista vence quando uma entrada está nas duas.</string>
+    <string name="pref_history_filter_inclusion_wins">Categorias incluídas têm prioridade</string>
+    <string name="pref_history_filter_inclusion_wins_summary">Um mangá que está em uma categoria incluída e em uma excluída é exibido em vez de ocultado. Desativado: as categorias excluídas têm prioridade.</string>
+    <string name="pref_history_filter_reset">Redefinir filtro</string>
 </resources>

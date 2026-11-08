@@ -225,4 +225,9 @@
     <string name="pref_discord_show_timestamp_summary">显示活动时间</string>
     <string name="pref_sync_pinned_sources">同步固定来源</string>
     <string name="pref_sync_pinned_sources_summary">关闭时，固定来源仅保留在此设备上。开启时，它们会被同步，合并后的集合会在所有设备上替换固定的来源。</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">点按分类一次可包含，两次可排除，第三次则清除该项。「重置筛选」会清空两个列表。当记录同时属于两者时，由上方开关决定哪一侧优先。</string>
+    <string name="pref_history_filter_inclusion_wins">已包含的分类优先</string>
+    <string name="pref_history_filter_inclusion_wins_summary">同时属于已包含和已排除分类的漫画会显示而不是隐藏。关闭：已排除分类优先。</string>
+    <string name="pref_history_filter_reset">重置筛选</string>
 </resources>

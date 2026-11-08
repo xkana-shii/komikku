@@ -14,6 +14,11 @@ interface HistoryRepository {
         unfinishedChapter: Boolean?,
         nonLibraryEntries: Boolean?,
         // KMK <--
+        // KUN -->
+        includedCategories: List<Long>,
+        excludedCategories: List<Long>,
+        inclusionWins: Boolean,
+        // KUN <--
     ): Flow<List<HistoryWithRelations>>
 
     suspend fun getLastHistory(): HistoryWithRelations?

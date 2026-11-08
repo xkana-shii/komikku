@@ -19,12 +19,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastForEachIndexed
-import eu.kanade.presentation.category.visualName
+import eu.kanade.presentation.category.CategoryFilterSheetContent
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.BookmarkColorFilterDialog
@@ -39,7 +36,6 @@ import tachiyomi.presentation.core.components.SettingsItemsPaddings
 import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
-import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.util.collectAsState
 
 @Composable
@@ -178,56 +174,21 @@ private fun ColumnScope.FilterSheet(
 private fun ColumnScope.CategoryFilterSheet(
     viewModel: UpdatesSettingsViewModel,
 ) {
-    Text(
-        stringResource(MR.strings.pref_filter_update_categories_details),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = SettingsItemsPaddings.Horizontal,
-                vertical = SettingsItemsPaddings.Vertical,
-            ),
-    )
-
-    HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.extraSmall))
-
     val allCategories by viewModel.getCategories.subscribe().collectAsState(initial = emptyList())
-
-    if (allCategories.isEmpty()) {
-        // since it includes the system category, this should only happen when loading is required
-        LoadingScreen(modifier = Modifier.padding(16.dp))
-        return
-    }
-
     val excluded by viewModel.updatesPreferences.filterExcludedCategories.collectAsState()
     val included by viewModel.updatesPreferences.filterIncludedCategories.collectAsState()
 
     // KUN -->
-    // Key the remembered tri-state list on the live category list so it is rebuilt (and stays the same
-    // size/order) when categories change while the dialog is open. Upstream origin: mihon 1d8a2b05dd
-    // ("Add category filters for Updates tab", #3589) used a keyless remember, which could throw
-    // IndexOutOfBoundsException / misalign the tri-state when allCategories changed.
-    val selected = remember(allCategories) {
-        allCategories.map { category ->
-            when (category.id) {
-                in included -> TriState.ENABLED_IS
-                in excluded -> TriState.ENABLED_NOT
-                else -> TriState.DISABLED
-            }
-        }.toMutableStateList()
-    }
+    // Rendering is shared with History's category tab so the two cannot drift. The shared list
+    // derives the tri-state from the two lists on every recomposition, so there is no snapshot to
+    // go stale when categories change (mihon 1d8a2b05dd used a keyless remember; keying it only
+    // shortened the window).
+    CategoryFilterSheetContent(
+        categories = allCategories,
+        includedCategories = included,
+        excludedCategories = excluded,
+        onCycleCategory = viewModel::cycleCategory,
+        description = stringResource(MR.strings.pref_filter_update_categories_details),
+    )
     // KUN <--
-
-    Column {
-        allCategories.fastForEachIndexed { idx, category ->
-            val state = selected[idx]
-            TriStateItem(
-                label = category.visualName,
-                state = state,
-                onClick = {
-                    selected[idx] = state.next()
-                    viewModel.cycleCategory(category)
-                },
-            )
-        }
-    }
 }

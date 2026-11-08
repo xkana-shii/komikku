@@ -18,13 +18,17 @@ import tachiyomi.domain.category.interactor.CreateCategoryWithName
 import tachiyomi.domain.category.interactor.DeleteCategory
 import tachiyomi.domain.category.interactor.MergeCategories
 import tachiyomi.domain.category.interactor.MoveCategory
+import tachiyomi.domain.category.interactor.PruneCategoryReferences
 import tachiyomi.domain.category.interactor.RenameCategory
 import tachiyomi.domain.category.interactor.ReorderCategory
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.RestoredCategoryHierarchy
 import tachiyomi.domain.category.service.CategoryTombstones
 import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.history.service.HistoryPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.upcoming.service.UpcomingPreferences
+import tachiyomi.domain.updates.service.UpdatesPreferences
 
 // KNS -->
 /**
@@ -44,8 +48,15 @@ class CategoryHierarchyTest {
     private val delete = DeleteCategory(
         repository,
         LibraryPreferences(preferences),
-        DownloadPreferences(preferences),
         CategoryTombstones { deleted += it },
+        // KUN: the id filters are pruned by PruneCategoryReferences (Komi-kun #96)
+        PruneCategoryReferences(
+            LibraryPreferences(preferences),
+            DownloadPreferences(preferences),
+            HistoryPreferences(preferences),
+            UpdatesPreferences(preferences),
+            UpcomingPreferences(preferences),
+        ),
     )
     // KNS <--
 

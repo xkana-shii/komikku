@@ -30,6 +30,7 @@ import mihon.app.di.appGraph
 import mihon.core.metro.metroGraph
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.interactor.PruneCategoryReferences
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.repository.HistoryRepository
@@ -71,6 +72,10 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
 
     @Inject private lateinit var getCategories: GetCategories
 
+    // KUN -->
+    @Inject private lateinit var pruneCategoryReferences: PruneCategoryReferences
+    // KUN <--
+
     @Inject private lateinit var backupCreatorFactory: BackupCreator.Factory
 
     @Inject private lateinit var mangaRestorer: MangaRestorer
@@ -104,6 +109,9 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
                 categoryRepository = categoryRepository,
                 syncPreferences = syncPreferences,
                 getCategories = getCategories,
+                // KUN -->
+                pruneCategoryReferences = pruneCategoryReferences,
+                // KUN <--
                 backupCreatorFactory = backupCreatorFactory,
                 notifier = notifier,
                 restorer = mangaRestorer,

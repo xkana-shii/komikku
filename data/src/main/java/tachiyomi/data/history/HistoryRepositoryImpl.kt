@@ -33,6 +33,11 @@ class HistoryRepositoryImpl(
         unfinishedChapter: Boolean?,
         nonLibraryEntries: Boolean?,
         // KMK <--
+        // KUN -->
+        includedCategories: List<Long>,
+        excludedCategories: List<Long>,
+        inclusionWins: Boolean,
+        // KUN <--
     ): Flow<List<HistoryWithRelations>> {
         return database.historyViewQueries
             .history(
@@ -43,6 +48,13 @@ class HistoryRepositoryImpl(
                 unfinishedChapter,
                 nonLibraryEntries,
                 // KMK <--
+                // KUN -->
+                includedEmpty = includedCategories.isEmpty(),
+                includedCategories = includedCategories,
+                excludedEmpty = excludedCategories.isEmpty(),
+                excludedCategories = excludedCategories,
+                inclusionWins = inclusionWins,
+                // KUN <--
                 query,
                 HistoryMapper::mapHistoryWithRelations,
             )

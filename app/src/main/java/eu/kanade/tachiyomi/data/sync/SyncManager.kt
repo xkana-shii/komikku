@@ -30,6 +30,7 @@ import okio.sink
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.interactor.PruneCategoryReferences
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.download.service.DownloadPreferences
@@ -58,6 +59,9 @@ class SyncManager(
     private val categoryRepository: CategoryRepository,
     private val syncPreferences: SyncPreferences,
     private val getCategories: GetCategories,
+    // KUN -->
+    private val pruneCategoryReferences: PruneCategoryReferences,
+    // KUN <--
     private val backupCreatorFactory: BackupCreator.Factory,
     private val notifier: SyncNotifier,
     restorer: MangaRestorer,
@@ -536,6 +540,11 @@ class SyncManager(
             }
             if (categoriesToDelete.isNotEmpty()) {
                 categoryRepository.delete(categoriesToDelete.map { it.id })
+                // KUN -->
+                // These rows were deleted without going through DeleteCategory, so the category ids
+                // must be pruned from the library, download and history filters here too.
+                pruneCategoryReferences.prune(categoriesToDelete.map { it.id })
+                // KUN <--
                 categoriesToDelete.forEach { syncPreferences.rememberDeletedCategory(it.uid) }
             }
         }

@@ -225,4 +225,9 @@
     <string name="pref_fetch_manga_chapters_on_add_description">Автоматически обновлять список глав при добавлении манги в библиотеку</string>
     <string name="pref_sync_pinned_sources">Синхронизировать закреплённые источники</string>
     <string name="pref_sync_pinned_sources_summary">Выключено: закреплённые источники остаются на этом устройстве. Включено: они синхронизируются, а объединённый набор заменяет закреплённые источники на всех устройствах.</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">Нажмите на категорию один раз, чтобы включить её, дважды — чтобы исключить; третье нажатие снимает выбор. «Сбросить фильтр» очищает оба списка. Переключатель выше решает, какой список важнее, если запись входит в оба.</string>
+    <string name="pref_history_filter_inclusion_wins">Включённые категории имеют приоритет</string>
+    <string name="pref_history_filter_inclusion_wins_summary">Манга, входящая и во включённую, и в исключённую категорию, показывается, а не скрывается. Выкл.: приоритет у исключённых категорий.</string>
+    <string name="pref_history_filter_reset">Сбросить фильтр</string>
 </resources>

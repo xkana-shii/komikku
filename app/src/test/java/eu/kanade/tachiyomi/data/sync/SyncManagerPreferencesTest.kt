@@ -42,7 +42,12 @@ class SyncManagerPreferencesTest {
     @Test
     fun `other device-local preferences stay excluded from the sync upload`() {
         val filtered = SyncManager.filterSyncableAppPreferences(
-            preferences("sync_service", "tablet_ui_mode", "connection_webdav_url", pinnedKey),
+            preferences(
+                "sync_service",
+                "tablet_ui_mode",
+                "connection_webdav_url",
+                pinnedKey,
+            ),
             syncPinnedSources = true,
         )
 
