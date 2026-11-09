@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
@@ -21,8 +22,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +58,7 @@ import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.pluralStringResource
+import kotlin.math.abs
 
 object HomeScreen : Screen() {
     @Suppress("unused")
@@ -122,14 +127,19 @@ object HomeScreen : Screen() {
                     ),
                     navigationItemVerticalArrangement = Arrangement.Center,
                     navigationItems = {
-                        TABS
+                        // KNS --> the tabs a swipe on the bar can move between
+                        val enabledTabs = TABS.fastFilter { it.isEnabled() }
+                        // KNS <--
+                        enabledTabs
                             // SY -->
-                            .fastFilter { it.isEnabled() }
                             // SY <--
                             .fastForEach {
                                 NavigationItem(
                                     tab = it,
                                     navigationSuiteType = navigationSuiteType,
+                                    // KNS -->
+                                    swipeTabs = enabledTabs,
+                                    // KNS <--
                                     // SY -->
                                     alwaysShowLabel = alwaysShowLabel,
                                     // SY <--
@@ -209,6 +219,9 @@ object HomeScreen : Screen() {
     private fun NavigationItem(
         tab: eu.kanade.presentation.util.Tab,
         navigationSuiteType: NavigationSuiteType,
+        // KNS -->
+        swipeTabs: List<eu.kanade.presentation.util.Tab>,
+        // KNS <--
         // SY -->
         alwaysShowLabel: Boolean,
         // SY <--
@@ -219,6 +232,13 @@ object HomeScreen : Screen() {
         val selected = tabNavigator.current::class == tab::class
         NavigationSuiteItem(
             navigationSuiteType = navigationSuiteType,
+            // KNS --> swiping on the bottom bar (not the tablet rail) moves to the neighbouring enabled tab
+            modifier = if (navigationSuiteType == NavigationSuiteType.NavigationBar) {
+                Modifier.bottomBarSwipe(swipeTabs)
+            } else {
+                Modifier
+            },
+            // KNS <--
             selected = selected,
             onClick = {
                 if (!selected) {
@@ -253,6 +273,50 @@ object HomeScreen : Screen() {
             badge = tabBadge(tab),
         )
     }
+
+    // KNS -->
+    /**
+     * Moves one tab towards the swipe once it has travelled [BottomBarSwipe.THRESHOLD_DP], at most once per gesture.
+     * Only the bar's items carry it, and taps and long presses are left to the item: a drag starts only after touch slop.
+     */
+    @Composable
+    private fun Modifier.bottomBarSwipe(tabs: List<eu.kanade.presentation.util.Tab>): Modifier {
+        val tabNavigator = LocalTabNavigator.current
+        val thresholdPx = with(LocalDensity.current) { BottomBarSwipe.THRESHOLD_DP.dp.toPx() }
+        // Read when a gesture moves, so the handler is not restarted when the tab or the tab list changes
+        val currentTabs by rememberUpdatedState(tabs)
+        val currentTab by rememberUpdatedState(tabNavigator.current)
+        return pointerInput(thresholdPx) {
+            var dragX = 0f
+            var dragY = 0f
+            var handled = false
+            fun reset() {
+                dragX = 0f
+                dragY = 0f
+                handled = false
+            }
+            detectDragGestures(
+                onDragStart = { reset() },
+                onDragEnd = { reset() },
+                onDragCancel = { reset() },
+            ) { _, dragAmount ->
+                if (handled) return@detectDragGestures
+                dragX += dragAmount.x
+                dragY += dragAmount.y
+                val tabs = currentTabs
+                val target = BottomBarSwipe.targetIndex(
+                    tabCount = tabs.size,
+                    currentIndex = tabs.indexOfFirst { it::class == currentTab::class },
+                    dragX = dragX,
+                    dragY = dragY,
+                    thresholdPx = thresholdPx,
+                ) ?: return@detectDragGestures
+                handled = true
+                tabNavigator.current = tabs[target]
+            }
+        }
+    }
+    // KNS <--
 
     @Composable
     private fun tabBadge(tab: eu.kanade.presentation.util.Tab): (@Composable () -> Unit)? {
@@ -329,3 +393,22 @@ object HomeScreen : Screen() {
         ) : Tab
     }
 }
+
+// KNS -->
+/** Which tab a swipe on the bottom bar leads to, independent of how the gesture is recognised. */
+internal object BottomBarSwipe {
+    const val THRESHOLD_DP = 48
+
+    /**
+     * The index of the neighbouring enabled tab for a drag of [dragX]/[dragY] pixels, or null while it is below the
+     * [thresholdPx], mostly vertical, at the first or last tab (no wrap-around), or the current tab is not among the
+     * [tabCount] enabled ones. A swipe to the left (negative [dragX]) goes forward.
+     */
+    fun targetIndex(tabCount: Int, currentIndex: Int, dragX: Float, dragY: Float, thresholdPx: Float): Int? {
+        if (currentIndex !in 0 until tabCount) return null
+        if (abs(dragX) < thresholdPx || abs(dragX) <= abs(dragY)) return null
+        val target = if (dragX < 0) currentIndex + 1 else currentIndex - 1
+        return target.takeIf { it in 0 until tabCount }
+    }
+}
+// KNS <--
