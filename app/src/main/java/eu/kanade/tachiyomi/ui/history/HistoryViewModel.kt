@@ -11,6 +11,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.core.util.insertSeparators
+import eu.kanade.domain.manga.interactor.CheckDuplicateLibraryManga
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.sync.SyncStateBumper
 import eu.kanade.domain.track.interactor.AddTracks
@@ -54,7 +55,6 @@ import tachiyomi.domain.history.interactor.RemoveHistory
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.history.service.HistoryPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
@@ -68,7 +68,7 @@ class HistoryViewModel(
     @AppCoroutineScope private val appScope: CoroutineScope,
     private val addTracks: AddTracks,
     private val getCategories: GetCategories,
-    private val getDuplicateLibraryManga: GetDuplicateLibraryManga,
+    private val checkDuplicateLibraryManga: CheckDuplicateLibraryManga,
     private val getHistory: GetHistory,
     // KNS -->
     private val historyVisibleCounts: HistoryVisibleCounts,
@@ -302,11 +302,13 @@ class HistoryViewModel(
         viewModelScope.launch {
             val manga = getManga.await(mangaId) ?: return@launch
 
-            val duplicates = getDuplicateLibraryManga(manga)
-            if (duplicates.isNotEmpty()) {
-                dialog.update { Dialog.DuplicateManga(manga, duplicates) }
+            // KNS -->
+            val check = checkDuplicateLibraryManga(manga)
+            if (check.duplicates.isNotEmpty()) {
+                dialog.update { Dialog.DuplicateManga(check.manga, check.duplicates, check.chapterCount) }
                 return@launch
             }
+            // KNS <--
 
             addFavorite(manga)
         }
@@ -560,7 +562,13 @@ class HistoryViewModel(
             constructor(history: HistoryWithRelations) : this(listOf(history))
         }
         // KMK <--
-        data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
+        data class DuplicateManga(
+            val manga: Manga,
+            val duplicates: List<MangaWithChapterCount>,
+            // KNS -->
+            val incomingChapterCount: Long? = null,
+            // KNS <--
+        ) : Dialog
         data class ChangeCategory(
             val manga: Manga,
             val initialSelection: List<CheckboxState<Category>>,

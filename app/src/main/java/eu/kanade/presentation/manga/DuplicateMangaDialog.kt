@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -17,10 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Typography
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -93,6 +97,9 @@ fun DuplicateMangaDialog(
     // KMK -->
     targetManga: Manga,
     bulkFavoriteManga: Manga? = null,
+    // KNS -->
+    incomingChapterCount: Long? = null,
+    // KNS <--
     onAllowAllDuplicate: () -> Unit = {},
     onSkipAllDuplicate: () -> Unit = {},
     onSkipDuplicate: () -> Unit = {},
@@ -138,39 +145,66 @@ fun DuplicateMangaDialog(
             // KMK <--
 
             Text(
-                text = stringResource(MR.strings.possible_duplicates_summary),
+                // KNS -->
+                text = stringResource(KMR.strings.duplicate_summary_compare),
+                // KNS <--
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.then(horizontalPaddingModifier),
             )
 
-            LazyRow(
-                horizontalArrangement = /* KMK --> */ Arrangement.SpaceAround, /* KMK <-- */
-                modifier = Modifier.height(getMaximumMangaCardHeight(duplicates))
-                    // KMK -->
-                    .fillMaxWidth(),
-                // KMK <--
-                contentPadding = horizontalPadding,
+            // KNS -->
+            val cardHeight = getMaximumMangaCardHeight(duplicates.map { it.manga } + targetManga)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontalPadding),
             ) {
-                // KMK -->
-                itemsIndexed(
-                    // KMK <--
-                    items = duplicates,
-                    key = { _, it -> it.manga.id },
-                ) { index, it ->
-                    DuplicateMangaListItem(
-                        duplicate = it,
-                        getSource = { sourceManager.getOrStub(it.manga.source) },
-                        onMigrate = { onMigrate(it.manga) },
-                        onOpenManga = { onOpenManga(it.manga) },
-                    )
-
-                    // KMK -->
-                    if (index != duplicates.lastIndex) {
-                        Spacer(modifier = Modifier.width(MaterialTheme.padding.small))
+                Column(modifier = Modifier.weight(1f)) {
+                    ColumnLabel(stringResource(KMR.strings.duplicate_in_library))
+                    // Stays scrollable so that several likely matches can be browsed
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                        modifier = Modifier
+                            .height(cardHeight)
+                            .fillMaxWidth(),
+                    ) {
+                        items(
+                            items = duplicates,
+                            key = { it.manga.id },
+                        ) {
+                            DuplicateMangaListItem(
+                                manga = it.manga,
+                                chapterCount = it.chapterCount,
+                                getSource = { sourceManager.getOrStub(it.manga.source) },
+                                onMigrate = { onMigrate(it.manga) },
+                                onOpenManga = { onOpenManga(it.manga) },
+                            )
+                        }
                     }
-                    // KMK <--
+                }
+
+                VerticalDivider(
+                    modifier = Modifier
+                        .padding(horizontal = MaterialTheme.padding.small)
+                        .height(cardHeight + 24.dp),
+                )
+
+                Column {
+                    ColumnLabel(stringResource(KMR.strings.duplicate_adding))
+                    Box(modifier = Modifier.height(cardHeight)) {
+                        DuplicateMangaListItem(
+                            manga = targetManga,
+                            chapterCount = incomingChapterCount,
+                            getSource = { sourceManager.getOrStub(targetManga.source) },
+                            // The incoming entry is only there for comparison
+                            onMigrate = null,
+                            onOpenManga = null,
+                            allowPanorama = false,
+                        )
+                    }
                 }
             }
+            // KNS <--
 
             // KMK -->
             if (bulkFavoriteManga != null) {
@@ -288,21 +322,30 @@ fun DuplicateMangaDialog(
 
 @Composable
 private fun DuplicateMangaListItem(
-    duplicate: MangaWithChapterCount,
+    manga: Manga,
+    // KNS -->
+    chapterCount: Long?,
     getSource: suspend () -> Source,
-    onOpenManga: () -> Unit,
-    onMigrate: () -> Unit,
+    onOpenManga: (() -> Unit)?,
+    onMigrate: (() -> Unit)?,
+    allowPanorama: Boolean = true,
+    // KNS <--
 ) {
     // KMK -->
-    val usePanoramaCover by LocalContext.current.appGraph.uiPreferences.usePanoramaCoverAlways.collectAsState()
+    val usePanoramaPreference by LocalContext.current.appGraph.uiPreferences.usePanoramaCoverAlways.collectAsState()
+    // KNS -->
+    val usePanoramaCover = usePanoramaPreference && allowPanorama
+    // KNS <--
     val coverRatio = remember { mutableFloatStateOf(1f) }
     val coverIsWide = coverRatio.floatValue <= RatioSwitchToPanorama
     // KMK <--
 
     val source by produceState<Source?>(initialValue = null) { value = getSource() }
-    val manga = duplicate.manga
     Column(
         modifier = Modifier
+            // KNS -->
+            .fillMaxHeight()
+            // KNS <--
             // KMK -->
             .then(
                 if (usePanoramaCover && coverIsWide) {
@@ -314,10 +357,18 @@ private fun DuplicateMangaListItem(
             // KMK <--
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surface)
-            .combinedClickable(
-                onLongClick = { onOpenManga() },
-                onClick = { onMigrate() },
+            // KNS -->
+            .then(
+                if (onMigrate != null) {
+                    Modifier.combinedClickable(
+                        onLongClick = onOpenManga,
+                        onClick = onMigrate,
+                    )
+                } else {
+                    Modifier
+                },
             )
+            // KNS <--
             .padding(MaterialTheme.padding.small),
     ) {
         // KMK -->
@@ -346,21 +397,25 @@ private fun DuplicateMangaListItem(
                     },
                 )
             }
-            BadgeGroup(
-                modifier = Modifier
-                    .padding(4.dp)
-                    .align(Alignment.TopStart),
-            ) {
-                Badge(
-                    color = MaterialTheme.colorScheme.secondary,
-                    textColor = MaterialTheme.colorScheme.onSecondary,
-                    text = pluralStringResource(
-                        MR.plurals.manga_num_chapters,
-                        duplicate.chapterCount.toInt(),
-                        duplicate.chapterCount,
-                    ),
-                )
+            // KNS -->
+            if (chapterCount != null && chapterCount > 0) {
+                BadgeGroup(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .align(Alignment.TopStart),
+                ) {
+                    Badge(
+                        color = MaterialTheme.colorScheme.secondary,
+                        textColor = MaterialTheme.colorScheme.onSecondary,
+                        text = pluralStringResource(
+                            MR.plurals.manga_num_chapters,
+                            chapterCount.toInt(),
+                            chapterCount,
+                        ),
+                    )
+                }
             }
+            // KNS <--
         }
         // KMK <--
 
@@ -389,26 +444,32 @@ private fun DuplicateMangaListItem(
             )
         }
 
-        MangaDetailRow(
-            text = when (manga.status) {
-                SManga.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
-                SManga.COMPLETED.toLong() -> stringResource(MR.strings.completed)
-                SManga.LICENSED.toLong() -> stringResource(MR.strings.licensed)
-                SManga.PUBLISHING_FINISHED.toLong() -> stringResource(MR.strings.publishing_finished)
-                SManga.CANCELLED.toLong() -> stringResource(MR.strings.cancelled)
-                SManga.ON_HIATUS.toLong() -> stringResource(MR.strings.on_hiatus)
-                else -> stringResource(MR.strings.unknown)
-            },
-            iconImageVector = when (manga.status) {
-                SManga.ONGOING.toLong() -> MaterialSymbols.Rounded.Schedule
-                SManga.COMPLETED.toLong() -> MaterialSymbols.Rounded.DoneAll
-                SManga.LICENSED.toLong() -> MaterialSymbols.Rounded.AttachMoney
-                SManga.PUBLISHING_FINISHED.toLong() -> MaterialSymbols.Rounded.Check
-                SManga.CANCELLED.toLong() -> MaterialSymbols.Rounded.Close
-                SManga.ON_HIATUS.toLong() -> MaterialSymbols.RoundedFilled.Pause
-                else -> MaterialSymbols.Rounded.Block
-            },
-        )
+        // KNS -->
+        if (manga.status != 0L) {
+            // KNS <--
+            MangaDetailRow(
+                text = when (manga.status) {
+                    SManga.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
+                    SManga.COMPLETED.toLong() -> stringResource(MR.strings.completed)
+                    SManga.LICENSED.toLong() -> stringResource(MR.strings.licensed)
+                    SManga.PUBLISHING_FINISHED.toLong() -> stringResource(MR.strings.publishing_finished)
+                    SManga.CANCELLED.toLong() -> stringResource(MR.strings.cancelled)
+                    SManga.ON_HIATUS.toLong() -> stringResource(MR.strings.on_hiatus)
+                    else -> stringResource(MR.strings.unknown)
+                },
+                iconImageVector = when (manga.status) {
+                    SManga.ONGOING.toLong() -> MaterialSymbols.Rounded.Schedule
+                    SManga.COMPLETED.toLong() -> MaterialSymbols.Rounded.DoneAll
+                    SManga.LICENSED.toLong() -> MaterialSymbols.Rounded.AttachMoney
+                    SManga.PUBLISHING_FINISHED.toLong() -> MaterialSymbols.Rounded.Check
+                    SManga.CANCELLED.toLong() -> MaterialSymbols.Rounded.Close
+                    SManga.ON_HIATUS.toLong() -> MaterialSymbols.RoundedFilled.Pause
+                    else -> MaterialSymbols.Rounded.Block
+                },
+            )
+            // KNS -->
+        }
+        // KNS <--
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -433,6 +494,42 @@ private fun DuplicateMangaListItem(
         }
     }
 }
+
+// KNS -->
+@Composable
+private fun ColumnLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(bottom = MaterialTheme.padding.extraSmall),
+    )
+}
+
+/** Shown while the details of the manga being added are loaded to look for duplicates. */
+@Composable
+fun CheckingDuplicatesDialog(onDismissRequest: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = stringResource(MR.strings.action_cancel))
+            }
+        },
+        text = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.medium),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                Text(text = stringResource(KMR.strings.duplicate_checking))
+            }
+        },
+    )
+}
+// KNS <--
 
 @Composable
 private fun MangaDetailRow(
@@ -462,7 +559,7 @@ private fun MangaDetailRow(
 }
 
 @Composable
-private fun getMaximumMangaCardHeight(duplicates: List<MangaWithChapterCount>): Dp {
+private fun getMaximumMangaCardHeight(duplicates: List<Manga>): Dp {
     val density = LocalDensity.current
     val typography = MaterialTheme.typography
     val textMeasurer = rememberTextMeasurer()
@@ -490,7 +587,7 @@ private fun getMaximumMangaCardHeight(duplicates: List<MangaWithChapterCount>): 
     ) {
         duplicates.fastMaxOfOrNull {
             calculateMangaCardHeight(
-                manga = it.manga,
+                manga = it,
                 density = density,
                 typography = typography,
                 textMeasurer = textMeasurer,

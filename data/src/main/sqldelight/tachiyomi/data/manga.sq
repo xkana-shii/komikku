@@ -299,18 +299,26 @@ FROM manga
 WHERE user_favorite_at IS NOT NULL
 AND source_id = :sourceId;
 
-getDuplicateLibraryManga:
-WITH
-track_dupes AS (
-    SELECT DISTINCT T2.manga_id
-    FROM manga_track T1
-    JOIN manga_track T2
-    ON T1.tracker_id = T2.tracker_id
-    AND T1.remote_id = T2.remote_id
-    AND T1.remote_id != 0
-    AND T1.manga_id != T2.manga_id
-    WHERE T1.manga_id = :id
-)
+-- KNS -->
+-- Duplicate detection is done by DuplicateMatcher in the domain layer: it reads these slim rows for the whole
+-- library, picks the likely matches, and only then loads the full rows (with chapter counts) of those.
+getDuplicateCandidateKeys:
+SELECT id, remote_title, user_title, remote_author, user_author
+FROM manga
+WHERE user_favorite_at IS NOT NULL
+AND id != :id;
+
+getTrackDuplicateMangaIds:
+SELECT DISTINCT T2.manga_id
+FROM manga_track T1
+JOIN manga_track T2
+ON T1.tracker_id = T2.tracker_id
+AND T1.remote_id = T2.remote_id
+AND T1.remote_id != 0
+AND T1.manga_id != T2.manga_id
+WHERE T1.manga_id = :id;
+
+getLibraryMangaWithChapterCountByIds:
 SELECT
     M.id, M.source_id, M.remote_url, M.remote_title, M.remote_author, M.remote_artist,
     M.remote_description, M.remote_genre, M.remote_status, M.remote_cover,
@@ -319,28 +327,22 @@ SELECT
     M.state_chapter_next_update, M.state_chapter_fetch_interval,
     M.state_cover_last_modified, M.state_initialized, M.last_modified_at, M.version, M.is_syncing,
     M.favorite_modified_at,
-    -- KNS -->
     M.user_blacklisted_chapters, M.user_scanlator_priority, M.user_scanlator_range_rules,
     M.user_smart_merge_override,
-    -- KNS <--
     M.user_title, M.user_author, M.user_artist, M.user_thumbnail_url, M.user_description, M.user_genre, M.user_status,
     (
         SELECT count(*)
         FROM chapter C
         LEFT JOIN excluded_scanlator ES
-        ON C.manga_id = ES.manga_id
-        AND C.remote_scanlator = ES.scanlator
+            ON C.manga_id = ES.manga_id
+            AND C.remote_scanlator = ES.scanlator
         WHERE C.manga_id = M.id
         AND ES.scanlator IS NULL
     ) AS chapter_count
 FROM manga M
 WHERE M.user_favorite_at IS NOT NULL
-AND M.id != :id
--- A blank title would match every title
-AND (
-    (trim(:remoteTitle) != '' AND lower(M.remote_title) LIKE '%' || lower(:remoteTitle) || '%')
-    OR M.id IN (SELECT manga_id FROM track_dupes)
-);
+AND M.id IN :ids;
+-- KNS <--
 
 getUpcomingManga:
 SELECT

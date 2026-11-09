@@ -23,6 +23,8 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
 import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
 import eu.kanade.core.preference.asState
+import eu.kanade.domain.manga.interactor.CheckDuplicateLibraryManga
+import eu.kanade.domain.manga.interactor.DuplicateCheck
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.interactor.GetExhSavedSearch
 import eu.kanade.domain.source.interactor.GetIncognitoState
@@ -43,8 +45,10 @@ import exh.source.ExhPreferences
 import exh.source.LOCAL_SOURCE_PACKAGE
 import exh.source.getMainSource
 import exh.source.isEhBasedSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -79,7 +83,6 @@ import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
@@ -116,7 +119,7 @@ open class BrowseSourceViewModel(
     private val libraryPreferences: LibraryPreferences,
     private val coverCache: CoverCache,
     private val getRemoteManga: GetRemoteManga,
-    private val getDuplicateLibraryManga: GetDuplicateLibraryManga,
+    private val checkDuplicateLibraryManga: CheckDuplicateLibraryManga,
     private val getCategories: GetCategories,
     private val setMangaCategories: SetMangaCategories,
     private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags,
@@ -514,9 +517,44 @@ open class BrowseSourceViewModel(
             .orEmpty()
     }
 
-    suspend fun getDuplicateLibraryManga(manga: Manga): List<MangaWithChapterCount> {
-        return getDuplicateLibraryManga.invoke(manga)
+    // KNS -->
+    private var duplicateCheckJob: Job? = null
+
+    /**
+     * Long press on a browse entry: removes it from the library if it is in it, otherwise loads its details from
+     * the source if needed (a progress dialog is shown meanwhile), looks for duplicates in the library and either
+     * opens the duplicates dialog or adds it.
+     */
+    fun addRemoveManga(manga: Manga) {
+        duplicateCheckJob?.cancel()
+        if (manga.favorite) {
+            setDialog(Dialog.RemoveManga(manga))
+            return
+        }
+        duplicateCheckJob = viewModelScope.launch(Dispatchers.IO) {
+            setDialog(Dialog.CheckingDuplicates)
+            val check = try {
+                checkDuplicateLibraryManga(manga)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e)
+                null
+            }
+            if (check != null && check.duplicates.isNotEmpty()) {
+                setDialog(Dialog.AddDuplicateManga(check.manga, check.duplicates, check.chapterCount))
+            } else {
+                setDialog(null)
+                addFavorite(manga)
+            }
+        }
     }
+
+    fun cancelDuplicateCheck() {
+        duplicateCheckJob?.cancel()
+        setDialog(null)
+    }
+    // KNS <--
 
     private fun moveMangaToCategories(manga: Manga, vararg categories: Category) {
         moveMangaToCategories(manga, categories.filter { it.id != 0L }.map { it.id })
@@ -568,7 +606,15 @@ open class BrowseSourceViewModel(
     sealed interface Dialog {
         data object Filter : Dialog
         data class RemoveManga(val manga: Manga) : Dialog
-        data class AddDuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
+        data object CheckingDuplicates : Dialog
+
+        data class AddDuplicateManga(
+            val manga: Manga,
+            val duplicates: List<MangaWithChapterCount>,
+            // KNS -->
+            val incomingChapterCount: Long? = null,
+            // KNS <--
+        ) : Dialog
         data class ChangeMangaCategory(
             val manga: Manga,
             val initialSelection: List<CheckboxState.State<Category>>,

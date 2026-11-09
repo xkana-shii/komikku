@@ -21,6 +21,7 @@ import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.browse.components.RemoveMangaDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.BulkSelectionToolbar
+import eu.kanade.presentation.manga.CheckingDuplicatesDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteViewModel
@@ -128,16 +129,9 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                         navigator.push(MangaScreen(manga.id, true))
                     } else {
                         // KMK <--
-                        scope.launchIO {
-                            val duplicates = viewModel.getDuplicateLibraryManga(manga)
-                            when {
-                                manga.favorite -> viewModel.setDialog(BrowseSourceViewModel.Dialog.RemoveManga(manga))
-                                duplicates.isNotEmpty() -> viewModel.setDialog(
-                                    BrowseSourceViewModel.Dialog.AddDuplicateManga(manga, duplicates),
-                                )
-                                else -> viewModel.addFavorite(manga)
-                            }
-                        }
+                        // KNS -->
+                        viewModel.addRemoveManga(manga)
+                        // KNS <--
                     }
                 },
                 // KMK -->
@@ -148,6 +142,11 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
 
         val onDismissRequest = { viewModel.setDialog(null) }
         when (val dialog = state.dialog) {
+            // KNS -->
+            is BrowseSourceViewModel.Dialog.CheckingDuplicates -> {
+                CheckingDuplicatesDialog(onDismissRequest = viewModel::cancelDuplicateCheck)
+            }
+            // KNS <--
             is BrowseSourceViewModel.Dialog.AddDuplicateManga -> {
                 DuplicateMangaDialog(
                     duplicates = dialog.duplicates,
@@ -156,6 +155,9 @@ class MangaDexFollowsScreen(private val sourceId: Long) : Screen() {
                     onOpenManga = { navigator.push(MangaScreen(it.id)) },
                     // KMK -->
                     targetManga = dialog.manga,
+                    // KNS -->
+                    incomingChapterCount = dialog.incomingChapterCount,
+                    // KNS <--
                     onMigrate = { viewModel.setDialog(BrowseSourceViewModel.Dialog.Migrate(dialog.manga, it)) },
                     // KMK <--
                 )

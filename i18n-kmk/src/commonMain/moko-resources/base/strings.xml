@@ -472,4 +472,10 @@
     <string name="pref_history_filter_inclusion_wins">Included categories take precedence</string>
     <string name="pref_history_filter_inclusion_wins_summary">A manga that is in both an included and an excluded category is shown instead of hidden. Off: excluded categories take precedence.</string>
     <string name="pref_history_filter_reset">Reset filter</string>
+
+    <!-- KNS: possible duplicates dialog -->
+    <string name="duplicate_checking">Checking your library…</string>
+    <string name="duplicate_summary_compare">Your library has entries that look like this one. Tap an entry to migrate to it, or add this one anyway. Long press an entry to open it.</string>
+    <string name="duplicate_in_library">In your library</string>
+    <string name="duplicate_adding">Adding</string>
 </resources>

@@ -151,6 +151,9 @@ private fun AddDuplicateMangaDialog(
         onOpenManga = { navigator?.push(MangaScreen(it.id)) },
         onMigrate = { showMigrateDialog(dialog.manga, it) },
         targetManga = dialog.manga,
+        // KNS -->
+        incomingChapterCount = dialog.incomingChapterCount,
+        // KNS <--
     )
 }
 
@@ -203,6 +206,9 @@ private fun BulkAllowDuplicateDialog(
         onOpenManga = { navigator?.push(MangaScreen(it.id)) },
         onMigrate = { showMigrateDialog(dialog.manga, it) },
         targetManga = dialog.manga,
+        // KNS -->
+        incomingChapterCount = dialog.incomingChapterCount,
+        // KNS <--
         bulkFavoriteManga = dialog.manga,
         onAllowAllDuplicate = { addFavoriteDuplicate(false) },
         onSkipAllDuplicate = { addFavoriteDuplicate(true) },

@@ -143,6 +143,9 @@ data object HistoryTab : Tab {
                     // KMK -->
                     targetManga = dialog.manga,
                     // KMK <--
+                    // KNS -->
+                    incomingChapterCount = dialog.incomingChapterCount,
+                    // KNS <--
                 )
             }
             is HistoryViewModel.Dialog.ChangeCategory -> {

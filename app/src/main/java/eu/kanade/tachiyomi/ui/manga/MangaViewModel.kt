@@ -1048,10 +1048,11 @@ class MangaViewModel(
                 // Add to library
                 // First, check if duplicate exists if callback is provided
                 if (checkDuplicate) {
-                    val duplicates = getDuplicateLibraryManga(manga)
+                    // KNS: the details are already loaded here, the chapter count only orders equal matches
+                    val duplicates = getDuplicateLibraryManga(manga, state.chapters.size.toLong())
 
                     if (duplicates.isNotEmpty()) {
-                        dialog.value = Dialog.DuplicateManga(manga, duplicates)
+                        dialog.value = Dialog.DuplicateManga(manga, duplicates, state.chapters.size.toLong())
                         return@launch
                     }
                 }
@@ -2091,7 +2092,13 @@ class MangaViewModel(
             val initialSelection: List<CheckboxState<Category>>,
         ) : Dialog
         data class DeleteChapters(val chapters: List<Chapter>) : Dialog
-        data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
+        data class DuplicateManga(
+            val manga: Manga,
+            val duplicates: List<MangaWithChapterCount>,
+            // KNS -->
+            val incomingChapterCount: Long? = null,
+            // KNS <--
+        ) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
         data class SetFetchInterval(val manga: Manga) : Dialog
         data object RemoveFromLibrary : Dialog

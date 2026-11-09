@@ -24,6 +24,7 @@ import tachiyomi.data.subscribeToList
 import tachiyomi.data.subscribeToOne
 import tachiyomi.data.subscribeToOneOrNull
 import tachiyomi.domain.library.model.LibraryManga
+import tachiyomi.domain.manga.model.DuplicateKey
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaRemoteUpdate
 import tachiyomi.domain.manga.model.MangaUpdate
@@ -106,11 +107,30 @@ class MangaRepositoryImpl(
             .subscribeToList()
     }
 
-    override suspend fun getDuplicateLibraryManga(id: Long, title: String): List<MangaWithChapterCount> {
+    // KNS -->
+    override suspend fun getDuplicateCandidateKeys(id: Long): List<DuplicateKey> {
         return database.mangaQueries
-            .getDuplicateLibraryManga(id, title, MangaMapper::mapMangaWithChapterCount)
+            .getDuplicateCandidateKeys(id) { mangaId, remoteTitle, userTitle, remoteAuthor, userAuthor ->
+                DuplicateKey(
+                    id = mangaId,
+                    titles = listOfNotNull(userTitle, remoteTitle),
+                    authors = listOfNotNull(userAuthor, remoteAuthor),
+                )
+            }
             .awaitAsList()
     }
+
+    override suspend fun getTrackDuplicateMangaIds(id: Long): List<Long> {
+        return database.mangaQueries.getTrackDuplicateMangaIds(id).awaitAsList()
+    }
+
+    override suspend fun getLibraryMangaWithChapterCount(ids: Collection<Long>): List<MangaWithChapterCount> {
+        if (ids.isEmpty()) return emptyList()
+        return database.mangaQueries
+            .getLibraryMangaWithChapterCountByIds(ids, MangaMapper::mapMangaWithChapterCount)
+            .awaitAsList()
+    }
+    // KNS <--
 
     override suspend fun getUpcomingManga(
         statuses: Set<Long>,

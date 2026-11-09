@@ -8,6 +8,7 @@ import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
 import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
+import eu.kanade.domain.manga.interactor.CheckDuplicateLibraryManga
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.source.interactor.GetExhSavedSearch
 import eu.kanade.domain.source.interactor.GetIncognitoState
@@ -40,7 +41,6 @@ import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
@@ -59,7 +59,7 @@ class BrowseRecommendsViewModel(
     libraryPreferences: LibraryPreferences,
     coverCache: CoverCache,
     getRemoteManga: GetRemoteManga,
-    getDuplicateLibraryManga: GetDuplicateLibraryManga,
+    checkDuplicateLibraryManga: CheckDuplicateLibraryManga,
     getCategories: GetCategories,
     setMangaCategories: SetMangaCategories,
     setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags,
@@ -93,7 +93,7 @@ class BrowseRecommendsViewModel(
     libraryPreferences = libraryPreferences,
     coverCache = coverCache,
     getRemoteManga = getRemoteManga,
-    getDuplicateLibraryManga = getDuplicateLibraryManga,
+    checkDuplicateLibraryManga = checkDuplicateLibraryManga,
     getCategories = getCategories,
     setMangaCategories = setMangaCategories,
     setMangaDefaultChapterFlags = setMangaDefaultChapterFlags,

@@ -552,6 +552,9 @@ class MangaScreen(
                     // KMK -->
                     targetManga = dialog.manga,
                     // KMK <--
+                    // KNS -->
+                    incomingChapterCount = dialog.incomingChapterCount,
+                    // KNS <--
                 )
             }
 

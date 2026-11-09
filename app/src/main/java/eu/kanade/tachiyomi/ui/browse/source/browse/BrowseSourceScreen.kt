@@ -43,6 +43,7 @@ import eu.kanade.presentation.browse.components.SavedSearchCreateDialog
 import eu.kanade.presentation.browse.components.SavedSearchDeleteDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.components.BulkSelectionToolbar
+import eu.kanade.presentation.manga.CheckingDuplicatesDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.more.settings.screen.SettingsEhScreen
 import eu.kanade.presentation.util.AssistContentScreen
@@ -378,16 +379,9 @@ data class BrowseSourceScreen(
                         navigator.push(MangaScreen(manga.id, true))
                     } else {
                         // KMK <--
-                        scope.launch(Dispatchers.IO) {
-                            val duplicates = viewModel.getDuplicateLibraryManga(manga)
-                            when {
-                                manga.favorite -> viewModel.setDialog(BrowseSourceViewModel.Dialog.RemoveManga(manga))
-                                duplicates.isNotEmpty() -> viewModel.setDialog(
-                                    BrowseSourceViewModel.Dialog.AddDuplicateManga(manga, duplicates),
-                                )
-                                else -> viewModel.addFavorite(manga)
-                            }
-                        }
+                        // KNS -->
+                        viewModel.addRemoveManga(manga)
+                        // KNS <--
                     }
                 },
                 // KMK -->
@@ -445,6 +439,11 @@ data class BrowseSourceScreen(
                     // SY <--
                 )
             }
+            // KNS -->
+            is BrowseSourceViewModel.Dialog.CheckingDuplicates -> {
+                CheckingDuplicatesDialog(onDismissRequest = viewModel::cancelDuplicateCheck)
+            }
+            // KNS <--
             is BrowseSourceViewModel.Dialog.AddDuplicateManga -> {
                 DuplicateMangaDialog(
                     duplicates = dialog.duplicates,
@@ -454,6 +453,9 @@ data class BrowseSourceScreen(
                     onMigrate = { viewModel.setDialog(BrowseSourceViewModel.Dialog.Migrate(dialog.manga, it)) },
                     // KMK -->
                     targetManga = dialog.manga,
+                    // KNS -->
+                    incomingChapterCount = dialog.incomingChapterCount,
+                    // KNS <--
                     // KMK <--
                 )
             }

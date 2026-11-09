@@ -13,6 +13,8 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
+import eu.kanade.domain.manga.interactor.CheckDuplicateLibraryManga
+import eu.kanade.domain.manga.interactor.DuplicateCheck
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.presentation.components.BulkSelectionToolbar
@@ -36,7 +38,6 @@ import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.toMangaUpdate
@@ -49,7 +50,7 @@ import kotlin.time.Clock
 class BulkFavoriteViewModel(
     private val sourceManager: SourceManager,
     private val libraryPreferences: LibraryPreferences,
-    private val getDuplicateLibraryManga: GetDuplicateLibraryManga,
+    private val checkDuplicateLibraryManga: CheckDuplicateLibraryManga,
     private val getCategories: GetCategories,
     private val setMangaCategories: SetMangaCategories,
     private val updateManga: UpdateManga,
@@ -127,12 +128,12 @@ class BulkFavoriteViewModel(
             startRunning()
             val entryWithDuplicates = getDuplicateLibraryManga(startIdx)
             if (entryWithDuplicates != null) {
-                val (index, manga, duplicates) = entryWithDuplicates
+                val (index, manga, duplicates, chapterCount) = entryWithDuplicates
                 if (state.value.selection.size == 1) {
                     // If only one manga is selected, show the multiple-duplicates dialog.
-                    setDialog(Dialog.AddDuplicateManga(manga, duplicates))
+                    setDialog(Dialog.AddDuplicateManga(manga, duplicates, chapterCount))
                 } else {
-                    setDialog(Dialog.BulkAllowDuplicate(manga, duplicates, index))
+                    setDialog(Dialog.BulkAllowDuplicate(manga, duplicates, index, chapterCount))
                 }
             } else {
                 addFavoriteDuplicate()
@@ -196,17 +197,36 @@ class BulkFavoriteViewModel(
 
     private suspend fun getNotDuplicateLibraryMangas(): List<Manga> {
         return state.value.selection.filterNot { manga ->
-            getDuplicateLibraryManga(manga).isNotEmpty()
+            findDuplicates(manga) != null
         }
     }
 
-    private suspend fun getDuplicateLibraryManga(startIdx: Int = 0): Triple<Int, Manga, List<MangaWithChapterCount>>? {
+    // KNS -->
+    private data class BulkDuplicate(
+        val index: Int,
+        val manga: Manga,
+        val duplicates: List<MangaWithChapterCount>,
+        val chapterCount: Long?,
+    )
+
+    /**
+     * Looks for duplicates with what is known first and only when there are any loads the details of the manga
+     * from its source to show and match accurately, so that a long selection does not fetch every entry.
+     */
+    private suspend fun findDuplicates(manga: Manga): DuplicateCheck? {
+        if (checkDuplicateLibraryManga(manga, loadDetails = false).duplicates.isEmpty()) return null
+        return checkDuplicateLibraryManga(manga).takeIf { it.duplicates.isNotEmpty() }
+    }
+    // KNS <--
+
+    private suspend fun getDuplicateLibraryManga(startIdx: Int = 0): BulkDuplicate? {
         val mangas = state.value.selection
         mangas.fastForEachIndexed { index, manga ->
             if (index < startIdx) return@fastForEachIndexed
-            val duplicates = getDuplicateLibraryManga(manga)
-            if (duplicates.isEmpty()) return@fastForEachIndexed
-            return Triple(index, manga, duplicates)
+            // KNS -->
+            val check = findDuplicates(manga) ?: return@fastForEachIndexed
+            return BulkDuplicate(index, check.manga, check.duplicates, check.chapterCount)
+            // KNS <--
         }
         return null
     }
@@ -408,14 +428,23 @@ class BulkFavoriteViewModel(
 
     fun addRemoveManga(manga: Manga, haptic: HapticFeedback? = null) {
         viewModelScope.launchIO {
-            val duplicates = getDuplicateLibraryManga(manga)
-            when {
-                manga.favorite -> setDialog(Dialog.RemoveManga(manga))
-                duplicates.isNotEmpty() -> setDialog(
-                    Dialog.AddDuplicateManga(manga, duplicates),
-                )
-                else -> addFavorite(manga)
+            // KNS -->
+            if (manga.favorite) {
+                setDialog(Dialog.RemoveManga(manga))
+            } else {
+                startRunning()
+                val check = try {
+                    checkDuplicateLibraryManga(manga)
+                } finally {
+                    stopRunning()
+                }
+                if (check.duplicates.isNotEmpty()) {
+                    setDialog(Dialog.AddDuplicateManga(check.manga, check.duplicates, check.chapterCount))
+                } else {
+                    addFavorite(manga)
+                }
             }
+            // KNS <--
             haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
@@ -450,8 +479,19 @@ class BulkFavoriteViewModel(
 
     sealed interface Dialog {
         data class Migrate(val target: Manga, val current: Manga) : Dialog
-        data class AddDuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
-        data class BulkAllowDuplicate(val manga: Manga, val duplicates: List<MangaWithChapterCount>, val currentIdx: Int) : Dialog
+        // KNS -->
+        data class AddDuplicateManga(
+            val manga: Manga,
+            val duplicates: List<MangaWithChapterCount>,
+            val incomingChapterCount: Long? = null,
+        ) : Dialog
+        data class BulkAllowDuplicate(
+            val manga: Manga,
+            val duplicates: List<MangaWithChapterCount>,
+            val currentIdx: Int,
+            val incomingChapterCount: Long? = null,
+        ) : Dialog
+        // KNS <--
         data class RemoveManga(val manga: Manga) : Dialog
         data class ChangeMangasCategory(
             val mangas: List<Manga>,
