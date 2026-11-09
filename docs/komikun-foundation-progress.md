@@ -379,3 +379,24 @@ No multi-finger or real-device gesture testing was done (adb cannot inject a pin
 Compose reader (Mihon steps 1–3) ported commit by commit on `codex/komikun-pr81-compose-reader` from
 `main` `6ffd8272e7`. KNS adaptations, removed TachiyomiSY autoscroll and the preservation matrix:
 [`reader/kns-pr81-preservation.md`](reader/kns-pr81-preservation.md).
+
+## Preferred tracker synchronization
+
+`PreferredTrackerSync` (with the pure `PreferredTrackerReconciler`) makes the preferred tracker the reference for
+the other linked, logged-in trackers. It is reached through `UnifiedTrackerEdits.sync` only, which serialises it
+with the unified editor's queue, drops a request while one is already waiting, and records its outcome in the same
+per-manga failure map the warning badges use. Triggers: `RefreshTracks` (tracker dialog, manga page),
+`TrackChapter` and `UnifiedTrackerEdits.apply`. Nothing runs from preference or database emissions, and
+propagated writes go straight to `UpsertTrack`, so they cannot start another round.
+
+- Fields: status (equivalent status only), chapters read, score (10-point normalisation, nearest destination value,
+  skipped when the preferred entry is unscored), start/finish dates (same calendar day counts as equal; only between
+  trackers that support reading dates). Never: URLs, remote ids, private flag, publishing status, list data.
+- Progress is lowered only when no queued update exists (`DelayedTrackingStore.hasPending`); a preferred tracker whose
+  last edit or refresh failed is not trusted and pauses the sync. Local chapter read state is never touched.
+- Destinations are compared from the saved records first (no request when equal) and refreshed before a write.
+- Switching the preferred tracker does not sync by itself; the new one takes effect at the next trigger.
+- Untracked trackers: `TrackerSheetPresentation.badgeFor` gives `UNTRACKED` for a missing link only.
+
+Verification: unit tests for the reconciler, the sync runner, the queue/coalescing and the badge model. No live
+tracker was contacted, so API behaviour (date handling, score rounding on each service) is not verified end to end.

@@ -25,6 +25,9 @@ class RefreshTracks(
     private val upsertTrack: UpsertTrack,
     private val syncChapterProgressWithTrack: SyncChapterProgressWithTrack,
     private val context: Context,
+    // KNS -->
+    private val unifiedTrackerEdits: UnifiedTrackerEdits,
+    // KNS <--
 ) {
 
     /**
@@ -39,8 +42,9 @@ class RefreshTracks(
         enhancedTrackersOnly: Boolean = true,
         // KMK <--
     ): List<Pair<Tracker?, Throwable>> {
-        return supervisorScope {
-            return@supervisorScope getTracks.await(mangaId)
+        // KNS -->
+        val failures = supervisorScope {
+            getTracks.await(mangaId)
                 .map { it to trackerManager.get(it.trackerId) }
                 .filter { (_, service) -> service?.isLoggedIn == true }
                 .map { (track, service) ->
@@ -71,5 +75,10 @@ class RefreshTracks(
                 .awaitAll()
                 .filterNotNull()
         }
+        // The refreshed records are now the current state of the services: bring the others in step with the
+        // preferred tracker. A tracker that failed to refresh is not trusted (the preferred one pauses the sync).
+        unifiedTrackerEdits.sync(mangaId, unreliableTrackerIds = failures.mapNotNullTo(mutableSetOf()) { it.first?.id })
+        return failures
+        // KNS <--
     }
 }

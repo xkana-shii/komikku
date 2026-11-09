@@ -34,6 +34,15 @@ internal fun TrackItem.unifiedIconLongPressAction(editMode: Boolean): UnifiedTra
     else -> UnifiedTrackerIconAction.COPY_LINK
 }
 
+/** The one badge a tracker icon wears; an untracked tracker is not an error, so it never gets a warning. */
+internal enum class TrackerBadge {
+    NONE,
+    ERROR,
+    MISMATCH,
+    PREFERRED,
+    UNTRACKED,
+}
+
 /**
  * The values of the unified card: those of the preferred tracker (else the one furthest ahead), which
  * unified edits start from, plus which trackers differ from it or failed their last unified edit.
@@ -70,5 +79,20 @@ internal class TrackerSheetPresentation(
     } ?: "0"
     val mismatchedIds = TrackerProgressSync.mismatchedIds(tracks, preferredId)
     val errorIds = bound.map { it.tracker.id }.toSet() intersect failedTrackerIds
+
+    /**
+     * A logged-in tracker without a linked entry (a missing link, whatever its last refresh did: failures only ever mark
+     * linked trackers) shows the plus badge; a linked one its warning, mismatch or preferred badge, in that order.
+     */
+    fun badgeFor(item: TrackItem): TrackerBadge {
+        val id = item.tracker.id
+        return when {
+            item.track == null -> TrackerBadge.UNTRACKED
+            id in errorIds -> TrackerBadge.ERROR
+            id in mismatchedIds -> TrackerBadge.MISMATCH
+            id == preferredTrackerId -> TrackerBadge.PREFERRED
+            else -> TrackerBadge.NONE
+        }
+    }
 }
 // KNS <--
