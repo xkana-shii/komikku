@@ -239,13 +239,17 @@ object AppBindings {
     fun providesDeleteCategory(
         categoryRepository: tachiyomi.domain.category.repository.CategoryRepository,
         libraryPreferences: tachiyomi.domain.library.service.LibraryPreferences,
-        downloadPreferences: tachiyomi.domain.download.service.DownloadPreferences,
         categoryTombstones: tachiyomi.domain.category.service.CategoryTombstones,
+        // KUN -->
+        pruneCategoryReferences: tachiyomi.domain.category.interactor.PruneCategoryReferences,
+        // KUN <--
     ): tachiyomi.domain.category.interactor.DeleteCategory = tachiyomi.domain.category.interactor.DeleteCategory(
         categoryRepository = categoryRepository,
         libraryPreferences = libraryPreferences,
-        downloadPreferences = downloadPreferences,
         categoryTombstones = categoryTombstones,
+        // KUN -->
+        pruneCategoryReferences = pruneCategoryReferences,
+        // KUN <--
     )
     // KMK <--
     // SY <--

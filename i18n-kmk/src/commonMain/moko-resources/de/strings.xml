@@ -210,4 +210,9 @@
     <string name="pref_webdav_password">Passwort</string>
     <string name="pref_sync_pinned_sources">Angeheftete Quellen synchronisieren</string>
     <string name="pref_sync_pinned_sources_summary">Aus: Angeheftete Quellen bleiben auf diesem Gerät. An: Sie werden synchronisiert, und die zusammengeführte Auswahl ersetzt die angehefteten Quellen auf allen Geräten.</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">Tippe eine Kategorie einmal an, um sie einzuschließen, zweimal, um sie auszuschließen; ein dritter Tipp hebt sie wieder auf. „Filter zurücksetzen“ leert beide Listen. Der Schalter darüber entscheidet, welche Liste gewinnt, wenn ein Eintrag in beiden ist.</string>
+    <string name="pref_history_filter_inclusion_wins">Eingeschlossene Kategorien haben Vorrang</string>
+    <string name="pref_history_filter_inclusion_wins_summary">Ein Manga, der sowohl in einer eingeschlossenen als auch in einer ausgeschlossenen Kategorie ist, wird angezeigt statt ausgeblendet. Aus: ausgeschlossene Kategorien haben Vorrang.</string>
+    <string name="pref_history_filter_reset">Filter zurücksetzen</string>
 </resources>

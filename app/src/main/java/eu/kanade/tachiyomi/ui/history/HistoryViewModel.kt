@@ -128,6 +128,11 @@ class HistoryViewModel(
                 unfinishedChapter = pref.filterUnfinishedChapter.toBooleanOrNull(),
                 nonLibraryEntries = pref.filterNonLibraryManga.toBooleanOrNull(),
                 // KMK <--
+                // KUN -->
+                includedCategories = pref.filterIncludedCategories,
+                excludedCategories = pref.filterExcludedCategories,
+                inclusionWins = pref.filterInclusionWins,
+                // KUN <--
             )
                 // KNS -->
                 .map { history ->
@@ -154,7 +159,11 @@ class HistoryViewModel(
                 prefs.filterUnfinishedChapter,
                 prefs.filterNonLibraryManga,
             )
-                .any { it != TriState.DISABLED }
+                .any { it != TriState.DISABLED } ||
+                // KUN -->
+                prefs.filterIncludedCategories.isNotEmpty() ||
+                prefs.filterExcludedCategories.isNotEmpty()
+            // KUN <--
         }
         .distinctUntilChanged()
     // KMK <--
@@ -459,13 +468,28 @@ class HistoryViewModel(
             historyPreferences.filterUnfinishedManga.changes(),
             historyPreferences.filterUnfinishedChapter.changes(),
             historyPreferences.filterNonLibraryManga.changes(),
-        ) { unfinishedManga, unfinishedChapter, nonLibraryManga ->
+            // KUN -->
+            historyPreferences.filterIncludedCategories.changes(),
+            historyPreferences.filterExcludedCategories.changes(),
+            // KUN <--
+        ) { unfinishedManga, unfinishedChapter, nonLibraryManga, includedCategories, excludedCategories ->
             ItemPreferences(
+                // KUN -->
                 filterUnfinishedManga = unfinishedManga,
                 filterUnfinishedChapter = unfinishedChapter,
                 filterNonLibraryManga = nonLibraryManga,
+                filterIncludedCategories = includedCategories,
+                filterExcludedCategories = excludedCategories,
+                // KUN <--
             )
         }
+            // KUN -->
+            // The precedence flag is combined on afterwards so every slot above stays typed and
+            // named; an array-index `combine` could swap the two List<Long> slots silently.
+            .combine(historyPreferences.filterCategoryInclusionWins.changes()) { preferences, inclusionWins ->
+                preferences.copy(filterInclusionWins = inclusionWins)
+            }
+        // KUN <--
     }
 
     fun showFilterDialog() {
@@ -477,6 +501,12 @@ class HistoryViewModel(
         val filterUnfinishedManga: TriState,
         val filterUnfinishedChapter: TriState,
         val filterNonLibraryManga: TriState,
+        // KUN -->
+        val filterIncludedCategories: List<Long>,
+        val filterExcludedCategories: List<Long>,
+        /** Filled in by the precedence combine in [getHistoryItemPreferenceFlow]. */
+        val filterInclusionWins: Boolean = false,
+        // KUN <--
     )
     // KMK <--
 

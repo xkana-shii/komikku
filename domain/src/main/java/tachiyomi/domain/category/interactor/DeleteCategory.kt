@@ -6,16 +6,17 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.category.service.CategoryTombstones
 import tachiyomi.domain.category.service.CategoryTree
-import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 
 class DeleteCategory(
     private val categoryRepository: CategoryRepository,
     private val libraryPreferences: LibraryPreferences,
-    private val downloadPreferences: DownloadPreferences,
     // SY -->
     private val categoryTombstones: CategoryTombstones,
     // SY <--
+    // KUN -->
+    private val pruneCategoryReferences: PruneCategoryReferences,
+    // KUN <--
 ) {
 
     suspend fun await(categoryId: Long): Result {
@@ -63,23 +64,11 @@ class DeleteCategory(
             libraryPreferences.defaultCategory.delete()
         }
 
-        val categoryPreferences = listOf(
-            libraryPreferences.updateCategories,
-            libraryPreferences.updateCategoriesExclude,
-            downloadPreferences.removeExcludeCategories,
-            downloadPreferences.downloadNewChapterCategories,
-            downloadPreferences.downloadNewChapterCategoriesExclude,
-            // KMK -->
-            libraryPreferences.filterCategoriesInclude,
-            libraryPreferences.filterCategoriesExclude,
-            // KMK <--
-        )
-        val categoryIdString = categoryId.toString()
-        categoryPreferences.forEach { preference ->
-            val ids = preference.get()
-            if (categoryIdString !in ids) return@forEach
-            preference.set(ids.minus(categoryIdString))
-        }
+        // KUN -->
+        // The library, download and history filters that store category ids are pruned in one place,
+        // because the non-v2 sync merge deletes categories without going through this interactor.
+        pruneCategoryReferences.prune(listOf(categoryId))
+        // KUN <--
 
         return try {
             categoryRepository.updateAllOrders(orderedIds = orderedIds)

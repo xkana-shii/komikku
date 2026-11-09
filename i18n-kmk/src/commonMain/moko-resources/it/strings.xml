@@ -220,4 +220,9 @@
     <string name="pref_fetch_manga_chapters_on_add_description">Recupera automaticamente l'elenco dei capitoli di un nuovo manga quando lo aggiungi alla libreria</string>
     <string name="pref_sync_pinned_sources">Sincronizza le fonti fissate</string>
     <string name="pref_sync_pinned_sources_summary">Disattivato: le fonti fissate restano su questo dispositivo. Attivato: vengono sincronizzate e l\'insieme unito sostituisce le fonti fissate su tutti i dispositivi.</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">Tocca una categoria una volta per includerla e due volte per escluderla; un terzo tocco la disattiva. «Reimposta filtro» svuota entrambi gli elenchi. L'interruttore sopra decide quale elenco prevale quando una voce è in entrambi.</string>
+    <string name="pref_history_filter_inclusion_wins">Le categorie incluse hanno la precedenza</string>
+    <string name="pref_history_filter_inclusion_wins_summary">Un manga presente sia in una categoria inclusa sia in una esclusa viene mostrato invece che nascosto. Disattivato: le categorie escluse hanno la precedenza.</string>
+    <string name="pref_history_filter_reset">Reimposta filtro</string>
 </resources>

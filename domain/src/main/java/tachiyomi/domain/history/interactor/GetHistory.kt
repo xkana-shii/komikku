@@ -22,6 +22,11 @@ class GetHistory(
         unfinishedChapter: Boolean?,
         nonLibraryEntries: Boolean?,
         // KMK <--
+        // KUN -->
+        includedCategories: List<Long>,
+        excludedCategories: List<Long>,
+        inclusionWins: Boolean,
+        // KUN <--
     ): Flow<List<HistoryWithRelations>> {
         return repository.getHistory(
             query,
@@ -30,6 +35,11 @@ class GetHistory(
             unfinishedChapter,
             nonLibraryEntries,
             // KMK <--
+            // KUN -->
+            includedCategories,
+            excludedCategories,
+            inclusionWins,
+            // KUN <--
         )
     }
 }

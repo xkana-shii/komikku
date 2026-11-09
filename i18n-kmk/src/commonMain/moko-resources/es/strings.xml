@@ -197,4 +197,9 @@
     <string name="pref_discord_show_discord_button">Mostrar botón de Discord</string>
     <string name="pref_sync_pinned_sources">Sincronizar fuentes fijadas</string>
     <string name="pref_sync_pinned_sources_summary">Desactivado: las fuentes fijadas permanecen en este dispositivo. Activado: se sincronizan y el conjunto combinado sustituye a las fuentes fijadas en todos los dispositivos.</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">Toca una categoría una vez para incluirla y dos veces para excluirla; un tercer toque la desactiva. «Restablecer filtro» vacía ambas listas. El interruptor de arriba decide qué lista gana cuando una entrada está en ambas.</string>
+    <string name="pref_history_filter_inclusion_wins">Las categorías incluidas tienen prioridad</string>
+    <string name="pref_history_filter_inclusion_wins_summary">Un manga que está tanto en una categoría incluida como en una excluida se muestra en lugar de ocultarse. Desactivado: las categorías excluidas tienen prioridad.</string>
+    <string name="pref_history_filter_reset">Restablecer filtro</string>
 </resources>

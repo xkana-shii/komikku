@@ -212,4 +212,9 @@
     <string name="pref_fetch_manga_chapters_on_add_description">ライブラリに新しい漫画を追加する際に、追加する漫画の章リストを自動的に取得します</string>
     <string name="pref_sync_pinned_sources">ピン留めしたソースを同期</string>
     <string name="pref_sync_pinned_sources_summary">オフの場合、ピン留めしたソースはこのデバイスにのみ保存されます。オンの場合、同期され、マージされたセットがすべてのデバイスでピン留めしたソースを置き換えます。</string>
+    <!-- KUN: History category filter (Komi-kun #96) -->
+    <string name="pref_filter_history_categories_details">カテゴリを1回タップすると含める、2回で除外、3回目で解除します。「フィルターをリセット」は両方のリストを空にします。両方に属する場合にどちらを優先するかは上のスイッチで決まります。</string>
+    <string name="pref_history_filter_inclusion_wins">含めるカテゴリを優先</string>
+    <string name="pref_history_filter_inclusion_wins_summary">含めるカテゴリと除外カテゴリの両方に属する作品を、非表示にせず表示します。オフ: 除外カテゴリを優先します。</string>
+    <string name="pref_history_filter_reset">フィルターをリセット</string>
 </resources>
