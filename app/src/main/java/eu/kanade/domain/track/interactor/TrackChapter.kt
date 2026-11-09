@@ -23,6 +23,9 @@ class TrackChapter(
     private val trackerManager: TrackerManager,
     private val upsertTrack: UpsertTrack,
     private val delayedTrackingStore: DelayedTrackingStore,
+    // KNS -->
+    private val unifiedTrackerEdits: UnifiedTrackerEdits,
+    // KNS <--
 ) {
 
     /**
@@ -76,6 +79,9 @@ class TrackChapter(
                 .awaitAll()
                 .mapNotNull { it.exceptionOrNull() }
                 .forEach { logcat(LogPriority.WARN, it) }
+            // KNS --> the other fields of the preferred tracker (a status it set itself, say) follow the reading
+            unifiedTrackerEdits.sync(mangaId)
+            // KNS <--
         }
     }
 }

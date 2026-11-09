@@ -24,7 +24,9 @@ class TrackChapterProgressTest {
     private val upsert = mockk<UpsertTrack>(relaxed = true)
     private val delayed = mockk<DelayedTrackingStore>(relaxed = true)
     private val service = mockk<BaseTracker>()
-    private val subject = TrackChapter(getTracks, manager, upsert, delayed)
+    // KNS: the sync after the update is covered by PreferredTrackerSyncTest
+    private val edits = mockk<UnifiedTrackerEdits>(relaxed = true)
+    private val subject = TrackChapter(getTracks, manager, upsert, delayed, edits)
     private val cached = Track(
         id = 1, mangaId = 2, trackerId = 3, remoteId = 4, libraryId = null, title = "Title",
         lastChapterRead = 1.0, totalChapters = 100, status = 1, score = 0.0, remoteUrl = "",

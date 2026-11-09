@@ -128,5 +128,50 @@ class TrackerSheetPresentationTest {
         enhanced.unifiedIconClickAction(editMode = true) shouldBe UnifiedTrackerIconAction.NONE
         enhanced.unifiedIconLongPressAction(editMode = true) shouldBe UnifiedTrackerIconAction.SET_PREFERRED
     }
+
+    private fun untracked(id: Long) = TrackItem(null, tracker(id))
+
+    @Test
+    fun `an untracked tracker wears the plus badge in a single tracker list too`() {
+        val linked = item(1)
+        val missing = untracked(2)
+        val presentation = TrackerSheetPresentation(listOf(linked, missing), 1, format, emptySet())
+
+        presentation.bound.size shouldBe 1
+        presentation.badgeFor(missing) shouldBe TrackerBadge.UNTRACKED
+        presentation.badgeFor(linked) shouldBe TrackerBadge.PREFERRED
+    }
+
+    @Test
+    fun `badges of linked trackers keep their order and untracked is no warning`() {
+        val preferred = item(1)
+        val behind = item(2, progress = 1.0)
+        val failed = item(3)
+        val missing = untracked(4)
+        val presentation = TrackerSheetPresentation(listOf(preferred, behind, failed, missing), 1, format, setOf(3L, 4L))
+
+        presentation.badgeFor(preferred) shouldBe TrackerBadge.PREFERRED
+        presentation.badgeFor(behind) shouldBe TrackerBadge.MISMATCH
+        presentation.badgeFor(failed) shouldBe TrackerBadge.ERROR
+        // even a failure recorded for it (a failed refresh) does not turn an unlinked tracker into an error
+        presentation.badgeFor(missing) shouldBe TrackerBadge.UNTRACKED
+        presentation.errorIds shouldBe setOf(3L)
+    }
+
+    @Test
+    fun `a linked tracker is never shown as untracked and a healthy one has no badge`() {
+        val one = item(1)
+        val two = item(2)
+        val presentation = TrackerSheetPresentation(listOf(one, two), null, format, emptySet())
+
+        presentation.badgeFor(one) shouldBe TrackerBadge.NONE
+        presentation.badgeFor(two) shouldBe TrackerBadge.NONE
+    }
+
+    @Test
+    fun `an untracked icon still opens the link search`() {
+        untracked(2).unifiedIconClickAction(editMode = false) shouldBe UnifiedTrackerIconAction.SEARCH
+        untracked(2).unifiedIconClickAction(editMode = true) shouldBe UnifiedTrackerIconAction.SEARCH
+    }
 }
 // KNS <--

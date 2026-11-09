@@ -142,20 +142,26 @@ class UpdateTracks(
         return failures
     }
 
-    private fun equivalentStatus(source: Tracker, status: Long, target: Tracker): Long? {
-        if (source.id == target.id) return status
-        val label = statusLabel(source.getStatus(status)) ?: return null
-        return target.getStatusList().firstOrNull { statusLabel(target.getStatus(it)) == label }
-    }
+    private fun equivalentStatus(source: Tracker, status: Long, target: Tracker): Long? = Companion.equivalentStatus(source, status, target)
 
-    // MangaUpdates names its lists after the reading states other trackers use.
-    private fun statusLabel(label: StringResource?): StringResource? = when (label) {
-        MR.strings.reading_list -> MR.strings.reading
-        MR.strings.complete_list -> MR.strings.completed
-        MR.strings.wish_list -> MR.strings.plan_to_read
-        MR.strings.unfinished_list -> MR.strings.dropped
-        MR.strings.on_hold_list, MR.strings.paused -> MR.strings.on_hold
-        else -> label
+    // KNS --> shared with PreferredTrackerSync
+    internal companion object {
+        fun equivalentStatus(source: Tracker, status: Long, target: Tracker): Long? {
+            if (source.id == target.id) return status
+            val label = statusLabel(source.getStatus(status)) ?: return null
+            return target.getStatusList().firstOrNull { statusLabel(target.getStatus(it)) == label }
+        }
+
+        // MangaUpdates names its lists after the reading states other trackers use.
+        private fun statusLabel(label: StringResource?): StringResource? = when (label) {
+            MR.strings.reading_list -> MR.strings.reading
+            MR.strings.complete_list -> MR.strings.completed
+            MR.strings.wish_list -> MR.strings.plan_to_read
+            MR.strings.unfinished_list -> MR.strings.dropped
+            MR.strings.on_hold_list, MR.strings.paused -> MR.strings.on_hold
+            else -> label
+        }
     }
+    // KNS <--
 }
 // KNS <--

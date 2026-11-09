@@ -33,6 +33,10 @@ class DelayedTrackingStore(context: Context) {
         }
     }
 
+    // KNS --> whether an update for any of these tracks is still waiting to reach its service
+    fun hasPending(trackIds: Collection<Long>): Boolean = getItems().any { it.trackId in trackIds }
+    // KNS <--
+
     fun getItems(): List<DelayedTrackingItem> {
         return preferences.all.mapNotNull {
             DelayedTrackingItem(

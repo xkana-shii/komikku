@@ -43,6 +43,7 @@ import eu.kanade.presentation.track.components.TrackLogoIcon
 import eu.kanade.tachiyomi.data.track.Tracker
 import eu.kanade.tachiyomi.ui.manga.track.TrackItem
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Add
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Edit
 import mihon.icons.materialsymbols.roundedfilled.Star
@@ -250,38 +251,39 @@ private fun UnifiedTrackerIcon(
     onCopyLink: (TrackItem) -> Unit,
     onSetPreferredTracker: (TrackItem) -> Unit,
 ) {
-    val id = item.tracker.id
     val unsyncedDescription = stringResource(KMR.strings.tracker_unsynced_a11y, item.tracker.name)
-    BadgedBox(
-        badge = {
-            when {
-                id in presentation.errorIds -> Badge(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ) {
-                    Icon(
-                        imageVector = MaterialSymbols.RoundedFilled.Warning,
-                        contentDescription = stringResource(KMR.strings.tracker_sync_error_a11y, item.tracker.name),
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
-                id in presentation.mismatchedIds -> Badge(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.semantics { contentDescription = unsyncedDescription },
+    BadgedBox(badge = {
+        // KNS --> one badge by TrackerSheetPresentation.badgeFor
+        when (presentation.badgeFor(item)) {
+            TrackerBadge.UNTRACKED -> UntrackedBadge(item.tracker.name)
+            TrackerBadge.ERROR -> Badge(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError,
+            ) {
+                Icon(
+                    imageVector = MaterialSymbols.RoundedFilled.Warning,
+                    contentDescription = stringResource(KMR.strings.tracker_sync_error_a11y, item.tracker.name),
+                    modifier = Modifier.size(12.dp),
                 )
-                id == presentation.preferredTrackerId -> Badge(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ) {
-                    Icon(
-                        imageVector = MaterialSymbols.RoundedFilled.Star,
-                        contentDescription = stringResource(KMR.strings.tracker_preferred_a11y, item.tracker.name),
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
             }
-        },
-    ) {
+            TrackerBadge.MISMATCH -> Badge(
+                containerColor = MaterialTheme.colorScheme.error,
+                modifier = Modifier.semantics { contentDescription = unsyncedDescription },
+            )
+            TrackerBadge.PREFERRED -> Badge(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
+                Icon(
+                    imageVector = MaterialSymbols.RoundedFilled.Star,
+                    contentDescription = stringResource(KMR.strings.tracker_preferred_a11y, item.tracker.name),
+                    modifier = Modifier.size(12.dp),
+                )
+            }
+            TrackerBadge.NONE -> Unit
+        }
+        // KNS <--
+    }) {
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -309,6 +311,24 @@ private fun UnifiedTrackerIcon(
     }
 }
 
+// KNS -->
+/** The plus on the icon of a logged-in tracker without a linked entry: neutral, not an error. */
+@Composable
+private fun UntrackedBadge(trackerName: String) {
+    val description = stringResource(KMR.strings.tracker_untracked_a11y, trackerName)
+    Badge(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Icon(
+            imageVector = MaterialSymbols.Rounded.Add,
+            contentDescription = description,
+            modifier = Modifier.size(12.dp),
+        )
+    }
+}
+// KNS <--
+
 /** The icons of trackers not linked yet, shown under a single linked tracker; a tap binds one. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -316,16 +336,20 @@ internal fun UntrackedTrackerIcons(items: List<TrackItem>, onNewSearch: (TrackIt
     if (items.isEmpty()) return
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items.forEach { item ->
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(4.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TrackLogoIcon(tracker = item.tracker, onClick = { onNewSearch(item) })
+            // KNS --> the plus badge marks it as a link that can be made, in this single-tracker list too
+            BadgedBox(badge = { UntrackedBadge(item.tracker.name) }) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TrackLogoIcon(tracker = item.tracker, onClick = { onNewSearch(item) })
+                }
             }
+            // KNS <--
         }
     }
 }

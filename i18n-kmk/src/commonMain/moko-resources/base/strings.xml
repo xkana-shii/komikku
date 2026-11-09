@@ -338,6 +338,7 @@
     <string name="tracker_updated_count">Trackers updated: %1$d</string>
     <string name="tracker_unsynced_a11y">%1$s: chapter count differs from the preferred tracker</string>
     <string name="tracker_sync_error_a11y">%1$s: the last update failed</string>
+    <string name="tracker_untracked_a11y">Not tracked on %1$s. Tap to link.</string>
     <string name="tracker_preferred_a11y">%1$s is the preferred tracker</string>
     <string name="pref_priority_tracker">Priority tracker</string>
     <string name="pref_reader_automation">Automation</string>
