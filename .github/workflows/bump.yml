@@ -388,9 +388,12 @@ jobs:
           commit_message="$(git log -1 --pretty=%B)"
           echo "Last commit message:"
           echo "$commit_message"
-          if echo "$commit_message" | grep -Fq "[no spotless]"; then
+
+          # Recognize no spotless with or without brackets,
+          # parentheses, hyphens, underscores, and any capitalization.
+          if printf '%s\n' "$commit_message" | grep -Eiq '(^|[^[:alnum:]])no[[:space:]_-]+spotless([^[:alnum:]]|$)'; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Skipping Spotless because the last commit contains [no spotless]."
+            echo "Skipping Spotless because the commit message contains a no spotless directive."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi

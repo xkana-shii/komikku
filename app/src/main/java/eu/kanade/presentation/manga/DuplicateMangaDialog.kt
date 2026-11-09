@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -162,8 +163,11 @@ fun DuplicateMangaDialog(
                 Column(modifier = Modifier.weight(1f)) {
                     ColumnLabel(stringResource(KMR.strings.duplicate_in_library))
                     // Stays scrollable so that several likely matches can be browsed
+                    // Same configuration as the Feed rows; the state keeps the position across recompositions
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                        state = rememberLazyListState(),
+                        contentPadding = PaddingValues(end = MaterialTheme.padding.small),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
                         modifier = Modifier
                             .height(cardHeight)
                             .fillMaxWidth(),
@@ -189,16 +193,17 @@ fun DuplicateMangaDialog(
                         .height(cardHeight + 24.dp),
                 )
 
-                Column {
+                // Fixed width so the incoming card never moves or gets squeezed while the left side scrolls
+                Column(modifier = Modifier.width(MangaCardWidth)) {
                     ColumnLabel(stringResource(KMR.strings.duplicate_adding))
                     Box(modifier = Modifier.height(cardHeight)) {
                         DuplicateMangaListItem(
                             manga = targetManga,
                             chapterCount = incomingChapterCount,
                             getSource = { sourceManager.getOrStub(targetManga.source) },
-                            // The incoming entry is only there for comparison
+                            // The incoming entry never migrates; tapping or long pressing it only opens it
                             onMigrate = null,
-                            onOpenManga = null,
+                            onOpenManga = { onOpenManga(targetManga) },
                             allowPanorama = false,
                         )
                     }
@@ -363,6 +368,11 @@ private fun DuplicateMangaListItem(
                     Modifier.combinedClickable(
                         onLongClick = onOpenManga,
                         onClick = onMigrate,
+                    )
+                } else if (onOpenManga != null) {
+                    Modifier.combinedClickable(
+                        onLongClick = onOpenManga,
+                        onClick = onOpenManga,
                     )
                 } else {
                     Modifier

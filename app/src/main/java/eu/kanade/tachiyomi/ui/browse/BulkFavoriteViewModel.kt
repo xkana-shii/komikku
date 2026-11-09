@@ -21,11 +21,16 @@ import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.util.removeCovers
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import logcat.LogPriority
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.preference.CheckboxState
@@ -126,6 +131,13 @@ class BulkFavoriteViewModel(
     fun addFavorite(startIdx: Int = 0) {
         viewModelScope.launch {
             startRunning()
+            // KNS -->
+            if (startIdx == 0) {
+                // A new run: the library may have changed since the last one
+                duplicateChecks.clear()
+            }
+            prepareDuplicateChecks(startIdx)
+            // KNS <--
             val entryWithDuplicates = getDuplicateLibraryManga(startIdx)
             if (entryWithDuplicates != null) {
                 val (index, manga, duplicates, chapterCount) = entryWithDuplicates
@@ -214,8 +226,25 @@ class BulkFavoriteViewModel(
      * from its source to show and match accurately, so that a long selection does not fetch every entry.
      */
     private suspend fun findDuplicates(manga: Manga): DuplicateCheck? {
-        if (checkDuplicateLibraryManga(manga, loadDetails = false).duplicates.isEmpty()) return null
-        return checkDuplicateLibraryManga(manga).takeIf { it.duplicates.isNotEmpty() }
+        return duplicateChecks.getOrPut(manga.id) {
+            viewModelScope.async(start = CoroutineStart.LAZY) {
+                if (checkDuplicateLibraryManga(manga, loadDetails = false).duplicates.isEmpty()) return@async null
+                // Bounded, so a long selection never hits a source with every request at once
+                remoteSlots.withPermit { checkDuplicateLibraryManga(manga) }.takeIf { it.duplicates.isNotEmpty() }
+            }
+        }.await()
+    }
+
+    /** Results prepared for the current selection; reused after each decision instead of starting over. */
+    private val duplicateChecks = mutableMapOf<Long, Deferred<DuplicateCheck?>>()
+    private val remoteSlots = Semaphore(3)
+
+    /** Starts checking the rest of the selection in the background while the first dialog is being answered. */
+    private fun prepareDuplicateChecks(startIdx: Int) {
+        state.value.selection.drop(startIdx).forEach { manga ->
+            if (manga.favorite) return@forEach
+            viewModelScope.launch { findDuplicates(manga) }
+        }
     }
     // KNS <--
 

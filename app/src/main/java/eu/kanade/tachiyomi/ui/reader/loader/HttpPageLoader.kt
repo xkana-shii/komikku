@@ -22,7 +22,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import logcat.LogPriority
 import mihon.data.cache.ChapterCache
+import tachiyomi.core.common.util.system.logcat
 import java.io.FileNotFoundException
 import java.util.concurrent.ConcurrentHashMap
 
@@ -108,7 +110,16 @@ internal class HttpPageLoader(
 
         // Start the page being read before anything else. Planning the chunks walks the whole chapter and takes
         // chunkProcessLock, and the chain only reaches this page once it has, so don't make it wait on either.
-        launchLoadOnce(page)
+        // KNS -->
+        // A prefetch of this page may still be waiting for a download slot behind slower pages (slots are handed
+        // out first come first served). The page being viewed must not queue behind them: drop that waiting job
+        // and load the page right away, outside the slot limit.
+        downloadJobs[page.index]?.takeIf { it.isActive && page.status == Page.State.Queue }?.let {
+            downloadJobs.remove(page.index, it)
+            it.cancel()
+        }
+        launchLoadOnce(page, priority = true)
+        // KNS <--
 
         val pages = page.chapter.pages.orEmpty()
         if (page.index !in pages.indices) return@withContext
@@ -179,7 +190,14 @@ internal class HttpPageLoader(
      * Starts loading [page] unless it's already loaded or a load is already in flight for it. Claiming the slot and
      * starting the job has to be atomic, otherwise two chunk chains can both launch the same page.
      */
-    private fun launchLoadOnce(page: ReaderPage, /* KUN --> */ force: Boolean = false /* KUN <-- */): Job? {
+    private fun launchLoadOnce(
+        page: ReaderPage,
+        /* KUN --> */
+        force: Boolean = false /* KUN <-- */,
+        // KNS -->
+        priority: Boolean = false,
+        // KNS <--
+    ): Job? {
         val pageIndex = page.index
         // A page another chain is already loading still counts towards this chunk, otherwise the chain moves on
         // and starts the next chunk while it's in flight
@@ -187,7 +205,7 @@ internal class HttpPageLoader(
         if (page.status !is Page.State.Queue && page.status !is Page.State.Error) return null
 
         // KUN -->
-        val job = scope.launch(start = CoroutineStart.LAZY) { internalLoadPage(page, force) }
+        val job = scope.launch(start = CoroutineStart.LAZY) { internalLoadPage(page, force, priority) }
         // KUN <--
         val running = downloadJobs.putIfAbsent(pageIndex, job)
         if (running != null) {
@@ -279,11 +297,26 @@ internal class HttpPageLoader(
      *
      * @param page the page whose source image has to be downloaded.
      */
-    private suspend fun internalLoadPage(page: ReaderPage, force: Boolean = false) {
+    private suspend fun internalLoadPage(page: ReaderPage, force: Boolean = false, priority: Boolean = false) {
         // EXH -->
         // KUN -->
         // Bound concurrent downloads to the user's reader thread count.
-        downloadSemaphore.withPermit { internalLoadPageImpl(page, force) }
+        // KNS -->
+        if (priority) {
+            // The page being viewed is never held back by prefetches that already hold every slot
+            internalLoadPageImpl(page, force)
+            return
+        }
+        val queuedAt = System.nanoTime()
+        downloadSemaphore.withPermit {
+            val waitedMs = (System.nanoTime() - queuedAt) / 1_000_000
+            // Only noteworthy waits are logged, to keep normal reading quiet
+            if (waitedMs > SLOW_QUEUE_LOG_MS) {
+                logcat(LogPriority.DEBUG) { "Reader: page ${page.index} waited ${waitedMs}ms for a download slot" }
+            }
+            internalLoadPageImpl(page, force)
+        }
+        // KNS <--
         // KUN <--
         // EXH <--
     }
@@ -350,3 +383,7 @@ internal class HttpPageLoader(
 }
 
 private const val LIMITED_PAGES_AHEAD = 4
+
+// KNS -->
+private const val SLOW_QUEUE_LOG_MS = 1_000L
+// KNS <--
