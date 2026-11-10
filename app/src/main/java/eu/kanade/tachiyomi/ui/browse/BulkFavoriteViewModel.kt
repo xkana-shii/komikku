@@ -21,16 +21,11 @@ import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.util.removeCovers
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import logcat.LogPriority
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import tachiyomi.core.common.preference.CheckboxState
@@ -43,6 +38,7 @@ import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.interactor.SetMangaDefaultChapterFlags
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.toMangaUpdate
@@ -134,9 +130,8 @@ class BulkFavoriteViewModel(
             // KNS -->
             if (startIdx == 0) {
                 // A new run: the library may have changed since the last one
-                duplicateChecks.clear()
+                resetDuplicateChecks()
             }
-            prepareDuplicateChecks(startIdx)
             // KNS <--
             val entryWithDuplicates = getDuplicateLibraryManga(startIdx)
             if (entryWithDuplicates != null) {
@@ -222,29 +217,27 @@ class BulkFavoriteViewModel(
     )
 
     /**
-     * Looks for duplicates with what is known first and only when there are any loads the details of the manga
-     * from its source to show and match accurately, so that a long selection does not fetch every entry.
+     * Local duplicate check of one selected entry, no network: the details shown in the dialog are loaded by the
+     * dialog itself. Checks of one run share a library snapshot and their results, so the selection is matched
+     * against the library once and each entry at most once, in order, as the dialogs are answered.
      */
     private suspend fun findDuplicates(manga: Manga): DuplicateCheck? {
-        return duplicateChecks.getOrPut(manga.id) {
-            viewModelScope.async(start = CoroutineStart.LAZY) {
-                if (checkDuplicateLibraryManga(manga, loadDetails = false).duplicates.isEmpty()) return@async null
-                // Bounded, so a long selection never hits a source with every request at once
-                remoteSlots.withPermit { checkDuplicateLibraryManga(manga) }.takeIf { it.duplicates.isNotEmpty() }
-            }
-        }.await()
+        duplicateChecks[manga.id]?.let { return it.check }
+        val library = librarySnapshot ?: checkDuplicateLibraryManga.librarySnapshot().also { librarySnapshot = it }
+        val check = checkDuplicateLibraryManga(manga, library).takeIf { it.duplicates.isNotEmpty() }
+        duplicateChecks[manga.id] = CachedCheck(check)
+        return check
     }
 
-    /** Results prepared for the current selection; reused after each decision instead of starting over. */
-    private val duplicateChecks = mutableMapOf<Long, Deferred<DuplicateCheck?>>()
-    private val remoteSlots = Semaphore(3)
+    private class CachedCheck(val check: DuplicateCheck?)
 
-    /** Starts checking the rest of the selection in the background while the first dialog is being answered. */
-    private fun prepareDuplicateChecks(startIdx: Int) {
-        state.value.selection.drop(startIdx).forEach { manga ->
-            if (manga.favorite) return@forEach
-            viewModelScope.launch { findDuplicates(manga) }
-        }
+    /** Results for the current run; reused after each decision instead of starting over. */
+    private val duplicateChecks = mutableMapOf<Long, CachedCheck>()
+    private var librarySnapshot: GetDuplicateLibraryManga.LibrarySnapshot? = null
+
+    private fun resetDuplicateChecks() {
+        duplicateChecks.clear()
+        librarySnapshot = null
     }
     // KNS <--
 

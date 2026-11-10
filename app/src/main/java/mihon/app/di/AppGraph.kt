@@ -144,6 +144,10 @@ interface AppGraph : ViewModelGraph {
     val trustExtension: TrustExtension
 
     val sourceManager: SourceManager
+
+    // KNS --> loads the incoming entry's details inside the duplicate dialog
+    val checkDuplicateLibraryManga: eu.kanade.domain.manga.interactor.CheckDuplicateLibraryManga
+    // KNS <--
     val trackerManager: TrackerManager
     val extensionManager: ExtensionManager
     val chapterCache: ChapterCache

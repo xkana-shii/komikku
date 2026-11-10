@@ -19,19 +19,28 @@ class GetDuplicateLibraryManga(
      *
      * @param incomingChapterCount only used to order candidates that matched equally well.
      */
-    suspend operator fun invoke(manga: Manga, incomingChapterCount: Long? = null): List<MangaWithChapterCount> {
-        val incomingTitles = listOfNotNull(manga.title, manga.ogTitle, manga.userTitle)
-        val incomingAuthors = listOfNotNull(manga.author, manga.ogAuthor)
+    suspend operator fun invoke(
+        manga: Manga,
+        incomingChapterCount: Long? = null,
+        library: LibrarySnapshot? = null,
+    ): List<MangaWithChapterCount> {
+        val incoming = DuplicateMatcher.Normalized(
+            listOfNotNull(manga.title, manga.ogTitle, manga.userTitle),
+            listOfNotNull(manga.author, manga.ogAuthor),
+        )
 
         val trackMatches = mangaRepository.getTrackDuplicateMangaIds(manga.id).toSet()
+        val candidates = library?.candidates
+            ?: mangaRepository.getDuplicateCandidateKeys(manga.id).map(DuplicateMatcher::Candidate)
         val levels = HashMap<Long, DuplicateMatcher.MatchLevel>()
-        mangaRepository.getDuplicateCandidateKeys(manga.id).forEach { key ->
-            val level = if (key.id in trackMatches) {
+        candidates.forEach { candidate ->
+            if (candidate.id == manga.id) return@forEach
+            val level = if (candidate.id in trackMatches) {
                 DuplicateMatcher.MatchLevel.TRACKER
             } else {
-                DuplicateMatcher.matchLevel(incomingTitles, incomingAuthors, key)
+                DuplicateMatcher.matchLevel(incoming, candidate.names)
             }
-            if (level != DuplicateMatcher.MatchLevel.NONE) levels[key.id] = level
+            if (level != DuplicateMatcher.MatchLevel.NONE) levels[candidate.id] = level
         }
         if (levels.isEmpty()) return emptyList()
 
@@ -43,5 +52,14 @@ class GetDuplicateLibraryManga(
                     .thenBy { it.manga.title.lowercase() },
             )
     }
+
+    /**
+     * The library's names, loaded and normalized once so that a bulk add can check every selected entry
+     * against it. Entries added during the run are not in it; callers take a new one per run.
+     */
+    suspend fun snapshot(): LibrarySnapshot =
+        LibrarySnapshot(mangaRepository.getDuplicateCandidateKeys(-1L).map(DuplicateMatcher::Candidate))
+
+    class LibrarySnapshot(val candidates: List<DuplicateMatcher.Candidate>)
     // KNS <--
 }

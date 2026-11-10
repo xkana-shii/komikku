@@ -115,5 +115,22 @@ class DuplicateMatcherTest {
         // the loaded author shows it is by someone else
         interactor(detailed).size shouldBe 0
     }
+
+    @Test
+    fun `a bulk run loads the library once and never matches an entry with itself`() = runTest {
+        coEvery { repository.getDuplicateCandidateKeys(-1) } returns
+            listOf(key(1, "Alpha Story"), key(2, "Beta Story"), key(100, "Alpha Story"))
+        coEvery { repository.getTrackDuplicateMangaIds(any()) } returns emptyList()
+        coEvery { repository.getLibraryMangaWithChapterCount(any()) } answers {
+            firstArg<Collection<Long>>().map { entry(it, "t$it", 1) }
+        }
+        val library = interactor.snapshot()
+
+        interactor(Manga.create().copy(id = 100, ogTitle = "Alpha Story"), library = library)
+            .map { it.manga.id } shouldBe listOf(1L)
+        interactor(Manga.create().copy(id = 101, ogTitle = "Beta Story"), library = library)
+            .map { it.manga.id } shouldBe listOf(2L)
+        coVerify(exactly = 1) { repository.getDuplicateCandidateKeys(any()) }
+    }
 }
 // KNS <--

@@ -37,17 +37,30 @@ object DuplicateMatcher {
             .toSet()
     }
 
+    /** Titles and authors normalized once, so a whole library can be compared without redoing it per pair. */
+    class Normalized(titles: Collection<String>, authors: Collection<String>) {
+        val titles: Set<String> = titles.map(::normalize).filter { it.isNotEmpty() }.toSet()
+        val authors: Set<String> = normalizedAuthors(authors)
+    }
+
+    /** A library entry with its names already normalized. */
+    class Candidate(val id: Long, val names: Normalized) {
+        constructor(key: DuplicateKey) : this(key.id, Normalized(key.titles, key.authors))
+    }
+
     fun matchLevel(
         incomingTitles: Collection<String>,
         incomingAuthors: Collection<String>,
         candidate: DuplicateKey,
-    ): MatchLevel {
-        val incoming = incomingTitles.map(::normalize).filter { it.isNotEmpty() }.toSet()
-        val known = candidate.titles.map(::normalize).filter { it.isNotEmpty() }.toSet()
+    ): MatchLevel = matchLevel(Normalized(incomingTitles, incomingAuthors), Normalized(candidate.titles, candidate.authors))
+
+    fun matchLevel(incomingNormalized: Normalized, candidate: Normalized): MatchLevel {
+        val incoming = incomingNormalized.titles
+        val known = candidate.titles
         if (incoming.isEmpty() || known.isEmpty()) return MatchLevel.NONE
 
-        val incomingNames = normalizedAuthors(incomingAuthors)
-        val knownNames = normalizedAuthors(candidate.authors)
+        val incomingNames = incomingNormalized.authors
+        val knownNames = candidate.authors
         val authorsAgree = incomingNames.isNotEmpty() && knownNames.any { it in incomingNames }
         val authorsDisagree = incomingNames.isNotEmpty() && knownNames.isNotEmpty() && !authorsAgree
 

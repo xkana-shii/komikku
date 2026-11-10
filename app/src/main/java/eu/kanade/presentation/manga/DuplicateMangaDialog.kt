@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMaxOfOrNull
+import eu.kanade.domain.manga.interactor.DuplicateCheck
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.presentation.manga.components.MangaCover
@@ -112,6 +113,20 @@ fun DuplicateMangaDialog(
     val minHeight = LocalPreferenceMinHeight.current
     val horizontalPadding = PaddingValues(horizontal = TabbedDialogPaddings.Horizontal)
     val horizontalPaddingModifier = Modifier.padding(horizontalPadding)
+    // KNS -->
+    // The dialog opens from a local check; the incoming entry's details and chapters load from its source here,
+    // in the background, and its card updates in place
+    val checker = remember { context.appGraph.checkDuplicateLibraryManga }
+    val incoming by produceState(
+        initialValue = DuplicateCheck(targetManga, incomingChapterCount, duplicates),
+        targetManga.id,
+    ) {
+        value = DuplicateCheck(targetManga, incomingChapterCount, duplicates)
+        if (checker.canEnrich(targetManga, incomingChapterCount)) {
+            value = runCatching { checker.enrich(value) }.getOrDefault(value)
+        }
+    }
+    // KNS <--
 
     AdaptiveSheet(
         modifier = modifier,
@@ -154,19 +169,21 @@ fun DuplicateMangaDialog(
             )
 
             // KNS -->
-            val cardHeight = getMaximumMangaCardHeight(duplicates.map { it.manga } + targetManga)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontalPadding),
-            ) {
+            val cardHeight = getMaximumMangaCardHeight(duplicates.map { it.manga } + incoming.manga)
+            // No outer horizontal padding: the library carousel scrolls to the sheet's edge like the Feed rows,
+            // its first card starting at the dialog's text inset; the incoming side keeps its own end inset
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    ColumnLabel(stringResource(KMR.strings.duplicate_in_library))
-                    // Stays scrollable so that several likely matches can be browsed
+                    Box(modifier = Modifier.padding(start = TabbedDialogPaddings.Horizontal)) {
+                        ColumnLabel(stringResource(KMR.strings.duplicate_in_library))
+                    }
                     // Same configuration as the Feed rows; the state keeps the position across recompositions
                     LazyRow(
                         state = rememberLazyListState(),
-                        contentPadding = PaddingValues(end = MaterialTheme.padding.small),
+                        contentPadding = PaddingValues(
+                            start = TabbedDialogPaddings.Horizontal,
+                            end = MaterialTheme.padding.small,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
                         modifier = Modifier
                             .height(cardHeight)
@@ -194,12 +211,16 @@ fun DuplicateMangaDialog(
                 )
 
                 // Fixed width so the incoming card never moves or gets squeezed while the left side scrolls
-                Column(modifier = Modifier.width(MangaCardWidth)) {
+                Column(
+                    modifier = Modifier
+                        .padding(end = TabbedDialogPaddings.Horizontal)
+                        .width(MangaCardWidth),
+                ) {
                     ColumnLabel(stringResource(KMR.strings.duplicate_adding))
                     Box(modifier = Modifier.height(cardHeight)) {
                         DuplicateMangaListItem(
-                            manga = targetManga,
-                            chapterCount = incomingChapterCount,
+                            manga = incoming.manga,
+                            chapterCount = incoming.chapterCount,
                             getSource = { sourceManager.getOrStub(targetManga.source) },
                             // The incoming entry never migrates; tapping or long pressing it only opens it
                             onMigrate = null,

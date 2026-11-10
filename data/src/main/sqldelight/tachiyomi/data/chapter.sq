@@ -74,6 +74,12 @@ SELECT
 FROM chapter
 WHERE id = :id;
 
+-- KNS -->
+-- The number of chapters stored for a manga, without loading them (the duplicate check's badge).
+countChaptersByMangaId:
+SELECT count(*) FROM chapter WHERE manga_id = :mangaId;
+-- KNS <--
+
 getChaptersByMangaId:
 SELECT
     C.id, C.manga_id, C.remote_url, C.remote_name, C.remote_scanlator, C.remote_chapter_number,

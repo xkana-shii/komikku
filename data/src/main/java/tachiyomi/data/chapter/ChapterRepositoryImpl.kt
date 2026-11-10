@@ -198,6 +198,12 @@ class ChapterRepositoryImpl(
         }
     }
 
+    // KNS -->
+    override suspend fun countChaptersByMangaId(mangaId: Long): Long {
+        return database.chapterQueries.countChaptersByMangaId(mangaId).awaitAsOne()
+    }
+    // KNS <--
+
     override suspend fun getChapterByMangaId(mangaId: Long, applyFilter: Boolean): List<Chapter> {
         return database.chapterQueries
             .getChaptersByMangaId(

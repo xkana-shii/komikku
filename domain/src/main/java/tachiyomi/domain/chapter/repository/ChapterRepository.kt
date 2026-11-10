@@ -26,6 +26,11 @@ interface ChapterRepository {
 
     suspend fun getChapterByMangaId(mangaId: Long, applyFilter: Boolean = false): List<Chapter>
 
+    // KNS -->
+    /** How many chapters are stored for [mangaId], without loading them. */
+    suspend fun countChaptersByMangaId(mangaId: Long): Long
+    // KNS <--
+
     // KUN -->
     suspend fun getChaptersByMangaIds(mangaIds: List<Long>): List<Chapter>
     // KUN <--
