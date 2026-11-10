@@ -31,7 +31,7 @@ class GetDuplicateLibraryManga(
 
         val trackMatches = mangaRepository.getTrackDuplicateMangaIds(manga.id).toSet()
         val candidates = library?.candidates
-            ?: mangaRepository.getDuplicateCandidateKeys(manga.id).map(DuplicateMatcher::Candidate)
+            ?: mangaRepository.getDuplicateCandidateKeys(manga.id).map { DuplicateMatcher.Candidate(it) }
         val levels = HashMap<Long, DuplicateMatcher.MatchLevel>()
         candidates.forEach { candidate ->
             if (candidate.id == manga.id) return@forEach

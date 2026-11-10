@@ -117,6 +117,18 @@ class DuplicateMatcherTest {
     }
 
     @Test
+    fun `the fast normalization matches the previous regex one`() {
+        fun reference(text: String) = java.text.Normalizer.normalize(text.trim(), java.text.Normalizer.Form.NFKD)
+            .replace(Regex("""\p{Mn}+"""), "")
+            .lowercase()
+            .replace(Regex("""[^\p{L}\p{N}]+"""), "")
+        listOf(
+            "Mr.A's Farm", "  Café  Ⅻ ", "ＦＵＬＬＷＩＤＴＨ ２", "Pokémon: Żółć!", "鬼の花嫁 1", "크렘노스 부흥기",
+            "İstanbul", "ﬁnal ½", "Ça va? — oui", "",
+        ).forEach { DuplicateMatcher.normalize(it) shouldBe reference(it) }
+    }
+
+    @Test
     fun `a bulk run loads the library once and never matches an entry with itself`() = runTest {
         coEvery { repository.getDuplicateCandidateKeys(-1) } returns
             listOf(key(1, "Alpha Story"), key(2, "Beta Story"), key(100, "Alpha Story"))

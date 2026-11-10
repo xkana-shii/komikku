@@ -18,14 +18,43 @@ object DuplicateMatcher {
     /** Shorter titles than this are only matched when identical. */
     private const val MIN_CONTAINED_LENGTH = 3
 
-    private val diacritics = Regex("""\p{Mn}+""")
-    private val nonAlphanumeric = Regex("""[^\p{L}\p{N}]+""")
-
+    /**
+     * Case, accents and everything but letters and digits removed. One pass without regexes: a whole library is
+     * normalized for every check, and the regex version took over a second for 20,000 entries on a phone.
+     */
     fun normalize(text: String): String {
-        return java.text.Normalizer.normalize(text.trim(), java.text.Normalizer.Form.NFKD)
-            .replace(diacritics, "")
-            .lowercase()
-            .replace(nonAlphanumeric, "")
+        normalized[text]?.let { return it }
+        if (normalized.size > MAX_CACHED_NAMES) normalized.clear()
+        return normalizeUncached(text).also { normalized[text] = it }
+    }
+
+    /**
+     * Library names rarely change, so their normalized form is kept for the session: after the first check, a
+     * check only looks names up. Bounded, so it can never outgrow a few large libraries' worth of names.
+     */
+    private val normalized = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private const val MAX_CACHED_NAMES = 200_000
+
+    private fun normalizeUncached(text: String): String {
+        val ascii = text.all { it.code < 0x80 }
+        val decomposed = if (ascii) text else java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKD)
+        val lower = decomposed.lowercase()
+        val out = StringBuilder(lower.length)
+        var i = 0
+        while (i < lower.length) {
+            val cp = lower.codePointAt(i)
+            if (isLetterOrNumber(cp)) out.appendCodePoint(cp)
+            i += Character.charCount(cp)
+        }
+        return out.toString()
+    }
+
+    private fun isLetterOrNumber(cp: Int): Boolean = when (Character.getType(cp).toByte()) {
+        Character.UPPERCASE_LETTER, Character.LOWERCASE_LETTER, Character.TITLECASE_LETTER,
+        Character.MODIFIER_LETTER, Character.OTHER_LETTER,
+        Character.DECIMAL_DIGIT_NUMBER, Character.LETTER_NUMBER, Character.OTHER_NUMBER,
+        -> true
+        else -> false
     }
 
     /** Splits "A, B & C" style author fields into normalized names. */
@@ -45,8 +74,17 @@ object DuplicateMatcher {
 
     /** A library entry with its names already normalized. */
     class Candidate(val id: Long, val names: Normalized) {
-        constructor(key: DuplicateKey) : this(key.id, Normalized(key.titles, key.authors))
+        constructor(key: DuplicateKey) : this(key.id, normalizedKey(key))
     }
+
+    /** A library entry's names, normalized once per session while they do not change. */
+    private fun normalizedKey(key: DuplicateKey): Normalized {
+        normalizedKeys[key]?.let { return it }
+        if (normalizedKeys.size > MAX_CACHED_NAMES) normalizedKeys.clear()
+        return Normalized(key.titles, key.authors).also { normalizedKeys[key] = it }
+    }
+
+    private val normalizedKeys = java.util.concurrent.ConcurrentHashMap<DuplicateKey, Normalized>()
 
     fun matchLevel(
         incomingTitles: Collection<String>,
