@@ -100,6 +100,9 @@ class TrackPreferences(
     /** The tracker preferred when a manga has no preference of its own; 0 = none. */
     val priorityTrackerId = preferenceStore.getLong("pref_priority_tracker_id", 0L)
 
+    /** Applies the preferred tracker's metadata automatically (see `ApplyPriorityTrackerMetadata`). */
+    val autoPriorityTrackerMetadata = preferenceStore.getBoolean("pref_auto_priority_tracker_metadata", false)
+
     private val preferredTrackerLock = Any()
 
     fun getPreferredTrackerForManga(mangaId: Long): Long? =

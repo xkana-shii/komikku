@@ -377,6 +377,9 @@ data class TrackInfoDialogHomeScreen(
 
         fun setPreferredTracker(trackerId: Long?) {
             trackPreferences.setPreferredTrackerForManga(mangaId, trackerId)
+            // KNS -->
+            appScope.launch { context.appGraph.applyPriorityTrackerMetadata(mangaId) }
+            // KNS <--
         }
 
         fun removeTrackers(trackerIds: Set<Long>, remotely: Boolean) {

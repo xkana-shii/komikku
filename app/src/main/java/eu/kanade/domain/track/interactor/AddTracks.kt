@@ -31,6 +31,9 @@ class AddTracks(
     private val trackerManager: TrackerManager,
     private val getHistory: GetHistory,
     private val context: Context,
+    // KNS -->
+    private val applyPriorityTrackerMetadata: ApplyPriorityTrackerMetadata,
+    // KNS <--
 ) {
 
     // TODO: update all trackers based on common data
@@ -91,6 +94,10 @@ class AddTracks(
                 }
             }
         // KMK <--
+        // KNS -->
+        // Binding succeeded: the preferred tracker may now be a different one
+        applyPriorityTrackerMetadata(mangaId)
+        // KNS <--
     }
 
     suspend fun bindEnhancedTrackers(manga: Manga, source: Source) = withContext(Dispatchers.IO) {

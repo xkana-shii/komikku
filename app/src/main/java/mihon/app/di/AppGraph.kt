@@ -190,6 +190,10 @@ interface AppGraph : ViewModelGraph {
     val getMergeSettings: GetMergeSettings
     val networkToLocalManga: NetworkToLocalManga
     val updateMangaFromRemote: UpdateMangaFromRemote
+
+    // KNS -->
+    val applyPriorityTrackerMetadata: eu.kanade.domain.track.interactor.ApplyPriorityTrackerMetadata
+    // KNS <--
     val filterChaptersForDownload: FilterChaptersForDownload
     val debugRepository: DebugRepository
     val savedSearchRepository: SavedSearchRepository

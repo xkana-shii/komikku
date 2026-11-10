@@ -27,6 +27,7 @@ class RefreshTracks(
     private val context: Context,
     // KNS -->
     private val unifiedTrackerEdits: UnifiedTrackerEdits,
+    private val applyPriorityTrackerMetadata: ApplyPriorityTrackerMetadata,
     // KNS <--
 ) {
 
@@ -78,6 +79,8 @@ class RefreshTracks(
         // The refreshed records are now the current state of the services: bring the others in step with the
         // preferred tracker. A tracker that failed to refresh is not trusted (the preferred one pauses the sync).
         unifiedTrackerEdits.sync(mangaId, unreliableTrackerIds = failures.mapNotNullTo(mutableSetOf()) { it.first?.id })
+        // Reuses the metadata fetched earlier; only changed details are written
+        applyPriorityTrackerMetadata(mangaId)
         return failures
         // KNS <--
     }

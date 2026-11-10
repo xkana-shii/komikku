@@ -478,4 +478,8 @@
     <string name="duplicate_summary_compare">Your library has entries that look like this one. Tap an entry to migrate to it, or add this one anyway. Long press an entry to open it.</string>
     <string name="duplicate_in_library">In your library</string>
     <string name="duplicate_adding">Adding</string>
+
+    <!-- KNS: automatic priority tracker metadata -->
+    <string name="pref_auto_priority_tracker_metadata">Automatically use priority tracker metadata</string>
+    <string name="pref_auto_priority_tracker_metadata_summary">Automatically use metadata from the highest-priority linked tracker when tracking starts or an entry is updated.</string>
 </resources>

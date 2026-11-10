@@ -36,6 +36,9 @@ class UpdateMangaFromRemote(
     private val coverCache: CoverCache,
     private val libraryPreferences: LibraryPreferences,
     private val downloadManager: DownloadManager,
+    // KNS -->
+    private val applyPriorityTrackerMetadata: eu.kanade.domain.track.interactor.ApplyPriorityTrackerMetadata,
+    // KNS <--
 ) {
     /**
      * @param manualFetch Default: `false`. If `true`, it will update cover's last modified date & fetchInterval.
@@ -125,6 +128,15 @@ class UpdateMangaFromRemote(
                     fetchWindow = fetchWindow,
                 )
             }
+            // KNS -->
+            // After the source update, so the tracker metadata is what the entry ends up with. Best effort and
+            // bounded: a slow tracker never delays or fails the update.
+            if (manga.favorite) {
+                kotlinx.coroutines.withTimeoutOrNull(TRACKER_METADATA_TIMEOUT_MS) {
+                    applyPriorityTrackerMetadata(manga.id)
+                }
+            }
+            // KNS <--
             val updatedManga = mangaRepository.getMangaById(manga.id)
             Result.success(RemoteMangaUpdate(manga = updatedManga, newChapters = newChapters))
         } catch (e: Exception) {
@@ -132,6 +144,12 @@ class UpdateMangaFromRemote(
             Result.failure(e)
         }
     }
+
+    // KNS -->
+    private companion object {
+        const val TRACKER_METADATA_TIMEOUT_MS = 10_000L
+    }
+    // KNS <--
 
     private suspend fun awaitUpdateFromSource(
         localManga: Manga,

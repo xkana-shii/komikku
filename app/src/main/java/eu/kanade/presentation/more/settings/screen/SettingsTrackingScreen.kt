@@ -141,6 +141,13 @@ object SettingsTrackingScreen : SearchableSettings {
                 preference = trackPreferences.trackOnAddingToLibrary,
                 title = stringResource(KMR.strings.pref_track_on_add_library),
             ),
+            // KNS -->
+            Preference.PreferenceItem.SwitchPreference(
+                preference = trackPreferences.autoPriorityTrackerMetadata,
+                title = stringResource(KMR.strings.pref_auto_priority_tracker_metadata),
+                subtitle = stringResource(KMR.strings.pref_auto_priority_tracker_metadata_summary),
+            ),
+            // KNS <--
             Preference.PreferenceItem.SwitchPreference(
                 preference = trackPreferences.autoUpdateTrack,
                 title = stringResource(MR.strings.pref_auto_update_manga_sync),
