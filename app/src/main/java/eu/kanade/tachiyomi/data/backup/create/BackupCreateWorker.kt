@@ -20,6 +20,7 @@ import com.hippo.unifile.UniFile
 import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreWorker
+import eu.kanade.tachiyomi.data.job.BackupLibraryUpdateGate
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isRunning
@@ -49,7 +50,12 @@ class BackupCreateWorker(private val context: Context, workerParams: WorkerParam
 
     @Inject private lateinit var notifier: BackupNotifier
 
-    override suspend fun doWork(): Result {
+    // KNS -->
+    // Never alongside a library update: wait for it to finish
+    override suspend fun doWork(): Result = BackupLibraryUpdateGate.withExclusiveAccess { createBackup() }
+    // KNS <--
+
+    private suspend fun createBackup(): Result {
         graph.inject(this)
 
         val isAutoBackup = inputData.getBoolean(IS_AUTO_BACKUP_KEY, true)

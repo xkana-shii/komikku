@@ -28,6 +28,7 @@ import eu.kanade.domain.track.model.toDbTrack
 import eu.kanade.domain.track.model.toDomainTrack
 import eu.kanade.tachiyomi.data.LibraryUpdateStatus
 import eu.kanade.tachiyomi.data.download.DownloadManager
+import eu.kanade.tachiyomi.data.job.BackupLibraryUpdateGate
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.track.TrackStatus
@@ -180,7 +181,12 @@ class LibraryUpdateWorker(private val context: Context, workerParams: WorkerPara
     private var dueIntervalCategories: Set<Long> = emptySet()
     // KNS <--
 
-    override suspend fun doWork(): Result {
+    // KNS -->
+    // Never alongside a backup creation: wait for it to finish
+    override suspend fun doWork(): Result = BackupLibraryUpdateGate.withExclusiveAccess { updateLibrary() }
+    // KNS <--
+
+    private suspend fun updateLibrary(): Result {
         graph.inject(this)
 
         if (tags.contains(WORK_NAME_AUTO)) {
