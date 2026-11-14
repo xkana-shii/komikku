@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -36,7 +37,10 @@ fun HistoryDeleteDialog(
                 Text(text = stringResource(MR.strings.dialog_with_checkbox_remove_description))
 
                 LabeledCheckbox(
-                    label = stringResource(MR.strings.dialog_with_checkbox_reset),
+                    // KUN -->
+                    // Resetting takes every history row of the manga, so it needs a fork-owned string
+                    label = stringResource(KMR.strings.history_reset_all_chapters_of_manga),
+                    // KUN <--
                     checked = removeEverything,
                     onCheckedChange = { removeEverything = it },
                 )

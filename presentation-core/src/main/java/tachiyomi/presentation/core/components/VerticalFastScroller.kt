@@ -25,17 +25,26 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -72,6 +81,10 @@ fun VerticalFastScroller(
     topContentPadding: Dp = Dp.Hairline,
     bottomContentPadding: Dp = Dp.Hairline,
     endContentPadding: Dp = Dp.Hairline,
+    // KUN -->
+    // Label to show next to the thumb while it is dragged, keyed by item index. Null hides it.
+    thumbLabel: ((index: Int) -> String?)? = null,
+    // KUN <--
     content: @Composable () -> Unit,
 ) {
     SubcomposeLayout(modifier = modifier) { constraints ->
@@ -141,16 +154,12 @@ fun VerticalFastScroller(
 
             if (maxRemainingSections < 0.5) return@subcompose
 
-            // When thumb dragged
-            LaunchedEffect(thumbOffsetY) {
-                if (layoutInfo.totalItemsCount == 0 || !isThumbDragged) return@LaunchedEffect
-                val thumbProportion = (thumbOffsetY - thumbTopPadding) / trackHeightPx
-                if (thumbProportion <= 0.001f) {
-                    estimateConfidence.value = -1f
-                    listState.scrollToItem(index = 0, scrollOffset = 0)
-                    scrolled.tryEmit(Unit)
-                    return@LaunchedEffect
-                }
+            // KUN -->
+            // Item index and offset the thumb lands on at [offsetY], shared by the drag scroll and the
+            // thumb label so the pill and the section it would jump to always agree
+            fun targetAt(offsetY: Float): Pair<Int, Int> {
+                val thumbProportion = (offsetY - thumbTopPadding) / trackHeightPx
+                if (thumbProportion <= 0.001f) return 0 to 0
                 val scrollRemainingSections = (1f - thumbProportion) * maxRemainingSections
                 val currentSection = layoutInfo.totalItemsCount - scrollRemainingSections
                 val scrollSectionIndex = currentSection.toInt().coerceAtMost(layoutInfo.totalItemsCount)
@@ -159,9 +168,45 @@ fun VerticalFastScroller(
                 val scrollSectionOffset = (scrollRelativeOffset - scrollHeightPx).roundToInt()
                 val scrollItemIndex = scrollSectionIndex.coerceIn(0, layoutInfo.totalItemsCount - 1)
                 val scrollItemOffset = scrollSectionOffset + (scrollSectionIndex - scrollItemIndex) * bottomItem.size
-                listState.scrollToItem(index = scrollItemIndex, scrollOffset = scrollItemOffset)
+                return scrollItemIndex to scrollItemOffset
+            }
+            // KUN <--
+
+            // When thumb dragged
+            LaunchedEffect(thumbOffsetY) {
+                if (layoutInfo.totalItemsCount == 0 || !isThumbDragged) return@LaunchedEffect
+                val thumbProportion = (thumbOffsetY - thumbTopPadding) / trackHeightPx
+                if (thumbProportion <= 0.001f) estimateConfidence.value = -1f
+                // KUN -->
+                val (index, offset) = targetAt(thumbOffsetY)
+                listState.scrollToItem(index = index, scrollOffset = offset)
+                // KUN <--
                 scrolled.tryEmit(Unit)
             }
+
+            // KUN -->
+            // Drag label, derived from where the drag would scroll to rather than from the settled layout
+            val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+            val labelAlpha = remember { Animatable(0f) }
+            var label by remember { mutableStateOf<String?>(null) }
+            // This effect only restarts with the label, unlike the drag one, so the mapping is read
+            // through a state or the pill would keep naming the section of the first composition
+            val currentTargetAt by rememberUpdatedState(::targetAt)
+            LaunchedEffect(thumbLabel) {
+                if (thumbLabel == null) return@LaunchedEffect
+                snapshotFlow { if (isThumbDragged) thumbOffsetY else null }
+                    .collectLatest { offsetY ->
+                        if (offsetY == null) {
+                            delay(ThumbLabelVisibilityDuration)
+                            labelAlpha.animateTo(0f, animationSpec = ImmediateFadeOutAnimationSpec)
+                            label = null
+                        } else {
+                            labelAlpha.snapTo(1f)
+                            label = thumbLabel(currentTargetAt(offsetY).first)
+                        }
+                    }
+            }
+            // KUN <--
 
             // When list scrolled
             if (layoutInfo.totalItemsCount != 0 && !isThumbDragged) {
@@ -222,7 +267,34 @@ fun VerticalFastScroller(
                     .width(ThumbThickness)
                     .alpha(alpha.value)
                     .background(color = thumbColor, shape = ThumbShape),
-            )
+            ) {
+                // KUN -->
+                label?.let { text ->
+                    FastScrollThumbLabel(
+                        text = text,
+                        modifier = Modifier
+                            // CenterStart is the side facing the list in both directions, since the scroller sits
+                            // on the trailing edge, so the pill goes on that side of the thumb.
+                            .align(Alignment.CenterStart)
+                            .graphicsLayer { this.alpha = labelAlpha.value }
+                            .layout { measurable, constraints ->
+                                // Measured unconstrained so the pill sizes to its text inside the thin thumb column
+                                val placeable = measurable.measure(Constraints())
+                                val gap = ThumbLabelGap.roundToPx()
+                                layout(0, placeable.height) {
+                                    // Zero-width node, so put the pill on the inner side by hand: placeRelative
+                                    // doesn't mirror here
+                                    if (isRtl) {
+                                        placeable.place(gap, 0)
+                                    } else {
+                                        placeable.place(-placeable.width - gap, 0)
+                                    }
+                                }
+                            },
+                    )
+                }
+                // KUN <--
+            }
         }.map { it.measure(scrollerConstraints) }
         val scrollerWidth = scrollerPlaceable.fastMaxBy { it.width }?.width ?: 0
 
@@ -236,6 +308,29 @@ fun VerticalFastScroller(
         }
     }
 }
+
+// KUN -->
+@Composable
+private fun FastScrollThumbLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = ThumbShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 2.dp,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+        )
+    }
+}
+// KUN <--
 
 @Composable
 private fun rememberColumnWidthSums(
@@ -470,9 +565,15 @@ object Scroller {
 }
 
 private val ThumbLength = 48.dp
+// KUN -->
+private val ThumbLabelGap = 8.dp
+// KUN <--
 private val ThumbThickness = 12.dp
 private val ThumbShape = RoundedCornerShape(ThumbThickness / 2)
 private val ScrollBarVisibilityDuration = 2.seconds
+// KUN -->
+private val ThumbLabelVisibilityDuration = 1.seconds
+// KUN <--
 private val ImmediateFadeOutAnimationSpec = tween<Float>(
     durationMillis = ViewConfiguration.getScrollBarFadeDuration(),
 )

@@ -27,6 +27,20 @@ fun relativeDateText(
 fun relativeDateText(
     localDate: LocalDate?,
 ): String {
+    // KUN -->
+    val format = relativeDateFormatter()
+
+    return localDate?.let(format)
+        ?: stringResource(MR.strings.not_applicable)
+    // KUN <--
+}
+
+// KUN -->
+/**
+ * [relativeDateText] as a plain function, for callers that need the text outside of composition.
+ */
+@Composable
+fun relativeDateFormatter(): (LocalDate) -> String {
     val context = LocalContext.current
     val locale = LocalLocale.current
 
@@ -34,10 +48,8 @@ fun relativeDateText(
     val relativeTime = remember { preferences.relativeTime.get() }
     val dateFormat = remember { UiPreferences.dateFormat(preferences.dateFormat.get(), locale.platformLocale) }
 
-    return localDate?.toRelativeString(
-        context = context,
-        relative = relativeTime,
-        dateFormat = dateFormat,
-    )
-        ?: stringResource(MR.strings.not_applicable)
+    return remember(context, relativeTime, dateFormat) {
+        { date -> date.toRelativeString(context, relativeTime, dateFormat) }
+    }
 }
+// KUN <--

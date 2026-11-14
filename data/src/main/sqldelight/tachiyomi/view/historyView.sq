@@ -143,9 +143,10 @@ AND (
     )
 )
 -- KUN <--
-AND maxReadAtChapterId = historyView.chapterId
 AND lower(historyView.title) LIKE ('%' || :query || '%')
-ORDER BY readAt DESC;
+-- KUN -->
+ORDER BY readAt DESC, id DESC;
+-- KUN <--
 
 getLatestHistory:
 SELECT

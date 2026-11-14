@@ -3,7 +3,7 @@ package eu.kanade.presentation.history
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -22,6 +22,8 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
+import eu.kanade.presentation.components.relativeDateFormatter
+import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
@@ -30,7 +32,6 @@ import eu.kanade.tachiyomi.ui.history.HistoryViewModel
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
 import kotlinx.datetime.LocalDate
 import mihon.app.di.appGraph
-import mihon.feature.upcoming.DateHeading
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Checklist
 import mihon.icons.materialsymbols.rounded.DeleteSweep
@@ -40,6 +41,8 @@ import mihon.icons.materialsymbols.rounded.SelectAll
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
+import tachiyomi.presentation.core.components.ListGroupHeader
+import tachiyomi.presentation.core.components.Scroller.STICKY_HEADER_KEY_PREFIX
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -179,30 +182,49 @@ private fun HistoryScreenContent(
         UiPreferences.timeFormat(timeFormat, locale.platformLocale, is24HourSystem)
     }
 
+    // KUN -->
+    val formatDate = relativeDateFormatter()
+    // Section each index belongs to, so the thumb label names the header a jump would land under.
+    // Days are formatted on demand: only a drag needs a label, and only for the days it crosses.
+    val thumbLabel = remember(history, formatDate) {
+        var section: LocalDate? = null
+        val sections = arrayOfNulls<LocalDate>(history.size)
+        history.forEachIndexed { index, model ->
+            if (model is HistoryUiModel.Header) section = model.date
+            sections[index] = section
+        }
+        val labels = HashMap<LocalDate, String>()
+        val label: (Int) -> String? = { index ->
+            sections.getOrNull(index)?.let { date -> labels.getOrPut(date) { formatDate(date) } }
+        }
+        label
+    }
+    val listState = rememberLazyListState()
+    // KUN <--
+
     FastScrollLazyColumn(
-        contentPadding = contentPadding,
+        // KUN -->
+        // Using modifier instead of contentPadding so we can use stickyHeader
+        modifier = Modifier.padding(contentPadding),
+        state = listState,
+        thumbLabel = thumbLabel,
+        // KUN <--
     ) {
-        items(
-            items = history,
-            key = { "history-${it.hashCode()}" },
-            contentType = {
-                when (it) {
-                    is HistoryUiModel.Header -> "header"
-                    is HistoryUiModel.Item -> "item"
+        // KUN -->
+        history.forEach { model ->
+            when (model) {
+                is HistoryUiModel.Header -> stickyHeader(
+                    key = "$STICKY_HEADER_KEY_PREFIX${model.date}",
+                    contentType = "header",
+                ) {
+                    // The pinned header needs an opaque background; ListGroupHeader already paints one
+                    ListGroupHeader(text = relativeDateText(model.date))
                 }
-            },
-        ) { item ->
-            when (item) {
-                is HistoryUiModel.Header -> {
-                    DateHeading(
-                        modifier = Modifier.animateItemFastScroll()
-                            .padding(top = MaterialTheme.padding.extraSmall),
-                        date = item.date,
-                        mangaCount = item.mangaCount,
-                    )
-                }
-                is HistoryUiModel.Item -> {
-                    val value = item.item
+                is HistoryUiModel.Item -> item(
+                    key = "history-${model.item.id}",
+                    contentType = "item",
+                ) {
+                    val value = model.item
                     // KMK -->
                     val isSelected = remember(state.selection) { value.chapterId in state.selection }
                     // KMK <--
@@ -215,7 +237,7 @@ private fun HistoryScreenContent(
                         onClick = {
                             when {
                                 selectionMode -> onHistorySelected(
-                                    item.item,
+                                    model.item,
                                     HistorySelectionOptions(
                                         selected = !isSelected,
                                         fromLongPress = false,
@@ -226,7 +248,7 @@ private fun HistoryScreenContent(
                         },
                         onLongClick = {
                             onHistorySelected(
-                                item.item,
+                                model.item,
                                 HistorySelectionOptions(
                                     selected = !isSelected,
                                     fromLongPress = true,
@@ -253,6 +275,7 @@ private fun HistoryScreenContent(
                 }
             }
         }
+        // KUN <--
     }
 }
 

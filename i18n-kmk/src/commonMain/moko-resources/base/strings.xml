@@ -482,4 +482,7 @@
     <!-- KNS: automatic priority tracker metadata -->
     <string name="pref_auto_priority_tracker_metadata">Automatically use priority tracker metadata</string>
     <string name="pref_auto_priority_tracker_metadata_summary">Automatically use metadata from the highest-priority linked tracker when tracking starts or an entry is updated.</string>
+
+    <!-- History -->
+    <string name="history_reset_all_chapters_of_manga">Reset all chapters of this manga</string>
 </resources>

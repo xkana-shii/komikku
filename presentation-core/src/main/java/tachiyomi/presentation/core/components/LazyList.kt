@@ -66,6 +66,9 @@ fun FastScrollLazyColumn(
         if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     userScrollEnabled: Boolean = true,
+    // KUN -->
+    thumbLabel: ((index: Int) -> String?)? = null,
+    // KUN <--
     content: LazyListScope.() -> Unit,
 ) {
     VerticalFastScroller(
@@ -73,6 +76,9 @@ fun FastScrollLazyColumn(
         modifier = modifier,
         topContentPadding = contentPadding.calculateTopPadding(),
         endContentPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
+        // KUN -->
+        thumbLabel = thumbLabel,
+        // KUN <--
     ) {
         LazyColumn(
             state = state,
