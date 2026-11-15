@@ -321,6 +321,58 @@ class MigrationTest {
             }
         }
     }
+
+    /**
+     * `read_at = 0` was written by the restore path after `53.sqm` had already run, so only a later
+     * migration can reach those rows: it starts from version 64 so the seed rows (already nulled by
+     * `53.sqm`) prove nothing here.
+     */
+    @Test
+    fun `migration from version 64 nulls zero read dates and keeps the rest of the row`() {
+        runBlocking {
+            val dbFile = Files.createTempFile("komikku-migration-history-read-at-test", ".db")
+            Files.copy(Path.of("src/main/sqldelight/49.db"), dbFile, REPLACE_EXISTING)
+            val driver = JdbcSqliteDriver("jdbc:sqlite:$dbFile")
+            try {
+                populateOldSchema(driver)
+                Database.Schema.migrate(driver, 49L, 64L).await()
+
+                // Rows as they existed at version 64: the zero and the negative are what the migration
+                // is for, the positive and the NULL are what it must leave alone.
+                driver.execute(
+                    null,
+                    "INSERT INTO chapter(id,manga_id,remote_url,remote_name,remote_chapter_number,remote_order,remote_memo,user_read,user_bookmark,user_last_page_read,state_date_fetch) " +
+                        "VALUES (100,1,'https://c100','Ch 100',100.0,100,'{}',1,0,0,100),(101,1,'https://c101','Ch 101',101.0,101,'{}',1,0,0,101)," +
+                        "(102,1,'https://c102','Ch 102',102.0,102,'{}',1,0,0,102),(103,1,'https://c103','Ch 103',103.0,103,'{}',1,0,0,103)",
+                    0,
+                ).await()
+                driver.execute(
+                    null,
+                    "INSERT INTO history(id,manga_id,chapter_id,read_at,read_duration) " +
+                        "VALUES (100,1,100,0,111),(101,1,101,1700000000,222),(102,1,102,NULL,333),(103,1,103,-5,444)",
+                    0,
+                ).await()
+
+                Database.Schema.migrate(driver, 64L, Database.Schema.version).await()
+
+                // The zero and the negative epoch become the "removed or never read" marker...
+                driver.scalarLong("SELECT count(*) FROM history WHERE id = 100 AND read_at IS NULL") shouldBe 1
+                driver.scalarLong("SELECT count(*) FROM history WHERE id = 103 AND read_at IS NULL") shouldBe 1
+                driver.scalarLong("SELECT count(*) FROM history WHERE read_at <= 0") shouldBe 0
+                // ... while the row's own read duration survives.
+                driver.scalarLong("SELECT read_duration FROM history WHERE id = 100") shouldBe 111
+                driver.scalarLong("SELECT read_duration FROM history WHERE id = 103") shouldBe 444
+                // A real date and an existing NULL are untouched, and nothing is deleted.
+                driver.scalarLong("SELECT read_at FROM history WHERE id = 101") shouldBe 1700000000
+                driver.scalarLong("SELECT read_duration FROM history WHERE id = 101") shouldBe 222
+                driver.scalarLong("SELECT count(*) FROM history WHERE id = 102 AND read_at IS NULL") shouldBe 1
+                driver.scalarLong("SELECT read_duration FROM history WHERE id = 102") shouldBe 333
+                driver.scalarLong("SELECT count(*) FROM history") shouldBe 7
+            } finally {
+                driver.close()
+            }
+        }
+    }
     // KUN <--
 
     private fun populateOldSchema(driver: SqlDriver) = runBlocking {

@@ -90,8 +90,8 @@ userThumbnailUrl
 FROM historyView
 WHERE historyView.readAt IS NOT NULL
 -- KUN -->
--- A restored history row can carry a 0 read date from before epoch 0 stopped being written; it
--- must not render as a 1970 entry.
+-- The guard predates 64.sqm, which nulls every non-positive read date, so nothing should reach it
+-- any more; it stays as a backstop so a future writer's date can never render as a 1970 entry.
 AND historyView.readAt > 0
 -- KUN <--
 -- KMK -->

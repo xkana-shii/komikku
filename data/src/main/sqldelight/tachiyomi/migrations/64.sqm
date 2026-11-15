@@ -1,0 +1,7 @@
+-- KUN -->
+-- 53.sqm already turned `read_at = 0` into NULL, but it shipped in the commit that reworked the schema,
+-- before the restore path started writing those 0s; #61 stopped writing them. A migration never runs
+-- twice, so the rows written in between are still here. NULL is the established "removed or never read"
+-- marker and every reader already handles it; a negative epoch is as meaningless as 0.
+UPDATE history SET read_at = NULL WHERE read_at <= 0;
+-- KUN <--
