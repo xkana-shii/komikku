@@ -89,6 +89,11 @@ userThumbnailUrl
 -- SY <--
 FROM historyView
 WHERE historyView.readAt IS NOT NULL
+-- KUN -->
+-- A restored history row can carry a 0 read date from before epoch 0 stopped being written; it
+-- must not render as a 1970 entry.
+AND historyView.readAt > 0
+-- KUN <--
 -- KMK -->
 AND (
     :unfinishedManga IS NULL
@@ -205,5 +210,9 @@ ON manga.id = history.manga_id
 JOIN chapter
 ON chapter.id = history.chapter_id
 WHERE history.read_at IS NOT NULL
+-- KUN -->
+-- A manga whose only history row is a 0 read date leftover must not win "continue reading".
+AND history.read_at > 0
+-- KUN <--
 ORDER BY history.read_at DESC
 LIMIT 1;

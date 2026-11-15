@@ -16,10 +16,10 @@ import tachiyomi.domain.history.model.HistoryWithRelations
  * re-implementation of its predicate.
  *
  * Fixture: manga 1 is in category 1, manga 2 in category 2, manga 3 in both and manga 4 in none,
- * each with one chapter and one history entry, plus a second read chapter for manga 1. Assertions
- * compare manga ids, so forwarding the include and exclude lists to the wrong query parameter (or
- * deriving `includedEmpty` / `excludedEmpty` from the other list) changes the result instead of
- * only its size.
+ * each with one chapter and one history entry, plus a later second read chapter for manga 1.
+ * Assertions compare manga ids, so forwarding the include and exclude lists to the wrong query
+ * parameter (or deriving `includedEmpty` / `excludedEmpty` from the other list) changes the result
+ * instead of only its size.
  */
 class HistoryCategoryFilterTest {
 
@@ -145,17 +145,87 @@ class HistoryCategoryFilterTest {
     }
 
     @Test
-    fun `every read chapter is listed and equal read dates keep history id order`() {
+    fun `every read chapter is listed and equal read dates follow the history id`() {
         runBlocking {
             val driver = newDriver()
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
                 driver.insertHistoryFixture()
 
-                // Manga 1 read a second chapter, and both of its history rows share a `read_at`; the
-                // max-read-at predicate used to collapse that manga to one row, and `id DESC` orders
-                // the tied rows. Manga 4's newer row still comes first.
+                // Manga 1 read two chapters and contributes both rows, the later one first; the
+                // rest were all read at 3000.
                 historyChapterIds(database) shouldBe listOf(104L, 201L, 103L, 102L, 101L)
+                historyMangaIds(database) shouldBe listOf(1L, 2L, 3L, 4L)
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `rows with an equal read date come back by history id descending`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                driver.insertHistoryFixture()
+                // A second read chapter for manga 3 sharing its first row's `read_at`.
+                driver.insertChapter(mangaId = 3L, chapterId = secondChapterIdFor(3L), index = 2)
+                driver.insertHistory(
+                    mangaId = 3L,
+                    chapterId = secondChapterIdFor(3L),
+                    historyId = secondHistoryIdFor(3L),
+                )
+
+                // Four rows tie at 3000, so the tiebreaker decides the order: history id 2003
+                // first, then 1003, 1002 and 1001.
+                historyChapterIds(database) shouldBe listOf(104L, 201L, 203L, 103L, 102L, 101L)
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `history rows with a zero read date are not listed`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                driver.insertHistoryFixture()
+                // A manga whose only history row is the epoch-0 leftover an old restore wrote...
+                driver.insertManga(5L)
+                driver.insertChapter(mangaId = 5L)
+                driver.insertHistory(mangaId = 5L, readAt = 0L)
+                // ...and a second, epoch-0 row next to the real one of manga 2.
+                driver.insertChapter(mangaId = 2L, chapterId = secondChapterIdFor(2L), index = 2)
+                driver.insertHistory(
+                    mangaId = 2L,
+                    chapterId = secondChapterIdFor(2L),
+                    historyId = secondHistoryIdFor(2L),
+                    readAt = 0L,
+                )
+
+                // Manga 5's 0 row and manga 2's 0 row are gone, but manga 1's earlier chapter stays.
+                historyChapterIds(database) shouldBe listOf(104L, 201L, 103L, 102L, 101L)
+                historyMangaIds(database) shouldBe listOf(1L, 2L, 3L, 4L)
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `a zero read date never becomes the latest history entry`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                driver.insertManga(1L)
+                driver.insertChapter(mangaId = 1L)
+                driver.insertHistory(mangaId = 1L, readAt = 0L)
+
+                HistoryRepositoryImpl(database).getLastHistory() shouldBe null
             } finally {
                 driver.close()
             }
@@ -169,7 +239,7 @@ class HistoryCategoryFilterTest {
         inclusionWins: Boolean = false,
     ): List<Long> {
         return historyRows(database, included, excluded, inclusionWins)
-            // A manga has one row per read chapter now, and these cases are about membership
+            // A manga can have several read chapters, and these cases are about membership
             .map { it.mangaId }
             .distinct()
             .sorted()
@@ -212,9 +282,14 @@ class HistoryCategoryFilterTest {
             insertHistory(mangaId = id, readAt = if (id == 4L) 4000L else 3000L)
         }
 
-        // A second read chapter for manga 1, whose history row shares the first one's `read_at`.
+        // A second read chapter for manga 1, read later than its first, so it comes before it.
         insertChapter(mangaId = 1L, chapterId = secondChapterIdFor(1L), index = 2)
-        insertHistory(mangaId = 1L, chapterId = secondChapterIdFor(1L), historyId = secondHistoryIdFor(1L))
+        insertHistory(
+            mangaId = 1L,
+            chapterId = secondChapterIdFor(1L),
+            historyId = secondHistoryIdFor(1L),
+            readAt = 3500L,
+        )
 
         insertCategory(id = 1L, name = "Category 1", order = 0L)
         insertCategory(id = 2L, name = "Category 2", order = 1L)

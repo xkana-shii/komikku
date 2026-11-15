@@ -91,6 +91,34 @@ class HistoryUiModelsTest {
             listOf(day1.toLocalDate(), day2.toLocalDate())
     }
 
+    @Test
+    fun `several rows of one manga keep only the latest`() {
+        val latest = history(id = 3, mangaId = 1, chapterId = 13, readAt = day1)
+        val older = history(id = 2, mangaId = 1, chapterId = 12, readAt = day2)
+        val other = history(id = 1, mangaId = 2, chapterId = 21, readAt = day2)
+
+        listOf(latest, older, other).toLatestPerManga() shouldContainExactly listOf(latest, other)
+    }
+
+    @Test
+    fun `rows of one manga read at the same time keep the first one`() {
+        // The query's `id DESC` already put the higher history id first, so the collapse must not
+        // re-rank the pair.
+        val first = history(id = 2, mangaId = 1, chapterId = 12, readAt = day1)
+        val second = history(id = 1, mangaId = 1, chapterId = 11, readAt = day1)
+
+        listOf(first, second).toLatestPerManga() shouldContainExactly listOf(first)
+    }
+
+    @Test
+    fun `distinct manga are all kept in order`() {
+        val first = history(id = 3, mangaId = 1, chapterId = 13, readAt = day1)
+        val second = history(id = 2, mangaId = 2, chapterId = 22, readAt = day2)
+        val third = history(id = 1, mangaId = 3, chapterId = 33, readAt = day2)
+
+        listOf(first, second, third).toLatestPerManga() shouldContainExactly listOf(first, second, third)
+    }
+
     private fun List<HistoryUiModel>.itemIds(): List<Long> =
         filterIsInstance<HistoryUiModel.Item>().map { it.item.id }
 

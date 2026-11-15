@@ -148,6 +148,11 @@ class HistoryViewModel(
                     _events.send(Event.InternalError)
                 }
                 .map { it.toList() }
+                // KUN -->
+                // The query orders by readAt DESC, id DESC and the mapper keeps that order, so the
+                // first row of each manga is its latest read chapter.
+                .map { it.toLatestPerManga() }
+                // KUN <--
                 .flowOn(Dispatchers.IO)
         }
 
@@ -574,11 +579,17 @@ class HistoryViewModel(
 }
 
 // KUN -->
+// The per-manga pick happens here, after the query's readAt DESC, id DESC order, because SQLite's
+// bare-column `MAX()` rule leaves the surviving chapter of two rows read at the same time unspecified.
+internal fun List<HistoryWithRelations>.toLatestPerManga(): List<HistoryWithRelations> =
+    distinctBy { it.mangaId }
+
 /**
  * One [HistoryUiModel.Header] per read date, with the rows in the order the history query returned them.
  */
 internal fun List<HistoryWithRelations>.toHistoryUiModels(): List<HistoryUiModel> {
-    // readAt is nullable on the model: a null row would otherwise be listed under the previous day's header
+    // The history queries only return positive read dates; the filter is the mapper's guard, so a
+    // null can never be listed under the previous day's header.
     return filter { it.readAt != null }
         .map { HistoryUiModel.Item(it) }
         .insertSeparators { before, after ->
