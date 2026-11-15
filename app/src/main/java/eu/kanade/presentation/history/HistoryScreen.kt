@@ -225,7 +225,8 @@ private fun HistoryScreenContent(
                     // KNS -->
                     val date = relativeDateText(model.date)
                     val count = mangaCounts[model.date]
-                    ListGroupHeader(text = if (count != null) "$date ($count)" else date)
+                    // The same count badge as the Updates screen
+                    ListGroupHeader(text = date, count = count)
                     // KNS <--
                 }
                 is HistoryUiModel.Item -> item(
