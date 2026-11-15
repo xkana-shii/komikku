@@ -30,6 +30,7 @@ import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.presentation.util.rememberIs24HourSystem
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
+import eu.kanade.tachiyomi.ui.history.mangaCountByDate
 import kotlinx.datetime.LocalDate
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -201,6 +202,9 @@ private fun HistoryScreenContent(
     }
     val listState = rememberLazyListState()
     // KUN <--
+    // KNS -->
+    val mangaCounts = remember(history) { history.mangaCountByDate() }
+    // KNS <--
 
     FastScrollLazyColumn(
         // KUN -->
@@ -218,7 +222,11 @@ private fun HistoryScreenContent(
                     contentType = "header",
                 ) {
                     // The pinned header needs an opaque background; ListGroupHeader already paints one
-                    ListGroupHeader(text = relativeDateText(model.date))
+                    // KNS -->
+                    val date = relativeDateText(model.date)
+                    val count = mangaCounts[model.date]
+                    ListGroupHeader(text = if (count != null) "$date ($count)" else date)
+                    // KNS <--
                 }
                 is HistoryUiModel.Item -> item(
                     key = "history-${model.item.id}",

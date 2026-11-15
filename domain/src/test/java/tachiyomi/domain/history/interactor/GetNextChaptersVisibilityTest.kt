@@ -91,7 +91,6 @@ class GetNextChaptersVisibilityTest {
             getChaptersByMangaId = getChapters,
             getMergedChaptersByMangaId = getMergedChapters,
             getManga = getManga,
-            historyRepository = mockk(),
             chapterVisibility = ChapterVisibility(LibraryPreferences(store)),
         )
     }

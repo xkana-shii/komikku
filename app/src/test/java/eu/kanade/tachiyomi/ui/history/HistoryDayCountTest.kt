@@ -25,7 +25,7 @@ class HistoryDayCountTest {
             ),
         )
 
-        state.getUiModel().filterIsInstance<HistoryUiModel.Header>().map { it.mangaCount } shouldBe listOf(2, 1)
+        state.getUiModel().mangaCountByDate().values.toList() shouldBe listOf(2, 1)
     }
 
     private fun history(chapterId: Long, mangaId: Long, readAt: Instant) = HistoryWithRelations(

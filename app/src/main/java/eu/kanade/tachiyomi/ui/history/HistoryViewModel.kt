@@ -615,3 +615,13 @@ internal fun List<HistoryWithRelations>.toHistoryUiModels(): List<HistoryUiModel
         }
 }
 // KUN <--
+
+// KNS -->
+/** How many different manga were read on each day, not how many chapters. */
+internal fun List<HistoryUiModel>.mangaCountByDate(): Map<kotlinx.datetime.LocalDate, Int> =
+    filterIsInstance<HistoryUiModel.Item>()
+        .groupBy { it.item.readAt?.toLocalDate() }
+        .entries
+        .mapNotNull { (date, items) -> date?.let { it to items.distinctBy { item -> item.item.mangaId }.size } }
+        .toMap()
+// KNS <--
