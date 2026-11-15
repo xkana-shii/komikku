@@ -216,16 +216,32 @@ class HistoryCategoryFilterTest {
     }
 
     @Test
-    fun `a zero read date never becomes the latest history entry`() {
+    fun `the first row is the most recent entry the category filter shows`() {
         runBlocking {
             val driver = newDriver()
             try {
                 val database = DatabaseBindings.providesDatabase(driver)
-                driver.insertManga(1L)
-                driver.insertChapter(mangaId = 1L)
-                driver.insertHistory(mangaId = 1L, readAt = 0L)
+                driver.insertHistoryFixture()
+                // Manga 2 sits in category 2 and is read after every other entry, so a listing that
+                // ignored the category filter would put it first.
+                driver.insertChapter(mangaId = 2L, chapterId = secondChapterIdFor(2L), index = 2)
+                driver.insertHistory(
+                    mangaId = 2L,
+                    chapterId = secondChapterIdFor(2L),
+                    historyId = secondHistoryIdFor(2L),
+                    readAt = 5000L,
+                )
 
-                HistoryRepositoryImpl(database).getLastHistory() shouldBe null
+                // Reselecting the History tab resumes the first row of this list, so it has to be the
+                // newest entry the filter leaves visible: manga 1's later chapter, read at 3500.
+                val listed = historyRows(database, included = listOf(1L)).first()
+                listed.mangaId shouldBe 1L
+                listed.chapterId shouldBe secondChapterIdFor(1L)
+
+                // Exclude-only hides manga 2's 5000 row, leaving manga 4 (read at 4000) on top.
+                val excluded = historyRows(database, excluded = listOf(2L)).first()
+                excluded.mangaId shouldBe 4L
+                excluded.chapterId shouldBe chapterIdFor(4L)
             } finally {
                 driver.close()
             }

@@ -21,8 +21,6 @@ interface HistoryRepository {
         // KUN <--
     ): Flow<List<HistoryWithRelations>>
 
-    suspend fun getLastHistory(): HistoryWithRelations?
-
     suspend fun getTotalReadDuration(): Long
 
     suspend fun getHistoryByMangaId(mangaId: Long): List<History>

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -146,6 +147,11 @@ class HistoryViewModel(
                 .catch { error ->
                     logcat(LogPriority.ERROR, error)
                     _events.send(Event.InternalError)
+                    // KUN -->
+                    // A catch that emitted nothing would complete the flow and leave the state on its
+                    // initial, loading value, which getNextChapter() waits on forever.
+                    emit(emptyList())
+                    // KUN <--
                 }
                 .map { it.toList() }
                 // KUN -->
@@ -205,7 +211,13 @@ class HistoryViewModel(
         .stateIn(viewModelScope + subscriberGate, subscriberGate.whileSubscribed(5.seconds), State())
 
     suspend fun getNextChapter(): Chapter? {
-        return getNextChapters.await(onlyUnread = false).firstOrNull()
+        // KUN -->
+        // Resume the top of the list the tab shows: it is already filtered and collapsed to one row
+        // per manga, so the newest global entry can be one the active filter hides. It starts out
+        // loading, and the tab can be reselected before the first history emission.
+        val entry = state.first { !it.isLoading }.list.firstOrNull() ?: return null
+        // KUN <--
+        return getNextChapters.await(entry.mangaId, entry.chapterId, onlyUnread = false).firstOrNull()
     }
 
     fun getNextChapterForManga(mangaId: Long, chapterId: Long) {

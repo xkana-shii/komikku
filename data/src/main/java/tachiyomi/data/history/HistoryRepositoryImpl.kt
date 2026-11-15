@@ -2,7 +2,6 @@ package tachiyomi.data.history
 
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
-import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
@@ -59,16 +58,6 @@ class HistoryRepositoryImpl(
                 HistoryMapper::mapHistoryWithRelations,
             )
             .subscribeToList()
-    }
-
-    override suspend fun getLastHistory(): HistoryWithRelations? {
-        return database.historyViewQueries
-            .getLatestHistory(
-                Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
-                Manga.CHAPTER_SHOW_BOOKMARKED,
-                HistoryMapper::mapHistoryWithRelations,
-            )
-            .awaitAsOneOrNull()
     }
 
     override suspend fun getTotalReadDuration(): Long {

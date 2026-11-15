@@ -8,7 +8,6 @@ import tachiyomi.domain.chapter.interactor.GetMergedChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.service.ChapterVisibility
 import tachiyomi.domain.chapter.service.getChapterSort
-import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.interactor.GetManga
 import kotlin.math.max
 
@@ -19,16 +18,10 @@ class GetNextChapters(
     private val getMergedChaptersByMangaId: GetMergedChaptersByMangaId,
     // SY <--
     private val getManga: GetManga,
-    private val historyRepository: HistoryRepository,
     // KNS -->
     private val chapterVisibility: ChapterVisibility,
     // KNS <--
 ) {
-
-    suspend fun await(onlyUnread: Boolean = true): List<Chapter> {
-        val history = historyRepository.getLastHistory() ?: return emptyList()
-        return await(history.mangaId, history.chapterId, onlyUnread)
-    }
 
     suspend fun await(mangaId: Long, onlyUnread: Boolean = true): List<Chapter> {
         val manga = getManga.await(mangaId) ?: return emptyList()
