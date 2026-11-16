@@ -2,12 +2,14 @@ package eu.kanade.presentation.history
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +35,7 @@ import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
 import eu.kanade.tachiyomi.ui.history.mangaCountByDate
 import kotlinx.datetime.LocalDate
 import mihon.app.di.appGraph
+import mihon.feature.upcoming.DateHeading
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Checklist
 import mihon.icons.materialsymbols.rounded.DeleteSweep
@@ -223,10 +226,15 @@ private fun HistoryScreenContent(
                 ) {
                     // The pinned header needs an opaque background; ListGroupHeader already paints one
                     // KNS -->
-                    val date = relativeDateText(model.date)
                     val count = mangaCounts[model.date]
-                    // The same count badge as the Updates screen
-                    ListGroupHeader(text = date, count = count)
+                    // The same heading and count badge, with the same spacing, as the Updates screen
+                    Surface(modifier = Modifier.fillMaxWidth()) {
+                        if (count != null) {
+                            DateHeading(date = model.date, mangaCount = count)
+                        } else {
+                            ListGroupHeader(text = relativeDateText(model.date))
+                        }
+                    }
                     // KNS <--
                 }
                 is HistoryUiModel.Item -> item(
