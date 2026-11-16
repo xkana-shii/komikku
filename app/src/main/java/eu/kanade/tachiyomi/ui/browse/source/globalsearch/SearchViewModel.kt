@@ -73,6 +73,11 @@ abstract class SearchViewModel(
             { (map[it] as? SearchItemResult.Success)?.isEmpty ?: true },
             { "${it.id}" !in pinnedSources },
             { "${it.name.lowercase()} (${it.lang})" },
+            // KNS -->
+            // toSortedMap() drops keys that compare equal, so sources sharing a name and language need a unique
+            // tie-breaker (Komikku 07f6b434e8)
+            { it.id },
+            // KNS <--
         )
     }
 
