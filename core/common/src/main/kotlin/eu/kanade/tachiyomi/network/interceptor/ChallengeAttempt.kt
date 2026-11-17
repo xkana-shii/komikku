@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.network.interceptor
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.TimeUnit
 
 // KNS -->
@@ -35,6 +37,15 @@ class ChallengeAttempt(
         private set
 
     val isTerminal: Boolean get() = state.terminal
+
+    private val _widget = MutableStateFlow<WidgetBounds?>(null)
+
+    /** Where the verification widget sits on the challenge page, once the page reported it. */
+    val widget: StateFlow<WidgetBounds?> = _widget
+
+    fun updateWidget(bounds: WidgetBounds?) {
+        if (!isTerminal) _widget.value = bounds
+    }
 
     /** Moves to a later non-terminal state. False when the attempt is already terminal or would go backwards. */
     fun advance(to: State): Boolean {
@@ -108,6 +119,24 @@ class ChallengeAttempt(
     companion object {
         val TOTAL_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(150)
         val AUTOMATIC_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(30)
+    }
+}
+/** Bounding box of the verification widget in CSS pixels, as reported by the challenge page. */
+data class WidgetBounds(val left: Float, val top: Float, val width: Float, val height: Float) {
+    companion object {
+        const val EVENT_PREFIX = "widget:"
+        private const val MIN_SIZE = 20f
+        private const val MAX_SIZE = 4000f
+
+        /** Parses `widget:left,top,width,height`; null for anything malformed or implausibly sized. */
+        fun parse(event: String): WidgetBounds? {
+            if (!event.startsWith(EVENT_PREFIX)) return null
+            val parts = event.removePrefix(EVENT_PREFIX).split(',').map { it.trim().toFloatOrNull() ?: return null }
+            if (parts.size != 4 || parts.any { it.isNaN() || it.isInfinite() }) return null
+            val (left, top, width, height) = parts
+            if (width < MIN_SIZE || height < MIN_SIZE || width > MAX_SIZE || height > MAX_SIZE) return null
+            return WidgetBounds(left, top, width, height)
+        }
     }
 }
 // KNS <--

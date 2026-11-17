@@ -277,3 +277,33 @@ class CloudflareHostOwnershipTest {
     }
 }
 // KNS <--
+
+// KNS -->
+class WidgetBoundsTest {
+
+    @Test
+    fun `parses a reported widget box`() {
+        WidgetBounds.parse("widget:12,340,300,65") shouldBe WidgetBounds(12f, 340f, 300f, 65f)
+    }
+
+    @Test
+    fun `rejects malformed or implausible reports`() {
+        WidgetBounds.parse("interactiveBegin") shouldBe null
+        WidgetBounds.parse("widget:1,2,3") shouldBe null
+        WidgetBounds.parse("widget:a,b,c,d") shouldBe null
+        WidgetBounds.parse("widget:0,0,5,5") shouldBe null
+        WidgetBounds.parse("widget:0,0,99999,50") shouldBe null
+        WidgetBounds.parse("widget:NaN,0,300,65") shouldBe null
+    }
+
+    @Test
+    fun `the widget is kept per attempt and ignored once it ended`() {
+        val attempt = ChallengeAttempt("a.test")
+        attempt.updateWidget(WidgetBounds(0f, 10f, 300f, 65f))
+        attempt.widget.value shouldBe WidgetBounds(0f, 10f, 300f, 65f)
+        attempt.finish(ChallengeAttempt.State.Cancelled)
+        attempt.updateWidget(WidgetBounds(0f, 99f, 300f, 65f))
+        attempt.widget.value shouldBe WidgetBounds(0f, 10f, 300f, 65f)
+    }
+}
+// KNS <--
