@@ -282,7 +282,7 @@ class ReaderActivity : BaseActivity() {
         setComposeContent {
             ReaderScreen()
             // KNS -->
-            eu.kanade.presentation.components.CloudflareChallengeDialog()
+            eu.kanade.presentation.components.CloudflareChallengeDialog(this@ReaderActivity)
             // KNS <--
         }
         // KUN <--
@@ -705,7 +705,7 @@ class ReaderActivity : BaseActivity() {
         // <-- AM (DISCORD)
 
         // KNS -->
-        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostPaused()
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostPaused(this)
         // KNS <--
         super.onPause()
     }
@@ -717,7 +717,7 @@ class ReaderActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         // KNS -->
-        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostResumed()
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostResumed(this)
         // KNS <--
         viewModel.restartReadTimer()
 

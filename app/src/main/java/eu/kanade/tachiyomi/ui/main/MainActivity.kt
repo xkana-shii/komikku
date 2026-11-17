@@ -542,7 +542,7 @@ class MainActivity : BaseActivity() {
             // SY <--
 
             // KNS -->
-            eu.kanade.presentation.components.CloudflareChallengeDialog()
+            eu.kanade.presentation.components.CloudflareChallengeDialog(this@MainActivity)
             // KNS <--
         }
 
@@ -563,7 +563,7 @@ class MainActivity : BaseActivity() {
         super.onPause()
         MangaCoverMetadata.savePrefs(libraryPreferences)
         // KNS -->
-        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostPaused()
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostPaused(this)
         // KNS <--
     }
     // KMK <--
@@ -571,7 +571,7 @@ class MainActivity : BaseActivity() {
     // KNS -->
     override fun onResume() {
         super.onResume()
-        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostResumed()
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostResumed(this)
     }
     // KNS <--
 

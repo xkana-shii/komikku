@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.network.interceptor
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
@@ -28,8 +31,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -42,6 +44,11 @@ class CloudflareInterceptor(
 ) : WebViewInterceptor(context, scope, defaultUserAgentProvider) {
 
     private val executor = ContextCompat.getMainExecutor(context)
+
+    // KNS -->
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val failures = HostFailureLog()
+    // KNS <--
 
     // Requests to a host share its lock while a challenge is solved under it alone, so concurrent requests wait for
     // one WebView instead of each opening their own
@@ -64,7 +71,11 @@ class CloudflareInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val lock = hostLocks.computeIfAbsent(request.url.host) { ReentrantReadWriteLock() }
+        val host = request.url.host
+        val lock = hostLocks.computeIfAbsent(host) { ReentrantReadWriteLock() }
+        // KNS -->
+        val startedWaiting = System.nanoTime()
+        // KNS <--
 
         val (response, clearance) = lock.read {
             val response = chain.proceed(request)
@@ -79,12 +90,30 @@ class CloudflareInterceptor(
             if (isCleared(request.url, clearance)) {
                 response.close()
             } else {
+                // KNS -->
+                // The user cancelled (or it failed) while this request waited: share that outcome instead of opening
+                // another dialog straight away
+                if (failures.failedSince(host, startedWaiting)) {
+                    response.close()
+                    throw IOException(context.stringResource(MR.strings.information_cloudflare_bypass_failure))
+                }
+                // KNS <--
                 if (!prepareWebView()) return response
                 solve(request, response, clearance)
             }
         }
 
-        return chain.proceed(request)
+        // KNS -->
+        // Retry once. A challenge that is still there means the clearance was rejected: fail rather than loop.
+        val retried = chain.proceed(request)
+        if (shouldIntercept(retried)) {
+            retried.close()
+            cookieManager.remove(request.url, COOKIE_NAMES, 0)
+            failures.record(host)
+            throw IOException(context.stringResource(MR.strings.information_cloudflare_bypass_failure))
+        }
+        return retried
+        // KNS <--
     }
 
     override fun intercept(chain: Interceptor.Chain, request: Request, response: Response): Response {
@@ -116,30 +145,29 @@ class CloudflareInterceptor(
         }
     }
 
+    // KNS -->
+    // The attempt is the single source of truth: callbacks only ever move it forward, the first terminal state wins,
+    // and everything touching the WebView runs on the main thread, where `webview`, `session` and `cleaned` live.
     private fun resolveWithWebView(originalRequest: Request, originalClearance: String?) {
-        // We need to lock this thread until the WebView finds the challenge solution url, because
-        // OkHttp doesn't support asynchronous interceptors.
-        val latch = CountDownLatch(1)
+        val host = originalRequest.url.host
+        val attempt = ChallengeAttempt(host)
+        attempt.advance(ChallengeAttempt.State.Preparing)
 
-        var webview: WebView? = null
-        var listenerScriptHandler: ScriptHandler? = null
         val useIsolatedWorld = WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)
+        val challengeFound = AtomicBoolean(false)
+        val rendererGone = AtomicBoolean(false)
 
-        var challengeFound = false
-        var cloudflareBypassed = false
-        var challengeFailed = false
-        var isWebViewOutdated = false
-        var isRenderProcessGone = false
-        // KNS -->
-        var interactiveShown = false
-        var cancelled = false
+        // Main thread only
+        var webview: WebView? = null
         var session: CloudflareChallengeCoordinator.Session? = null
-        // KNS <--
+        var listenerScriptHandler: ScriptHandler? = null
+        var cleaned = false
+        var fallback: Runnable? = null
 
         val origRequestUrl = originalRequest.url.toString()
         // A WebView can only load a page with GET, and loading the url of another method usually reaches an
         // endpoint that answers GET without a challenge to solve. The clearance covers the whole site, so it's
-        // earned on the site's root page instead.
+        // earned on the site's root page instead. A body is never replayed through the WebView.
         val challengeUrl = if (originalRequest.method == "GET") {
             origRequestUrl
         } else {
@@ -147,56 +175,78 @@ class CloudflareInterceptor(
         }
         val headers = originalRequest.headers.toWebViewHeaders()
 
-        executor.execute {
-            webview = createWebView(originalRequest)
-
-            fun onChallengeEvent(event: String) {
-                when (event) {
-                    // The challenge cannot be solved non-interactively: let the user solve it in a dialog when the
-                    // app is in the foreground, abort otherwise (library updates, downloads).
-                    // KNS -->
-                    "interactiveBegin" -> executor.execute {
-                        val view = webview
-                        if (view != null && !interactiveShown && CloudflareChallengeCoordinator.canPrompt) {
-                            interactiveShown = true
-                            val newSession = CloudflareChallengeCoordinator.Session(
-                                host = originalRequest.url.host,
-                                webView = view,
-                                onCancel = {
-                                    cancelled = true
-                                    latch.countDown()
-                                },
-                            )
-                            session = newSession
-                            CloudflareChallengeCoordinator.show(newSession)
-                        } else if (!interactiveShown) {
-                            latch.countDown()
-                        }
-                    }
-                    // KNS <--
-                    "fail" -> {
-                        challengeFailed = true
-                        latch.countDown()
-                    }
+        fun cleanup(state: ChallengeAttempt.State) {
+            if (cleaned) return
+            cleaned = true
+            fallback?.let(mainHandler::removeCallbacks)
+            session?.let { CloudflareChallengeCoordinator.queue.remove(it) }
+            val view = webview ?: return
+            webview = null
+            // Taken off the dialog first so Compose is not left rendering a destroyed view
+            (view.parent as? ViewGroup)?.removeView(view)
+            if (!rendererGone.get()) {
+                if (state == ChallengeAttempt.State.Failed || state == ChallengeAttempt.State.TimedOut) {
+                    if (view.isOutdated()) context.toast(MR.strings.information_webview_outdated, Toast.LENGTH_LONG)
                 }
+                // Only destroy can be called on a WebView whose renderer is gone
+                if (useIsolatedWorld) {
+                    WebViewCompat.removeWebMessageListener(view, WebViewCompat.getExecutionWorld(view, "mihon"), "mihon")
+                } else {
+                    view.removeJavascriptInterface("mihon")
+                }
+                listenerScriptHandler?.remove()
+                view.stopLoading()
             }
+            view.destroy()
+        }
+
+        attempt.onTerminal { state -> executor.execute { cleanup(state) } }
+
+        // Hands the challenge to the user, only while the app can show it. Main thread.
+        fun requestUser() {
+            val view = webview ?: return
+            if (attempt.isTerminal || attempt.state == ChallengeAttempt.State.AwaitingUser) return
+            if (!CloudflareChallengeCoordinator.canPrompt) {
+                // Library updates, downloads and other background work keep failing as before
+                attempt.finish(ChallengeAttempt.State.Failed)
+                return
+            }
+            if (!attempt.advance(ChallengeAttempt.State.AwaitingUser)) return
+            val newSession = CloudflareChallengeCoordinator.Session(host, attempt, view) { executor.execute(it) }
+            session = newSession
+            if (!CloudflareChallengeCoordinator.enqueue(newSession)) attempt.finish(ChallengeAttempt.State.Failed)
+        }
+
+        fun onChallengeEvent(event: String) {
+            when (event) {
+                // The challenge cannot be solved non-interactively
+                "interactiveBegin" -> executor.execute { requestUser() }
+                "fail" -> attempt.finish(ChallengeAttempt.State.Failed)
+            }
+        }
+
+        executor.execute {
+            if (attempt.isTerminal) return@execute
+            val view = createWebView(originalRequest)
+            webview = view
+            attempt.advance(ChallengeAttempt.State.AutomaticVerification)
 
             if (useIsolatedWorld) {
                 // An isolated world keeps the bridge out of the page's reach
-                val world = WebViewCompat.getExecutionWorld(webview, "mihon")
+                val world = WebViewCompat.getExecutionWorld(view, "mihon")
                 val origins = setOf(originalRequest.url.origin())
-                WebViewCompat.addWebMessageListener(webview, "mihon", origins, world) { _, message, _, isMainFrame, _ ->
+                WebViewCompat.addWebMessageListener(view, "mihon", origins, world) { _, message, _, isMainFrame, _ ->
                     if (isMainFrame) message.data?.let(::onChallengeEvent)
                 }
                 listenerScriptHandler = WebViewCompat.addJavaScriptOnEvent(
-                    webview,
+                    view,
                     listenerScript,
                     WebViewCompat.INJECTION_EVENT_DOCUMENT_START,
                     origins,
                     world,
                 )
             } else {
-                webview.addJavascriptInterface(
+                view.addJavascriptInterface(
                     object {
                         @Suppress("unused")
                         @JavascriptInterface
@@ -206,21 +256,29 @@ class CloudflareInterceptor(
                 )
             }
 
-            webview.webViewClient = object : WebViewClient() {
+            fun checkCleared() {
+                if (!attempt.isTerminal && isCleared(originalRequest.url, originalClearance)) {
+                    attempt.finish(ChallengeAttempt.State.Succeeded)
+                }
+            }
+
+            view.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) {
-                    if (!challengeFailed && isCleared(originalRequest.url, originalClearance)) {
-                        cloudflareBypassed = true
-                        latch.countDown()
-                    }
+                    if (attempt.isTerminal) return
+                    checkCleared()
 
                     if (url == challengeUrl) {
-                        if (!challengeFound) {
+                        if (!challengeFound.get()) {
                             // The first request didn't return the challenge, abort.
-                            latch.countDown()
+                            attempt.finish(ChallengeAttempt.State.Failed)
                         } else if (!useIsolatedWorld) {
                             view.evaluateJavascript(listenerScript, null)
                         }
                     }
+                }
+
+                override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
+                    if (!attempt.isTerminal && challengeFound.get()) checkCleared()
                 }
 
                 override fun onReceivedHttpError(
@@ -228,14 +286,24 @@ class CloudflareInterceptor(
                     request: WebResourceRequest?,
                     errorResponse: WebResourceResponse?,
                 ) {
-                    if (request?.isForMainFrame == true) {
-                        if (errorResponse?.responseHeaders["cf-mitigated"] == "challenge") {
-                            // Found the Cloudflare challenge page.
-                            challengeFound = true
-                        } else {
-                            // Unlock thread, the challenge wasn't found.
-                            latch.countDown()
+                    if (attempt.isTerminal || request?.isForMainFrame != true) return
+                    if (errorResponse?.responseHeaders?.get("cf-mitigated") == "challenge") {
+                        // Found the Cloudflare challenge page.
+                        if (challengeFound.compareAndSet(false, true)) {
+                            // Bounded fallback for a positively detected challenge that neither finishes nor
+                            // announces itself: hand it to the user after a while
+                            val runnable = Runnable {
+                                if (attempt.state == ChallengeAttempt.State.AutomaticVerification) requestUser()
+                            }
+                            fallback = runnable
+                            mainHandler.postDelayed(runnable, INTERACTIVE_FALLBACK_MS)
                         }
+                    } else if (isCleared(originalRequest.url, originalClearance)) {
+                        // The solved page may itself answer with an error status
+                        attempt.finish(ChallengeAttempt.State.Succeeded)
+                    } else {
+                        // The challenge wasn't found.
+                        attempt.finish(ChallengeAttempt.State.Failed)
                     }
                 }
 
@@ -245,62 +313,25 @@ class CloudflareInterceptor(
                         "WebView renderer gone during Cloudflare bypass: crashed=${detail.didCrash()}, " +
                             "priority=${detail.rendererPriorityAtExit()}, url=$origRequestUrl"
                     }
-                    isRenderProcessGone = true
-                    latch.countDown()
+                    rendererGone.set(true)
+                    attempt.finish(ChallengeAttempt.State.Failed)
                     return true
                 }
             }
 
-            webview.loadUrl(challengeUrl, headers)
+            view.loadUrl(challengeUrl, headers)
         }
 
-        // KNS -->
-        if (!latch.awaitFor30Seconds() && interactiveShown) {
-            // The user is solving the challenge, give them time
-            latch.await(INTERACTIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        }
-        // KNS <--
+        val outcome = attempt.await()
 
-        executor.execute {
-            // KNS -->
-            session?.let(CloudflareChallengeCoordinator::dismiss)
-            (webview?.parent as? android.view.ViewGroup)?.removeView(webview)
-            // KNS <--
-            // Only destroy can be called on a WebView whose renderer is gone
-            if (!cloudflareBypassed && !isRenderProcessGone) {
-                isWebViewOutdated = webview?.isOutdated() == true
-            }
-
-            webview?.run {
-                if (!isRenderProcessGone) {
-                    if (useIsolatedWorld) {
-                        WebViewCompat.removeWebMessageListener(
-                            this,
-                            WebViewCompat.getExecutionWorld(this, "mihon"),
-                            "mihon",
-                        )
-                    } else {
-                        removeJavascriptInterface("mihon")
-                    }
-                    listenerScriptHandler?.remove()
-                    stopLoading()
-                }
-                destroy()
-            }
-        }
-
-        // Throw exception if we failed to bypass Cloudflare
-        if (!cloudflareBypassed) {
+        if (outcome != ChallengeAttempt.State.Succeeded) {
             // A clearance from a failed challenge would only be rejected again
             cookieManager.remove(originalRequest.url, COOKIE_NAMES, 0)
-            // Prompt user to update WebView if it seems too outdated
-            if (isWebViewOutdated) {
-                context.toast(MR.strings.information_webview_outdated, Toast.LENGTH_LONG)
-            }
-
+            failures.record(host)
             throw CloudflareBypassException()
         }
     }
+    // KNS <--
 }
 
 // An origin rule without a port only matches the scheme's default one
@@ -308,7 +339,7 @@ private fun HttpUrl.origin(): String {
     return if (port == HttpUrl.defaultPort(scheme)) "$scheme://$host" else "$scheme://$host:$port"
 }
 
-private const val INTERACTIVE_TIMEOUT_SECONDS = 150L
+private const val INTERACTIVE_FALLBACK_MS = 12_000L
 private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
 private val COOKIE_NAMES = listOf("cf_clearance")
 
