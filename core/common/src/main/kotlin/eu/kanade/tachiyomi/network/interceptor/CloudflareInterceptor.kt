@@ -60,35 +60,10 @@ class CloudflareInterceptor(
                 mihon?.postMessage(data.event);
             }
         })
+    """.trimIndent() +
         // KNS -->
-        // Reports where the verification widget is, so the dialog can show only that
-        ;(() => {
-            const selectors = [
-                'iframe[src*="challenges.cloudflare.com"]',
-                '#turnstile-wrapper', '.cf-turnstile', '#cf-turnstile', '[id^="cf-chl-widget"]', '#challenge-stage',
-            ]
-            let last = ''
-            const report = () => {
-                for (const selector of selectors) {
-                    const el = document.querySelector(selector)
-                    if (!el) continue
-                    const r = el.getBoundingClientRect()
-                    if (r.width < 20 || r.height < 20) continue
-                    const text = 'widget:' + [r.left + scrollX, r.top + scrollY, r.width, r.height]
-                        .map((v) => Math.round(v)).join(',')
-                    if (text !== last) {
-                        last = text
-                        mihon?.postMessage(text)
-                    }
-                    return
-                }
-            }
-            new MutationObserver(report).observe(document, { subtree: true, childList: true, attributes: true })
-            addEventListener('resize', report)
-            addEventListener('load', report)
-        })()
-        // KNS <--
-    """.trimIndent()
+        "\n" + ChallengeWidgetScript.SOURCE
+    // KNS <--
 
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
