@@ -307,3 +307,37 @@ class WidgetBoundsTest {
     }
 }
 // KNS <--
+
+// KNS -->
+class ChallengeWidgetScriptTest {
+
+    private val script = ChallengeWidgetScript.SOURCE
+
+    @Test
+    fun `script locates the widget by iframe, wrappers and container signals`() {
+        listOf(
+            "challenges.cloudflare.com",
+            ".cf-turnstile",
+            "[id^=\"cf-chl-widget\"]",
+            "cf-turnstile-response",
+            "data-sitekey",
+            "shadowRoot",
+        ).forEach { (it in script) shouldBe true }
+    }
+
+    @Test
+    fun `script hides siblings instead of removing them and reports through the message channel`() {
+        ("'display', 'none', 'important'" in script) shouldBe true
+        (".remove()" in script) shouldBe false
+        ("mihon?.postMessage(text)" in script) shouldBe true
+        ("'widget:'" in script) shouldBe true
+    }
+
+    @Test
+    fun `fixtures for the managed interstitial and the iframe widget exist`() {
+        listOf("managed-interstitial.html", "turnstile-iframe.html").forEach {
+            (javaClass.getResource("/cloudflare-fixtures/$it") != null) shouldBe true
+        }
+    }
+}
+// KNS <--
