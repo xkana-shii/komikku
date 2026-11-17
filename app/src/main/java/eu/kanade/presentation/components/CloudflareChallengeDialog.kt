@@ -2,11 +2,13 @@ package eu.kanade.presentation.components
 
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
@@ -18,9 +20,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.heading
@@ -36,8 +38,9 @@ import tachiyomi.presentation.core.i18n.stringResource
 
 // KNS -->
 /**
- * Shows the Cloudflare human verification as an interactive WebView when a request hit an interactive challenge
- * while the app is in the foreground. Closing it (cancel or success) is driven by the coordinator's session.
+ * Shows the Cloudflare human check while a request waits on it. Only the verification widget is shown: once the page
+ * reports where the widget is, the WebView is cropped to it. When the widget can't be located (a full-page
+ * interstitial, or before the page reported it) the page is shown instead, and Expand gives it the whole screen.
  */
 @Composable
 fun CloudflareChallengeDialog(hostToken: Any) {
@@ -45,6 +48,7 @@ fun CloudflareChallengeDialog(hostToken: Any) {
     val activeHost by CloudflareChallengeCoordinator.activeHost.collectAsState()
     val session by CloudflareChallengeCoordinator.session.collectAsState()
     val current = (session as? CloudflareChallengeCoordinator.Session)?.takeIf { activeHost === hostToken } ?: return
+    val widget by current.attempt.widget.collectAsState()
     var expanded by rememberSaveable(current) { mutableStateOf(false) }
     val landscape = LocalConfiguration.current.screenWidthDp > LocalConfiguration.current.screenHeightDp
 
@@ -54,15 +58,23 @@ fun CloudflareChallengeDialog(hostToken: Any) {
             onDismissRequest = { current.cancel() },
             properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
         ) {
+            // The widget's own height plus a little air; the page when it is unknown
+            val widgetHeight = widget?.let { (it.height + WIDGET_PADDING_DP).dp }
+            val fitToWidget = widgetHeight != null && !expanded
             Surface(
-                modifier = if (expanded) {
-                    Modifier.fillMaxSize()
-                } else {
-                    Modifier
-                        .safeDrawingPadding()
-                        .padding(horizontal = 16.dp, vertical = if (landscape) 8.dp else 24.dp)
-                        .fillMaxWidth()
-                        .fillMaxHeight(if (landscape) 1f else 0.75f)
+                modifier = when {
+                    expanded -> Modifier.fillMaxSize()
+                    fitToWidget ->
+                        Modifier
+                            .safeDrawingPadding()
+                            .padding(horizontal = 16.dp, vertical = if (landscape) 8.dp else 24.dp)
+                            .fillMaxWidth()
+                    else ->
+                        Modifier
+                            .safeDrawingPadding()
+                            .padding(horizontal = 16.dp, vertical = if (landscape) 8.dp else 24.dp)
+                            .fillMaxWidth()
+                            .fillMaxHeight(if (landscape) 1f else 0.75f)
                 },
                 shape = if (expanded) MaterialTheme.shapes.extraSmall else MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -73,43 +85,64 @@ fun CloudflareChallengeDialog(hostToken: Any) {
                         .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
                         .then(if (expanded) Modifier.safeDrawingPadding() else Modifier),
                 ) {
-                    Text(
-                        text = stringResource(KMR.strings.cloudflare_verification_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(
-                        text = stringResource(KMR.strings.cloudflare_verification_subtitle, current.host),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-                    )
-                    AndroidView(
-                        factory = {
-                            (current.webView.parent as? ViewGroup)?.removeView(current.webView)
-                            current.webView.apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                )
-                            }
-                        },
-                        onRelease = { (it.parent as? ViewGroup)?.removeView(it) },
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        TextButton(onClick = { current.cancel() }) {
-                            Text(text = stringResource(MR.strings.action_cancel))
-                        }
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text(
+                            text = stringResource(KMR.strings.cloudflare_verification_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { heading() },
+                        )
                         TextButton(onClick = { expanded = !expanded }) {
                             Text(
                                 text = stringResource(
                                     if (expanded) KMR.strings.action_collapse else KMR.strings.action_expand,
                                 ),
                             )
+                        }
+                    }
+                    Text(
+                        text = stringResource(KMR.strings.cloudflare_verification_subtitle, current.host),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                    )
+                    // Cropped to the widget (centred on the full screen when expanded), the whole page otherwise
+                    val webViewModifier = if (widgetHeight != null) {
+                        Modifier.fillMaxWidth().height(widgetHeight)
+                    } else {
+                        Modifier.fillMaxSize()
+                    }
+                    Box(
+                        modifier = if (fitToWidget) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AndroidView(
+                            factory = {
+                                (current.webView.parent as? ViewGroup)?.removeView(current.webView)
+                                current.webView.apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                    )
+                                }
+                            },
+                            update = { view ->
+                                // Bring the widget to the top of the cropped view
+                                widget?.let { w ->
+                                    view.evaluateJavascript("window.scrollTo(0, ${w.top.toInt()})", null)
+                                }
+                            },
+                            onRelease = { (it.parent as? ViewGroup)?.removeView(it) },
+                            modifier = webViewModifier,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = { current.cancel() }) {
+                            Text(text = stringResource(MR.strings.action_cancel))
                         }
                         TextButton(onClick = { current.retry() }) {
                             Text(text = stringResource(MR.strings.action_retry))
@@ -120,4 +153,6 @@ fun CloudflareChallengeDialog(hostToken: Any) {
         }
     }
 }
+
+private const val WIDGET_PADDING_DP = 8
 // KNS <--

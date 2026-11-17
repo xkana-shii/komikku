@@ -487,8 +487,8 @@
     <string name="history_reset_all_chapters_of_manga">Reset all chapters of this manga</string>
 
     <!-- Cloudflare verification -->
-    <string name="cloudflare_verification_title">Cloudflare verification</string>
-    <string name="cloudflare_verification_subtitle">%1$s wants to verify you're human.</string>
+    <string name="cloudflare_verification_title">Cloudflare check</string>
+    <string name="cloudflare_verification_subtitle">%1$s wants to check you're human.</string>
     <string name="action_expand">Expand</string>
     <string name="action_collapse">Collapse</string>
 </resources>
