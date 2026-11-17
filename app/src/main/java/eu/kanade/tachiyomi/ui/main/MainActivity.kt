@@ -540,6 +540,10 @@ class MainActivity : BaseActivity() {
             // SY -->
             ConfigureExhDialog(run = runExhConfigureDialog, onRunning = { runExhConfigureDialog = false })
             // SY <--
+
+            // KNS -->
+            eu.kanade.presentation.components.CloudflareChallengeDialog()
+            // KNS <--
         }
 
         val startTime = System.currentTimeMillis()
@@ -558,8 +562,18 @@ class MainActivity : BaseActivity() {
     override fun onPause() {
         super.onPause()
         MangaCoverMetadata.savePrefs(libraryPreferences)
+        // KNS -->
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostPaused()
+        // KNS <--
     }
     // KMK <--
+
+    // KNS -->
+    override fun onResume() {
+        super.onResume()
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostResumed()
+    }
+    // KNS <--
 
     override fun onProvideAssistContent(outContent: AssistContent) {
         super.onProvideAssistContent(outContent)

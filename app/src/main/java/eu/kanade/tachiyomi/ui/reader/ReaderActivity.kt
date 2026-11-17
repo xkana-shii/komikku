@@ -281,6 +281,9 @@ class ReaderActivity : BaseActivity() {
         // the chrome and the dialogs, replacing the XML binding the activity used to inflate.
         setComposeContent {
             ReaderScreen()
+            // KNS -->
+            eu.kanade.presentation.components.CloudflareChallengeDialog()
+            // KNS <--
         }
         // KUN <--
 
@@ -701,6 +704,9 @@ class ReaderActivity : BaseActivity() {
         updateDiscordRPC(exitingReader = true)
         // <-- AM (DISCORD)
 
+        // KNS -->
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostPaused()
+        // KNS <--
         super.onPause()
     }
 
@@ -710,6 +716,9 @@ class ReaderActivity : BaseActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // KNS -->
+        eu.kanade.tachiyomi.network.interceptor.CloudflareChallengeCoordinator.onHostResumed()
+        // KNS <--
         viewModel.restartReadTimer()
 
         // AM (DISCORD) -->

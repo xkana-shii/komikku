@@ -29,6 +29,7 @@ import tachiyomi.i18n.MR
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -129,6 +130,11 @@ class CloudflareInterceptor(
         var challengeFailed = false
         var isWebViewOutdated = false
         var isRenderProcessGone = false
+        // KNS -->
+        var interactiveShown = false
+        var cancelled = false
+        var session: CloudflareChallengeCoordinator.Session? = null
+        // KNS <--
 
         val origRequestUrl = originalRequest.url.toString()
         // A WebView can only load a page with GET, and loading the url of another method usually reaches an
@@ -146,8 +152,28 @@ class CloudflareInterceptor(
 
             fun onChallengeEvent(event: String) {
                 when (event) {
-                    // The challenge cannot be solved non-interactively, abort.
-                    "interactiveBegin" -> latch.countDown()
+                    // The challenge cannot be solved non-interactively: let the user solve it in a dialog when the
+                    // app is in the foreground, abort otherwise (library updates, downloads).
+                    // KNS -->
+                    "interactiveBegin" -> executor.execute {
+                        val view = webview
+                        if (view != null && !interactiveShown && CloudflareChallengeCoordinator.canPrompt) {
+                            interactiveShown = true
+                            val newSession = CloudflareChallengeCoordinator.Session(
+                                host = originalRequest.url.host,
+                                webView = view,
+                                onCancel = {
+                                    cancelled = true
+                                    latch.countDown()
+                                },
+                            )
+                            session = newSession
+                            CloudflareChallengeCoordinator.show(newSession)
+                        } else if (!interactiveShown) {
+                            latch.countDown()
+                        }
+                    }
+                    // KNS <--
                     "fail" -> {
                         challengeFailed = true
                         latch.countDown()
@@ -228,9 +254,18 @@ class CloudflareInterceptor(
             webview.loadUrl(challengeUrl, headers)
         }
 
-        latch.awaitFor30Seconds()
+        // KNS -->
+        if (!latch.awaitFor30Seconds() && interactiveShown) {
+            // The user is solving the challenge, give them time
+            latch.await(INTERACTIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        }
+        // KNS <--
 
         executor.execute {
+            // KNS -->
+            session?.let(CloudflareChallengeCoordinator::dismiss)
+            (webview?.parent as? android.view.ViewGroup)?.removeView(webview)
+            // KNS <--
             // Only destroy can be called on a WebView whose renderer is gone
             if (!cloudflareBypassed && !isRenderProcessGone) {
                 isWebViewOutdated = webview?.isOutdated() == true
@@ -273,6 +308,7 @@ private fun HttpUrl.origin(): String {
     return if (port == HttpUrl.defaultPort(scheme)) "$scheme://$host" else "$scheme://$host:$port"
 }
 
+private const val INTERACTIVE_TIMEOUT_SECONDS = 150L
 private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
 private val COOKIE_NAMES = listOf("cf_clearance")
 
