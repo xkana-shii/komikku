@@ -201,6 +201,67 @@ class CategoryRepositoryRestoreTest {
     }
 
     @Test
+    fun `a local category the server does not know moves after the synced ones`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val repository = CategoryRepositoryImpl(database)
+                // Squats the position the server claims for its own category.
+                driver.insertCategory(id = 1L, name = "Local", order = 0L)
+
+                repository.restoreCategories(
+                    categories = listOf(category(name = "Action", order = 0L)),
+                    isSync = true,
+                )
+
+                // A sync delta is a replica: the server's position wins and the local-only category
+                // follows it, instead of the synced row falling back to a free order.
+                driver.categoryNamesInOrder() shouldBe listOf("Action", "Local")
+                driver.categoryOrdersInOrder() shouldBe listOf(0L, 1L)
+                driver.scalarLong("SELECT min(`order`) FROM category WHERE id > 0") shouldBe 0L
+                driver.scalarLong("SELECT count(*) FROM category WHERE is_syncing != 0") shouldBe 0L
+                // Re-placing a parked local must not age it, or the next delta echoes it back.
+                driver.scalarLong("SELECT version FROM category WHERE name = 'Local'") shouldBe 0L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
+    fun `every displaced category frees its order for the synced ones`() {
+        runBlocking {
+            val driver = newDriver()
+            try {
+                val database = DatabaseBindings.providesDatabase(driver)
+                val repository = CategoryRepositoryImpl(database)
+                // Two locals the delta does not know squat the positions the server claims, so both
+                // have to drop out of the used-order set - not just the first one.
+                driver.insertCategory(id = 1L, name = "Local A", order = 0L)
+                driver.insertCategory(id = 2L, name = "Action", order = 1L)
+                driver.insertCategory(id = 3L, name = "Local B", order = 2L)
+
+                repository.restoreCategories(
+                    categories = listOf(
+                        category(name = "Action", order = 0L, uid = Category.nameToUid("Action")),
+                        category(name = "Drama", order = 2L),
+                    ),
+                    isSync = true,
+                )
+
+                // Both server positions land exactly as sent, and both displaced locals follow them
+                // past the highest used order, in their previous relative order.
+                driver.categoryNamesInOrder() shouldBe listOf("Action", "Drama", "Local A", "Local B")
+                driver.categoryOrdersInOrder() shouldBe listOf(0L, 2L, 3L, 4L)
+                driver.scalarLong("SELECT count(*) FROM category WHERE is_syncing != 0") shouldBe 0L
+            } finally {
+                driver.close()
+            }
+        }
+    }
+
+    @Test
     fun `deleting a batch commits once`() {
         runBlocking {
             val driver = newDriver()

@@ -2,10 +2,12 @@ package eu.kanade.tachiyomi.extension
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import eu.kanade.domain.extension.interactor.RefreshExtensionStores
 import eu.kanade.domain.extension.interactor.TrustExtension
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.R
@@ -45,12 +47,16 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.core.metro.AppCoroutineScope
-import mihon.domain.extension.interactor.UpdateExtensionStores
+import mihon.domain.extension.model.ChangedExtensionStore
 import mihon.domain.extension.model.ExtensionStore
+import mihon.domain.extension.model.FetchedExtensions
 import mihon.domain.extension.repository.ExtensionStoreRepository
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import java.util.Locale
 
 /**
@@ -70,7 +76,9 @@ class ExtensionManager(
     private val installer: ExtensionInstaller,
     private val extensionUpdateNotifier: ExtensionUpdateNotifier,
     private val extensionStoreRepository: ExtensionStoreRepository,
-    private val updateExtensionStores: UpdateExtensionStores,
+    // KMK -->
+    private val refreshExtensionStores: RefreshExtensionStores,
+    // KMK <--
     // KMK -->
     private val exhPreferences: ExhPreferences,
     // KMK <--
@@ -289,7 +297,11 @@ class ExtensionManager(
      */
     suspend fun findAvailableExtensions() {
         val extensions: List<Extension.Available> = try {
+            // KMK -->
             fetchExtensions()
+                .also { warnAboutChangedStores(it.changedStores) }
+                .extensions
+            // KMK <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             withContext(Dispatchers.Main) { context.toast(MR.strings.extension_api_error) }
@@ -299,18 +311,51 @@ class ExtensionManager(
         setAvailableExtensions(extensions)
     }
 
+    // KMK -->
+    /**
+     * Tells the user about saved stores whose URL now serves another store, signed by another key. Their
+     * extensions aren't listed until the user removes the store and adds it again.
+     */
+    suspend fun warnAboutChangedStores(stores: List<ChangedExtensionStore>) {
+        if (stores.isEmpty()) return
+        withUIContext {
+            stores.distinctBy { it.store.indexUrl }.forEach {
+                context.toast(
+                    context.stringResource(
+                        KMR.strings.ext_store_signing_key_changed,
+                        it.store.name,
+                        it.servedName,
+                    ),
+                    Toast.LENGTH_LONG,
+                )
+            }
+        }
+    }
+    // KMK <--
+
     /**
      * Refreshes the stores and their listings like [findAvailableExtensions], then notifies about the
      * installed extensions that have an update. Stays silent when the stores can't be reached.
      */
     suspend fun checkForUpdates() {
+        // KMK -->
+        val changedStores = mutableListOf<ChangedExtensionStore>()
+        // KMK <--
         val extensions = try {
-            updateExtensionStores()
+            // KMK -->
+            changedStores += refreshExtensionStores()
             fetchExtensions()
+                .also { changedStores += it.changedStores }
+                .extensions
+            // KMK <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             return
         }
+
+        // KMK -->
+        warnAboutChangedStores(changedStores)
+        // KMK <--
 
         isInitialized.first { it }
         setAvailableExtensions(extensions)
@@ -326,12 +371,12 @@ class ExtensionManager(
         }
     }
 
-    private suspend fun fetchExtensions(): List<Extension.Available> {
-        // KMK -->
+    // KMK -->
+    private suspend fun fetchExtensions(): FetchedExtensions {
         val disabledRepos = preferences.disabledRepos.get()
         return extensionStoreRepository.fetchExtensions(disabledRepos)
-        // KMK <--
     }
+    // KMK <--
 
     private fun setAvailableExtensions(extensions: List<Extension.Available>) {
         enableAdditionalSubLanguages(extensions)

@@ -29,6 +29,7 @@ data class PagePreviewPage(
 data class PagePreviewInfo(
     val index: Int,
     val imageUrl: String,
+    val cacheKey: String = imageUrl,
     @Transient
     private val _progress: MutableStateFlow<Int> = MutableStateFlow(-1),
 ) : ProgressListener {

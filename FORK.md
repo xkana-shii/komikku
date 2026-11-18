@@ -121,7 +121,7 @@ divergences:
 - **Raw database access is restricted to `:data`** (`RestoreRepositoryImpl`, `DatabaseBindings`).
 - **`:source-api`/`:source-local` are Android library modules** (no longer KMP).
 - **Gradle isolated projects is enabled** (`org.gradle.isolated-projects=true`) on the coherent
-  AGP 9.4.1 / Gradle 9.8.1 / Kotlin 2.4.21 toolchain, matching `mihon/main`. This is what removed the
+  AGP 9.4.1 / Gradle 9.9.1 / Kotlin 2.4.21 toolchain, matching `mihon/main`. This is what removed the
   moko-resources `findProperty` blocker, the compileSdk-37 AAR-metadata excludes and the
   whole-configuration Compose force (they were only needed on AGP 8.13.2).
 - **Mihon's extension-store model** (`Extension.Loaded`/`NotLoaded`, `signatures`, `store`).

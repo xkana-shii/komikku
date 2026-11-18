@@ -73,7 +73,7 @@ class MangaDexLoginHelper(
             client.newCall(
                 POST(
                     url = MdApi.baseAuthUrl + MdApi.logout,
-                    headers = Headers.Builder().add("Authorization", "Bearer $sessionToken")
+                    headers = headers.newBuilder().add("Authorization", "Bearer $sessionToken")
                         .build(),
                     body = formBody,
                 ),

@@ -2,7 +2,7 @@
 aboutlib_version = "15.0.3"
 leakcanary = "2.14"
 moko = "0.26.4"
-okhttp_version = "5.3.2"
+okhttp_version = "5.5.1"
 shizuku_version = "13.1.5"
 sqldelight = "2.4.1"
 sqldelight-androidx-driver = "0.2.2"
@@ -19,9 +19,9 @@ image-decoder = "17"
 webgpuviewer = "53"
 apollo = "5.2.0"
 apollo-adapters = "0.8.0"
-metro = "1.4.2"
-metrox-viewmodel = "1.4.2"
-metrox-viewmodel-compose = "1.4.2"
+metro = "1.5.2"
+metrox-viewmodel = "1.5.2"
+metrox-viewmodel-compose = "1.5.2"
 # KMK -->
 valkyrie = "0.5.2"
 # KMK <--
@@ -53,7 +53,7 @@ jsoup = "org.jsoup:jsoup:1.23.2"
 
 disklrucache = "com.jakewharton:disklrucache:2.0.2"
 unifile = "com.github.komi-kun:UniFile:b7f6a2ef47"
-libarchive = "me.zhanghai.android.libarchive:library:1.1.6"
+libarchive = "me.zhanghai.android.libarchive:library:1.1.7"
 
 
 preferencektx = "androidx.preference:preference-ktx:1.2.1"
@@ -121,8 +121,11 @@ sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", versi
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-kotest-assertions = "io.kotest:kotest-assertions-core:6.2.1"
-mockk = "io.mockk:mockk:1.14.11"
+kotest-assertions = "io.kotest:kotest-assertions-core:6.2.7"
+mockk = "io.mockk:mockk:1.14.12"
+# KUN -->
+org-json = { module = "org.json:json", version = "20240303" }
+# KUN <--
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
 voyager-tab-navigator = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "voyager" }
 voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "voyager" }

@@ -8,6 +8,7 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
+import eu.kanade.domain.extension.interactor.RefreshExtensionStores
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +24,6 @@ import kotlinx.coroutines.launch
 import mihon.domain.extension.interactor.AddExtensionStore
 import mihon.domain.extension.interactor.GetExtensionStores
 import mihon.domain.extension.interactor.RemoveExtensionStore
-import mihon.domain.extension.interactor.UpdateExtensionStores
 import mihon.domain.extension.model.ExtensionStore
 import kotlin.time.Duration.Companion.seconds
 
@@ -34,7 +34,9 @@ class ExtensionStoresViewModel(
     private val getExtensionStores: GetExtensionStores,
     private val addExtensionStore: AddExtensionStore,
     private val removeExtensionStore: RemoveExtensionStore,
-    private val updateExtensionStores: UpdateExtensionStores,
+    // KMK -->
+    private val refreshExtensionStores: RefreshExtensionStores,
+    // KMK <--
     private val extensionManager: ExtensionManager,
     // KUN -->
     private val sourcePreferences: SourcePreferences,
@@ -105,7 +107,9 @@ class ExtensionStoresViewModel(
      */
     fun refreshRepos() {
         viewModelScope.launch(Dispatchers.IO) {
-            updateExtensionStores()
+            // KMK -->
+            extensionManager.warnAboutChangedStores(refreshExtensionStores())
+            // KMK <--
         }
     }
 
