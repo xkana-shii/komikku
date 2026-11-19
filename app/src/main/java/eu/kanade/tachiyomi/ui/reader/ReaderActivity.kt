@@ -1145,7 +1145,12 @@ class ReaderActivity : BaseActivity() {
 
     private fun setDoublePageMode(viewer: PagerViewer) {
         val currentOrientation = resources.configuration.orientation
-        viewer.doublePages = currentOrientation == Configuration.ORIENTATION_LANDSCAPE
+        // KUN -->
+        // A paired holder renders only its first page in split mode, dropping the sibling
+        // (upstream 5c77cad303; the guard reads the settings plane, as `PagerConfig` was retired).
+        viewer.doublePages = currentOrientation == Configuration.ORIENTATION_LANDSCAPE &&
+            !viewer.simplePaged.dualPageSplit
+        // KUN <--
         viewModel.setDoublePages(viewer.doublePages)
     }
 

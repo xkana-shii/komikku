@@ -178,9 +178,27 @@ class CategoryRepositoryImpl(
             } else {
                 emptyList()
             }
-            if (reordered.isNotEmpty()) {
+            // KUN -->
+            // A local category the server does not know is not in the delta, so it kept its position
+            // and can squat on one the server claims. Freeing only the matched rows would then hand
+            // the synced category a `freeOrder()` fallback instead of the server's position, so the
+            // two devices never converge. Move those locals out of the way in the same pre-pass and
+            // re-place them after the synced ones below.
+            val displaced = if (isSync) {
+                val matchedIds = reordered.mapTo(mutableSetOf()) { it.id }
+                val incomingOrders = deduplicatedCategories.mapTo(mutableSetOf()) { it.order }
+                dbCategories.filter { !it.isSystemCategory && it.id !in matchedIds && it.order in incomingOrders }
+            } else {
+                emptyList()
+            }
+            // Hoisted so the order bookkeeping below tests membership against a set instead of
+            // re-scanning every displaced row for every category.
+            val displacedIds = displaced.mapTo(mutableSetOf()) { it.id }
+            val parked = reordered + displaced
+            // KUN <--
+            if (parked.isNotEmpty()) {
                 // The enclosing transaction makes the sentinel pre-pass part of the same commit.
-                reordered.forEachIndexed { index, db ->
+                parked.forEachIndexed { index, db ->
                     database.categoryQueries.update(
                         name = db.name,
                         order = -(index + 1L) - 1_000_000L,
@@ -200,7 +218,7 @@ class CategoryRepositoryImpl(
             }
             val reorderedIds = reordered.mapTo(mutableSetOf()) { it.id }
             val usedOrders = dbCategories
-                .filterNot { it.id in reorderedIds }
+                .filterNot { it.id in reorderedIds || it.id in displacedIds }
                 .mapTo(mutableSetOf()) { it.order }
             var nextOrder = (dbCategories.maxOfOrNull { it.order } ?: -1L) + 1
             fun freeOrder(): Long {
@@ -314,6 +332,19 @@ class CategoryRepositoryImpl(
                         }
                 }
 
+            // KUN -->
+            // The displaced locals have no server position to converge to, so they follow the
+            // synced ones in their previous relative order instead of keeping a squatted slot.
+            if (displaced.isNotEmpty()) {
+                nextOrder = maxOf(nextOrder, (usedOrders.maxOrNull() ?: -1L) + 1L)
+                displaced.sortedBy { it.order }.forEach { db ->
+                    val order = freeOrder()
+                    usedOrders.add(order)
+                    // Already parked with is_syncing = 1, so this move does not age the row.
+                    database.categoryQueries.updateOrder(order = order, categoryId = db.id)
+                }
+            }
+            // KUN <--
             // KNS -->
             // The global order must stay depth-first (every parent followed by its subtree). Rows
             // touched above are still flagged is_syncing, so fixing their order does not bump their

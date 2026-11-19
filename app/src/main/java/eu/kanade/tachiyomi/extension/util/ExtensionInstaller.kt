@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.extension.util
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import dev.zacsweers.metro.Inject
@@ -14,6 +15,7 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.isPackageInstalled
+import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -28,7 +30,10 @@ import logcat.LogPriority
 import mihon.core.metro.AppCoroutineScope
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.i18n.kmk.KMR
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -99,6 +104,23 @@ class ExtensionInstaller(
                     tmpFile.delete()
                     throw Exception("Extension isn't signed with the key of ${extension.store.name}")
                 }
+
+                // KMK -->
+                if (!ExtensionLoader.isSignedLikeInstalled(context, tmpFile)) {
+                    logcat(LogPriority.ERROR) {
+                        "Downloaded ${extension.pkgName} is signed by another key than the installed extension"
+                    }
+                    withUIContext {
+                        context.toast(
+                            context.stringResource(KMR.strings.ext_update_signature_mismatch, extension.name),
+                            Toast.LENGTH_LONG,
+                        )
+                    }
+                    step.value = InstallStep.Error
+                    tmpFile.delete()
+                    return@launch
+                }
+                // KMK <--
 
                 ensureActive()
                 step.value = InstallStep.Installing

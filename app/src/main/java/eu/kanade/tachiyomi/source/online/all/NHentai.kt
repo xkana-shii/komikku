@@ -198,6 +198,7 @@ class NHentai(delegate: HttpSource, val context: Context) :
                 PagePreviewInfo(
                     index + 1,
                     imageUrl = "$thumbServer/$path",
+                    cacheKey = "https://nhentai.net/$path",
                 )
             },
             false,

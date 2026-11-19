@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="action_skip_entry">Не переносить</string>
-    <string name="action_search_manually">Искать вручную</string>
-    <string name="action_migrate_now">Перенести сейчас</string>
-    <string name="action_copy_now">Копировать сейчас</string>
     <string name="action_clean_titles">Очистить названия</string>
-    <string name="action_start_reading">Начать чтение</string>
     <string name="action_edit_info">Редактировать сведенья</string>
     <!-- Entry Type -->
     <string name="entry_type_manga">Манга</string>
@@ -137,7 +132,6 @@
     <string name="bandwidth_hero">Bandwidth Hero (Требуется прокси-сервер Bandwidth Hero)</string>
     <string name="bandwidth_data_saver_server">Прокси-сервер Bandwidth Hero</string>
     <string name="data_saver_server_summary">Поместите в эту область URL-адрес прокси-сервера Bandwidth Hero</string>
-    <string name="clear_db_exclude_read">Оставлять серии с прочитанными главами</string>
     <!-- Log Level -->
     <string name="log_minimal">Минимально</string>
     <string name="log_extra">Дополнительно</string>
@@ -159,15 +153,10 @@
     <string name="pref_show_bottom_bar_labels">Названия вкладок на панели навигации</string>
     <!-- Library settings -->
     <string name="pref_sorting_settings">Настройки сортировки</string>
-    <string name="pref_skip_pre_migration_summary">Использовать последние сохранённые предпереносные настройки и источники для массового переноса</string>
     <string name="library_group_updates">Обновления библиотеки для динамических категорий</string>
     <string name="library_group_updates_global">Всегда запускать глобальные обновления</string>
     <string name="library_group_updates_all_but_ungrouped">Глобальные обновления только для группы «Не группировать». Остальные группы используют обновления категорий</string>
     <string name="library_group_updates_all">Постоянно запускать обновления категорий</string>
-    <string name="pref_mark_read_dupe_chapters">Помечать повторяющиеся главы как «Прочитано»</string>
-    <string name="pref_mark_read_dupe_chapters_summary">Помечать повторяющиеся главы как «Прочитано» после прочтения</string>
-    <string name="pref_library_mark_duplicate_chapters">Помечать новые повторяющиеся главы как «Прочитано»</string>
-    <string name="pref_library_mark_duplicate_chapters_summary">Автоматически помечать новые главы как «Прочитано», если они были ранее прочитаны</string>
     <string name="update_30min">Каждые 30 минут</string>
     <string name="update_1hour">Каждый час</string>
     <string name="update_3hour">Каждые 3 часа</string>
@@ -183,8 +172,6 @@
     <string name="pref_local_source_hidden_folders_summery">Дать разрешение локальному источнику просматривать скрытые папки</string>
     <!-- Backup settings -->
     <string name="custom_entry_info">Сведенья пользователя</string>
-    <string name="all_read_entries">Прочитанные серии</string>
-    <string name="label_sync">Синхронизировать</string>
     <string name="label_triggers">Триггеры</string>
     <!-- Sync settings -->
     <string name="sync_error">Не удалось синхронизировать библиотеку</string>
@@ -212,9 +199,6 @@
     <string name="google_drive_login_success">Выполнен вход в Google Диск</string>
     <string name="google_drive_login_failed">Не удалось войти в Google Диск: %s</string>
     <string name="google_drive_not_signed_in">Не выполнен вход в Google Диск</string>
-    <string name="error_uploading_sync_data">Ошибка при загрузке данных синхронизации на Google Диск</string>
-    <string name="error_deleting_google_drive_lock_file">Ошибка удаления файла блокировки Google Диска</string>
-    <string name="error_before_sync_gdrive">Ошибка перед синхронизацией: %s</string>
     <string name="pref_purge_confirmation_title">Подтверждение очистки</string>
     <string name="pref_purge_confirmation_message">Очистка данных синхронизации приведет к удалению всех данных синхронизации с Google Диска. Вы уверены, что хотите продолжить?</string>
     <string name="pref_sync_options">Создать триггеры синхронизации</string>
@@ -252,33 +236,15 @@
     <string name="password_protect_downloads_summary">Шифрует загрузки в архиве CBZ при помощи заданного пароля.\nВНИМАНИЕ: ДАННЫЕ ВНУТРИ АРХИВОВ БУДУТ НАВСЕГДА УТЕРЯНЫ, ЕСЛИ ВЫ ЗАБУДЕТЕ ПАРОЛЬ</string>
     <string name="delete_cbz_archive_password">Удалить пароль архива CBZ</string>
     <string name="cbz_archive_password">Пароль архива CBZ</string>
-    <string name="wrong_cbz_archive_password">Неверный пароль архива CBZ</string>
     <string name="encryption_type">Тип шифрования</string>
     <string name="standard_zip_encryption">Обычное ZIP шифрование (быстрое, но небезопасное)</string>
     <!-- Reader Settings -->
     <string name="page_downloading">Загрузка страниц</string>
-    <string name="download_threads">Потоки загрузки</string>
-    <string name="download_threads_summary">Более высокие значения могут значительно ускорить загрузку изображений, но также могут спровоцировать блокировку источников для Komikku. Рекомендуемое значение - 2 или 3. Текущее значение: %s</string>
-    <string name="aggressively_load_pages">Агрессивная загрузка страниц</string>
-    <string name="aggressively_load_pages_summary">Медленно загружать всю главу во время чтения вместо загрузки в текущий момент просматреваемых страниц.</string>
-    <string name="skip_queue_on_retry">Пропускать очередь при повторной попытке</string>
-    <string name="skip_queue_on_retry_summary">Обычно нажатие кнопки «Повторить» при неудачной загрузке будет ждать, пока загрузчик закончит загрузку последней страницы, прежде чем начать перезагрузку неудачной страницы. Включение этого режима заставит загрузчик немедленно начать перезагрузку неудачной страницы, как только будет нажата кнопка «Повторить».</string>
-    <string name="reader_preload_amount">Количество страниц с предзагрузкой</string>
-    <string name="reader_preload_amount_4_pages">4 страницы</string>
-    <string name="reader_preload_amount_6_pages">6 страниц</string>
-    <string name="reader_preload_amount_8_pages">8 страниц</string>
-    <string name="reader_preload_amount_10_pages">10 страниц</string>
-    <string name="reader_preload_amount_12_pages">12 страниц</string>
-    <string name="reader_preload_amount_14_pages">14 страниц</string>
-    <string name="reader_preload_amount_16_pages">16 страниц</string>
-    <string name="reader_preload_amount_20_pages">20 страниц</string>
-    <string name="reader_preload_amount_summary">Количество предварительной загрузки страниц при чтении. Более высокие значения приведут к более плавному чтению за счет увеличенного использования кэша. Рекомендуется увеличить объём выделяемого кэша для высоких значений</string>
     <string name="reader_cache_size">Размер кэша читалки</string>
     <string name="reader_cache_size_summary">Количество изображений, сохраняемых на устройстве во время чтения. Более высокие значения приведут к более плавному чтению за счет увеличенного использования хранилища устройства</string>
     <string name="preserve_reading_position">Сохранять позицию чтения для серий</string>
     <string name="auto_webtoon_mode">Автоматический режим веб-комикса</string>
     <string name="auto_webtoon_mode_summary">Использовать автоматический режим веб-комикса для серий, которые, вероятно, имеют формат длинной вертикальной страницы</string>
-    <string name="enable_zoom_out">Включить уменьшение масштаба</string>
     <string name="tap_scroll_page">Нажатия пролистывают постранично</string>
     <string name="tap_scroll_page_summary">Нажатие будет пролистывать целую страницу, вместо размера экрана устройства</string>
     <string name="reader_bottom_buttons">Кнопки в нижней части читалки</string>
@@ -366,8 +332,6 @@
     <string name="saved_searches">Сохраненные запросы</string>
     <string name="save_search">Сохранить текущий поисковой запрос?</string>
     <string name="save_search_hint">Имя запроса</string>
-    <string name="save_search_failed_to_load">Не удалось загрузить сохраненные поисковые запросы!</string>
-    <string name="save_search_failed_to_load_message">Произошла ошибка при загрузке сохраненных поисковых запросов.</string>
     <string name="save_search_delete">Удалить сохраненный поисковый запрос?</string>
     <string name="save_search_delete_message">Вы уверены, что хотите удалить сохраненный поисковый запрос: %1$s?</string>
     <string name="save_search_invalid">Сохраненный поисковый запрос недействителен. Фильтры были изменены</string>
@@ -396,29 +360,11 @@
     <string name="delete_tag_confirmation">Хотите ли вы удалить тэг %s?</string>
     <!-- Extension section -->
     <string name="ext_redundant">Избыточное</string>
+    <!-- KUN -->
+    <!-- Hand-corrected: this fork's base names the fork, not upstream's app. Keep this value when porting translations. -->
     <string name="redundant_extension_message">Это расширение является избыточным и не будет использоваться внутри этой версии Komikku.</string>
-    <string name="select_sources">Выберите источники</string>
-    <string name="select_none">Ничего не выбрано</string>
+    <!-- KUN -->
     <string name="migration">Перенос</string>
-    <string name="skip_pre_migration">Пропустить настройку переноса</string>
-    <string name="pre_migration_skip_toast">Чтобы снова показать этот экран, перейдите по (Настройки → Библиотека).</string>
-    <string name="use_intelligent_search">Поиск названия + ключевые слова</string>
-    <string name="data_to_include_in_migration">Какие данные перенести</string>
-    <string name="include_extra_search_parameter">Дополнительный параметр при поиске</string>
-    <string name="use_most_chapters">Использовать источник с наибольшим количеством глав (Медленнее)</string>
-    <string name="use_first_source">Использовать первый источник с альтернативой</string>
-    <string name="skip_this_step_next_time">Не показывать этот экран в следующий раз</string>
-    <string name="hide_not_found_entries">Скрыть не найденые серии</string>
-    <string name="search_parameter">Параметр поиска (Например - language:english)</string>
-    <string name="latest_">Последняя: %1$s</string>
-    <string name="migrating_to">Перенести в</string>
-    <string name="match_pinned_sources">Соответствие закреплённых источников</string>
-    <string name="match_enabled_sources">Соответствие включённых источников</string>
-    <string name="no_chapters_found_for_migration">Глав не найдено. Эта серия не может быть использована для переноса</string>
-    <string name="no_alternatives_found">Альтернатив не найдено</string>
-    <string name="stop_migrating">Остановить перенос?</string>
-    <string name="action_stop">Остановить</string>
-    <string name="skipping_">(Исключая %1$d)</string>
     <!-- Library -->
     <!-- Library Actions -->
     <string name="no_valid_entry">Выбрана недопустимая серия</string>
@@ -460,7 +406,6 @@
     <string name="favorites_sync_failed_to_add_to_local">Не удалось добавить галерею в базу данных:</string>
     <string name="favorites_sync_failed_to_add_to_local_error">%1$s (%2$s)</string>
     <string name="favorites_sync_failed_to_add_to_local_unknown_type">%1$s (%2$s) является не действительной галерей!</string>
-    <string name="favorites_sync_waiting_for_start">Ожидание начала синхронизации</string>
     <string name="favorites_sync_gallery_in_multiple_categories">Галерея %1$s находится более чем в одной категории (%2$s)!</string>
     <string name="favorites_sync_initializing">Инициализация синхронизации</string>
     <string name="favorites_sync_processing_throttle">%1$s\n\nСинхронизация в настоящее время регулируется (Чтобы избежать блокировки на ExHentai). Выполнение синхронизации может занять много времени.</string>
@@ -474,7 +419,6 @@
     <!-- Gallery Adder -->
     <!-- Batch Add -->
     <string name="eh_batch_add">Добавить галереи</string>
-    <string name="md_batch_add_description">Пример:\n\nhttps://mangadex.org/title/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/solo-leveling\nhttps://mangadex.org/title/77bee52c-d2d6-44ad-a33a-1734c1fe696a\n\n</string>
     <string name="eh_batch_add_description">Пример:\n\nhttp://e-hentai.org/g/12345/1a2b3c4e\nhttp://g.e-hentai.org/g/67890/6f7g8h9i\nhttp://exhentai.org/g/13579/1a3b5c7e\nhttps://exhentai.org/g/24680/2f4g6h8i\n\nТакже поддерживаются экспортированные данные на E-Hentai\n</string>
     <string name="eh_batch_add_title">Ввести в этой области URL-адрес галерей для добавления (Разделённые новой строкой):</string>
     <string name="eh_batch_add_button">Добавить</string>
@@ -495,7 +439,6 @@
     <string name="gallery_adder_uri_map_to_gallery_error">Oшибка исходного URI map-to-gallery!</string>
     <string name="gallery_adder_uri_map_to_chapter_error">Ошибка исходного URI map-to-chapter!</string>
     <string name="gallery_adder_uri_clean_error">Ошибка очистки исходного URI!</string>
-    <string name="gallery_adder_chapter_fetch_error">Не удалось обновить главы для галереи: %1$s!</string>
     <string name="gallery_adder_could_not_add_gallery">Не удалось добавить галерею (URL-адрес: %1$s)!</string>
     <string name="gallery_adder_could_not_identify_chapter">Не удалось идентифицировать главу (URL-адрес: %1$s)!</string>
     <!-- Intercept Activity -->
@@ -560,8 +503,6 @@
     <string name="japanese_title">Японское название</string>
     <string name="english_title">Английское название</string>
     <string name="short_title">Краткое название</string>
-    <string name="cover_image_file_type">Тип изображения обложки</string>
-    <string name="thumbnail_image_file_type">Тип изображения миниатюры</string>
     <string name="url">URL-адрес</string>
     <string name="uploader_capital">Имя загрузчика с заглавной буквы</string>
     <string name="uploader">Имя загрузчика</string>
@@ -577,7 +518,6 @@
     <string name="manga_updates_id">MangaUpdates ID</string>
     <string name="anime_planet_id">Anime-Planet ID</string>
     <string name="translated">Переведено</string>
-    <string name="is_visible">Не скрыто: %1$s</string>
     <string name="language_translated">%1$s</string>
     <!-- Merged entry -->
     <string name="merge_settings">Настройки объединения</string>
@@ -589,8 +529,6 @@
     <string name="download_merged_entry">Переключатель загрузки глав</string>
     <string name="download_merged_entry_desc">Переключение этого параметра отключит/включит загрузку глав для этой объеденённой серии</string>
     <string name="merged_references_invalid">Недействительные объеденённые ссылки</string>
-    <string name="merged_chapter_updates_error">Ошибка переключения обновлений глав</string>
-    <string name="merged_toggle_download_chapters_error">Ошибка переключения загрузки глав</string>
     <!-- MangaDex -->
     <string name="md_follows_unfollowed">Без отслеживания</string>
     <string name="mangadex_sync_follows_to_library">Синхронизировать серии (MangaDex)</string>
@@ -603,7 +541,6 @@
     <string name="mangadex_push_favorites_to_mangadex">Синхронизировать библиотеку (MangaDex)</string>
     <string name="mangadex_push_favorites_to_mangadex_summary">Синхронизирует любую не отслеживаемую MDList серию как прочитанную на MangaDex.</string>
     <string name="community_recommendations">Рекомендации сообщества</string>
-    <string name="select_scanlators">Группы переводчиков</string>
     <!-- Similar -->
     <string name="similar">Похожее на %1$s</string>
     <!-- MangaDex relations-->
@@ -631,7 +568,6 @@
     <string name="humanize_fallback">мгновение назад</string>
     <string name="action_copy_first_page">Копировать первую страницу</string>
     <string name="action_copy_second_page">Копировать вторую страницу</string>
-    <string name="only_show_updated_entries">Показывать серии только с новыми главами</string>
     <string name="action_copy_combined_page">Копировать объединенную страницу</string>
     <string name="pref_category_eh">E-Hentai</string>
     <string name="wsrv">wsrv.nl</string>
@@ -670,6 +606,7 @@
     <string name="final_chapter">Последняя глава</string>
     <string name="pref_include_chapter_url_hash">Включать URL-хэш главы</string>
     <string name="pref_include_chapter_url_hash_desc">Добавить первые шесть символов хеша MD5 из URL-адреса главы к имени файла или папки главы.</string>
+    <string name="action_stop">Остановить</string>
     <string name="eh_autoscroll_gestures">Жесты автоподкрутки</string>
     <string name="eh_autoscroll_gestures_help">Помощь с жестами автоподкрутки</string>
     <string name="eh_autoscroll_gestures_help_message">Автоподкрутка включена:\n- Нажать на экран для включения или выключения\n- Пролистнуть вверх или вниз для настройки скорости\n- Сведите два пальца в жесте для ручного пролистывания\n- Проведите жестом в бок чтобы остановить\n\nАвтоподкрутка выключена:\n- Проведите жестом в бок чтобы начать\n\nЗакройте меню читалки чтобы использовать жесты.</string>
@@ -691,10 +628,77 @@
     <string name="merge_dedupe_priority">Приоритет</string>
     <string name="merge_dedupe_most">Большинство</string>
     <string name="merge_dedupe_highest">Наивысший</string>
-    <string name="merge_dedupe_keep_all_summary">Показывать все главы из всех серий.</string>
+    <string name="merge_dedupe_keep_all_summary">Показывать все главы из всех серий, отсортировав по приоритету серий.</string>
     <string name="merge_dedupe_priority_summary">Показывать каждую главу один раз, используя самую верхнюю запись, в которой она встречается.</string>
     <string name="merge_dedupe_most_summary">Показывать только главы из серии с наибольшим количеством глав.</string>
     <string name="merge_dedupe_highest_summary">Показывать только главы из серии с самым высоким номером главы.</string>
     <string name="merge_info_source">Информация об источнике</string>
     <string name="merge_drag_to_set_priority">Перетащить, чтобы задать приоритет</string>
+    <string name="collate_tags">Объединить тэги</string>
+    <string name="action_skip_entry">Не переносить</string>
+    <string name="action_search_manually">Искать вручную</string>
+    <string name="action_migrate_now">Перенести сейчас</string>
+    <string name="action_copy_now">Копировать сейчас</string>
+    <string name="action_start_reading">Начать чтение</string>
+    <string name="clear_db_exclude_read">Оставлять серии с прочитанными главами</string>
+    <string name="pref_skip_pre_migration_summary">Использовать последние сохранённые предпереносные настройки и источники для массового переноса</string>
+    <string name="pref_mark_read_dupe_chapters">Помечать повторяющиеся главы как «Прочитано»</string>
+    <string name="pref_mark_read_dupe_chapters_summary">Помечать повторяющиеся главы как «Прочитано» после прочтения</string>
+    <string name="pref_library_mark_duplicate_chapters">Помечать новые повторяющиеся главы как «Прочитано»</string>
+    <string name="pref_library_mark_duplicate_chapters_summary">Автоматически помечать новые главы как «Прочитано», если они были ранее прочитаны</string>
+    <string name="all_read_entries">Прочитанные серии</string>
+    <string name="label_sync">Синхронизировать</string>
+    <string name="error_uploading_sync_data">Ошибка при загрузке данных синхронизации на Google Диск</string>
+    <string name="error_deleting_google_drive_lock_file">Ошибка удаления файла блокировки Google Диска</string>
+    <string name="error_before_sync_gdrive">Ошибка перед синхронизацией: %s</string>
+    <string name="wrong_cbz_archive_password">Неверный пароль архива CBZ</string>
+    <string name="download_threads">Потоки загрузки</string>
+    <string name="download_threads_summary">Более высокие значения могут значительно ускорить загрузку изображений, но также могут спровоцировать блокировку источников для Komikku. Рекомендуемое значение - 2 или 3. Текущее значение: %s</string>
+    <string name="aggressively_load_pages">Агрессивная загрузка страниц</string>
+    <string name="aggressively_load_pages_summary">Медленно загружать всю главу во время чтения вместо загрузки в текущий момент просматреваемых страниц.</string>
+    <string name="skip_queue_on_retry">Пропускать очередь при повторной попытке</string>
+    <string name="skip_queue_on_retry_summary">Обычно нажатие кнопки «Повторить» при неудачной загрузке будет ждать, пока загрузчик закончит загрузку последней страницы, прежде чем начать перезагрузку неудачной страницы. Включение этого режима заставит загрузчик немедленно начать перезагрузку неудачной страницы, как только будет нажата кнопка «Повторить».</string>
+    <string name="reader_preload_amount">Количество страниц с предзагрузкой</string>
+    <string name="reader_preload_amount_4_pages">4 страницы</string>
+    <string name="reader_preload_amount_6_pages">6 страниц</string>
+    <string name="reader_preload_amount_8_pages">8 страниц</string>
+    <string name="reader_preload_amount_10_pages">10 страниц</string>
+    <string name="reader_preload_amount_12_pages">12 страниц</string>
+    <string name="reader_preload_amount_14_pages">14 страниц</string>
+    <string name="reader_preload_amount_16_pages">16 страниц</string>
+    <string name="reader_preload_amount_20_pages">20 страниц</string>
+    <string name="reader_preload_amount_summary">Количество предварительной загрузки страниц при чтении. Более высокие значения приведут к более плавному чтению за счет увеличенного использования кэша. Рекомендуется увеличить объём выделяемого кэша для высоких значений</string>
+    <string name="enable_zoom_out">Включить уменьшение масштаба</string>
+    <string name="save_search_failed_to_load">Не удалось загрузить сохраненные поисковые запросы!</string>
+    <string name="save_search_failed_to_load_message">Произошла ошибка при загрузке сохраненных поисковых запросов.</string>
+    <string name="select_sources">Выберите источники</string>
+    <string name="select_none">Ничего не выбрано</string>
+    <string name="skip_pre_migration">Пропустить настройку переноса</string>
+    <string name="pre_migration_skip_toast">Чтобы снова показать этот экран, перейдите по (Настройки → Библиотека).</string>
+    <string name="use_intelligent_search">Поиск названия + ключевые слова</string>
+    <string name="data_to_include_in_migration">Какие данные перенести</string>
+    <string name="include_extra_search_parameter">Дополнительный параметр при поиске</string>
+    <string name="use_most_chapters">Использовать источник с наибольшим количеством глав (Медленнее)</string>
+    <string name="use_first_source">Использовать первый источник с альтернативой</string>
+    <string name="skip_this_step_next_time">Не показывать этот экран в следующий раз</string>
+    <string name="hide_not_found_entries">Скрыть не найденые серии</string>
+    <string name="search_parameter">Параметр поиска (Например - language:english)</string>
+    <string name="latest_">Последняя: %1$s</string>
+    <string name="migrating_to">Перенести в</string>
+    <string name="match_pinned_sources">Соответствие закреплённых источников</string>
+    <string name="match_enabled_sources">Соответствие включённых источников</string>
+    <string name="no_chapters_found_for_migration">Глав не найдено. Эта серия не может быть использована для переноса</string>
+    <string name="no_alternatives_found">Альтернатив не найдено</string>
+    <string name="stop_migrating">Остановить перенос?</string>
+    <string name="skipping_">(Исключая %1$d)</string>
+    <string name="favorites_sync_waiting_for_start">Ожидание начала синхронизации</string>
+    <string name="md_batch_add_description">Пример:\n\nhttps://mangadex.org/title/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/solo-leveling\nhttps://mangadex.org/title/77bee52c-d2d6-44ad-a33a-1734c1fe696a\n\n</string>
+    <string name="gallery_adder_chapter_fetch_error">Не удалось обновить главы для галереи: %1$s!</string>
+    <string name="cover_image_file_type">Тип изображения обложки</string>
+    <string name="thumbnail_image_file_type">Тип изображения миниатюры</string>
+    <string name="is_visible">Не скрыто: %1$s</string>
+    <string name="merged_chapter_updates_error">Ошибка переключения обновлений глав</string>
+    <string name="merged_toggle_download_chapters_error">Ошибка переключения загрузки глав</string>
+    <string name="select_scanlators">Группы переводчиков</string>
+    <string name="only_show_updated_entries">Показывать серии только с новыми главами</string>
 </resources>

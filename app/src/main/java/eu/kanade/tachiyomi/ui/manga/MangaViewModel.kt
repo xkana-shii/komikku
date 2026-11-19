@@ -724,7 +724,9 @@ class MangaViewModel(
 
             // SY -->
             if (source.getMainSource() is PagePreviewSource) {
-                getPagePreviews(manga, source)
+                if (loadedState.chapters.isNotEmpty()) {
+                    getPagePreviews(manga, source)
+                }
             } else {
                 pagePreviewsState.value = PagePreviewState.Unused
             }
@@ -862,6 +864,11 @@ class MangaViewModel(
                     downloadNewChapters(update.newChapters)
                 }
             }
+            // SY -->
+            if (fetchChapters) {
+                getPagePreviews(manga, sourceManager.getOrStub(manga.source), refresh = true)
+            }
+            // SY <--
         } catch (_: CancellationException) {
             // ignore
         } catch (e: Exception) {
@@ -1307,9 +1314,9 @@ class MangaViewModel(
     }
 
     // SY -->
-    private fun getPagePreviews(manga: Manga, source: Source) {
+    private fun getPagePreviews(manga: Manga, source: Source, refresh: Boolean = false) {
         viewModelScope.launchIO {
-            when (val result = getPagePreviews.await(manga, source, 1)) {
+            when (val result = getPagePreviews.await(manga, source, 1, refresh)) {
                 is GetPagePreviews.Result.Error -> pagePreviewsState.value = PagePreviewState.Error(result.error)
                 is GetPagePreviews.Result.Success ->
                     pagePreviewsState.value = PagePreviewState.Success(result.pagePreviews)
