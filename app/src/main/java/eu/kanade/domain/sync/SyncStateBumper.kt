@@ -5,6 +5,9 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.sync.models.SyncSettings
+import eu.kanade.tachiyomi.data.sync.chapterTombstoneKey
+import tachiyomi.domain.chapter.repository.ChapterRepository
+import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.repository.MangaRepository
 
@@ -26,12 +29,45 @@ import tachiyomi.domain.manga.repository.MangaRepository
 class SyncStateBumper(
     private val syncPreferences: SyncPreferences,
     private val mangaRepository: MangaRepository,
+    private val chapterRepository: ChapterRepository,
+    private val historyRepository: HistoryRepository,
 ) {
 
     /** Bumps every manga whose history was reset/tombstoned by the user. */
     suspend fun bumpForHistoryRemoval(mangaIds: Collection<Long>) {
         if (mangaIds.isEmpty() || !isEnabled { it.history }) return
         mangaIds.distinct().forEach { mangaRepository.bumpSyncVersion(it) }
+    }
+
+    /**
+     * Records the history entries a removal is about to reset as `history` tombstones, before the
+     * reset takes the read date the server identifies the entry by. The key is the chapter tombstone
+     * key: the server's history key is built from the same manga and chapter urls.
+     *
+     * [chapterIds] names the exact entries a selection removed; null means every history entry of
+     * [mangaIds], which is what the per-manga removal resets in one SQL statement.
+     */
+    suspend fun rememberHistoryRemoval(
+        mangaIds: Collection<Long>,
+        chapterIds: Collection<Long>? = null,
+    ) {
+        if (mangaIds.isEmpty() || !isEnabled { it.history }) return
+        val ids = mangaIds.distinct()
+        val chapterIdsToForget = chapterIds?.toSet()
+            ?: historyRepository.getHistoryByMangaIds(ids).values
+                .flatten()
+                .mapTo(mutableSetOf()) { it.chapterId }
+        if (chapterIdsToForget.isEmpty()) return
+
+        // One manga read for the whole selection, then one chapter read per selected entry: never
+        // every chapter of the manga, which a long series would make thousands of rows.
+        val mangaById = mangaRepository.getMangaByIds(ids).associateBy { it.id }
+        val keys = chapterIdsToForget.mapNotNull { chapterId ->
+            val chapter = chapterRepository.getChapterById(chapterId) ?: return@mapNotNull null
+            val manga = mangaById[chapter.mangaId] ?: return@mapNotNull null
+            chapterTombstoneKey(manga.source, manga.url, chapter.url)
+        }
+        syncPreferences.rememberDeletedHistory(keys)
     }
 
     /**

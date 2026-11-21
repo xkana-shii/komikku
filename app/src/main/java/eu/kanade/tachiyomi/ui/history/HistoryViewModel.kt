@@ -237,6 +237,13 @@ class HistoryViewModel(
         // App-wide + non-cancellable: the reset writes `read_at = NULL`, and the following bump is
         // what makes that tombstone reach the server. Navigating away must not cancel the pair.
         appScope.launchNonCancellable {
+            // Recorded before the reset: the tombstone key is built from the manga and chapter urls
+            // of the entries, and the upload no longer carries a reset row, so this is the only
+            // way the removal reaches the server.
+            syncStateBumper.rememberHistoryRemoval(
+                mangaIds = toDelete.map { it.mangaId }.distinct(),
+                chapterIds = toDelete.map { it.chapterId },
+            )
             removeHistory.await(toDelete.map { it.id })
             // A history reset only writes `read_at = NULL` on the history rows, which does not touch
             // the manga row, so the sync delta would never upload the removal. History sync only:
@@ -250,7 +257,11 @@ class HistoryViewModel(
     fun removeAllFromHistory(toDelete: List<HistoryWithRelations>) {
         // KUN -->
         appScope.launchNonCancellable {
-            removeHistory.awaitManga(toDelete.map { it.mangaId }.distinct())
+            val mangaIds = toDelete.map { it.mangaId }.distinct()
+            // The reset below is one statement over the manga, so the tombstone keys come from
+            // every history row those manga have, read while they still exist.
+            syncStateBumper.rememberHistoryRemoval(mangaIds = mangaIds)
+            removeHistory.awaitManga(mangaIds)
             syncStateBumper.bumpForHistoryRemoval(toDelete.map { it.mangaId })
         }
         // KUN <--
@@ -262,10 +273,13 @@ class HistoryViewModel(
         viewModelScope.launch {
             val result = removeHistory.awaitAll()
             // KUN -->
-            // Nothing to bump: "delete all" runs `DELETE FROM history` and cannot leave the
-            // `read_at = NULL` tombstones the other devices need, so there is no per-manga change to
-            // upload. Uploading the empty history section instead would be indistinguishable from a
-            // peer that has history disabled. Deletion propagation needs a protocol change.
+            // A per-entry or per-manga removal propagates as a `history` tombstone, but "clear all"
+            // does not: the endpoint only deletes the keys it is given, and the key queue is
+            // persisted until the next successful sync, so this would have to keep one key per
+            // deleted row — thousands of them in a preference set, with no bounded form.
+            // Nothing is bumped either: `DELETE FROM history` leaves no `read_at = NULL` row and no
+            // per-manga change, and uploading an empty history section would be indistinguishable
+            // from a peer that has history disabled.
             // KUN <--
             if (!result) return@launch
             _events.send(Event.HistoryCleared)

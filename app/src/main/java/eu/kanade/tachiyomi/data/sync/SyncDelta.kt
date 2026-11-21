@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 
@@ -64,6 +65,23 @@ internal fun missingRemoteChapterUrls(
     localUrls: Collection<String>,
     remoteUrls: Collection<String>,
 ): Set<String> = localUrls.filterNotTo(mutableSetOf()) { it in remoteUrls }
+
+/**
+ * Drops the history rows a local removal reset (`read_at = NULL`, exported as `lastRead = 0`) from
+ * a SyncYomi v2 upload, mutating the [mangas] in place.
+ *
+ * The removal travels as an explicit `history` tombstone instead. A `0` row would be merged into
+ * the server's history as "not newer", so the live entry would win and come straight back; it is
+ * not a statement of absence there either, because the server never deletes an entry the upload
+ * simply leaves out.
+ */
+internal fun dropTombstonedHistory(mangas: List<BackupManga>) {
+    mangas.forEach { manga ->
+        if (manga.history.any { it.lastRead == 0L }) {
+            manga.history = manga.history.filterNot { it.lastRead == 0L }
+        }
+    }
+}
 // KUN <--
 
 // KUN -->
@@ -269,6 +287,32 @@ internal fun mergeSyncCategories(
         }
     } else {
         remote.ifEmpty { local }
+    }
+}
+
+/**
+ * The local categories a category list no longer names, matched by uid or by name because local ids
+ * and uids only agree by accident.
+ *
+ * [requireUploaded] is for a full v2 snapshot, the complete list of live categories: only a
+ * category this run uploaded can have been deleted by the server, so one created locally after the
+ * upload was built (never sent) stays. The v1 path compares against the remote list directly and
+ * keeps its historical behaviour.
+ */
+internal fun categoriesMissingFromSnapshot(
+    local: List<Category>,
+    snapshot: List<BackupCategory>,
+    uploaded: List<BackupCategory>,
+    requireUploaded: Boolean,
+): List<Category> {
+    val snapshotUids = snapshot.mapTo(HashSet()) { it.uid }
+    val snapshotNames = snapshot.mapTo(HashSet()) { it.name }
+    val uploadedUids = if (requireUploaded) uploaded.mapTo(HashSet()) { it.uid } else emptySet()
+    val uploadedNames = if (requireUploaded) uploaded.mapTo(HashSet()) { it.name } else emptySet()
+    return local.filter { category ->
+        category.uid !in snapshotUids &&
+            category.name !in snapshotNames &&
+            (!requireUploaded || category.uid in uploadedUids || category.name in uploadedNames)
     }
 }
 // KUN <--

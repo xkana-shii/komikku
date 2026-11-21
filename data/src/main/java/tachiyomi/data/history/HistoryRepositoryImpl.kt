@@ -15,6 +15,7 @@ import tachiyomi.data.subscribeToList
 import tachiyomi.domain.history.model.History
 import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.history.model.HistoryWithRelations
+import tachiyomi.domain.history.repository.HistoryChapterEntry
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.model.Manga
 
@@ -80,6 +81,24 @@ class HistoryRepositoryImpl(
             .awaitAsList()
             .groupBy({ it.first }, { it.second })
     }
+
+    // KUN -->
+    override suspend fun getHistoryChapterEntriesByMangaIds(mangaIds: List<Long>): List<HistoryChapterEntry> {
+        // one bind variable per id, so a whole library needs chunking to fit SQLite's limit
+        return mangaIds.chunked(MAX_BOUND_IDS).flatMap { chunk ->
+            database.historyQueries
+                .getHistoryChapterEntriesByMangaIds(chunk) { mangaId, historyId, chapterUrl, readAt ->
+                    HistoryChapterEntry(
+                        historyId = historyId,
+                        mangaId = mangaId,
+                        chapterUrl = chapterUrl,
+                        readAt = readAt,
+                    )
+                }
+                .awaitAsList()
+        }
+    }
+    // KUN <--
 
     // KMK -->
     override suspend fun resetHistory(historyIds: List<Long>) {

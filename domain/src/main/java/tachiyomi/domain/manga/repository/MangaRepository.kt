@@ -16,6 +16,9 @@ interface MangaRepository {
     // KUN -->
     /** [getMangaById] for a row that may already be gone: null instead of throwing. */
     suspend fun getMangaByIdOrNull(id: Long): Manga?
+
+    /** The rows [getMangaById] would return for [ids], in one query; ids with no row are absent. */
+    suspend fun getMangaByIds(ids: List<Long>): List<Manga>
     // KUN <--
 
     fun getMangaByIdAsFlow(id: Long): Flow<Manga>

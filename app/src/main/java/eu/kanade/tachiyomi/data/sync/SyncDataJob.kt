@@ -35,6 +35,7 @@ import tachiyomi.domain.category.interactor.PruneCategoryReferences
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.repository.HistoryRepository
+import tachiyomi.domain.source.repository.SavedSearchRepository
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.sync.repository.SyncRepository
 import java.util.concurrent.TimeUnit
@@ -80,6 +81,8 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
     @Inject private lateinit var downloadManager: DownloadManager
 
     @Inject private lateinit var sourceManager: SourceManager
+
+    @Inject private lateinit var savedSearchRepository: SavedSearchRepository
     // KUN <--
 
     @Inject private lateinit var backupCreatorFactory: BackupCreator.Factory
@@ -119,6 +122,7 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
                 pruneCategoryReferences = pruneCategoryReferences,
                 downloadManager = downloadManager,
                 sourceManager = sourceManager,
+                savedSearchRepository = savedSearchRepository,
                 // KUN <--
                 backupCreatorFactory = backupCreatorFactory,
                 notifier = notifier,

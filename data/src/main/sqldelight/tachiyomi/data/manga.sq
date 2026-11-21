@@ -149,6 +149,18 @@ WHERE id = :id;
 -- KUN -->
 getMangaIsSyncing:
 SELECT is_syncing FROM manga WHERE id = :mangaId;
+
+getMangaByIds:
+SELECT
+    id, source_id, remote_url, remote_title, remote_author, remote_artist, remote_description,
+    remote_genre, remote_status, remote_cover, remote_update_strategy, remote_memo,
+    user_favorite_at, user_notes, user_reader_flags, user_chapter_flags,
+    state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
+    state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
+    favorite_modified_at,
+    user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
+FROM manga
+WHERE id IN :ids;
 -- KUN <--
 
 -- TODO: this should ideally never really have more than 1 result

@@ -53,6 +53,16 @@ class MangaRepositoryImpl(
             .awaitAsOneOrNull()
     }
 
+    override suspend fun getMangaByIds(ids: List<Long>): List<Manga> {
+        if (ids.isEmpty()) return emptyList()
+        // one bind variable per id, so a large selection needs chunking to fit SQLite's limit
+        return ids.chunked(MAX_BOUND_IDS).flatMap { chunk ->
+            database.mangaQueries
+                .getMangaByIds(chunk, MangaMapper::mapManga)
+                .awaitAsList()
+        }
+    }
+
     override suspend fun isSyncing(mangaId: Long): Boolean {
         return database.mangaQueries
             .getMangaIsSyncing(mangaId)
@@ -435,3 +445,8 @@ class MangaRepositoryImpl(
     }
     // SY <--
 }
+
+// KUN -->
+/** Bind ids per statement: SQLite allows 999 variables before Android 11, 32766 after. */
+private const val MAX_BOUND_IDS = 900
+// KUN <--

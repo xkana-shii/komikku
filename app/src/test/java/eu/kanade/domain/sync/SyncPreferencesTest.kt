@@ -141,5 +141,44 @@ class SyncPreferencesTest {
 
         assertEquals(setOf("3|/c"), prefs.pendingDeletedMangaKeys.get())
     }
+
+    @Test
+    fun `deleted history entries stay pending until the server acknowledges them`() {
+        val prefs = syncPreferences(syncService = 1)
+
+        prefs.rememberDeletedHistory(listOf("1|/m\u001f/m/ch1", "1|/m\u001f/m/ch2"))
+        prefs.forgetDeletedHistory(listOf("1|/m\u001f/m/ch1", "1|/m\u001f/m/ch3"))
+
+        assertEquals(setOf("1|/m\u001f/m/ch2"), prefs.pendingDeletedHistoryKeys.get())
+    }
+
+    @Test
+    fun `deleted history entries are not tracked while history sync is disabled`() {
+        val prefs = SyncPreferences(
+            InMemoryPreferenceStore(
+                sequenceOf(
+                    InMemoryPreference("sync_service", 1, 0),
+                    InMemoryPreference("__APP_STATE_sync_server_supports_v2", true, false),
+                    InMemoryPreference("__APP_STATE_sync_v2_probed_host", "https://sync.tachiyomi.org", ""),
+                    InMemoryPreference("sync_history", false, true),
+                ),
+            ),
+        )
+
+        prefs.rememberDeletedHistory(listOf("1|/m\u001f/m/ch1"))
+
+        assertEquals(emptySet<String>(), prefs.pendingDeletedHistoryKeys.get())
+    }
+
+    @Test
+    fun `pending history tombstones are device-local app state`() {
+        val prefs = SyncPreferences(InMemoryPreferenceStore())
+
+        assertEquals(
+            Preference.appStateKey("sync_pending_deleted_history_keys"),
+            prefs.pendingDeletedHistoryKeys.key(),
+        )
+        assertTrue(Preference.isAppState(prefs.pendingDeletedHistoryKeys.key()))
+    }
     // KUN <--
 }

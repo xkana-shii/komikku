@@ -5,6 +5,7 @@ import android.os.Build
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.sync.SyncNotifier
+import eu.kanade.tachiyomi.data.sync.dropTombstonedHistory
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.PUT
@@ -141,6 +142,15 @@ class SyncYomiSyncService(
         // SY -->
         submitDeletedItems(host, apiKey)
         // SY <--
+
+        // KUN -->
+        // A history entry the user removed is a reset row (`read_at = NULL`). It already travels as
+        // an explicit `history` tombstone above; sending the row as `lastRead = 0` as well would
+        // lose the server's version-first history merge (0 is never newer) and the live entry would
+        // be handed straight back. Only the v2 upload drops it: a manual backup, and the v1/Drive/
+        // WebDAV paths that still express a removal that way, keep their rows.
+        dropTombstonedHistory(backup.backupManga)
+        // KUN <--
 
         // KUN -->
         // A disabled category sync must not tombstone the server's categories: a force push uploads
@@ -479,24 +489,36 @@ class SyncYomiSyncService(
 
     // KUN -->
     /**
-     * Reports the chapters a source dropped and the manga deleted locally to the v2 deletions
-     * endpoint before the merge, so the server tombstones them. Keys are cleared only on a 2xx, so
-     * an older server without the route (404) loses nothing and they go out once it is upgraded.
+     * Reports the chapter and history entries a source or the user dropped, and the manga deleted
+     * locally, to the v2 deletions endpoint before the merge, so the server tombstones them.
+     *
+     * Keys are cleared only on a 2xx, so an older server without the route (404) loses nothing and
+     * they go out once it is upgraded. Chapter keys are also honoured by the legacy request shape;
+     * manga and history keys are only cleared once the response reports `applied`, because a server
+     * that predates the `items` shape ignores them while still answering 200.
      */
     // KUN <--
     // SY -->
     private suspend fun submitDeletedItems(host: String, apiKey: String) {
+        // KUN -->
+        val syncSettings = syncPreferences.getSyncSettings()
+        // A device that does not sync a section does not manage the server's rows for it either, so
+        // that section's tombstones stay pending instead of deleting what it never uploaded.
+        val histories = if (syncSettings.history) {
+            syncPreferences.pendingDeletedHistoryKeys.get()
+        } else {
+            emptySet()
+        }
+        // KUN <--
         val chapters = syncPreferences.pendingDeletedChapterKeys.get()
         // KUN -->
-        // A device with library sync disabled does not manage the server's library rows, so its
-        // manga tombstones are left pending instead of deleting rows it never uploaded.
-        val mangas = if (syncPreferences.getSyncSettings().libraryEntries) {
+        val mangas = if (syncSettings.libraryEntries) {
             syncPreferences.pendingDeletedMangaKeys.get()
         } else {
             emptySet()
         }
         // KUN <--
-        if (chapters.isEmpty() && mangas.isEmpty()) return
+        if (chapters.isEmpty() && mangas.isEmpty() && histories.isEmpty()) return
 
         val request = POST(
             url = "$host/api/sync/v2/deletions",
@@ -505,7 +527,7 @@ class SyncYomiSyncService(
                 .encodeToString(
                     DeletionRequest.serializer(),
                     DeletionRequest(
-                        items = deletionItems(chapters, mangas),
+                        items = deletionItems(chapters, mangas, histories),
                         // An older server only reads the legacy shape; it merges and dedupes both.
                         deletedChapters = chapters.toList(),
                     ),
@@ -521,19 +543,43 @@ class SyncYomiSyncService(
             logcat(LogPriority.WARN) { "SyncYomi v2 deletions not sent: ${e.message}" }
             return
         }
-        response.use { resp ->
+        // KUN -->
+        // The body is read, not just the status: a server that ignores `items` still answers 200.
+        // An unreadable body is not a confirmation either, so a failure here keeps every key pending
+        // for the next run instead of aborting the sync.
+        val responseBody: String? = response.use { resp ->
             if (!resp.isSuccessful) {
                 logcat(LogPriority.WARN) { "SyncYomi v2 deletions not applied: ${resp.code}" }
                 return
             }
+            try {
+                resp.body.string()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN) { "SyncYomi v2 deletions response unreadable: ${e.message}" }
+                null
+            }
         }
-        syncPreferences.forgetDeletedChapters(chapters)
-        // KUN -->
-        // Only the manga keys actually sent: one recorded while the request was in flight stays
-        // pending for the next run.
-        if (mangas.isNotEmpty()) syncPreferences.forgetDeletedManga(mangas)
+        // Only the keys actually sent: one recorded while the request was in flight stays pending
+        // for the next run. A pre-#335 server answers 200 and ignores `items`, so the kinds that
+        // have no legacy shape are only cleared when the response says it applied them.
+        val acknowledged = acknowledgedDeletions(responseBody, chapters, mangas, histories)
+        syncPreferences.forgetDeletedChapters(acknowledged.chapters)
+        if (acknowledged.mangas.isNotEmpty()) syncPreferences.forgetDeletedManga(acknowledged.mangas)
+        if (acknowledged.histories.isNotEmpty()) syncPreferences.forgetDeletedHistory(acknowledged.histories)
+        val keptPending = (mangas.isNotEmpty() && acknowledged.mangas.isEmpty()) ||
+            (histories.isNotEmpty() && acknowledged.histories.isEmpty())
+        if (keptPending) {
+            logcat(LogPriority.DEBUG) {
+                "SyncYomi v2 deletions: manga and history keys stay pending, the server did not report `applied`"
+            }
+        }
         // KUN <--
-        logcat(LogPriority.DEBUG) { "SyncYomi v2 deletions applied: ${chapters.size} chapters, ${mangas.size} manga" }
+        logcat(LogPriority.DEBUG) {
+            "SyncYomi v2 deletions applied: ${chapters.size} chapters, ${histories.size} history, " +
+                "${mangas.size} manga"
+        }
     }
     // SY <--
 }
@@ -558,7 +604,63 @@ internal data class DeletionRequest(
 )
 
 // Chapters go first: a manga tombstone removes the row, so the server must see the chapter keys
-// before it forgets the manga they belong to.
-internal fun deletionItems(chapters: Collection<String>, mangas: Collection<String>): List<DeletionItem> =
-    chapters.map { DeletionItem("chapter", it) } + mangas.map { DeletionItem("manga", it) }
+// before it forgets the manga they belong to. History entries go with the chapters: they are keyed
+// by a chapter too, and a manga tombstone takes them with it.
+internal fun deletionItems(
+    chapters: Collection<String>,
+    mangas: Collection<String>,
+    histories: Collection<String> = emptyList(),
+): List<DeletionItem> =
+    chapters.map { DeletionItem("chapter", it) } +
+        histories.map { DeletionItem("history", it) } +
+        mangas.map { DeletionItem("manga", it) }
+
+/**
+ * The body of a 2xx `POST /api/sync/v2/deletions`. `applied` counts the entries the server actually
+ * changed and only exists on a server that reads the `items` shape; an older one answers
+ * `{"acknowledged":n}` after processing the legacy `deletedChapters` list alone.
+ */
+@Serializable
+internal data class DeletionResponse(
+    val acknowledged: Long = 0,
+    val applied: Long? = null,
+)
+
+private val deletionResponseJson = Json { ignoreUnknownKeys = true }
+
+/** Whether the response confirms that every kind in the request was processed. */
+internal fun deletionResponseAppliesEveryKind(body: String?): Boolean {
+    if (body.isNullOrBlank()) return false
+    return try {
+        deletionResponseJson.decodeFromString(DeletionResponse.serializer(), body).applied != null
+    } catch (_: IllegalArgumentException) {
+        // not JSON, or not the shape above: an older server, so no confirmation
+        false
+    }
+}
+
+/** The pending keys a 2xx deletions response lets this device forget. */
+internal data class AcknowledgedDeletions(
+    val chapters: Collection<String>,
+    val mangas: Collection<String>,
+    val histories: Collection<String>,
+)
+
+/**
+ * Splits the keys a deletions request carried into the ones the response acknowledged.
+ *
+ * Chapter keys are safe to clear on any server: the legacy `deletedChapters` shape is still honoured,
+ * so even a server that ignores `items` applied them. Manga and history keys have no legacy shape,
+ * so a 2xx without `applied` leaves them pending for a server that has been upgraded.
+ */
+internal fun acknowledgedDeletions(
+    responseBody: String?,
+    chapters: Collection<String>,
+    mangas: Collection<String>,
+    histories: Collection<String>,
+): AcknowledgedDeletions = if (deletionResponseAppliesEveryKind(responseBody)) {
+    AcknowledgedDeletions(chapters, mangas, histories)
+} else {
+    AcknowledgedDeletions(chapters, emptySet(), emptySet())
+}
 // KUN <--

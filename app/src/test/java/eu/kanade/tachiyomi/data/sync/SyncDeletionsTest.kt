@@ -7,7 +7,10 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupDeletedItem
+import eu.kanade.tachiyomi.data.backup.models.BackupFeed
+import eu.kanade.tachiyomi.data.backup.models.BackupHistory
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
+import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
@@ -21,6 +24,7 @@ import tachiyomi.data.DatabaseBindings
 import tachiyomi.data.category.CategoryRepositoryImpl
 import tachiyomi.data.chapter.ChapterRepositoryImpl
 import tachiyomi.data.history.HistoryRepositoryImpl
+import tachiyomi.data.source.SavedSearchRepositoryImpl
 import tachiyomi.data.sync.SyncRepositoryImpl
 import tachiyomi.domain.category.interactor.PruneCategoryReferences
 import tachiyomi.domain.chapter.model.Chapter
@@ -107,6 +111,7 @@ class SyncDeletionsTest {
                 item("history", "2|/other\u001f/other/ch"),
                 item("category", "uid:12"),
                 item("category", "name:Reading"),
+                item("saved_search", "q|1"),
             ),
         )
 
@@ -114,7 +119,19 @@ class SyncDeletionsTest {
         plan.chapters shouldBe listOf(ChapterTombstone(sourceId = 1, mangaUrl = "/m", chapterUrl = "/m/ch1"))
         plan.history shouldBe listOf(ChapterTombstone(sourceId = 2, mangaUrl = "/other", chapterUrl = "/other/ch"))
         plan.categories shouldBe listOf(CategoryTombstone(uid = 12), CategoryTombstone(name = "Reading"))
+        plan.savedSearches shouldBe listOf(SavedSearchTombstone(name = "q", sourceId = 1))
         plan.skippedKinds shouldBe emptySet()
+    }
+
+    @Test
+    fun `a saved search key splits on its last separator`() {
+        savedSearchKeyOf("q|1") shouldBe SavedSearchTombstone(name = "q", sourceId = 1)
+        // the name may hold the separator itself; only the source id follows the last one
+        savedSearchKeyOf("a|b|2") shouldBe SavedSearchTombstone(name = "a|b", sourceId = 2)
+        savedSearchKeyOf("q") shouldBe null
+        savedSearchKeyOf("|1") shouldBe null
+        savedSearchKeyOf("q|") shouldBe null
+        savedSearchKeyOf("q|source") shouldBe null
     }
 
     @Test
@@ -135,6 +152,8 @@ class SyncDeletionsTest {
                     item("category", "other:1"),
                     item("category", "uid:x"),
                     item("category", "name:"),
+                    item("saved_search", "no-separator"),
+                    item("saved_search", "q|source"),
                 ),
             )
 
@@ -142,6 +161,7 @@ class SyncDeletionsTest {
             plan.chapters.shouldBeEmpty()
             plan.history.shouldBeEmpty()
             plan.categories.shouldBeEmpty()
+            plan.savedSearches.shouldBeEmpty()
             plan.skippedKinds shouldBe emptySet()
 
             fixture.apply(plan) shouldBe emptySet()
@@ -446,6 +466,91 @@ class SyncDeletionsTest {
     }
 
     @Test
+    fun `a saved search tombstone deletes the local row its key names`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertSavedSearch(id = 1L, name = "Reading", sourceId = 7L)
+            // the same name on another source is a different saved search
+            fixture.insertSavedSearch(id = 2L, name = "Reading", sourceId = 8L)
+            fixture.insertSavedSearch(id = 3L, name = "Other", sourceId = 7L)
+
+            fixture.apply(deletionPlan(listOf(item("saved_search", "Reading|7")))) shouldBe emptySet()
+
+            fixture.savedSearchIds() shouldBe listOf(2L, 3L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a saved search tombstone is skipped when the section is off`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertSavedSearch(id = 1L, name = "Reading", sourceId = 7L)
+
+            val skipped = fixture.apply(
+                deletionPlan(listOf(item("saved_search", "Reading|7"))),
+                savedSearchesEnabled = false,
+            )
+
+            skipped shouldBe setOf("saved_search")
+            fixture.savedSearchIds() shouldBe listOf(1L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a saved search tombstone takes the feed that referenced it`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertSavedSearch(id = 1L, name = "Reading", sourceId = 7L)
+            fixture.insertSavedSearch(id = 2L, name = "Other", sourceId = 7L)
+            fixture.insertFeed(id = 11L, sourceId = 7L, savedSearchId = 1L)
+            fixture.insertFeed(id = 12L, sourceId = 7L, savedSearchId = 2L)
+            fixture.insertFeed(id = 13L, sourceId = 7L, savedSearchId = null)
+
+            fixture.apply(deletionPlan(listOf(item("saved_search", "Reading|7")))) shouldBe emptySet()
+
+            // a feed whose saved search is gone has nothing left to show; only the feeds of the
+            // other saved search and the plain source feed stay
+            fixture.feedIds() shouldBe listOf(12L, 13L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a tombstoned saved search leaves the restore payload with its feed`() {
+        val tombstones = deletionPlan(listOf(item("saved_search", "Reading|7"))).savedSearches
+        val searches = listOf(
+            BackupSavedSearch(name = "Reading", source = 7L),
+            // the same name on another source is a different item and stays
+            BackupSavedSearch(name = "Reading", source = 8L),
+        )
+        val feeds = listOf(
+            BackupFeed(
+                source = 7L,
+                global = false,
+                savedSearch = BackupSavedSearch(name = "Reading", source = 7L),
+            ),
+            BackupFeed(
+                source = 8L,
+                global = false,
+                savedSearch = BackupSavedSearch(name = "Reading", source = 8L),
+            ),
+            // a feed without a saved search is untouched
+            BackupFeed(source = 7L, global = true),
+        )
+
+        // FeedRestorer creates the saved search a feed references when it is missing, so a payload
+        // that still names the tombstoned one would undo the deletion in the same run.
+        withoutTombstonedSavedSearches(searches, tombstones).map { it.source } shouldBe listOf(8L)
+        withoutFeedsOfTombstonedSavedSearches(feeds, tombstones).map { it.source to it.global } shouldBe
+            listOf(8L to false, 7L to true)
+    }
+
+    @Test
     fun `a manga tombstone runs the download cleanup while the row still exists`(): Unit = runBlocking {
         val fixture = Fixture()
         try {
@@ -458,6 +563,237 @@ class SyncDeletionsTest {
             fixture.cleanupCalls shouldBe listOf(1L to "/m")
             fixture.cleanupSawRow shouldBe listOf(true)
             fixture.mangaIds().shouldBeEmpty()
+        } finally {
+            fixture.close()
+        }
+    }
+
+    // endregion
+
+    // region full-snapshot history pruning
+
+    @Test
+    fun `a full v2 snapshot clears the history entries a manga no longer lists`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertChapter(mangaId = 7L, chapterId = 207L, url = "/m/ch2")
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+            fixture.insertHistory(mangaId = 7L, chapterId = 207L, historyId = 2007L, readAt = 5000L)
+            // a second manga the response does not carry at all: nothing is known about its history
+            fixture.insertManga(id = 8L, sourceId = 1L, url = "/n")
+            fixture.insertChapter(mangaId = 8L, chapterId = 108L, url = "/n/ch1")
+            fixture.insertHistory(mangaId = 8L, chapterId = 108L, historyId = 1008L, readAt = 3000L)
+
+            val remote = listOf(
+                BackupManga(source = 1, url = "/m", title = "/m", history = listOf(BackupHistory("/m/ch2", 5000))),
+            )
+
+            fixture.historyToPrune(remote, uploadedManga = remote, syncStart = 9000) shouldBe listOf(1007L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a history entry read before the sync is pruned however far into the current second it lands`(): Unit =
+        runBlocking {
+            val fixture = Fixture()
+            try {
+                fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+                fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+                fixture.insertChapter(mangaId = 7L, chapterId = 307L, url = "/m/ch3")
+                fixture.insertChapter(mangaId = 7L, chapterId = 407L, url = "/m/ch4")
+                // read before the sync: absent from the response, so it is a removal
+                fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+                // also before the sync (5000 s), but far above a bare "5000 >= 9000"-style comparison
+                fixture.insertHistory(mangaId = 7L, chapterId = 307L, historyId = 3007L, readAt = 5_000_000L)
+                // read as the sync started (same second, epoch ms): it may predate the server's answer
+                fixture.insertHistory(mangaId = 7L, chapterId = 407L, historyId = 4007L, readAt = 9_000_000L)
+
+                val remote = listOf(BackupManga(source = 1, url = "/m", title = "/m", history = emptyList()))
+
+                // 5_000_000 ms is before the 9000 s sync start, so it is a deletion; only the row at
+                // the sync's own second survives.
+                fixture.historyToPrune(remote, uploadedManga = remote, syncStart = 9000) shouldBe
+                    listOf(1007L, 3007L)
+            } finally {
+                fixture.close()
+            }
+        }
+
+    @Test
+    fun `a history entry read after the sync started survives the prune`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertChapter(mangaId = 7L, chapterId = 307L, url = "/m/ch3")
+            // read before the sync: absent from the response, so it is a removal
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+            // read as the sync started (same second, epoch ms): it may predate the server's answer
+            fixture.insertHistory(mangaId = 7L, chapterId = 307L, historyId = 3007L, readAt = 9_000_000L)
+
+            val remote = listOf(BackupManga(source = 1, url = "/m", title = "/m", history = emptyList()))
+
+            fixture.historyToPrune(remote, uploadedManga = remote, syncStart = 9000) shouldBe listOf(1007L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a delta response and a disabled history section prune nothing`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+
+            val remote = listOf(BackupManga(source = 1, url = "/m", title = "/m", history = emptyList()))
+
+            // a delta omits the entries that did not change, so an absent one means nothing
+            fixture.historyToPrune(remote, remote, syncStart = 9000, full = false).shouldBeEmpty()
+            // a device that does not sync history never uploaded the rows being compared
+            fixture.historyToPrune(remote, remote, syncStart = 9000, historySyncEnabled = false).shouldBeEmpty()
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a manga the upload never carried keeps its history`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            // read without ever being added to the library: never uploaded, so the server's history
+            // list for it answers for nothing this device sent
+            fixture.insertManga(id = 8L, sourceId = 1L, url = "/read-only")
+            fixture.insertChapter(mangaId = 8L, chapterId = 108L, url = "/read-only/ch1")
+            fixture.insertHistory(mangaId = 8L, chapterId = 108L, historyId = 1008L, readAt = 3000L)
+
+            val remote = listOf(BackupManga(source = 1, url = "/read-only", title = "/read-only"))
+            val uploaded = listOf(BackupManga(source = 1, url = "/other", title = "/other"))
+
+            fixture.historyToPrune(remote, uploadedManga = uploaded, syncStart = 9000).shouldBeEmpty()
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a manga whose upload lost the version comparison keeps its history`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+
+            // The server's copy is newer, so on a pre-1.7.3 server its per-manga version merge kept
+            // the server's history section and dropped ours: the empty list below says nothing about
+            // the local read.
+            val remote = listOf(
+                BackupManga(source = 1, url = "/m", title = "/m", version = 9, lastModifiedAt = 900),
+            )
+            val uploaded = listOf(
+                BackupManga(source = 1, url = "/m", title = "/m", version = 8, lastModifiedAt = 800),
+            )
+
+            fixture.historyToPrune(remote, uploadedManga = uploaded, syncStart = 9000).shouldBeEmpty()
+
+            // The same version with a newer server timestamp also lost the merge.
+            fixture.historyToPrune(
+                listOf(BackupManga(source = 1, url = "/m", title = "/m", version = 9, lastModifiedAt = 901)),
+                uploadedManga = listOf(
+                    BackupManga(source = 1, url = "/m", title = "/m", version = 9, lastModifiedAt = 900),
+                ),
+                syncStart = 9000,
+            ).shouldBeEmpty()
+
+            // An equal version with an equal server timestamp is a tie the upload keeps, so it prunes.
+            fixture.historyToPrune(
+                listOf(BackupManga(source = 1, url = "/m", title = "/m", version = 9, lastModifiedAt = 900)),
+                uploadedManga = listOf(
+                    BackupManga(source = 1, url = "/m", title = "/m", version = 9, lastModifiedAt = 900),
+                ),
+                syncStart = 9000,
+            ) shouldBe listOf(1007L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `library sync off prunes no history`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+
+            val remote = listOf(BackupManga(source = 1, url = "/m", title = "/m", history = emptyList()))
+
+            // a disabled library upload carries no manga at all, so nothing was compared against it
+            fixture.historyToPrune(remote, remote, syncStart = 9000, libraryEntries = false).shouldBeEmpty()
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `an empty response prunes no history`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 3000L)
+
+            fixture.historyToPrune(emptyList(), emptyList(), syncStart = 9000).shouldBeEmpty()
+        } finally {
+            fixture.close()
+        }
+    }
+
+    // endregion
+
+    // region full-snapshot category pruning
+
+    @Test
+    fun `a full v2 snapshot deletes the category it omits and keeps the one it lists`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertCategory(id = 3L, name = "Reading", order = 0L, uid = 12L)
+            fixture.insertCategory(id = 4L, name = "Kept", order = 1L, uid = 13L)
+            // the History/Library filters store local ids: an id that no longer exists must go too
+            fixture.libraryPreferences.filterCategoriesInclude.set(setOf("3", "4"))
+
+            val uploaded = listOf(
+                BackupCategory(name = "Reading", order = 0, id = 3, uid = 12),
+                BackupCategory(name = "Kept", order = 1, id = 4, uid = 13),
+            )
+            val snapshot = listOf(BackupCategory(name = "Kept", order = 1, id = 4, uid = 13))
+
+            fixture.pruneCategories(snapshot, uploaded) shouldBe listOf(3L)
+            fixture.categoryIds() shouldBe listOf(0L, 4L)
+            fixture.libraryPreferences.filterCategoriesInclude.get() shouldBe setOf("4")
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a category created after the upload survives a full v2 snapshot`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertCategory(id = 3L, name = "Reading", order = 0L, uid = 12L)
+            fixture.insertCategory(id = 5L, name = "Created mid-sync", order = 1L, uid = 15L)
+
+            // only "Reading" was uploaded, so the snapshot's silence about the other one is a race
+            val uploaded = listOf(BackupCategory(name = "Reading", order = 0, id = 3, uid = 12))
+            val snapshot = listOf(BackupCategory(name = "Reading", order = 0, id = 3, uid = 12))
+
+            fixture.pruneCategories(snapshot, uploaded).shouldBeEmpty()
+            fixture.categoryIds() shouldBe listOf(0L, 3L, 5L)
         } finally {
             fixture.close()
         }
@@ -510,7 +846,8 @@ class SyncDeletionsTest {
 
         /** Counts the chapter reads a run makes, so the batch resolution path stays pinned. */
         val chapterRepository = CountingChapterRepository(ChapterRepositoryImpl(database))
-        private val historyRepository = HistoryRepositoryImpl(database)
+        val historyRepository = HistoryRepositoryImpl(database)
+        val savedSearchRepository = SavedSearchRepositoryImpl(database)
         private val categoryRepository = CategoryRepositoryImpl(database)
 
         /** Manga handed to the download-cleanup hook, in order, as `(sourceId, url)`. */
@@ -537,12 +874,48 @@ class SyncDeletionsTest {
 
         fun close() = driver.close()
 
+        /** The history entries a full v2 response would clear, gated exactly as the sync gates them. */
+        suspend fun historyToPrune(
+            remoteManga: List<BackupManga>,
+            uploadedManga: List<BackupManga>,
+            syncStart: Long,
+            full: Boolean = true,
+            protocolV2: Boolean = true,
+            libraryEntries: Boolean = true,
+            historySyncEnabled: Boolean = true,
+        ): List<Long> = historyIdsMissingFromFullSnapshot(
+            full = full,
+            protocolV2 = protocolV2,
+            libraryEntries = libraryEntries,
+            historySyncEnabled = historySyncEnabled,
+            syncStart = syncStart,
+            remoteManga = remoteManga,
+            uploadedManga = uploadedManga,
+            syncRepository = syncRepository,
+            historyRepository = historyRepository,
+        )
+
+        /** The categories a full v2 snapshot would delete, through the prune the sync runs. */
+        suspend fun pruneCategories(
+            snapshot: List<BackupCategory>,
+            uploaded: List<BackupCategory>,
+            requireUploaded: Boolean = true,
+        ): List<Long> = pruneCategoriesMissingFromSnapshot(
+            localCategories = categoryRepository.getAll(),
+            snapshot = snapshot,
+            uploaded = uploaded,
+            requireUploaded = requireUploaded,
+            categoryRepository = categoryRepository,
+            pruneCategoryReferences = pruneCategoryReferences,
+        ).map { it.id }
+
         suspend fun apply(
             plan: DeletionPlan,
             librarySyncEnabled: Boolean = true,
             historySyncEnabled: Boolean = true,
             chaptersEnabled: Boolean = true,
             categoriesEnabled: Boolean = true,
+            savedSearchesEnabled: Boolean = true,
         ): Set<String> = applyDeletions(
             plan = plan,
             syncRepository = syncRepository,
@@ -550,6 +923,7 @@ class SyncDeletionsTest {
             historyRepository = historyRepository,
             categoryRepository = categoryRepository,
             pruneCategoryReferences = pruneCategoryReferences,
+            savedSearchRepository = savedSearchRepository,
             // Stand-in for DownloadManager.deleteManga: records the call and whether the row was
             // still there, then removes the row like the real path does.
             deleteManga = { manga ->
@@ -561,6 +935,7 @@ class SyncDeletionsTest {
             historySyncEnabled = historySyncEnabled,
             chaptersEnabled = chaptersEnabled,
             categoriesEnabled = categoriesEnabled,
+            savedSearchesEnabled = savedSearchesEnabled,
         )
 
         fun mangaIds(): List<Long> = longs("SELECT id FROM manga ORDER BY id")
@@ -570,6 +945,10 @@ class SyncDeletionsTest {
         fun historyIds(): List<Long> = longs("SELECT id FROM history ORDER BY id")
 
         fun categoryIds(): List<Long> = longs("SELECT id FROM category ORDER BY id")
+
+        fun savedSearchIds(): List<Long> = longs("SELECT _id FROM saved_search ORDER BY _id")
+
+        fun feedIds(): List<Long> = longs("SELECT _id FROM feed_saved_search ORDER BY _id")
 
         fun readAtOf(historyId: Long): Long? =
             nullableLongs("SELECT read_at FROM history WHERE id = $historyId").firstOrNull()
@@ -643,6 +1022,24 @@ class SyncDeletionsTest {
                 null,
                 "INSERT INTO category(id, name, `order`, flags, hidden, version, uid, last_modified_at, is_syncing) " +
                     "VALUES ($id, '$name', $order, 0, 0, 0, $uid, 0, 1)",
+                0,
+            ).await()
+        }
+
+        suspend fun insertSavedSearch(id: Long, name: String, sourceId: Long) {
+            driver.execute(
+                null,
+                "INSERT INTO saved_search(_id, source, name, query, filters_json) " +
+                    "VALUES ($id, $sourceId, '$name', NULL, NULL)",
+                0,
+            ).await()
+        }
+
+        suspend fun insertFeed(id: Long, sourceId: Long, savedSearchId: Long?) {
+            driver.execute(
+                null,
+                "INSERT INTO feed_saved_search(_id, source, saved_search, global, feed_order) " +
+                    "VALUES ($id, $sourceId, ${savedSearchId ?: "NULL"}, 0, 0)",
                 0,
             ).await()
         }

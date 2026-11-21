@@ -26,6 +26,17 @@ FROM history
 WHERE manga_id IN :mangaIds
 ORDER BY manga_id, id;
 
+-- KUN -->
+-- The rows a full-snapshot sync compares against the server's history lists, each with the chapter
+-- url its tombstone key is built from: one projection instead of every chapter of every manga.
+getHistoryChapterEntriesByMangaIds:
+SELECT history.manga_id, history.id, chapter.remote_url, history.read_at
+FROM history
+JOIN chapter ON chapter.id = history.chapter_id
+WHERE history.manga_id IN :mangaIds
+ORDER BY history.manga_id, history.id;
+-- KUN <--
+
 -- KMK -->
 -- Removed unused SY query getHistoryByChapterUrlAndMangaId
 -- KMK <--

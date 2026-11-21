@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
 
@@ -143,6 +144,70 @@ class SyncDeltaTest {
         assertEquals(
             emptySet<String>(),
             missingRemoteChapterUrls(listOf("/c1"), listOf("/c1", "/c2")),
+        )
+    }
+
+    @Test
+    fun `a v2 upload drops the history rows a local removal reset`() {
+        val emptied = BackupManga(
+            source = 1,
+            url = "/a",
+            history = listOf(BackupHistory(url = "/a/1", lastRead = 0)),
+        )
+        val mixed = BackupManga(
+            source = 1,
+            url = "/m",
+            history = listOf(
+                BackupHistory(url = "/m/1", lastRead = 0),
+                BackupHistory(url = "/m/2", lastRead = 100),
+            ),
+        )
+
+        dropTombstonedHistory(listOf(emptied, mixed))
+
+        // A `lastRead = 0` row loses the server's version-first history merge and would hand the
+        // live entry back, so the v2 upload carries only the entries that still have a read date.
+        assertEquals(emptyList<String>(), emptied.history.map { it.url })
+        assertEquals(listOf("/m/2"), mixed.history.map { it.url })
+        assertEquals(100L, mixed.history.single().lastRead)
+    }
+
+    @Test
+    fun `a local category missing from the snapshot is returned and a listed one is kept`() {
+        val local = listOf(
+            Category(id = 3L, name = "Reading", order = 0L, flags = 0L, hidden = false, uid = 12L),
+            // matched by uid only: the peer renamed it and this device has not restored that yet
+            Category(id = 4L, name = "Old name", order = 1L, flags = 0L, hidden = false, uid = 13L),
+            // matched by name only: the peer assigned it a uid this device never saw
+            Category(id = 5L, name = "Kept", order = 2L, flags = 0L, hidden = false, uid = 0L),
+        )
+        val uploaded = local.map { BackupCategory(name = it.name, order = it.order, id = it.id, uid = it.uid) }
+        val snapshot = listOf(
+            BackupCategory(name = "Renamed", order = 1, id = 4, uid = 13),
+            BackupCategory(name = "Kept", order = 2, id = 5, uid = 15),
+        )
+
+        assertEquals(
+            listOf(3L),
+            categoriesMissingFromSnapshot(local, snapshot, uploaded, requireUploaded = true).map { it.id },
+        )
+    }
+
+    @Test
+    fun `a category created after the upload was built is not a deletion`() {
+        val late = Category(id = 9L, name = "Added mid-sync", order = 0L, flags = 0L, hidden = false, uid = 99L)
+        val uploaded = listOf(BackupCategory(name = "Reading", order = 0, id = 3, uid = 12))
+        val snapshot = listOf(BackupCategory(name = "Reading", order = 0, id = 3, uid = 12))
+
+        // A full v2 snapshot only says "deleted" about a category the server was told about.
+        assertEquals(
+            emptyList<Long>(),
+            categoriesMissingFromSnapshot(listOf(late), snapshot, uploaded, requireUploaded = true).map { it.id },
+        )
+        // The historical v1 comparison has no upload to consult and keeps its behaviour.
+        assertEquals(
+            listOf(9L),
+            categoriesMissingFromSnapshot(listOf(late), snapshot, uploaded, requireUploaded = false).map { it.id },
         )
     }
 
