@@ -6,16 +6,24 @@ import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.connections.service.ConnectionsPreferences
+import eu.kanade.domain.connections.service.ConnectionsServiceId
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import okhttp3.OkHttpClient
 
+// KUN -->
+// `ConnectionsPreferences` now lives in `:domain` and takes `ConnectionsServiceId`, this class's
+// narrow domain-side surface, so `domain` can hold the Discord incognito set in its category-id
+// inventory.
+// KUN <--
 abstract class ConnectionsService(
-    val id: Long,
+    // KUN -->
+    override val id: Long,
+    // KUN <--
     val connectionsPreferences: ConnectionsPreferences,
     private val networkService: NetworkHelper,
-) {
+) : ConnectionsServiceId {
 
     open val client: OkHttpClient
         get() = networkService.client

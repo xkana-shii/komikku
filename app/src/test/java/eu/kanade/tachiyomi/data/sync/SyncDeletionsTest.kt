@@ -4,6 +4,7 @@ import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupDeletedItem
@@ -27,6 +28,7 @@ import tachiyomi.data.history.HistoryRepositoryImpl
 import tachiyomi.data.source.SavedSearchRepositoryImpl
 import tachiyomi.data.sync.SyncRepositoryImpl
 import tachiyomi.domain.category.interactor.PruneCategoryReferences
+import tachiyomi.domain.category.service.CategoryIdPreferences
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.download.service.DownloadPreferences
@@ -766,6 +768,8 @@ class SyncDeletionsTest {
             fixture.insertCategory(id = 4L, name = "Kept", order = 1L, uid = 13L)
             // the History/Library filters store local ids: an id that no longer exists must go too
             fixture.libraryPreferences.filterCategoriesInclude.set(setOf("3", "4"))
+            // as does the library's "add to library" default, which the merge never resets itself
+            fixture.libraryPreferences.defaultCategory.set(3)
 
             val uploaded = listOf(
                 BackupCategory(name = "Reading", order = 0, id = 3, uid = 12),
@@ -776,6 +780,7 @@ class SyncDeletionsTest {
             fixture.pruneCategories(snapshot, uploaded) shouldBe listOf(3L)
             fixture.categoryIds() shouldBe listOf(0L, 4L)
             fixture.libraryPreferences.filterCategoriesInclude.get() shouldBe setOf("4")
+            assertFalse(fixture.libraryPreferences.defaultCategory.isSet())
         } finally {
             fixture.close()
         }
@@ -856,11 +861,14 @@ class SyncDeletionsTest {
         /** Whether the row the cleanup hook ran for was still in the database at that moment. */
         val cleanupSawRow = mutableListOf<Boolean>()
         private val pruneCategoryReferences = PruneCategoryReferences(
-            libraryPreferences = libraryPreferences,
-            downloadPreferences = DownloadPreferences(preferenceStore),
-            historyPreferences = HistoryPreferences(preferenceStore),
-            updatesPreferences = UpdatesPreferences(preferenceStore),
-            upcomingPreferences = UpcomingPreferences(preferenceStore),
+            categoryIdPreferences = CategoryIdPreferences(
+                libraryPreferences = libraryPreferences,
+                downloadPreferences = DownloadPreferences(preferenceStore),
+                historyPreferences = HistoryPreferences(preferenceStore),
+                updatesPreferences = UpdatesPreferences(preferenceStore),
+                upcomingPreferences = UpcomingPreferences(preferenceStore),
+                connectionsPreferences = ConnectionsPreferences(preferenceStore),
+            ),
         )
 
         init {

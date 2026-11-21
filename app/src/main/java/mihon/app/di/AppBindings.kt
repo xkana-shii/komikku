@@ -238,14 +238,16 @@ object AppBindings {
     @SingleIn(AppScope::class)
     fun providesDeleteCategory(
         categoryRepository: tachiyomi.domain.category.repository.CategoryRepository,
-        libraryPreferences: tachiyomi.domain.library.service.LibraryPreferences,
+        // KUN -->
+        // DeleteCategory no longer takes `libraryPreferences`: it resets `defaultCategory` through
+        // PruneCategoryReferences.
+        // KUN <--
         categoryTombstones: tachiyomi.domain.category.service.CategoryTombstones,
         // KUN -->
         pruneCategoryReferences: tachiyomi.domain.category.interactor.PruneCategoryReferences,
         // KUN <--
     ): tachiyomi.domain.category.interactor.DeleteCategory = tachiyomi.domain.category.interactor.DeleteCategory(
         categoryRepository = categoryRepository,
-        libraryPreferences = libraryPreferences,
         categoryTombstones = categoryTombstones,
         // KUN -->
         pruneCategoryReferences = pruneCategoryReferences,

@@ -6,11 +6,13 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.category.service.CategoryTombstones
 import tachiyomi.domain.category.service.CategoryTree
-import tachiyomi.domain.library.service.LibraryPreferences
 
 class DeleteCategory(
     private val categoryRepository: CategoryRepository,
-    private val libraryPreferences: LibraryPreferences,
+    // KUN -->
+    // Upstream took `libraryPreferences` here to reset `defaultCategory`; that reset now lives in
+    // [PruneCategoryReferences], so the sync deletion path behaves the same as this one.
+    // KUN <--
     // SY -->
     private val categoryTombstones: CategoryTombstones,
     // SY <--
@@ -59,14 +61,10 @@ class DeleteCategory(
             .filterNot(Category::isSystemCategory)
             .map { it.id }
 
-        val defaultCategory = libraryPreferences.defaultCategory.get()
-        if (defaultCategory == categoryId.toInt()) {
-            libraryPreferences.defaultCategory.delete()
-        }
-
         // KUN -->
-        // The library, download and history filters that store category ids are pruned in one place,
-        // because the non-v2 sync merge deletes categories without going through this interactor.
+        // The library, download, Discord incognito and History/Updates/Upcoming filters that store
+        // category ids — and `defaultCategory` with them — are reset in one place, because the
+        // non-v2 sync merge deletes categories without going through this interactor.
         pruneCategoryReferences.prune(listOf(categoryId))
         // KUN <--
 

@@ -26,16 +26,32 @@ import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.plusAssign
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
+// KUN -->
+import tachiyomi.domain.category.service.CategoryIdPreferences
+// KUN <--
 import tachiyomi.domain.category.service.CategoryTree
-import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.library.service.LibraryPreferences
 
 @Inject
 class PreferenceRestorer(
     private val context: Context,
     private val getCategories: GetCategories,
+    // KUN -->
+    categoryIdPreferences: CategoryIdPreferences,
+    // KUN <--
     private val preferenceStore: PreferenceStore,
 ) {
+    // KUN -->
+    /**
+     * Keys of the preferences that store local category ids, from the shared inventory:
+     * [categoryIdStringKeys] are `Set<String>`s (library, download and the Discord incognito set);
+     * [categoryIdLongKeys] are `List<Long>` tab filters, which `getLongArray` stores as a
+     * comma-joined `String`.
+     */
+    private val categoryIdStringKeys = categoryIdPreferences.stringFilters.mapTo(mutableSetOf()) { it.key() }
+    private val categoryIdLongKeys = categoryIdPreferences.longFilters.mapTo(mutableSetOf()) { it.key() }
+    // KUN <--
+
     suspend fun restoreApp(
         preferences: List<BackupPreference>,
         backupCategories: List<BackupCategory>?,
@@ -130,7 +146,17 @@ class PreferenceRestorer(
                     }
                     is StringPreferenceValue -> {
                         if (prefs[key] is String?) {
-                            writes[key] = value.value
+                            // KUN -->
+                            // A comma-joined category filter names the backup device's ids; remap
+                            // them like the Set<String> filters. An all-unknown list leaves the local
+                            // preference alone.
+                            if (key in categoryIdLongKeys) {
+                                val ids = value.value.split(",").mapNotNull { localCategoryId(it)?.toString() }
+                                if (ids.isNotEmpty()) writes[key] = ids.joinToString(",")
+                            } else {
+                                writes[key] = value.value
+                            }
+                            // KUN <--
                         }
                     }
                     is BooleanPreferenceValue -> {
@@ -188,8 +214,9 @@ class PreferenceRestorer(
         value: Set<String>,
         localCategoryId: (String) -> Long?,
     ): Set<String>? {
-        val categoryPreferences = LibraryPreferences.categoryPreferenceKeys + DownloadPreferences.categoryPreferenceKeys
-        if (key !in categoryPreferences) return null
+        // KUN -->
+        if (key !in categoryIdStringKeys) return null
+        // KUN <--
 
         return value.mapNotNullTo(mutableSetOf()) { localCategoryId(it)?.toString() }
     }

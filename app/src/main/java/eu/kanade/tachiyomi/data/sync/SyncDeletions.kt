@@ -282,8 +282,9 @@ internal suspend fun applyDeletions(
             logcat(LOG_TAG, LogPriority.DEBUG) { "Deleting ${categoryIds.size} categories the delta tombstoned" }
             categoryRepository.delete(categoryIds)
             // These rows were deleted without going through DeleteCategory, so the stale ids have to
-            // leave the library, download and History filters too, or a filter keeps matching a
-            // category that no longer exists.
+            // leave every category-id preference (library, download, Discord incognito and the
+            // History/Updates/Upcoming filters), or a filter keeps matching a category that no
+            // longer exists.
             pruneCategoryReferences.prune(categoryIds)
         }
     } else if (plan.categories.isNotEmpty()) {
@@ -396,8 +397,10 @@ internal fun withoutFeedsOfTombstonedSavedSearches(
  * Deletes the local categories a category list no longer names (see [categoriesMissingFromSnapshot])
  * and returns them, so the caller can remember the uids as tombstones.
  *
- * The rows are deleted without going through `DeleteCategory`, so the stale ids leave the library,
- * download and History filters too, or a filter keeps matching a category that no longer exists.
+ * The rows are deleted without going through `DeleteCategory`, so the stale ids leave every
+ * category-id preference (library, download, Discord incognito and the History/Updates/Upcoming
+ * filters) through `PruneCategoryReferences`, or a filter keeps matching a category that no longer
+ * exists.
  */
 internal suspend fun pruneCategoriesMissingFromSnapshot(
     localCategories: List<Category>,

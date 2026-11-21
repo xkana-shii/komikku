@@ -4,34 +4,43 @@ package eu.kanade.domain.connections.service
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import eu.kanade.tachiyomi.data.connections.ConnectionsService
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 
+// KUN -->
+// komi-kun moved this class from `:app` to `:domain`, unchanged except for the credentials helpers
+// below: `domain`'s `CategoryIdPreferences` inventory has to hold `discordRPCIncognitoCategories`, so
+// the pruner and the repair migration can cover it in the same layer as the other category-id
+// preferences. `:domain` cannot reference the app's `ConnectionsService`, so the helpers take the
+// narrow [ConnectionsServiceId] it implements.
+// KUN <--
 @Inject
 @SingleIn(AppScope::class)
 class ConnectionsPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
-    fun connectionsUsername(sync: ConnectionsService) = preferenceStore.getString(
+
+    // KUN -->
+    fun connectionsUsername(sync: ConnectionsServiceId) = preferenceStore.getString(
         connectionsUsername(sync.id),
         "",
     )
 
-    fun connectionsPassword(sync: ConnectionsService) = preferenceStore.getString(
+    fun connectionsPassword(sync: ConnectionsServiceId) = preferenceStore.getString(
         connectionsPassword(sync.id),
         "",
     )
 
-    fun setConnectionsCredentials(sync: ConnectionsService, username: String, password: String) {
+    fun setConnectionsCredentials(sync: ConnectionsServiceId, username: String, password: String) {
         connectionsUsername(sync).set(username)
         connectionsPassword(sync).set(password)
     }
 
-    fun connectionsToken(sync: ConnectionsService) = preferenceStore.getString(
+    fun connectionsToken(sync: ConnectionsServiceId) = preferenceStore.getString(
         Preference.privateKey(connectionsToken(sync.id)),
         "",
     )
+    // KUN <--
 
     val enableDiscordRPC = preferenceStore.getBoolean("pref_enable_discord_rpc", false)
 

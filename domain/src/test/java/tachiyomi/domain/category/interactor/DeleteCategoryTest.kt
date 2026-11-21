@@ -1,17 +1,20 @@
 // KUN -->
 package tachiyomi.domain.category.interactor
 
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.category.repository.CategoryRepository
+import tachiyomi.domain.category.service.CategoryIdPreferences
 import tachiyomi.domain.category.service.CategoryTombstones
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.service.HistoryPreferences
@@ -37,14 +40,18 @@ class DeleteCategoryTest {
     ): DeleteCategory {
         return DeleteCategory(
             categoryRepository = categoryRepository,
-            libraryPreferences = libraryPreferences,
             categoryTombstones = CategoryTombstones { },
             pruneCategoryReferences = PruneCategoryReferences(
-                libraryPreferences = libraryPreferences,
-                downloadPreferences = downloadPreferences,
-                historyPreferences = historyPreferences,
-                updatesPreferences = UpdatesPreferences(store),
-                upcomingPreferences = UpcomingPreferences(store),
+                categoryIdPreferences = CategoryIdPreferences(
+                    // KNS --> the instances the test reads back, not fresh ones over the same store
+                    libraryPreferences = libraryPreferences,
+                    downloadPreferences = downloadPreferences,
+                    // KNS <--
+                    historyPreferences = historyPreferences,
+                    updatesPreferences = UpdatesPreferences(store),
+                    upcomingPreferences = UpcomingPreferences(store),
+                    connectionsPreferences = ConnectionsPreferences(store),
+                ),
             ),
         )
     }
@@ -120,6 +127,20 @@ class DeleteCategoryTest {
     }
 
     @Test
+    fun `deleting the category a defaultCategory names unsets it`() = runTest {
+        val store = InMemoryPreferenceStore()
+        val libraryPreferences = LibraryPreferences(store)
+        libraryPreferences.defaultCategory.set(1)
+
+        val result = deleteCategory(HistoryPreferences(store), store = store).await(1L)
+
+        assertTrue(result is DeleteCategory.Result.Success)
+        // The reset moved into PruneCategoryReferences; a delete that no longer reaches it would
+        // leave the default pointing at the deleted category.
+        assertFalse(libraryPreferences.defaultCategory.isSet())
+    }
+
+    @Test
     fun `a failing category deletion leaves the history filter alone`() = runTest {
         val store = InMemoryPreferenceStore()
         val preferences = historyPreferences(store)
@@ -133,6 +154,27 @@ class DeleteCategoryTest {
         assertTrue(result is DeleteCategory.Result.InternalError)
         assertEquals(listOf(1L), preferences.filterIncludedCategories.get())
     }
+
+    @Test
+    fun `a failing reorder still leaves the deleted id pruned from the history filter and the discord set`() =
+        runTest {
+            val store = InMemoryPreferenceStore()
+            val preferences = historyPreferences(store)
+            val connectionsPreferences = ConnectionsPreferences(store)
+            preferences.filterIncludedCategories.set(listOf(1L, 2L))
+            connectionsPreferences.discordRPCIncognitoCategories.set(setOf("1", "3"))
+
+            val repository = mockk<CategoryRepository>(relaxed = true)
+            coEvery { repository.updateAllOrders(any()) } throws IllegalStateException("boom")
+
+            val result = deleteCategory(preferences, repository, store).await(1L)
+
+            assertTrue(result is DeleteCategory.Result.InternalError)
+            // The prune runs before the reorder, so a reorder that blows up still cannot resurrect
+            // the id of the category that was already deleted.
+            assertEquals(listOf(2L), preferences.filterIncludedCategories.get())
+            assertEquals(setOf("3"), connectionsPreferences.discordRPCIncognitoCategories.get())
+        }
 }
 
 /**

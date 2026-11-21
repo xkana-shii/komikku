@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BooleanPreferenceValue
@@ -23,7 +24,14 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.getEnum
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.service.CategoryIdPreferences
+import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.history.service.HistoryPreferences
+import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.upcoming.service.UpcomingPreferences
+import tachiyomi.domain.updates.service.UpdatesPreferences
 
 // KNS -->
 /**
@@ -34,12 +42,30 @@ import tachiyomi.domain.category.model.Category
  */
 class PreferenceRestorerTest {
 
+    // KUN -->
+    private val inventoryStore = InMemoryPreferenceStore()
+    private val categoryIdPreferences = CategoryIdPreferences(
+        libraryPreferences = LibraryPreferences(inventoryStore),
+        downloadPreferences = DownloadPreferences(inventoryStore),
+        historyPreferences = HistoryPreferences(inventoryStore),
+        updatesPreferences = UpdatesPreferences(inventoryStore),
+        upcomingPreferences = UpcomingPreferences(inventoryStore),
+        connectionsPreferences = ConnectionsPreferences(inventoryStore),
+    )
+    private val updatesIncludeKey = categoryIdPreferences.longFilters[2].key()
+    private val discordKey = categoryIdPreferences.stringFilters.last().key()
+    // KUN <--
+
     private val written = slot<Map<String, Any>>()
     private val store = mockk<PreferenceStore>(relaxed = true) {
         every { getAll() } returns mapOf(
             "pref_int_locally" to 3,
             "dark_theme" to "light",
             "pinned_catalogues" to setOf("1"),
+            // KUN -->
+            updatesIncludeKey to "5",
+            discordKey to setOf("5"),
+            // KUN <--
         )
         every { putAll(capture(written)) } returns Unit
         every { getStringSet("pinned_catalogues", any()) } returns mockk<Preference<Set<String>>> {
@@ -63,6 +89,9 @@ class PreferenceRestorerTest {
     private val restorer = PreferenceRestorer(
         context = mockk(relaxed = true),
         getCategories = mockk<GetCategories> { coEvery { await() } returns localCategories },
+        // KUN -->
+        categoryIdPreferences = categoryIdPreferences,
+        // KUN <--
         preferenceStore = store,
     )
 
@@ -124,6 +153,40 @@ class PreferenceRestorerTest {
             "pinned_catalogues" to setOf("1", "2"),
         )
     }
+
+    // KUN -->
+    @Test
+    fun `a List of Long category filter is remapped by name path and keeps its order`() = runBlocking<Unit> {
+        // `getLongArray` stores the list as a comma-joined string: 3 = Josei (local 30), 1 = Shounen
+        // (local 10), 99 names a category this device does not have.
+        restorer.restorePreferences(
+            listOf(BackupPreference(updatesIncludeKey, StringPreferenceValue("3,99,1"))),
+            store,
+            backupCategories,
+        )
+        written.captured shouldBe mapOf(updatesIncludeKey to "30,10")
+    }
+
+    @Test
+    fun `the Discord incognito set is remapped to local category ids`() = runBlocking<Unit> {
+        restorer.restorePreferences(
+            listOf(BackupPreference(discordKey, StringSetPreferenceValue(setOf("4", "99")))),
+            store,
+            backupCategories,
+        )
+        written.captured shouldBe mapOf(discordKey to setOf("40"))
+    }
+
+    @Test
+    fun `a category filter naming no local category leaves the current filter alone`() = runBlocking<Unit> {
+        restorer.restorePreferences(
+            listOf(BackupPreference(updatesIncludeKey, StringPreferenceValue("99,98"))),
+            store,
+            backupCategories,
+        )
+        written.captured shouldBe emptyMap()
+    }
+    // KUN <--
 
     @Test
     fun `a category preference with no local match leaves the current value`() = runBlocking<Unit> {
