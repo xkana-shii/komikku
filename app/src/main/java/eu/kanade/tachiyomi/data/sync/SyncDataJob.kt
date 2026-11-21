@@ -18,6 +18,7 @@ import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.tachiyomi.data.SyncStatus
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
+import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.isOnline
 import eu.kanade.tachiyomi.util.system.isRunning
@@ -34,6 +35,7 @@ import tachiyomi.domain.category.interactor.PruneCategoryReferences
 import tachiyomi.domain.category.repository.CategoryRepository
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.history.repository.HistoryRepository
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.sync.repository.SyncRepository
 import java.util.concurrent.TimeUnit
 
@@ -74,6 +76,10 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
 
     // KUN -->
     @Inject private lateinit var pruneCategoryReferences: PruneCategoryReferences
+
+    @Inject private lateinit var downloadManager: DownloadManager
+
+    @Inject private lateinit var sourceManager: SourceManager
     // KUN <--
 
     @Inject private lateinit var backupCreatorFactory: BackupCreator.Factory
@@ -111,6 +117,8 @@ class SyncDataJob(private val context: Context, workerParams: WorkerParameters) 
                 getCategories = getCategories,
                 // KUN -->
                 pruneCategoryReferences = pruneCategoryReferences,
+                downloadManager = downloadManager,
+                sourceManager = sourceManager,
                 // KUN <--
                 backupCreatorFactory = backupCreatorFactory,
                 notifier = notifier,

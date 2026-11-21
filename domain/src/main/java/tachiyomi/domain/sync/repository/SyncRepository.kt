@@ -46,4 +46,9 @@ interface SyncRepository {
      */
     suspend fun markForForcePush(version: Long, lastModifiedAt: Long, bumpCategories: Boolean)
     // KUN <--
+
+    // KUN -->
+    /** Deletes a manga row; chapters, history, category links and merge rows cascade. */
+    suspend fun deleteManga(mangaId: Long)
+    // KUN <--
 }

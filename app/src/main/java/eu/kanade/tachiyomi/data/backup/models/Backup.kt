@@ -22,4 +22,11 @@ data class Backup(
     // Global Popular/Latest feeds
     @ProtoNumber(610) var backupFeeds: List<BackupFeed> = emptyList(),
     // KMK <--
+    // KUN -->
+    // Explicit tombstones a SyncYomi v2 delta carries. `11000` is SyncYomi's own root-envelope
+    // band, outside komi-kun's `10000-10999` fork block; see AGENTS.md "Backup protobuf field
+    // numbers". A server that predates the field sends none, and the full-snapshot heuristic
+    // remains the fallback for it.
+    @ProtoNumber(11000) var deletions: List<BackupDeletedItem> = emptyList(),
+    // KUN <--
 )

@@ -48,6 +48,12 @@ private fun BackupExtensionStore.syncIdentity() =
 internal fun chapterTombstoneKey(sourceId: Long, mangaUrl: String, chapterUrl: String): String =
     "$sourceId|$mangaUrl\u001f$chapterUrl"
 
+/**
+ * The key the SyncYomi v2 server stores a manga under. It must match the server's byte for byte
+ * (`<source id>|<manga url>`, see `backup.MangaKey`), or the server tombstones nothing.
+ */
+internal fun mangaTombstoneKey(sourceId: Long, mangaUrl: String): String = "$sourceId|$mangaUrl"
+
 // KUN -->
 /**
  * Chapters missing from a complete remote chapter list. A SyncYomi v2 response carries each

@@ -457,6 +457,29 @@ AND id NOT IN (
 -- SY <--
 ;
 
+-- KUN -->
+-- Same rows as deleteNonLibraryManga, returned so the tombstones are recorded from the rows the
+-- delete actually removed: one statement instead of a SELECT followed by a DELETE whose shared
+-- WHERE could drift apart.
+deleteNonLibraryMangaReturningKeys:
+DELETE FROM manga
+WHERE user_favorite_at IS NULL
+AND source_id IN :sourceIds
+AND (
+    :keepReadManga = 0
+    OR NOT EXISTS (
+        SELECT 1
+        FROM chapter
+        WHERE chapter.manga_id = manga.id
+        AND (user_read = 1 OR user_last_page_read != 0)
+    )
+)
+AND id NOT IN (
+    SELECT DISTINCT manga_id FROM merged_entry
+)
+RETURNING source_id, remote_url;
+-- KUN <--
+
 insert:
 INSERT INTO manga(
     source_id, remote_url, remote_title, remote_author, remote_artist, remote_description,

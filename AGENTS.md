@@ -346,6 +346,12 @@ Rules:
 - `19000-19999` is reserved by the protobuf specification; never use it.
 - A field number in the 10000 range costs a 3-byte tag instead of 1-2, which is negligible next to the payload, and backups are gzipped.
 
+### SyncYomi range: `11000-11099`
+
+SyncYomi reserves this band for root-envelope fields of its own protocol. It is **not** a komi-kun block: a komi-kun field may not take a number in it, and nothing in `10000-10999` moves or gets reused because of it. `BackupProtoNumberTest` allows it as a documented exception to the fork block instead of widening `10000-10999`.
+
+Current SyncYomi allocation: `Backup.deletions` = `11000` (`List<BackupDeletedItem>`), the explicit tombstone list of a v2 delta.
+
 ---
 
 ## Extensions & sources

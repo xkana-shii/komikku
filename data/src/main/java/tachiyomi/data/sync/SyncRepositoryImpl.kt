@@ -54,4 +54,10 @@ class SyncRepositoryImpl(
         }
     }
     // KUN <--
+
+    // KUN -->
+    override suspend fun deleteManga(mangaId: Long) {
+        database.mangaQueries.deleteById(mangaId)
+    }
+    // KUN <--
 }

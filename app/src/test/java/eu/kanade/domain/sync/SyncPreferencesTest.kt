@@ -19,12 +19,14 @@ class SyncPreferencesTest {
         // SyncPreferences.isSyncYomiV2), so a v2 server is the default for these tests.
         serverSupportsV2: Boolean = true,
         probedHost: String = "https://sync.tachiyomi.org",
+        libraryEntries: Boolean = true,
     ) = SyncPreferences(
         InMemoryPreferenceStore(
             sequenceOf(
                 InMemoryPreference("sync_service", syncService, 0),
                 InMemoryPreference("__APP_STATE_sync_server_supports_v2", serverSupportsV2, false),
                 InMemoryPreference("__APP_STATE_sync_v2_probed_host", probedHost, ""),
+                InMemoryPreference("sync_library_entries", libraryEntries, true),
             ),
         ),
     )
@@ -86,6 +88,58 @@ class SyncPreferencesTest {
         assertFalse(syncPreferences(syncService = 0).isSyncYomiV2())
         assertFalse(syncPreferences(syncService = 1, serverSupportsV2 = false).isSyncYomiV2())
         assertFalse(syncPreferences(syncService = 1, probedHost = "https://other").isSyncYomiV2())
+    }
+
+    @Test
+    fun `deleted manga stay pending until the server acknowledges them`() {
+        val prefs = syncPreferences(syncService = 1)
+
+        prefs.rememberDeletedManga(listOf("1|/a", "2|/b"))
+        prefs.forgetDeletedManga(listOf("1|/a", "3|/c"))
+
+        assertEquals(setOf("2|/b"), prefs.pendingDeletedMangaKeys.get())
+    }
+
+    @Test
+    fun `deleted manga are not tracked while sync is off`() {
+        assertEquals(
+            emptySet<String>(),
+            syncPreferences(syncService = 0).also { it.rememberDeletedManga(listOf("1|/a")) }
+                .pendingDeletedMangaKeys.get(),
+        )
+        assertEquals(
+            emptySet<String>(),
+            syncPreferences(syncService = 2).also { it.rememberDeletedManga(listOf("1|/a")) }
+                .pendingDeletedMangaKeys.get(),
+        )
+        assertEquals(
+            emptySet<String>(),
+            syncPreferences(syncService = 1, serverSupportsV2 = false)
+                .also { it.rememberDeletedManga(listOf("1|/a")) }
+                .pendingDeletedMangaKeys.get(),
+        )
+    }
+
+    @Test
+    fun `deleted manga are not tracked while library sync is disabled`() {
+        val prefs = syncPreferences(syncService = 1, libraryEntries = false)
+
+        prefs.rememberDeletedManga(listOf("1|/a"))
+
+        assertEquals(emptySet<String>(), prefs.pendingDeletedMangaKeys.get())
+    }
+
+    @Test
+    fun `forgetting the acknowledged manga keys keeps a key recorded meanwhile pending`() {
+        val prefs = syncPreferences(syncService = 1)
+        prefs.rememberDeletedManga(listOf("1|/a", "2|/b"))
+        val sent = setOf("1|/a", "2|/b")
+
+        // A delete that happens while the deletions request is in flight must survive the clear.
+        prefs.rememberDeletedManga(listOf("3|/c"))
+        prefs.forgetDeletedManga(sent)
+
+        assertEquals(setOf("3|/c"), prefs.pendingDeletedMangaKeys.get())
     }
     // KUN <--
 }

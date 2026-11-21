@@ -118,6 +118,21 @@ class SyncDeltaTest {
         )
     }
 
+    // The manga tombstone key must match the server's `backup.MangaKey` byte for byte.
+    @Test
+    fun `manga tombstone key matches the server key and survives the JSON body`() {
+        val key = mangaTombstoneKey(sourceId = 9999999999, mangaUrl = "/manga/x")
+
+        assertEquals("9999999999|/manga/x", key)
+
+        val oddKey = mangaTombstoneKey(sourceId = 7, mangaUrl = "/manga/t\"a\u0001")
+        val serializer = ListSerializer(String.serializer())
+        assertEquals(
+            listOf(oddKey),
+            Json.decodeFromString(serializer, Json.encodeToString(serializer, listOf(oddKey))),
+        )
+    }
+
     // KUN -->
     @Test
     fun `a complete remote chapter list marks local-only chapters as removed`() {

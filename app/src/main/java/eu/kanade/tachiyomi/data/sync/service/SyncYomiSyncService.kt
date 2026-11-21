@@ -85,8 +85,9 @@ class SyncYomiSyncService(
     }
 
     // SY -->
-    @Serializable
-    private data class DeletedChapters(val deletedChapters: List<String> = emptyList())
+    // KUN -->
+    // The deletion request types live at file level so the body builder is testable.
+    // KUN <--
     // SY <--
 
     // SY -->
@@ -138,7 +139,7 @@ class SyncYomiSyncService(
         val apiKey = syncPreferences.clientAPIKey.get()
 
         // SY -->
-        submitDeletedChapters(host, apiKey)
+        submitDeletedItems(host, apiKey)
         // SY <--
 
         // KUN -->
@@ -478,21 +479,37 @@ class SyncYomiSyncService(
 
     // KUN -->
     /**
-     * Reports the chapters a source dropped to the v2 deletions endpoint before the merge, so the
-     * server tombstones them. Keys are cleared only on a 2xx, so an older server without the route
-     * (404) loses nothing and they go out once it is upgraded.
+     * Reports the chapters a source dropped and the manga deleted locally to the v2 deletions
+     * endpoint before the merge, so the server tombstones them. Keys are cleared only on a 2xx, so
+     * an older server without the route (404) loses nothing and they go out once it is upgraded.
      */
     // KUN <--
     // SY -->
-    private suspend fun submitDeletedChapters(host: String, apiKey: String) {
-        val sent = syncPreferences.pendingDeletedChapterKeys.get()
-        if (sent.isEmpty()) return
+    private suspend fun submitDeletedItems(host: String, apiKey: String) {
+        val chapters = syncPreferences.pendingDeletedChapterKeys.get()
+        // KUN -->
+        // A device with library sync disabled does not manage the server's library rows, so its
+        // manga tombstones are left pending instead of deleting rows it never uploaded.
+        val mangas = if (syncPreferences.getSyncSettings().libraryEntries) {
+            syncPreferences.pendingDeletedMangaKeys.get()
+        } else {
+            emptySet()
+        }
+        // KUN <--
+        if (chapters.isEmpty() && mangas.isEmpty()) return
 
         val request = POST(
             url = "$host/api/sync/v2/deletions",
             headers = baseHeaders(apiKey).build(),
             body = json
-                .encodeToString(DeletedChapters.serializer(), DeletedChapters(sent.toList()))
+                .encodeToString(
+                    DeletionRequest.serializer(),
+                    DeletionRequest(
+                        items = deletionItems(chapters, mangas),
+                        // An older server only reads the legacy shape; it merges and dedupes both.
+                        deletedChapters = chapters.toList(),
+                    ),
+                )
                 .toRequestBody("application/json; charset=utf-8".toMediaType()),
         )
 
@@ -510,8 +527,38 @@ class SyncYomiSyncService(
                 return
             }
         }
-        syncPreferences.forgetDeletedChapters(sent)
-        logcat(LogPriority.DEBUG) { "SyncYomi v2 deletions applied: ${sent.size} keys" }
+        syncPreferences.forgetDeletedChapters(chapters)
+        // KUN -->
+        // Only the manga keys actually sent: one recorded while the request was in flight stays
+        // pending for the next run.
+        if (mangas.isNotEmpty()) syncPreferences.forgetDeletedManga(mangas)
+        // KUN <--
+        logcat(LogPriority.DEBUG) { "SyncYomi v2 deletions applied: ${chapters.size} chapters, ${mangas.size} manga" }
     }
     // SY <--
 }
+
+// KUN -->
+/** One entry of the SyncYomi v2 deletions request; [key] is a chapter or manga tombstone key. */
+@Serializable
+internal data class DeletionItem(val kind: String, val key: String)
+
+/**
+ * The body of `POST /api/sync/v2/deletions`.
+ *
+ * [items] is the shape current servers read. [deletedChapters] is the legacy shape an older server
+ * still understands; it carries the chapter keys only, and a server that reads both merges and
+ * dedupes them. Sending both during the transition means an old server that 2xxes and ignores
+ * `items` still applies the chapter tombstones before the client clears its queue.
+ */
+@Serializable
+internal data class DeletionRequest(
+    val items: List<DeletionItem> = emptyList(),
+    val deletedChapters: List<String> = emptyList(),
+)
+
+// Chapters go first: a manga tombstone removes the row, so the server must see the chapter keys
+// before it forgets the manga they belong to.
+internal fun deletionItems(chapters: Collection<String>, mangas: Collection<String>): List<DeletionItem> =
+    chapters.map { DeletionItem("chapter", it) } + mangas.map { DeletionItem("manga", it) }
+// KUN <--

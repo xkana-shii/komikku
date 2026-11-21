@@ -45,11 +45,16 @@ class SyncPreferences(
     )
     // KUN -->
     /** Chapter keys a source dropped, kept until the server acknowledges the tombstone. */
-    // KUN <--
     val pendingDeletedChapterKeys = preferenceStore.getStringSet(
         Preference.appStateKey("sync_pending_deleted_chapter_keys"),
         emptySet(),
     )
+    /** Manga keys a local hard delete removed, kept until the server acknowledges the tombstone. */
+    val pendingDeletedMangaKeys = preferenceStore.getStringSet(
+        Preference.appStateKey("sync_pending_deleted_manga_keys"),
+        emptySet(),
+    )
+    // KUN <--
     // SY <--
 
     // KUN -->
@@ -193,6 +198,33 @@ class SyncPreferences(
         }
         // KUN <--
     }
+
+    // KUN -->
+    /**
+     * Remembers a locally hard-deleted manga so the next SyncYomi v2 request can tombstone it.
+     *
+     * A device with library sync disabled does not manage the server's library rows, so it must not
+     * record manga tombstones either; they would delete rows it never uploaded.
+     */
+    fun rememberDeletedManga(keys: Collection<String>) {
+        if (keys.isEmpty() || !isSyncYomiV2() || !getSyncSettings().libraryEntries) return
+        synchronized(tombstoneLock) {
+            pendingDeletedMangaKeys.set(pendingDeletedMangaKeys.get() + keys)
+        }
+    }
+
+    /**
+     * Forgets the manga tombstones the server acknowledged, leaving any key recorded since the
+     * request was built pending.
+     */
+    fun forgetDeletedManga(keys: Collection<String>) {
+        synchronized(tombstoneLock) {
+            val pending = pendingDeletedMangaKeys.get()
+            val remaining = pending - keys.toSet()
+            if (remaining.size != pending.size) pendingDeletedMangaKeys.set(remaining)
+        }
+    }
+    // KUN <--
     // SY <--
 
     fun getSyncSettings(): SyncSettings {
