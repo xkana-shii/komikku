@@ -163,9 +163,10 @@ private fun unreadableKey(item: BackupDeletedItem) {
  * chapter, and a category is matched by uid or name. A key with no local row is a no-op, so a
  * tombstone of something this device never had is free.
  *
- * A history tombstone goes through [HistoryRepository.resetHistory], komi-kun's established
- * removal path for a history entry (the same one `RemoveHistory` uses): the row keeps its id but
- * loses its read date, which is what the History tab shows as gone.
+ * A history tombstone goes through [HistoryRepository.resetHistory]: the row keeps its id but loses
+ * its read date, which is what the History tab shows as gone. It is a plain reset, not the queueing
+ * removal `RemoveHistory` performs: the removal is already applied on the server, so queueing it
+ * here would echo a peer's tombstone straight back as one of ours.
  *
  * [librarySyncEnabled], [historySyncEnabled], [chaptersEnabled] and [categoriesEnabled] honour the
  * same user settings the snapshot fallback honours: a section the user disabled is not deleted on
@@ -225,12 +226,18 @@ internal suspend fun applyDeletions(
 
     // One history read serves the reset below and the chapter gate: `history.chapter_id` cascades
     // with its chapter row, so a chapter that has one cannot be deleted while history sync is off.
+    //
+    // Only a *live* entry counts. A row the user removed keeps `read_at = NULL` — and since "clear
+    // all history" went soft, that is every chapter they ever read — so treating those rows as
+    // history would refuse every remote chapter tombstone on a history-disabled device. A reset row
+    // is nothing deleting the chapter could destroy.
     val historyIdByChapterId = if (
         chapterRowByKey.isNotEmpty() && (historySyncEnabled || plan.chapters.isNotEmpty())
     ) {
         historyRepository.getHistoryByMangaIds(chapterRowByKey.values.map { it.mangaId }.distinct())
             .values
             .flatten()
+            .filter { it.readAt != null }
             .associate { it.chapterId to it.id }
     } else {
         emptyMap()

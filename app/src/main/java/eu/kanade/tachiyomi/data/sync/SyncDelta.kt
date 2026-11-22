@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.history.service.HistoryTombstoneDeliverability
 import tachiyomi.domain.manga.model.Manga
 
 /**
@@ -218,6 +219,18 @@ internal fun mangaPayloadFieldsDiffer(local: Manga, remote: BackupManga): Boolea
  */
 internal fun resumesPendingForcePush(pendingForcePush: Boolean, isSyncYomi: Boolean): Boolean =
     pendingForcePush && isSyncYomi
+
+/**
+ * Whether a sync run may drop the queued history tombstones.
+ *
+ * Only a verdict does. [HistoryTombstoneDeliverability.UNKNOWN] means the capability probe for the
+ * current host has not answered yet — a changed host, or a fresh install — and the run this decision
+ * belongs to probes before it asks, so clearing on "not deliverable *yet*" would throw away a queue
+ * that the same run may go on to deliver. The rows are reset, so nothing could reconstruct them and
+ * the server would keep the entries.
+ */
+internal fun dropsStrandedHistoryTombstones(deliverability: HistoryTombstoneDeliverability): Boolean =
+    deliverability == HistoryTombstoneDeliverability.UNDELIVERABLE
 
 /**
  * Whether a force push that needs the server snapshot must stop instead of uploading. An

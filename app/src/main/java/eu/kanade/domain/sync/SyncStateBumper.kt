@@ -5,19 +5,17 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.sync.models.SyncSettings
-import eu.kanade.tachiyomi.data.sync.chapterTombstoneKey
-import tachiyomi.domain.chapter.repository.ChapterRepository
-import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.repository.MangaRepository
 
 /**
  * Bumps the sync state of manga whose user-visible change lives outside the manga row.
  *
- * History resets write `read_at = NULL`, and a custom-info edit only touches the `user_*` columns.
- * `update_last_modified_at_mangas` fires on any UPDATE, so the delta already selects the row, but
- * `update_manga_version` does not watch `user_*`: without the bump the payload would go out with an
- * unchanged `version` and lose the server's version-first merge. The bump is what makes the edit win.
+ * A history reset writes the history rows, and a custom-info edit only touches the `user_*`
+ * columns. `update_last_modified_at_mangas` fires on any UPDATE, so the delta already selects the
+ * row, but `update_manga_version` does not watch `user_*`: without the bump the payload would go out
+ * with an unchanged `version` and lose the server's version-first merge. The bump is what makes the
+ * edit win.
  *
  * The bump is gated on the sync service being enabled *and* on the matching "choose what to sync"
  * flag. Uploading a manga while a section is disabled would send that section's local (possibly
@@ -29,45 +27,20 @@ import tachiyomi.domain.manga.repository.MangaRepository
 class SyncStateBumper(
     private val syncPreferences: SyncPreferences,
     private val mangaRepository: MangaRepository,
-    private val chapterRepository: ChapterRepository,
-    private val historyRepository: HistoryRepository,
 ) {
 
-    /** Bumps every manga whose history was reset/tombstoned by the user. */
+    /**
+     * Bumps every manga whose history was reset/tombstoned by the user.
+     *
+     * The removal itself travels as a `history` tombstone (the row keeps its identity in
+     * `history.pending_deletion`), but a SyncYomi server older than 1.7.3 still carries the history
+     * section inside the manga payload, and there only a higher manga version makes the uploaded
+     * (removal-less) section win the version-first merge. History sync only: a device that does not
+     * manage the server's history must not upload its copy.
+     */
     suspend fun bumpForHistoryRemoval(mangaIds: Collection<Long>) {
         if (mangaIds.isEmpty() || !isEnabled { it.history }) return
         mangaIds.distinct().forEach { mangaRepository.bumpSyncVersion(it) }
-    }
-
-    /**
-     * Records the history entries a removal is about to reset as `history` tombstones, before the
-     * reset takes the read date the server identifies the entry by. The key is the chapter tombstone
-     * key: the server's history key is built from the same manga and chapter urls.
-     *
-     * [chapterIds] names the exact entries a selection removed; null means every history entry of
-     * [mangaIds], which is what the per-manga removal resets in one SQL statement.
-     */
-    suspend fun rememberHistoryRemoval(
-        mangaIds: Collection<Long>,
-        chapterIds: Collection<Long>? = null,
-    ) {
-        if (mangaIds.isEmpty() || !isEnabled { it.history }) return
-        val ids = mangaIds.distinct()
-        val chapterIdsToForget = chapterIds?.toSet()
-            ?: historyRepository.getHistoryByMangaIds(ids).values
-                .flatten()
-                .mapTo(mutableSetOf()) { it.chapterId }
-        if (chapterIdsToForget.isEmpty()) return
-
-        // One manga read for the whole selection, then one chapter read per selected entry: never
-        // every chapter of the manga, which a long series would make thousands of rows.
-        val mangaById = mangaRepository.getMangaByIds(ids).associateBy { it.id }
-        val keys = chapterIdsToForget.mapNotNull { chapterId ->
-            val chapter = chapterRepository.getChapterById(chapterId) ?: return@mapNotNull null
-            val manga = mangaById[chapter.mangaId] ?: return@mapNotNull null
-            chapterTombstoneKey(manga.source, manga.url, chapter.url)
-        }
-        syncPreferences.rememberDeletedHistory(keys)
     }
 
     /**

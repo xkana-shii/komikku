@@ -1,19 +1,12 @@
 // KUN -->
 package eu.kanade.domain.sync
 
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.InMemoryPreferenceStore.InMemoryPreference
-import tachiyomi.domain.chapter.model.Chapter
-import tachiyomi.domain.chapter.repository.ChapterRepository
-import tachiyomi.domain.history.model.History
-import tachiyomi.domain.history.repository.HistoryRepository
-import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUserInfoUpdate
 import tachiyomi.domain.manga.repository.MangaRepository
 
@@ -26,8 +19,6 @@ import tachiyomi.domain.manga.repository.MangaRepository
 class SyncStateBumperTest {
 
     private val mangaRepository = mockk<MangaRepository>(relaxed = true)
-    private val chapterRepository = mockk<ChapterRepository>(relaxed = true)
-    private val historyRepository = mockk<HistoryRepository>(relaxed = true)
 
     @Test
     fun `history removal bumps every affected manga once when history sync is on`() {
@@ -66,84 +57,6 @@ class SyncStateBumperTest {
             coVerify(exactly = 0) { mangaRepository.bumpSyncVersion(any()) }
         }
     }
-
-    // KUN -->
-    @Test
-    fun `a removed history selection queues the chapter key of each entry`() {
-        runBlocking {
-            coEvery { mangaRepository.getMangaByIds(listOf(1L)) } returns listOf(
-                Manga.create().copy(id = 1L, source = 7L, url = "/m"),
-            )
-            // only the selected entries are read; a long series is never loaded whole
-            coEvery { chapterRepository.getChapterById(11L) } returns
-                Chapter.create().copy(id = 11L, mangaId = 1L, url = "/m/ch1")
-            coEvery { chapterRepository.getChapterById(12L) } returns
-                Chapter.create().copy(id = 12L, mangaId = 1L, url = "/m/ch2")
-            coEvery { chapterRepository.getChapterById(13L) } returns
-                Chapter.create().copy(id = 13L, mangaId = 1L, url = "/m/ch3")
-            val prefs = syncPreferences(syncService = SYNCYOMI)
-
-            bumper(syncService = SYNCYOMI, prefs = prefs).rememberHistoryRemoval(
-                mangaIds = listOf(1L),
-                chapterIds = listOf(11L, 12L),
-            )
-
-            // the key is the server's history key, which is the chapter key byte for byte
-            assertEquals(
-                setOf("7|/m\u001f/m/ch1", "7|/m\u001f/m/ch2"),
-                prefs.pendingDeletedHistoryKeys.get(),
-            )
-        }
-    }
-
-    @Test
-    fun `removing every history entry of a manga queues the rows a SQL reset would lose`() {
-        runBlocking {
-            coEvery { mangaRepository.getMangaByIds(listOf(1L)) } returns listOf(
-                Manga.create().copy(id = 1L, source = 7L, url = "/m"),
-            )
-            // the list the History tab showed may only carry the latest entry per manga; the reset
-            // runs over every row, so the queued tombstones have to cover all of them
-            coEvery { historyRepository.getHistoryByMangaIds(listOf(1L)) } returns mapOf(
-                1L to listOf(
-                    History.create().copy(id = 101L, chapterId = 11L),
-                    History.create().copy(id = 102L, chapterId = 12L),
-                ),
-            )
-            coEvery { chapterRepository.getChapterById(11L) } returns
-                Chapter.create().copy(id = 11L, mangaId = 1L, url = "/m/ch1")
-            coEvery { chapterRepository.getChapterById(12L) } returns
-                Chapter.create().copy(id = 12L, mangaId = 1L, url = "/m/ch2")
-            val prefs = syncPreferences(syncService = SYNCYOMI)
-
-            bumper(syncService = SYNCYOMI, prefs = prefs).rememberHistoryRemoval(mangaIds = listOf(1L))
-
-            assertEquals(
-                setOf("7|/m\u001f/m/ch1", "7|/m\u001f/m/ch2"),
-                prefs.pendingDeletedHistoryKeys.get(),
-            )
-        }
-    }
-
-    @Test
-    fun `a history removal queues nothing while history sync is off`() {
-        runBlocking {
-            coEvery { mangaRepository.getMangaByIds(listOf(1L)) } returns listOf(
-                Manga.create().copy(id = 1L, source = 7L, url = "/m"),
-            )
-            coEvery { chapterRepository.getChapterById(11L) } returns
-                Chapter.create().copy(id = 11L, mangaId = 1L, url = "/m/ch1")
-            val prefs = syncPreferences(syncService = SYNCYOMI, history = false)
-
-            bumper(syncService = SYNCYOMI, history = false, prefs = prefs).rememberHistoryRemoval(
-                mangaIds = listOf(1L),
-                chapterIds = listOf(11L),
-            )
-
-            assertEquals(emptySet<String>(), prefs.pendingDeletedHistoryKeys.get())
-        }
-    }
-    // KUN <--
 
     @Test
     fun `a custom info edit that changes the stored overrides bumps the manga`() {
@@ -244,8 +157,6 @@ class SyncStateBumperTest {
     ) = SyncStateBumper(
         syncPreferences = prefs,
         mangaRepository = mangaRepository,
-        chapterRepository = chapterRepository,
-        historyRepository = historyRepository,
     )
 
     private fun syncPreferences(
@@ -258,7 +169,6 @@ class SyncStateBumperTest {
                 InMemoryPreference("sync_service", syncService, 0),
                 InMemoryPreference("sync_history", history, true),
                 InMemoryPreference("sync_customInfo", customInfo, true),
-                // a confirmed v2 host: the history tombstones are only recorded for one
                 InMemoryPreference("__APP_STATE_sync_server_supports_v2", true, false),
                 InMemoryPreference("__APP_STATE_sync_v2_probed_host", "https://sync.tachiyomi.org", ""),
             ),

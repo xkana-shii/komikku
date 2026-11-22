@@ -6,6 +6,18 @@ CREATE TABLE history(
     chapter_id INTEGER NOT NULL UNIQUE,
     read_at INTEGER AS Instant,
     read_duration INTEGER NOT NULL,
+    -- KUN -->
+    -- Set on the row the user removed on this device while its `history` tombstone has not reached
+    -- the server yet: the row keeps its identity (the chapter key the tombstone is built from) but
+    -- loses its read date, so every history reader hides it. Cleared by a new local read or by the
+    -- deletions request the server confirmed.
+    --
+    -- The queue is row-scoped, and both foreign keys below cascade: a queued tombstone is lost if
+    -- its chapter or its manga is deleted before the request sends it, and the server then keeps
+    -- the entry. Only a local read of a chapter that still exists is covered by `upsert`, so this
+    -- marker is never the reason a row survives a cascade.
+    pending_deletion INTEGER NOT NULL DEFAULT 0,
+    -- KUN <--
     FOREIGN KEY(manga_id) REFERENCES manga (id)
     ON DELETE CASCADE,
     FOREIGN KEY(chapter_id) REFERENCES chapter (id)
@@ -14,6 +26,11 @@ CREATE TABLE history(
 
 CREATE INDEX history_manga_id_index ON history(manga_id);
 CREATE INDEX history_read_at_index ON history(read_at);
+-- KUN -->
+-- Serves the deletions request (paging the queued rows by id) and the stranded-marker sweep. Partial,
+-- because the queue is normally empty and every history write would otherwise maintain it.
+CREATE INDEX history_pending_deletion_index ON history(id) WHERE pending_deletion = 1;
+-- KUN <--
 
 getHistoryByMangaId:
 SELECT id, chapter_id, read_at, read_duration
@@ -37,6 +54,57 @@ WHERE history.manga_id IN :mangaIds
 ORDER BY history.manga_id, history.id;
 -- KUN <--
 
+-- KUN -->
+-- The rows the SyncYomi v2 deletions request still owes the server, joined to the urls its
+-- `history` tombstone key is built from. Paged by row id: the id is the rowid, so a page is a range
+-- scan from the cursor instead of a scan of the whole table.
+getPendingHistoryDeletions:
+SELECT
+    history.id,
+    manga.source_id,
+    manga.remote_url AS manga_url,
+    chapter.remote_url AS chapter_url
+FROM history
+JOIN chapter ON chapter.id = history.chapter_id
+JOIN manga ON manga.id = history.manga_id
+WHERE history.pending_deletion = 1 AND history.id > :afterId
+ORDER BY history.id
+LIMIT :limit;
+
+-- Queue one entry (or a selection) for a server tombstone: the row loses its read date, which is
+-- what hides it, and keeps the chapter it is keyed by. Rows that already lost their read date are
+-- not touched, so a repeated removal cannot re-queue an entry the user already removed.
+--
+-- `:queue` is 0 when the configured sync cannot deliver a tombstone (see HistoryTombstoneDelivery):
+-- the removal still happens, it just does not leave a marker nothing would ever send.
+removeHistoryByIds:
+UPDATE history
+SET read_at = NULL,
+    pending_deletion = :queue
+WHERE id IN :historyIds AND read_at IS NOT NULL;
+
+removeHistoryByMangaIds:
+UPDATE history
+SET read_at = NULL,
+    pending_deletion = :queue
+WHERE manga_id IN :mangaIds AND read_at IS NOT NULL;
+
+-- Clear the queue flag of the rows a deletions response confirmed, leaving the read date alone: a
+-- queued row has none.
+clearPendingHistoryDeletion:
+UPDATE history
+SET pending_deletion = 0
+WHERE id IN :historyIds AND pending_deletion = 1;
+
+-- Drop every marker a configuration change stranded (history sync turned off, another service
+-- selected, a host that is no longer v2): no request will ever send them, and a marker blocks its
+-- row from being restored over and from being cleaned up.
+clearAllPendingHistoryDeletions:
+UPDATE history
+SET pending_deletion = 0
+WHERE pending_deletion = 1;
+-- KUN <--
+
 -- KMK -->
 -- Removed unused SY query getHistoryByChapterUrlAndMangaId
 -- KMK <--
@@ -53,12 +121,29 @@ SET read_at = NULL
 WHERE manga_id IN :mangaIds;
 -- KMK <--
 
+-- KUN -->
+-- "Clear all history" is a soft delete like the other two removal paths: every row that still has a
+-- read date is reset and, when `:queue` is 1, queued for a `history` tombstone instead of being
+-- dropped, so the removal can reach the server — one row per entry instead of one persisted key per
+-- entry.
+--
+-- The rows stay, so `getReadDuration` keeps counting the time the user spent reading them, exactly
+-- as a per-entry removal already did: the stat is "time read", not "time read on entries the
+-- History tab still lists".
 removeAllHistory:
-DELETE FROM history;
+UPDATE history
+SET read_at = NULL,
+    pending_deletion = :queue
+WHERE read_at IS NOT NULL;
+-- KUN <--
 
+-- KUN -->
+-- "Clear database" drops the rows a removal reset, but a queued row is NULL too: deleting it would
+-- throw away a tombstone the server never received.
 removeResettedHistory:
 DELETE FROM history
-WHERE read_at IS NULL;
+WHERE read_at IS NULL AND pending_deletion = 0;
+-- KUN <--
 
 upsert:
 INSERT INTO history(manga_id, chapter_id, read_at, read_duration)
@@ -68,18 +153,26 @@ WHERE id = :chapterId
 -- KUN -->
 ON CONFLICT(chapter_id) DO UPDATE SET
     read_at = max(coalesce(history.read_at, 0), coalesce(excluded.read_at, 0)),
-    read_duration = read_duration + excluded.read_duration;
+    read_duration = read_duration + excluded.read_duration,
+    -- A real read supersedes a removal that has not reached the server yet; the tombstone is dropped.
+    pending_deletion = 0;
 -- KUN <--
 
 -- KUN -->
 -- Exact history write for a restore that owns the row: the payload decides read_at (NULL means
 -- the entry was removed) while read_duration never moves backwards. Matched on chapter_id, never
 -- on the history row id.
+--
+-- A queued row is left alone: the user removed it here and the server has not been told yet, so a
+-- payload read (or its own tombstone) must not resurrect it or clear the queue flag. A peer's read
+-- that genuinely came after the removal cannot be told apart from one that came before it, because
+-- the row keeps no removal time; a removal timestamp would have to ride on `lastRead` to win the
+-- server's own merge.
 setHistoryFromRestore:
 UPDATE history
 SET read_at = :readAt,
     read_duration = max(read_duration, :readDuration)
-WHERE chapter_id = :chapterId;
+WHERE chapter_id = :chapterId AND pending_deletion = 0;
 -- KUN <--
 
 getReadDuration:

@@ -233,6 +233,9 @@ class SyncDeletionsTest {
             // clearing 2007 instead of 1007 is the mistake a chapter/history id mix-up makes
             fixture.readAtOf(historyId = 1007L) shouldBe null
             fixture.readAtOf(historyId = 2007L) shouldBe 3000L
+            // a peer's tombstone is already applied there, so it must not be queued back as one of
+            // ours: that would keep re-sending a removal the server made
+            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 0L
             // a history tombstone removes no chapter and no manga
             fixture.chapterIds() shouldBe listOf(107L, 207L)
             fixture.mangaIds() shouldBe listOf(7L)
@@ -444,6 +447,41 @@ class SyncDeletionsTest {
 
             skipped shouldBe setOf("chapter")
             fixture.chapterIds() shouldBe listOf(107L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a removed history row does not hold a chapter back from a remote tombstone`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertChapter(mangaId = 7L, chapterId = 207L, url = "/m/ch2", index = 2)
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L)
+            // what a removal leaves behind: the row stays, with no read date and queued for a
+            // tombstone. Since "clear all history" went soft, this is every chapter ever read.
+            fixture.historyRepository.removeHistory(queueForSync = true, historyIds = listOf(1007L))
+            fixture.readAtOf(historyId = 1007L) shouldBe null
+            // a live entry on the other chapter still protects it while history sync is off
+            fixture.insertHistory(mangaId = 7L, chapterId = 207L, historyId = 2007L)
+
+            val skipped = fixture.apply(
+                deletionPlan(
+                    listOf(
+                        item("chapter", "1|/m\u001f/m/ch1"),
+                        item("chapter", "1|/m\u001f/m/ch2"),
+                    ),
+                ),
+                historySyncEnabled = false,
+            )
+
+            // the dead row is not history anything could destroy, so its chapter goes
+            skipped shouldBe setOf("chapter")
+            fixture.chapterIds() shouldBe listOf(207L)
+            // the live entry did hold its chapter back, and is untouched
+            fixture.readAtOf(historyId = 2007L) shouldBe 3000L
         } finally {
             fixture.close()
         }
@@ -961,6 +999,9 @@ class SyncDeletionsTest {
         fun readAtOf(historyId: Long): Long? =
             nullableLongs("SELECT read_at FROM history WHERE id = $historyId").firstOrNull()
 
+        fun pendingDeletionOf(historyId: Long): Long? =
+            nullableLongs("SELECT pending_deletion FROM history WHERE id = $historyId").firstOrNull()
+
         private fun longs(sql: String): List<Long> = nullableLongs(sql).filterNotNull()
 
         private fun nullableLongs(sql: String): List<Long?> = driver.executeQuery(
@@ -1016,11 +1057,11 @@ class SyncDeletionsTest {
             ).await()
         }
 
-        suspend fun insertHistory(mangaId: Long, chapterId: Long, historyId: Long, readAt: Long = 3000L) {
+        suspend fun insertHistory(mangaId: Long, chapterId: Long, historyId: Long, readAt: Long? = 3000L) {
             driver.execute(
                 null,
                 "INSERT INTO history(id, chapter_id, manga_id, read_at, read_duration) " +
-                    "VALUES ($historyId, $chapterId, $mangaId, $readAt, 60)",
+                    "VALUES ($historyId, $chapterId, $mangaId, ${readAt ?: "NULL"}, 60)",
                 0,
             ).await()
         }

@@ -72,6 +72,7 @@ import tachiyomi.domain.category.interactor.ResetCategoryFlags
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.debug.repository.DebugRepository
 import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.DeleteFavoriteEntries
 import tachiyomi.domain.manga.interactor.GetAllManga
@@ -198,6 +199,10 @@ interface AppGraph : ViewModelGraph {
     val debugRepository: DebugRepository
     val savedSearchRepository: SavedSearchRepository
     val sourceMigrationRepository: SourceMigrationRepository
+    // KUN -->
+    // Settings → Data can drop the history tombstones a service switch stranded; it has no
+    // ViewModel of its own, so the repository is reached through the graph like the others above.
+    val historyRepository: HistoryRepository
     // KUN <--
 
     val json: Json

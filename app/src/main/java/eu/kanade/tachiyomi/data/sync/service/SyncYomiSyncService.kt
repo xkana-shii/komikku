@@ -5,6 +5,7 @@ import android.os.Build
 import eu.kanade.domain.sync.SyncPreferences
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.sync.SyncNotifier
+import eu.kanade.tachiyomi.data.sync.chapterTombstoneKey
 import eu.kanade.tachiyomi.data.sync.dropTombstonedHistory
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
@@ -26,6 +27,8 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.apache.http.HttpStatus
 import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.domain.history.repository.HistoryRepository
+import tachiyomi.domain.history.repository.PendingHistoryDeletion
 import tachiyomi.i18n.MR
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
@@ -41,6 +44,9 @@ class SyncYomiSyncService(
     // KUN -->
     // Metro DI: the shared ProtoBuf singleton replaces the old `Injekt.get()` default.
     private val protoBuf: ProtoBuf = ProtoBuf,
+    // The history tombstone queue lives on the rows (`history.pending_deletion`), so the deletions
+    // request reads and clears it here rather than through a preference set.
+    private val historyRepository: HistoryRepository,
     // KUN <--
 ) : SyncService(context, json, syncPreferences) {
 
@@ -496,6 +502,12 @@ class SyncYomiSyncService(
      * they go out once it is upgraded. Chapter keys are also honoured by the legacy request shape;
      * manga and history keys are only cleared once the response reports `applied`, because a server
      * that predates the `items` shape ignores them while still answering 200.
+     *
+     * The history tombstones come from the database (`history.pending_deletion`) and go out in pages
+     * of [HISTORY_DELETION_BATCH], so "clear all history" never builds one unbounded request. Each
+     * page is cleared only on its own confirmation; a server that answers without applying the
+     * `items` shape ends the run, since it would ignore every later page too, and the queue is left
+     * for the next sync.
      */
     // KUN <--
     // SY -->
@@ -504,22 +516,87 @@ class SyncYomiSyncService(
         val syncSettings = syncPreferences.getSyncSettings()
         // A device that does not sync a section does not manage the server's rows for it either, so
         // that section's tombstones stay pending instead of deleting what it never uploaded.
-        val histories = if (syncSettings.history) {
-            syncPreferences.pendingDeletedHistoryKeys.get()
-        } else {
-            emptySet()
-        }
-        // KUN <--
-        val chapters = syncPreferences.pendingDeletedChapterKeys.get()
-        // KUN -->
+        val historiesEnabled = syncSettings.history
         val mangas = if (syncSettings.libraryEntries) {
             syncPreferences.pendingDeletedMangaKeys.get()
         } else {
             emptySet()
         }
         // KUN <--
-        if (chapters.isEmpty() && mangas.isEmpty() && histories.isEmpty()) return
+        val chapters = syncPreferences.pendingDeletedChapterKeys.get()
 
+        // KUN -->
+        // The chapter and manga keys ride on the first request, since they have no cursor: they are
+        // a set that is either acknowledged or not. The history queue is paged by row id.
+        var firstBatch = true
+        var afterId = 0L
+        while (true) {
+            val historyRows = if (historiesEnabled) {
+                historyRepository.getPendingHistoryDeletions(HISTORY_DELETION_BATCH, afterId)
+            } else {
+                emptyList()
+            }
+            val batchChapters = if (firstBatch) chapters else emptySet()
+            val batchMangas = if (firstBatch) mangas else emptySet()
+            if (historyRows.isEmpty() && batchChapters.isEmpty() && batchMangas.isEmpty()) return
+
+            val historyKeys = historyDeletionKeys(historyRows)
+            val responseBody = postDeletions(host, apiKey, batchChapters, batchMangas, historyKeys)
+                // A transport failure or a non-2xx status: nothing was confirmed, so every key of
+                // this and every later batch stays pending for the next run.
+                ?: return
+            // Only the keys actually sent: one recorded while the request was in flight stays
+            // pending for the next run. A pre-#335 server answers 200 and ignores `items`, so the
+            // kinds that have no legacy shape are only cleared when the response says it applied
+            // them.
+            val acknowledged = acknowledgedDeletions(responseBody, batchChapters, batchMangas, historyKeys)
+            syncPreferences.forgetDeletedChapters(acknowledged.chapters)
+            if (acknowledged.mangas.isNotEmpty()) syncPreferences.forgetDeletedManga(acknowledged.mangas)
+            if (batchMangas.isNotEmpty() && acknowledged.mangas.isEmpty()) {
+                logcat(LogPriority.DEBUG) {
+                    "SyncYomi v2 deletions: manga tombstones stay pending, " +
+                        "the server did not report `applied`"
+                }
+            }
+            // A server that did not report `applied` ignored every `items` entry, not just this
+            // page, so the rest of the queue cannot be applied in this run either: keep it queued
+            // for the next sync instead of spending one request per page on a server that answers
+            // without applying anything.
+            if (historyKeys.isNotEmpty() && acknowledged.histories.isEmpty()) {
+                logcat(LogPriority.DEBUG) {
+                    "SyncYomi v2 deletions: ${historyKeys.size} history tombstones stay pending, " +
+                        "the server did not report `applied`"
+                }
+                return
+            }
+            // The queue is the row, so clearing it is a write: only the rows this page carried, and
+            // only once the server reported `applied`.
+            if (historyRows.isNotEmpty()) {
+                historyRepository.clearPendingHistoryDeletion(historyRows.map { it.historyId })
+            }
+            logcat(LogPriority.DEBUG) {
+                "SyncYomi v2 deletions applied: ${batchChapters.size} chapters, " +
+                    "${historyKeys.size} history, ${batchMangas.size} manga"
+            }
+
+            // Nothing further to page through.
+            if (historyRows.isEmpty()) return
+            firstBatch = false
+            afterId = historyRows.last().historyId
+        }
+    }
+
+    /**
+     * Sends one deletions request. Returns the 2xx response body, or null when the answer is not a
+     * confirmation (transport failure or a non-2xx status).
+     */
+    private suspend fun postDeletions(
+        host: String,
+        apiKey: String,
+        chapters: Collection<String>,
+        mangas: Collection<String>,
+        histories: Collection<String>,
+    ): String? {
         val request = POST(
             url = "$host/api/sync/v2/deletions",
             headers = baseHeaders(apiKey).build(),
@@ -541,16 +618,15 @@ class SyncYomiSyncService(
             throw e
         } catch (e: Exception) {
             logcat(LogPriority.WARN) { "SyncYomi v2 deletions not sent: ${e.message}" }
-            return
+            return null
         }
-        // KUN -->
         // The body is read, not just the status: a server that ignores `items` still answers 200.
         // An unreadable body is not a confirmation either, so a failure here keeps every key pending
         // for the next run instead of aborting the sync.
-        val responseBody: String? = response.use { resp ->
+        return response.use { resp ->
             if (!resp.isSuccessful) {
                 logcat(LogPriority.WARN) { "SyncYomi v2 deletions not applied: ${resp.code}" }
-                return
+                return null
             }
             try {
                 resp.body.string()
@@ -561,30 +637,23 @@ class SyncYomiSyncService(
                 null
             }
         }
-        // Only the keys actually sent: one recorded while the request was in flight stays pending
-        // for the next run. A pre-#335 server answers 200 and ignores `items`, so the kinds that
-        // have no legacy shape are only cleared when the response says it applied them.
-        val acknowledged = acknowledgedDeletions(responseBody, chapters, mangas, histories)
-        syncPreferences.forgetDeletedChapters(acknowledged.chapters)
-        if (acknowledged.mangas.isNotEmpty()) syncPreferences.forgetDeletedManga(acknowledged.mangas)
-        if (acknowledged.histories.isNotEmpty()) syncPreferences.forgetDeletedHistory(acknowledged.histories)
-        val keptPending = (mangas.isNotEmpty() && acknowledged.mangas.isEmpty()) ||
-            (histories.isNotEmpty() && acknowledged.histories.isEmpty())
-        if (keptPending) {
-            logcat(LogPriority.DEBUG) {
-                "SyncYomi v2 deletions: manga and history keys stay pending, the server did not report `applied`"
-            }
-        }
-        // KUN <--
-        logcat(LogPriority.DEBUG) {
-            "SyncYomi v2 deletions applied: ${chapters.size} chapters, ${histories.size} history, " +
-                "${mangas.size} manga"
-        }
     }
+    // KUN <--
     // SY <--
 }
 
 // KUN -->
+/**
+ * History tombstones per deletions request. The endpoint takes a list and "clear all history" can
+ * queue a whole library, so the queue is sent in bounded pages: 500 keys is a few tens of kB of
+ * JSON, small enough for any body limit the merge endpoint tolerates.
+ */
+internal const val HISTORY_DELETION_BATCH = 500
+
+/** The `history` tombstone keys of [rows]: the server keys a history entry by its chapter. */
+internal fun historyDeletionKeys(rows: List<PendingHistoryDeletion>): List<String> =
+    rows.map { chapterTombstoneKey(it.sourceId, it.mangaUrl, it.chapterUrl) }
+
 /** One entry of the SyncYomi v2 deletions request; [key] is a chapter or manga tombstone key. */
 @Serializable
 internal data class DeletionItem(val kind: String, val key: String)
@@ -616,9 +685,11 @@ internal fun deletionItems(
         mangas.map { DeletionItem("manga", it) }
 
 /**
- * The body of a 2xx `POST /api/sync/v2/deletions`. `applied` counts the entries the server actually
- * changed and only exists on a server that reads the `items` shape; an older one answers
- * `{"acknowledged":n}` after processing the legacy `deletedChapters` list alone.
+ * The body of a 2xx `POST /api/sync/v2/deletions`. It carries **counts, not keys**: `applied` counts
+ * the entries the server actually changed and only exists on a server that reads the `items` shape;
+ * an older one answers `{"acknowledged":n}` after processing the legacy `deletedChapters` list alone.
+ * `acknowledged` counts the entries the server read, so a batch it deduplicated to no change
+ * (`applied: 0`) still reports the full entry count.
  */
 @Serializable
 internal data class DeletionResponse(
@@ -628,15 +699,28 @@ internal data class DeletionResponse(
 
 private val deletionResponseJson = Json { ignoreUnknownKeys = true }
 
-/** Whether the response confirms that every kind in the request was processed. */
-internal fun deletionResponseAppliesEveryKind(body: String?): Boolean {
-    if (body.isNullOrBlank()) return false
-    return try {
-        deletionResponseJson.decodeFromString(DeletionResponse.serializer(), body).applied != null
+/**
+ * Whether the response confirms that the server processed **every** entry of a request that carried
+ * [itemCount] items.
+ *
+ * The presence of `applied` only says the server understands the `items` shape; it says nothing
+ * about how much of this request it processed, and a partially applied page (or one the server
+ * deduplicated against entries it already held) must keep its tombstones. Because the body has no
+ * per-key answer, the count is the only evidence available: every entry has to be accounted for,
+ * either as a changed row (`applied`) or as a read one (`acknowledged`). A retry against entries the
+ * server already tombstoned answers `applied: 0` with the full `acknowledged`, so it still clears.
+ */
+internal fun deletionResponseCoversEveryItem(body: String?, itemCount: Int): Boolean {
+    if (body.isNullOrBlank() || itemCount <= 0) return false
+    val response = try {
+        deletionResponseJson.decodeFromString(DeletionResponse.serializer(), body)
     } catch (_: IllegalArgumentException) {
         // not JSON, or not the shape above: an older server, so no confirmation
-        false
+        return false
     }
+    // no `applied` at all: a server that only read the legacy `deletedChapters` list
+    val applied = response.applied ?: return false
+    return maxOf(response.acknowledged, applied) >= itemCount
 }
 
 /** The pending keys a 2xx deletions response lets this device forget. */
@@ -650,17 +734,22 @@ internal data class AcknowledgedDeletions(
  * Splits the keys a deletions request carried into the ones the response acknowledged.
  *
  * Chapter keys are safe to clear on any server: the legacy `deletedChapters` shape is still honoured,
- * so even a server that ignores `items` applied them. Manga and history keys have no legacy shape,
- * so a 2xx without `applied` leaves them pending for a server that has been upgraded.
+ * so even a server that ignores `items` applied them. Manga and history keys have no legacy shape
+ * and no per-key answer either, so they are cleared only when the response accounts for every entry
+ * of the request — a page the server applied only in part keeps them for the next run.
  */
 internal fun acknowledgedDeletions(
     responseBody: String?,
     chapters: Collection<String>,
     mangas: Collection<String>,
     histories: Collection<String>,
-): AcknowledgedDeletions = if (deletionResponseAppliesEveryKind(responseBody)) {
-    AcknowledgedDeletions(chapters, mangas, histories)
-} else {
-    AcknowledgedDeletions(chapters, emptySet(), emptySet())
+): AcknowledgedDeletions {
+    // the request carries exactly one item per key (the legacy chapter list repeats its own keys)
+    val itemCount = chapters.size + mangas.size + histories.size
+    return if (deletionResponseCoversEveryItem(responseBody, itemCount)) {
+        AcknowledgedDeletions(chapters, mangas, histories)
+    } else {
+        AcknowledgedDeletions(chapters, emptySet(), emptySet())
+    }
 }
 // KUN <--

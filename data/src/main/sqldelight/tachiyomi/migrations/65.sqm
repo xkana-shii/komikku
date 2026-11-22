@@ -1,0 +1,14 @@
+-- KUN -->
+-- The history removal tombstone queue moved from a persisted preference set to the row itself, so
+-- "clear all history" can queue every removed entry without one preference key per row.
+--
+-- Existing rows get 0: nothing is queued by the migration, so an already-removed row (read_at NULL)
+-- keeps behaving exactly as before and `removeResettedHistory` still drops it.
+ALTER TABLE history ADD COLUMN pending_deletion INTEGER NOT NULL DEFAULT 0;
+
+-- The queue is normally empty, so a plain index on the flag would cost every history write for
+-- nothing. The two readers both start from `pending_deletion = 1` — the deletions request pages by
+-- row id and the stranded-marker sweep clears by flag — so a partial index on the row id serves both
+-- and is touched only when something is queued.
+CREATE INDEX history_pending_deletion_index ON history(id) WHERE pending_deletion = 1;
+-- KUN <--

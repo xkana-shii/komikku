@@ -234,20 +234,13 @@ class HistoryViewModel(
     // KMK -->
     fun removeFromHistory(toDelete: List<HistoryWithRelations>) {
         // KUN -->
-        // App-wide + non-cancellable: the reset writes `read_at = NULL`, and the following bump is
-        // what makes that tombstone reach the server. Navigating away must not cancel the pair.
+        // App-wide + non-cancellable: the removal is one database write that resets `read_at` and
+        // queues the row for a server tombstone, and navigating away must not cancel it.
         appScope.launchNonCancellable {
-            // Recorded before the reset: the tombstone key is built from the manga and chapter urls
-            // of the entries, and the upload no longer carries a reset row, so this is the only
-            // way the removal reaches the server.
-            syncStateBumper.rememberHistoryRemoval(
-                mangaIds = toDelete.map { it.mangaId }.distinct(),
-                chapterIds = toDelete.map { it.chapterId },
-            )
             removeHistory.await(toDelete.map { it.id })
-            // A history reset only writes `read_at = NULL` on the history rows, which does not touch
-            // the manga row, so the sync delta would never upload the removal. History sync only:
-            // uploading an empty history section while it is disabled would wipe the server history.
+            // A history reset only writes the history rows, which does not touch the manga row, so
+            // the sync delta would never upload it. History sync only: uploading an empty history
+            // section while it is disabled would wipe the server history.
             syncStateBumper.bumpForHistoryRemoval(toDelete.map { it.mangaId })
         }
         // KUN <--
@@ -258,11 +251,10 @@ class HistoryViewModel(
         // KUN -->
         appScope.launchNonCancellable {
             val mangaIds = toDelete.map { it.mangaId }.distinct()
-            // The reset below is one statement over the manga, so the tombstone keys come from
-            // every history row those manga have, read while they still exist.
-            syncStateBumper.rememberHistoryRemoval(mangaIds = mangaIds)
+            // The reset below is one statement over the manga, and it queues every row of those
+            // manga for a tombstone, not only the latest entry the list showed.
             removeHistory.awaitManga(mangaIds)
-            syncStateBumper.bumpForHistoryRemoval(toDelete.map { it.mangaId })
+            syncStateBumper.bumpForHistoryRemoval(mangaIds)
         }
         // KUN <--
         toggleSelectionMode(false)
@@ -273,13 +265,11 @@ class HistoryViewModel(
         viewModelScope.launch {
             val result = removeHistory.awaitAll()
             // KUN -->
-            // A per-entry or per-manga removal propagates as a `history` tombstone, but "clear all"
-            // does not: the endpoint only deletes the keys it is given, and the key queue is
-            // persisted until the next successful sync, so this would have to keep one key per
-            // deleted row — thousands of them in a preference set, with no bounded form.
-            // Nothing is bumped either: `DELETE FROM history` leaves no `read_at = NULL` row and no
-            // per-manga change, and uploading an empty history section would be indistinguishable
-            // from a peer that has history disabled.
+            // "Clear all" queues every entry exactly like a selection does, so it propagates through
+            // the same `history` tombstones: the queue is the rows themselves, so nothing unbounded
+            // has to be persisted per entry. Nothing is bumped either: the tombstones are the
+            // channel, and raising the sync version of every manga in the library is a much larger
+            // write that the endpoint no longer needs.
             // KUN <--
             if (!result) return@launch
             _events.send(Event.HistoryCleared)

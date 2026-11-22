@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.InMemoryPreferenceStore.InMemoryPreference
 import tachiyomi.core.common.preference.Preference
+import tachiyomi.domain.history.service.HistoryTombstoneDeliverability
 
 /**
  * Ported from TachiyomiSY (jobobby04/TachiyomiSY#1658).
@@ -20,6 +21,7 @@ class SyncPreferencesTest {
         serverSupportsV2: Boolean = true,
         probedHost: String = "https://sync.tachiyomi.org",
         libraryEntries: Boolean = true,
+        history: Boolean = true,
     ) = SyncPreferences(
         InMemoryPreferenceStore(
             sequenceOf(
@@ -27,6 +29,7 @@ class SyncPreferencesTest {
                 InMemoryPreference("__APP_STATE_sync_server_supports_v2", serverSupportsV2, false),
                 InMemoryPreference("__APP_STATE_sync_v2_probed_host", probedHost, ""),
                 InMemoryPreference("sync_library_entries", libraryEntries, true),
+                InMemoryPreference("sync_history", history, true),
             ),
         ),
     )
@@ -143,42 +146,50 @@ class SyncPreferencesTest {
     }
 
     @Test
-    fun `deleted history entries stay pending until the server acknowledges them`() {
-        val prefs = syncPreferences(syncService = 1)
-
-        prefs.rememberDeletedHistory(listOf("1|/m\u001f/m/ch1", "1|/m\u001f/m/ch2"))
-        prefs.forgetDeletedHistory(listOf("1|/m\u001f/m/ch1", "1|/m\u001f/m/ch3"))
-
-        assertEquals(setOf("1|/m\u001f/m/ch2"), prefs.pendingDeletedHistoryKeys.get())
-    }
-
-    @Test
-    fun `deleted history entries are not tracked while history sync is disabled`() {
-        val prefs = SyncPreferences(
-            InMemoryPreferenceStore(
-                sequenceOf(
-                    InMemoryPreference("sync_service", 1, 0),
-                    InMemoryPreference("__APP_STATE_sync_server_supports_v2", true, false),
-                    InMemoryPreference("__APP_STATE_sync_v2_probed_host", "https://sync.tachiyomi.org", ""),
-                    InMemoryPreference("sync_history", false, true),
-                ),
-            ),
-        )
-
-        prefs.rememberDeletedHistory(listOf("1|/m\u001f/m/ch1"))
-
-        assertEquals(emptySet<String>(), prefs.pendingDeletedHistoryKeys.get())
-    }
-
-    @Test
-    fun `pending history tombstones are device-local app state`() {
-        val prefs = SyncPreferences(InMemoryPreferenceStore())
-
+    fun `history tombstones are only deliverable to a confirmed v2 SyncYomi host with history on`() {
+        // The gate every removal path consults before queueing a row. Any other answer leaves a
+        // marker that no request reads, and that marker blocks its row from a restore, from "clear
+        // database" and from a remote chapter deletion.
         assertEquals(
-            Preference.appStateKey("sync_pending_deleted_history_keys"),
-            prefs.pendingDeletedHistoryKeys.key(),
+            HistoryTombstoneDeliverability.DELIVERABLE,
+            syncPreferences(syncService = 1).historyTombstoneDeliverability(),
         )
-        assertTrue(Preference.isAppState(prefs.pendingDeletedHistoryKeys.key()))
+        // a disabled section is a verdict: this device does not manage the server's history
+        assertEquals(
+            HistoryTombstoneDeliverability.UNDELIVERABLE,
+            syncPreferences(syncService = 1, history = false).historyTombstoneDeliverability(),
+        )
+        // another service (or none) owns the server's rows now
+        listOf(0, 2, 3).forEach { service ->
+            assertEquals(
+                HistoryTombstoneDeliverability.UNDELIVERABLE,
+                syncPreferences(syncService = service).historyTombstoneDeliverability(),
+            )
+        }
+        // a host that answered "no" cannot read the `items` shape
+        assertEquals(
+            HistoryTombstoneDeliverability.UNDELIVERABLE,
+            syncPreferences(syncService = 1, serverSupportsV2 = false).historyTombstoneDeliverability(),
+        )
+    }
+
+    @Test
+    fun `an unprobed host is the third answer, not a refusal`() {
+        // A changed host (or a fresh install) has no probe result for the host it now points at.
+        // That is not the same as "this host cannot take tombstones": the next sync asks before it
+        // decides anything, so a sweep driven by this answer must not act on it.
+        assertEquals(
+            HistoryTombstoneDeliverability.UNKNOWN,
+            syncPreferences(syncService = 1, probedHost = "https://other.example")
+                .historyTombstoneDeliverability(),
+        )
+        // the probe belongs to the host it ran against: a confirmed v2 answer for a different host
+        // says nothing about this one
+        assertEquals(
+            HistoryTombstoneDeliverability.UNKNOWN,
+            syncPreferences(syncService = 1, serverSupportsV2 = true, probedHost = "")
+                .historyTombstoneDeliverability(),
+        )
     }
     // KUN <--
 }

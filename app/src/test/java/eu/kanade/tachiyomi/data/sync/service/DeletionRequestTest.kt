@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tachiyomi.domain.history.repository.PendingHistoryDeletion
 
 /**
  * The SyncYomi v2 deletions body. The server reads top-level `items` with a `kind` and a `key`, so
@@ -143,17 +144,40 @@ class DeletionRequestTest {
     @Test
     fun `a fully deduplicated batch still confirms the batch`() {
         // `applied` counts the rows that changed, not the entries processed: a retry of keys the
-        // server already tombstoned answers 0 and must still clear the queue.
-        assertTrue(deletionResponseAppliesEveryKind("""{"acknowledged":2,"applied":0}"""))
-        assertFalse(deletionResponseAppliesEveryKind("""{"acknowledged":2}"""))
-        assertFalse(deletionResponseAppliesEveryKind(""))
-        assertFalse(deletionResponseAppliesEveryKind("<html>not json</html>"))
+        // server already tombstoned answers 0 and must still clear the queue, because the server
+        // says it read all three entries.
+        assertTrue(deletionResponseCoversEveryItem("""{"acknowledged":3,"applied":0}""", itemCount = 3))
+        // no `applied` at all: a server that only read the legacy `deletedChapters` list
+        assertFalse(deletionResponseCoversEveryItem("""{"acknowledged":3}""", itemCount = 3))
+        assertFalse(deletionResponseCoversEveryItem("", itemCount = 3))
+        assertFalse(deletionResponseCoversEveryItem("<html>not json</html>", itemCount = 3))
+    }
+
+    @Test
+    fun `a partially applied page does not confirm the tombstones it skipped`() {
+        // The body carries counts, not keys, so the only evidence that a page was processed is that
+        // every entry of it is accounted for. A page of 500 where the server read 400 must keep all
+        // 500 tombstones: clearing the whole page would lose the 100 it never looked at.
+        assertFalse(deletionResponseCoversEveryItem("""{"acknowledged":400,"applied":399}""", itemCount = 500))
+        assertTrue(deletionResponseCoversEveryItem("""{"acknowledged":500,"applied":400}""", itemCount = 500))
+        // every entry changed is coverage too, even if the server under-reports what it read
+        assertTrue(deletionResponseCoversEveryItem("""{"acknowledged":0,"applied":500}""", itemCount = 500))
+        // a request with nothing in it is never "covered": there is nothing to confirm
+        assertFalse(deletionResponseCoversEveryItem("""{"acknowledged":9,"applied":9}""", itemCount = 0))
+
+        val acknowledged = acknowledgedDeletions(
+            """{"acknowledged":1,"applied":1}""",
+            chapters = emptyList(),
+            mangas = emptyList(),
+            histories = listOf("1|/m\u001f/m/h1", "1|/m\u001f/m/h2"),
+        )
+        assertEquals(emptyList<String>(), acknowledged.histories.toList())
     }
 
     @Test
     fun `an unreadable body is not a confirmation`() {
         // the caller hands null over when reading the 2xx body itself failed
-        assertFalse(deletionResponseAppliesEveryKind(null))
+        assertFalse(deletionResponseCoversEveryItem(null, itemCount = 3))
 
         val acknowledged = acknowledgedDeletions(
             null,
@@ -164,6 +188,48 @@ class DeletionRequestTest {
         assertEquals(listOf("c1"), acknowledged.chapters.toList())
         assertEquals(emptyList<String>(), acknowledged.mangas.toList())
         assertEquals(emptyList<String>(), acknowledged.histories.toList())
+    }
+
+    @Test
+    fun `history tombstone keys are built from the urls the queue row carries`() {
+        // The sync reads these rows from the database, so the key has to come from the joined
+        // source, manga url and chapter url — a swapped manga/chapter url names another entry.
+        val rows = listOf(
+            PendingHistoryDeletion(historyId = 101L, sourceId = 7L, mangaUrl = "/m", chapterUrl = "/m/ch1"),
+            PendingHistoryDeletion(historyId = 102L, sourceId = 8L, mangaUrl = "/n", chapterUrl = "/n/ch9"),
+        )
+
+        assertEquals(
+            listOf("7|/m\u001f/m/ch1", "8|/n\u001f/n/ch9"),
+            historyDeletionKeys(rows),
+        )
+    }
+
+    @Test
+    fun `a page of queued history rows becomes history items only`() {
+        // A "clear all" is sent in pages, so the body of every page after the first carries history
+        // items and no legacy chapter key: a history key in that list would tombstone the chapter.
+        val rows = (1..HISTORY_DELETION_BATCH).map { index ->
+            PendingHistoryDeletion(
+                historyId = index.toLong(),
+                sourceId = 1L,
+                mangaUrl = "/m",
+                chapterUrl = "/m/ch$index",
+            )
+        }
+
+        val body = json.encodeToString(
+            DeletionRequest.serializer(),
+            DeletionRequest(items = deletionItems(emptyList(), emptyList(), historyDeletionKeys(rows))),
+        )
+
+        val root = Json.parseToJsonElement(body).jsonObject
+        val items = root.getValue("items").jsonArray.map {
+            it.jsonObject.getValue("kind").jsonPrimitive.content
+        }
+        assertEquals(HISTORY_DELETION_BATCH, items.size)
+        assertEquals(setOf("history"), items.toSet())
+        assertEquals(0, root.getValue("deletedChapters").jsonArray.size)
     }
     // KUN <--
 }

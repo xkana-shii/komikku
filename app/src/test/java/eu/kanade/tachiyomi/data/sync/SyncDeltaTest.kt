@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.chapter.model.Chapter
+import tachiyomi.domain.history.service.HistoryTombstoneDeliverability
 import tachiyomi.domain.manga.model.Manga
 
 /**
@@ -685,6 +686,18 @@ class SyncDeltaTest {
     @Test
     fun `older reading history needs no restore`() {
         assertFalse(needsRestore(local(), remote(history = listOf(BackupHistory(url = "/c1", lastRead = 50L)))))
+    }
+
+    @Test
+    fun `stranded history tombstones are dropped only on a verdict`() {
+        // UNDELIVERABLE is a verdict: no request will ever read the markers.
+        assertTrue(dropsStrandedHistoryTombstones(HistoryTombstoneDeliverability.UNDELIVERABLE))
+        // UNKNOWN is not: the probe for the current host has not answered yet, and the run this
+        // decides for is about to ask. A sweep here would discard a queue the answer may deliver,
+        // and the reset rows cannot be turned back into tombstones.
+        assertFalse(dropsStrandedHistoryTombstones(HistoryTombstoneDeliverability.UNKNOWN))
+        // A deliverable queue is obviously kept.
+        assertFalse(dropsStrandedHistoryTombstones(HistoryTombstoneDeliverability.DELIVERABLE))
     }
     // KUN <--
     // SY <--

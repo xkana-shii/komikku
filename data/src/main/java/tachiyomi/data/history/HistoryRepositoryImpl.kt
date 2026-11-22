@@ -9,6 +9,7 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.toLong
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
 import tachiyomi.data.subscribeToList
@@ -17,6 +18,7 @@ import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.history.repository.HistoryChapterEntry
 import tachiyomi.domain.history.repository.HistoryRepository
+import tachiyomi.domain.history.repository.PendingHistoryDeletion
 import tachiyomi.domain.manga.model.Manga
 
 @Inject
@@ -98,6 +100,83 @@ class HistoryRepositoryImpl(
                 .awaitAsList()
         }
     }
+
+    override suspend fun removeHistory(historyIds: List<Long>, queueForSync: Boolean) {
+        try {
+            // one bind variable per id, so a select-all needs chunking to fit SQLite's variable limit;
+            // the transaction keeps the chunks all-or-nothing.
+            database.transaction {
+                historyIds.chunked(MAX_BOUND_IDS).forEach {
+                    database.historyQueries.removeHistoryByIds(queue = queueForSync.toLong(), historyIds = it)
+                }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, throwable = e)
+        }
+    }
+
+    override suspend fun removeHistoryByMangaIds(mangaIds: List<Long>, queueForSync: Boolean) {
+        try {
+            database.transaction {
+                mangaIds.chunked(MAX_BOUND_IDS).forEach {
+                    database.historyQueries.removeHistoryByMangaIds(queue = queueForSync.toLong(), mangaIds = it)
+                }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, throwable = e)
+        }
+    }
+
+    override suspend fun removeAllHistory(queueForSync: Boolean): Boolean {
+        return try {
+            // KUN -->
+            // A soft delete: every row that still has a read date is reset and, when the configured
+            // sync can deliver a tombstone, queued — the same removal as the other two paths, over
+            // the whole table (the queue lives in the rows, not in a persisted key per entry).
+            // KUN <--
+            database.historyQueries.removeAllHistory(queue = queueForSync.toLong())
+            true
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, throwable = e)
+            false
+        }
+    }
+
+    override suspend fun getPendingHistoryDeletions(
+        limit: Int,
+        afterId: Long,
+    ): List<PendingHistoryDeletion> {
+        return database.historyQueries
+            .getPendingHistoryDeletions(afterId, limit.toLong()) { historyId, sourceId, mangaUrl, chapterUrl ->
+                PendingHistoryDeletion(
+                    historyId = historyId,
+                    sourceId = sourceId,
+                    mangaUrl = mangaUrl,
+                    chapterUrl = chapterUrl,
+                )
+            }
+            .awaitAsList()
+    }
+
+    override suspend fun clearPendingHistoryDeletion(historyIds: List<Long>) {
+        try {
+            database.transaction {
+                historyIds.chunked(MAX_BOUND_IDS).forEach { database.historyQueries.clearPendingHistoryDeletion(it) }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, throwable = e)
+        }
+    }
+
+    override suspend fun clearAllPendingHistoryDeletions() {
+        // KUN -->
+        // Dispatched here rather than at the call sites: one of them is a Compose settings callback
+        // on Main, and this is a full-table update whenever anything is queued.
+        // KUN <--
+        withIOContext {
+            database.historyQueries.clearAllPendingHistoryDeletions()
+        }
+    }
     // KUN <--
 
     // KMK -->
@@ -127,16 +206,6 @@ class HistoryRepositoryImpl(
         }
     }
     // KMK <--
-
-    override suspend fun deleteAllHistory(): Boolean {
-        return try {
-            database.historyQueries.removeAllHistory()
-            true
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, throwable = e)
-            false
-        }
-    }
 
     override suspend fun deleteResetHistory() {
         database.historyQueries.removeResettedHistory()

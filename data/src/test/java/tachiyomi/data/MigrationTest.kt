@@ -118,6 +118,14 @@ class MigrationTest {
                 driver.scalarLong("SELECT read_at FROM history WHERE id = 1") shouldBe 111
                 driver.scalarLong("SELECT read_duration FROM history WHERE id = 1") shouldBe 222
                 driver.scalarLong("SELECT read_at FROM history WHERE id = 2") shouldBe 333
+                // KUN -->
+                // The history tombstone queue lives on the row (63.sqm): an existing row is not
+                // queued, so nothing an older install removed changes behaviour, and "clear
+                // database" still drops those reset rows.
+                driver.columnCount("history", "pending_deletion") shouldBe 1
+                driver.scalarLong("SELECT count(*) FROM history WHERE pending_deletion = 0") shouldBe 3
+                driver.scalarLong("SELECT count(*) FROM history WHERE pending_deletion = 1") shouldBe 0
+                // KUN <--
 
                 // Track, category and extras carry over
                 driver.scalarLong("SELECT count(*) FROM manga_track") shouldBe 1

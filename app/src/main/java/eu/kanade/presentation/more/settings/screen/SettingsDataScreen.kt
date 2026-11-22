@@ -588,6 +588,22 @@ object SettingsDataScreen : SearchableSettings {
                                 SyncDataJob.setupTask(context, prefInterval = 0)
                             }
                             // KMK <--
+                            // KUN -->
+                            // Leaving SyncYomi is the one change no later sync can repair: the
+                            // schedule is cancelled or now belongs to another service, so no run
+                            // would ever drop the history tombstones queued for SyncYomi. They
+                            // block their rows (no restore over them, no "clear database"), so
+                            // drop them here while this screen still knows the switch happened.
+                            //
+                            // Keyed on the selected value, not on the cached probe: the swap is a
+                            // service change, which is a verdict on its own, and the stored
+                            // preference may not have been written yet when this runs. Staying on
+                            // SyncYomi (a host change included) clears nothing — the next sync
+                            // probes the new host before it decides.
+                            if (it != SyncManager.SyncService.SYNCYOMI.value) {
+                                context.appGraph.historyRepository.clearAllPendingHistoryDeletions()
+                            }
+                            // KUN <--
                             true
                         },
                     ),
