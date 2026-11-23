@@ -254,7 +254,7 @@ class SyncDeletionsTest {
             fixture.readAtOf(historyId = 2007L) shouldBe 3000L
             // a peer's tombstone is already applied there, so it must not be queued back as one of
             // ours: that would keep re-sending a removal the server made
-            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 0L
+            fixture.pendingDeletionOf(chapterId = 107L) shouldBe 0L
             // a history tombstone removes no chapter and no manga
             fixture.chapterIds() shouldBe listOf(107L, 207L)
             fixture.mangaIds() shouldBe listOf(7L)
@@ -279,7 +279,7 @@ class SyncDeletionsTest {
             // a read in a later second is one the server declines to delete too, so the row survives
             fixture.readAtOf(historyId = 1007L) shouldBe 8_001_000L
             // and a peer's tombstone applied there must not be queued back as one of ours
-            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 0L
+            fixture.pendingDeletionOf(chapterId = 107L) shouldBe 0L
         } finally {
             fixture.close()
         }
@@ -349,7 +349,7 @@ class SyncDeletionsTest {
             // removed here and queued: the row has no read left to compare
             fixture.historyRepository.removeHistory(queueForSync = true, historyIds = listOf(1007L))
             fixture.readAtOf(historyId = 1007L) shouldBe null
-            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 1L
+            fixture.pendingDeletionOf(chapterId = 107L) shouldBe 1L
 
             // the peer's tombstone must not drop the marker: our own removal still has to be delivered
             fixture.apply(
@@ -357,7 +357,7 @@ class SyncDeletionsTest {
             ) shouldBe emptySet()
 
             fixture.readAtOf(historyId = 1007L) shouldBe null
-            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 1L
+            fixture.pendingDeletionOf(chapterId = 107L) shouldBe 1L
         } finally {
             fixture.close()
         }
@@ -1155,8 +1155,12 @@ class SyncDeletionsTest {
         fun readAtOf(historyId: Long): Long? =
             nullableLongs("SELECT read_at FROM history WHERE id = $historyId").firstOrNull()
 
-        fun pendingDeletionOf(historyId: Long): Long? =
-            nullableLongs("SELECT pending_deletion FROM history WHERE id = $historyId").firstOrNull()
+        /** Whether that chapter's entry is still queued for a tombstone. */
+        fun pendingDeletionOf(chapterId: Long): Long? =
+            nullableLongs(
+                "SELECT count(*) FROM pending_history_deletion " +
+                    "WHERE chapter_url = (SELECT remote_url FROM chapter WHERE id = $chapterId)",
+            ).firstOrNull()
 
         private fun longs(sql: String): List<Long> = nullableLongs(sql).filterNotNull()
 

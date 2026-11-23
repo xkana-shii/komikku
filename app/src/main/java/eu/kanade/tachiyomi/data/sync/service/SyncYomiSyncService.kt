@@ -45,8 +45,8 @@ class SyncYomiSyncService(
     // KUN -->
     // Metro DI: the shared ProtoBuf singleton replaces the old `Injekt.get()` default.
     private val protoBuf: ProtoBuf = ProtoBuf,
-    // The history tombstone queue lives on the rows (`history.pending_deletion`), so the deletions
-    // request reads and clears it here rather than through a preference set.
+    // The history tombstone queue is the `pending_history_deletion` table, so the deletions request
+    // reads and clears it here rather than through a preference set.
     private val historyRepository: HistoryRepository,
     // KUN <--
 ) : SyncService(context, json, syncPreferences) {
@@ -504,7 +504,7 @@ class SyncYomiSyncService(
      * manga and history keys are only cleared once the response reports `applied`, because a server
      * that predates the `items` shape ignores them while still answering 200.
      *
-     * The history tombstones come from the database (`history.pending_deletion`) and go out in pages
+     * The history tombstones come from the database (`pending_history_deletion`) and go out in pages
      * of [HISTORY_DELETION_BATCH], so "clear all history" never builds one unbounded request. Each
      * page is cleared only on its own confirmation; a server that answers without applying the
      * `items` shape ends the run, since it would ignore every later page too, and the queue is left
@@ -561,21 +561,24 @@ class SyncYomiSyncService(
                         "the server did not report `applied`"
                 }
             }
-            // A server that did not report `applied` ignored every `items` entry, not just this
-            // page, so the rest of the queue cannot be applied in this run either: keep it queued
-            // for the next sync instead of spending one request per page on a server that answers
-            // without applying anything.
-            if (historyKeys.isNotEmpty() && acknowledged.histories.isEmpty()) {
+            // The rows this page may drop: all of them once the server accounted for the whole
+            // request, none while it did not.
+            val rowsToClear = historyRowsToClear(historyRows, acknowledged)
+            if (historyKeys.isNotEmpty() && rowsToClear.isEmpty()) {
+                // A server that did not report `applied` ignored every `items` entry, not just this
+                // page, so the rest of the queue cannot be applied in this run either: keep it
+                // queued for the next sync instead of spending one request per page on a server
+                // that answers without applying anything.
                 logcat(LogPriority.DEBUG) {
                     "SyncYomi v2 deletions: ${historyKeys.size} history tombstones stay pending, " +
                         "the server did not report `applied`"
                 }
                 return
             }
-            // The queue is the row, so clearing it is a write: only the rows this page carried, and
-            // only once the server reported `applied`.
-            if (historyRows.isNotEmpty()) {
-                historyRepository.clearPendingHistoryDeletion(historyRows.map { it.historyId })
+            // The tombstones have been delivered, so their queue rows go: there is nothing left to
+            // restore or to send again, while the removals themselves stand.
+            if (rowsToClear.isNotEmpty()) {
+                historyRepository.clearPendingHistoryDeletion(rowsToClear.map { it.id })
             }
             logcat(LogPriority.DEBUG) {
                 "SyncYomi v2 deletions applied: ${batchChapters.size} chapters, " +
@@ -585,7 +588,7 @@ class SyncYomiSyncService(
             // Nothing further to page through.
             if (historyRows.isEmpty()) return
             firstBatch = false
-            afterId = historyRows.last().historyId
+            afterId = historyRows.last().id
         }
     }
 
@@ -669,6 +672,20 @@ internal fun historyTombstones(rows: List<PendingHistoryDeletion>): List<History
 
 /** The wire unit is Unix seconds; the column is milliseconds and 0 means unknown. */
 internal fun removedAtSeconds(removedAtMs: Long): Long? = (removedAtMs / 1000).takeIf { it > 0 }
+
+/**
+ * The queued history entries a deletions page may drop: the whole page once the response accounts
+ * for every entry of it, and none otherwise.
+ *
+ * The sets are compared by size rather than by emptiness: a row carries one key and the keys are
+ * unique, so a page is covered exactly when the acknowledgement is as long as the page — a page the
+ * server applied only in part is sent again next run instead of losing the tombstones it skipped.
+ */
+internal fun historyRowsToClear(
+    rows: List<PendingHistoryDeletion>,
+    acknowledged: AcknowledgedDeletions,
+): List<PendingHistoryDeletion> =
+    if (rows.isNotEmpty() && acknowledged.histories.size == rows.size) rows else emptyList()
 
 /**
  * One entry of the SyncYomi v2 deletions request; [key] is a chapter or manga tombstone key and [at]

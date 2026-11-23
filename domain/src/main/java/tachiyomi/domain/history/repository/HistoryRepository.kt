@@ -20,15 +20,16 @@ data class HistoryChapterEntry(
 )
 
 /**
- * One history row the user removed on this device whose `history` tombstone the server has not
- * confirmed yet, with the urls that tombstone's key is built from (the server keys a history entry
- * by its chapter).
+ * One entry of the history tombstone queue: a removal this device made whose SyncYomi `history`
+ * tombstone the server has not confirmed yet, with the urls that tombstone's key is built from (the
+ * server keys a history entry by its chapter).
  *
- * [removedAtMs] is the removal time in epoch milliseconds, like `read_at`; 0 when unknown. The wire
- * field derived from it is `at`, in Unix seconds.
+ * [id] is the queue row's own id — the tombstone outlives the history row it came from, so nothing
+ * here points at one. [removedAtMs] is the removal time in epoch milliseconds, like `read_at`; 0 when
+ * unknown. The wire field derived from it is `at`, in Unix seconds.
  */
 data class PendingHistoryDeletion(
-    val historyId: Long,
+    val id: Long,
     val sourceId: Long,
     val mangaUrl: String,
     val chapterUrl: String,
@@ -64,15 +65,15 @@ interface HistoryRepository {
 
     /**
      * Removes [historyIds] from history: each row loses its read date, which is what every history
-     * reader shows as gone. [queueForSync] also queues the row as a SyncYomi `history` tombstone.
+     * reader shows as gone. [queueForSync] also queues the entry as a SyncYomi `history` tombstone.
      *
-     * A removal that no configured sync could ever deliver is reset *and* un-queued instead: a
-     * marker nothing will send blocks the row from being restored over, keeps it out of "clear
-     * database", and pins its chapter against a remote deletion. Rows without a read date are
-     * untouched either way.
+     * The tombstone is a row of its own (`pending_history_deletion`), written in the same
+     * transaction and holding no foreign key, so the removal reaches the server even if the chapter
+     * or the manga is deleted before the next sync. A removal nothing could deliver queues nothing.
+     * Rows without a read date are untouched either way.
      *
-     * A queued removal also records *when* it happened (`history.removed_at_ms`), which the tombstone
-     * sends so the server can refuse it over a later read.
+     * A queued removal also records *when* it happened (`pending_history_deletion.removed_at_ms`),
+     * which the tombstone sends so the server can refuse it over a later read.
      */
     suspend fun removeHistory(historyIds: List<Long>, queueForSync: Boolean)
 
@@ -83,17 +84,21 @@ interface HistoryRepository {
     suspend fun removeAllHistory(queueForSync: Boolean): Boolean
 
     /**
-     * At most [limit] rows still awaiting a server tombstone, ordered by row id, starting after
-     * [afterId]. Paged so a "clear all" never has to hold the whole removed history at once.
+     * At most [limit] queued tombstones, ordered by queue row id, starting after [afterId]. Paged so
+     * a "clear all" never has to hold the whole removed history at once.
      */
     suspend fun getPendingHistoryDeletions(limit: Int, afterId: Long = 0): List<PendingHistoryDeletion>
 
-    /** Drops the queue flag of the rows the server confirmed; their read date stays as it is. */
-    suspend fun clearPendingHistoryDeletion(historyIds: List<Long>)
+    /**
+     * Drops the queue rows the server confirmed ([PendingHistoryDeletion.id]s). The removal itself
+     * stands: its history row keeps no read date, and there is nothing left to send.
+     */
+    suspend fun clearPendingHistoryDeletion(ids: List<Long>)
 
     /**
-     * Drops every marker a configuration change stranded (history sync off, another service, a host
-     * that is no longer v2). Their removals stand: the rows keep no read date.
+     * Drops every queued tombstone a configuration change stranded (history sync off, another
+     * service, a host that is no longer v2). Their removals stand: the history rows keep no read
+     * date.
      */
     suspend fun clearAllPendingHistoryDeletions()
     // KUN <--

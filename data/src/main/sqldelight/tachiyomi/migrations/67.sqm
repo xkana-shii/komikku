@@ -1,0 +1,31 @@
+-- KUN -->
+-- The history tombstone queue lived on the `history` row (`pending_deletion`, `removed_at_ms`), and
+-- that row cascades with its chapter and manga: a library prune, a manga delete or a source dropping
+-- a chapter dropped the queued tombstone before the next sync, and the deletion never reached the
+-- server. The queue is its own table from here on, keyed by the server's key parts with no foreign
+-- key, so it outlives the row it came from.
+CREATE TABLE pending_history_deletion(
+    id INTEGER NOT NULL PRIMARY KEY,
+    source_id INTEGER NOT NULL,
+    manga_url TEXT NOT NULL,
+    chapter_url TEXT NOT NULL,
+    removed_at_ms INTEGER NOT NULL,
+    UNIQUE(source_id, manga_url, chapter_url)
+);
+
+-- Carry the queue of the previous build over, with the time it recorded (or 0, "unknown"). A queued
+-- row whose chapter or manga is already gone cannot be recovered: its urls are not in the database
+-- any more, which is the loss this table exists to prevent from now on.
+INSERT OR IGNORE INTO pending_history_deletion(source_id, manga_url, chapter_url, removed_at_ms)
+SELECT manga.source_id, manga.remote_url, chapter.remote_url, history.removed_at_ms
+FROM history
+JOIN chapter ON chapter.id = history.chapter_id
+JOIN manga ON manga.id = history.manga_id
+WHERE history.pending_deletion = 1;
+
+-- The two columns above are dead now. A table rebuild would drop them, but `history` is named by
+-- `historyView` and `libraryView`, and SQLite refuses to drop or rename a table a view uses until
+-- both are dropped and recreated verbatim here — which the migration gate does not verify, so the
+-- columns stay unwritten instead.
+DROP INDEX IF EXISTS history_pending_deletion_index;
+-- KUN <--

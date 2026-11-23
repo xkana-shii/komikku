@@ -11,7 +11,6 @@ import tachiyomi.data.manga.MangaRepositoryImpl
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import kotlin.time.Clock
 
 /**
  * Guards the destructive schema rework: the migration from the pre-rework schema (version 49, snapshot
@@ -120,12 +119,13 @@ class MigrationTest {
                 driver.scalarLong("SELECT read_duration FROM history WHERE id = 1") shouldBe 222
                 driver.scalarLong("SELECT read_at FROM history WHERE id = 2") shouldBe 333
                 // KUN -->
-                // The history tombstone queue lives on the row (65.sqm): an existing row is not
-                // queued, so nothing an older install removed changes behaviour, and "clear
-                // database" still drops those reset rows.
+                // The history tombstone queue is a table of its own (67.sqm): an existing reset row
+                // is not queued for one, so "clear database" still drops it. The queue columns on
+                // `history` stay behind, unwritten, because two views block the rebuild that would
+                // drop them.
                 driver.columnCount("history", "pending_deletion") shouldBe 1
-                driver.scalarLong("SELECT count(*) FROM history WHERE pending_deletion = 0") shouldBe 3
                 driver.scalarLong("SELECT count(*) FROM history WHERE pending_deletion = 1") shouldBe 0
+                driver.scalarLong("SELECT count(*) FROM pending_history_deletion") shouldBe 0
                 // KUN <--
 
                 // Track, category and extras carry over
@@ -383,17 +383,17 @@ class MigrationTest {
         }
     }
 
-    /** A queued row must not lose its only time reference on upgrade; a plain row stays at 0. */
+    /** A queued row must not lose its only time reference on upgrade, and no other row is queued. */
     @Test
-    fun `migration from version 66 backfills the removal time of a queued row only`() {
+    fun `migration from version 67 carries a queued row into the queue table`() {
         runBlocking {
-            val dbFile = Files.createTempFile("komikku-migration-history-removed-at-test", ".db")
+            val dbFile = Files.createTempFile("komikku-migration-history-queue-test", ".db")
             Files.copy(Path.of("src/main/sqldelight/49.db"), dbFile, REPLACE_EXISTING)
             val driver = JdbcSqliteDriver("jdbc:sqlite:$dbFile")
             try {
                 populateOldSchema(driver)
-                // version 66 has the queue flag but not the removal time
-                Database.Schema.migrate(driver, 49L, 66L).await()
+                // version 67 is the build whose queue is still the row's two columns
+                Database.Schema.migrate(driver, 49L, 67L).await()
 
                 // fresh chapter ids: the fixture's own history rows already use 1..3
                 driver.execute(
@@ -405,24 +405,23 @@ class MigrationTest {
                 ).await()
                 driver.execute(
                     null,
-                    "INSERT INTO history(id,manga_id,chapter_id,read_at,read_duration,pending_deletion) " +
-                        "VALUES (200,1,200,NULL,111,1),(201,1,201,1700000000,222,0)",
+                    "INSERT INTO history(id,manga_id,chapter_id,read_at,read_duration,pending_deletion,removed_at_ms) " +
+                        "VALUES (200,1,200,NULL,111,1,1700000000000),(201,1,201,1700000000,222,0,0)",
                     0,
                 ).await()
 
-                val before = Clock.System.now().toEpochMilliseconds()
-                Database.Schema.migrate(driver, 64L, Database.Schema.version).await()
-                val after = Clock.System.now().toEpochMilliseconds()
+                Database.Schema.migrate(driver, 67L, Database.Schema.version).await()
 
-                // catches a seconds stamp (far below this window), a 0, and a backfill of plain rows;
-                // the one-second slack is `strftime('%s','now')`'s whole-second precision
-                val backfilled = driver.scalarLong("SELECT removed_at_ms FROM history WHERE id = 200") ?: 0L
-                (backfilled in (before - 1_000)..after) shouldBe true
-                driver.scalarLong("SELECT removed_at_ms FROM history WHERE id = 201") shouldBe 0L
-                driver.scalarLong("SELECT count(*) FROM history WHERE pending_deletion = 1 AND removed_at_ms = 0") shouldBe 0L
-                // the migration leaves the flag alone
-                driver.scalarLong("SELECT pending_deletion FROM history WHERE id = 200") shouldBe 1L
-                driver.scalarLong("SELECT pending_deletion FROM history WHERE id = 201") shouldBe 0L
+                // the flagged row becomes the queue entry the urls of its chapter and manga make, and
+                // catches a backfill that stamped "now" instead of carrying the recorded time
+                driver.scalarLong("SELECT count(*) FROM pending_history_deletion") shouldBe 1L
+                driver.scalarLong("SELECT source_id FROM pending_history_deletion") shouldBe 100L
+                driver.scalarString("SELECT manga_url FROM pending_history_deletion") shouldBe "https://a"
+                driver.scalarString("SELECT chapter_url FROM pending_history_deletion") shouldBe "https://c200"
+                driver.scalarLong("SELECT removed_at_ms FROM pending_history_deletion") shouldBe 1_700_000_000_000L
+                // a row that was never queued stays unqueued, and the rows themselves are untouched
+                driver.scalarLong("SELECT count(*) FROM history") shouldBe 5L
+                driver.scalarLong("SELECT read_at FROM history WHERE id = 201") shouldBe 1_700_000_000L
             } finally {
                 driver.close()
             }

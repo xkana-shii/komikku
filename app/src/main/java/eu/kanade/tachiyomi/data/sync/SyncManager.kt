@@ -219,11 +219,11 @@ class SyncManager(
         // KUN <--
 
         // KUN -->
-        // A row queued for a SyncYomi tombstone that this configuration can no longer deliver would
-        // stay blocked for the rest of its life: a restore payload skips it, "Clear database" keeps
-        // it, and it pins its chapter against a remote deletion. Only a *verdict* may drop the queue
-        // though, so this runs after the capability probe above: a host that has not answered yet
-        // (a changed host, a fresh install) is UNKNOWN, and clearing there would discard a queue
+        // A tombstone queued for a SyncYomi configuration that no longer applies (another service
+        // selected, history sync off, a host that is not v2) has no run that would send it, so it is
+        // dropped rather than left to outlive the configuration that queued it. Only a *verdict* may
+        // drop the queue, so this runs after the capability probe above: a host that has not answered
+        // yet (a changed host, a fresh install) is UNKNOWN, and clearing there would discard a queue
         // that this run's probe may well turn out to deliver.
         val tombstoneDeliverability = syncPreferences.historyTombstoneDeliverability()
         if (dropsStrandedHistoryTombstones(tombstoneDeliverability)) {

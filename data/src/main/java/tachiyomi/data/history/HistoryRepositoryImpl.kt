@@ -111,14 +111,21 @@ class HistoryRepositoryImpl(
             // one bind variable per id, so a select-all needs chunking to fit SQLite's variable limit;
             // the transaction keeps the chunks all-or-nothing.
             database.transaction {
+                // KUN -->
+                // The tombstone is queued before the rows are reset: it copies the urls out of the
+                // joined chapter and manga, which the row still reaches. Same transaction, so a
+                // removal is either queued and reset, or neither.
+                if (queueForSync) {
+                    historyIds.chunked(MAX_BOUND_IDS).forEach {
+                        database.historyQueries.queuePendingHistoryDeletionsByIds(
+                            removedAtMs = removedAtMs,
+                            historyIds = it,
+                        )
+                    }
+                }
+                // KUN <--
                 historyIds.chunked(MAX_BOUND_IDS).forEach {
-                    database.historyQueries.removeHistoryByIds(
-                        // KUN -->
-                        removedAtMs = removedAtMs,
-                        // KUN <--
-                        queue = queueForSync.toLong(),
-                        historyIds = it,
-                    )
+                    database.historyQueries.removeHistoryByIds(it)
                 }
             }
         } catch (e: Exception) {
@@ -132,14 +139,18 @@ class HistoryRepositoryImpl(
             val removedAtMs = if (queueForSync) Clock.System.now().toEpochMilliseconds() else 0L
             // KUN <--
             database.transaction {
+                // KUN -->
+                if (queueForSync) {
+                    mangaIds.chunked(MAX_BOUND_IDS).forEach {
+                        database.historyQueries.queuePendingHistoryDeletionsByMangaIds(
+                            removedAtMs = removedAtMs,
+                            mangaIds = it,
+                        )
+                    }
+                }
+                // KUN <--
                 mangaIds.chunked(MAX_BOUND_IDS).forEach {
-                    database.historyQueries.removeHistoryByMangaIds(
-                        // KUN -->
-                        removedAtMs = removedAtMs,
-                        // KUN <--
-                        queue = queueForSync.toLong(),
-                        mangaIds = it,
-                    )
+                    database.historyQueries.removeHistoryByMangaIds(it)
                 }
             }
         } catch (e: Exception) {
@@ -152,18 +163,22 @@ class HistoryRepositoryImpl(
             // KUN -->
             // A soft delete: every row that still has a read date is reset and, when the configured
             // sync can deliver a tombstone, queued — the same removal as the other two paths, over
-            // the whole table (the queue lives in the rows, not in a persisted key per entry).
+            // the whole table.
             //
             // One full-table UPDATE, and its only caller is a `viewModelScope` (Main) handler, so the
             // hop belongs here; the other two paths are reached from `appScope` (IO).
             // KUN <--
             withIOContext {
-                database.historyQueries.removeAllHistory(
+                database.transaction {
                     // KUN -->
-                    removedAtMs = if (queueForSync) Clock.System.now().toEpochMilliseconds() else 0L,
+                    if (queueForSync) {
+                        database.historyQueries.queueAllPendingHistoryDeletions(
+                            removedAtMs = Clock.System.now().toEpochMilliseconds(),
+                        )
+                    }
                     // KUN <--
-                    queue = queueForSync.toLong(),
-                )
+                    database.historyQueries.removeAllHistory()
+                }
             }
             true
         } catch (e: Exception) {
@@ -177,9 +192,9 @@ class HistoryRepositoryImpl(
         afterId: Long,
     ): List<PendingHistoryDeletion> {
         return database.historyQueries
-            .getPendingHistoryDeletions(afterId, limit.toLong()) { historyId, sourceId, mangaUrl, chapterUrl, removedAtMs ->
+            .getPendingHistoryDeletions(afterId, limit.toLong()) { id, sourceId, mangaUrl, chapterUrl, removedAtMs ->
                 PendingHistoryDeletion(
-                    historyId = historyId,
+                    id = id,
                     sourceId = sourceId,
                     mangaUrl = mangaUrl,
                     chapterUrl = chapterUrl,
@@ -189,10 +204,10 @@ class HistoryRepositoryImpl(
             .awaitAsList()
     }
 
-    override suspend fun clearPendingHistoryDeletion(historyIds: List<Long>) {
+    override suspend fun clearPendingHistoryDeletion(ids: List<Long>) {
         try {
             database.transaction {
-                historyIds.chunked(MAX_BOUND_IDS).forEach { database.historyQueries.clearPendingHistoryDeletion(it) }
+                ids.chunked(MAX_BOUND_IDS).forEach { database.historyQueries.clearPendingHistoryDeletion(it) }
             }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
@@ -244,11 +259,18 @@ class HistoryRepositoryImpl(
 
     override suspend fun upsertHistory(historyUpdate: HistoryUpdate) {
         try {
-            database.historyQueries.upsert(
-                chapterId = historyUpdate.chapterId,
-                readAt = historyUpdate.readAt,
-                readDuration = historyUpdate.sessionReadDuration,
-            )
+            // KUN -->
+            // The read supersedes a removal the server has not been told about, so the queue entry
+            // goes with the write: the tombstone must not be sent over the read that replaced it.
+            database.transaction {
+                database.historyQueries.upsert(
+                    chapterId = historyUpdate.chapterId,
+                    readAt = historyUpdate.readAt,
+                    readDuration = historyUpdate.sessionReadDuration,
+                )
+                database.historyQueries.deletePendingHistoryDeletionByChapterId(chapterId = historyUpdate.chapterId)
+            }
+            // KUN <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
         }
@@ -264,6 +286,11 @@ class HistoryRepositoryImpl(
                         readAt = historyUpdate.readAt,
                         readDuration = historyUpdate.sessionReadDuration,
                     )
+                    // KUN -->
+                    database.historyQueries.deletePendingHistoryDeletionByChapterId(
+                        chapterId = historyUpdate.chapterId,
+                    )
+                    // KUN <--
                 }
             }
         } catch (e: Exception) {

@@ -198,14 +198,14 @@ class DeletionRequestTest {
         // source, manga url and chapter url — a swapped manga/chapter url names another entry.
         val rows = listOf(
             PendingHistoryDeletion(
-                historyId = 101L,
+                id = 101L,
                 sourceId = 7L,
                 mangaUrl = "/m",
                 chapterUrl = "/m/ch1",
                 removedAtMs = 1_700_000_000_000L,
             ),
             PendingHistoryDeletion(
-                historyId = 102L,
+                id = 102L,
                 sourceId = 8L,
                 mangaUrl = "/n",
                 chapterUrl = "/n/ch9",
@@ -225,7 +225,7 @@ class DeletionRequestTest {
         // items and no legacy chapter key: a history key in that list would tombstone the chapter.
         val rows = (1..HISTORY_DELETION_BATCH).map { index ->
             PendingHistoryDeletion(
-                historyId = index.toLong(),
+                id = index.toLong(),
                 sourceId = 1L,
                 mangaUrl = "/m",
                 chapterUrl = "/m/ch$index",
@@ -283,7 +283,7 @@ class DeletionRequestTest {
     fun `a queued row with no recorded removal time sends no at`() {
         // catches `at = 0`, which would claim the removal happened at the epoch
         val row = PendingHistoryDeletion(
-            historyId = 101L,
+            id = 101L,
             sourceId = 7L,
             mangaUrl = "/m",
             chapterUrl = "/m/ch1",

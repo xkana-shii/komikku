@@ -13,13 +13,12 @@ import tachiyomi.domain.history.service.HistoryTombstoneDeliverability
 import tachiyomi.domain.history.service.HistoryTombstoneDelivery
 
 /**
- * The user's removal paths have to queue the rows, not only reset them: a reset alone is invisible
- * to the SyncYomi deletions request, which reads `history.pending_deletion`, so the removal would
+ * The user's removal paths have to queue the entries, not only reset them: a reset alone is invisible
+ * to the SyncYomi deletions request, which reads `pending_history_deletion`, so the removal would
  * never reach the server and the next restore would bring the entries back.
  *
- * The queue flag is only written when a tombstone can actually be delivered
- * ([HistoryTombstoneDelivery]). A queued row nothing will send is not harmless: a restore payload
- * skips it, "clear database" keeps it, and it pins its chapter against a remote deletion.
+ * The queue write is only made when a tombstone can actually be delivered
+ * ([HistoryTombstoneDelivery]).
  */
 class RemoveHistoryTest {
 

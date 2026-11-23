@@ -590,10 +590,9 @@ object SettingsDataScreen : SearchableSettings {
                             // KMK <--
                             // KUN -->
                             // Leaving SyncYomi is the one change no later sync can repair: the
-                            // schedule is cancelled or now belongs to another service, so no run
-                            // would ever drop the history tombstones queued for SyncYomi. They
-                            // block their rows (no restore over them, no "clear database"), so
-                            // drop them here while this screen still knows the switch happened.
+                            // schedule is cancelled or now belongs to another service, so nothing
+                            // would ever send the history tombstones queued for SyncYomi. Drop
+                            // them here while this screen still knows the switch happened.
                             //
                             // Keyed on the selected value, not on the cached probe: the swap is a
                             // service change, which is a verdict on its own, and the stored

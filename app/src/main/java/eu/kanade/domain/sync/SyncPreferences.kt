@@ -56,9 +56,9 @@ class SyncPreferences(
         emptySet(),
     )
 
-    // The history tombstones are not kept here: they are a `history.pending_deletion` flag on the
-    // row itself, so "clear all history" queues one row per entry instead of one preference key per
-    // entry. See HistoryRepository.getPendingHistoryDeletions.
+    // The history tombstones are not kept here: they are rows of `pending_history_deletion`, so
+    // "clear all history" queues one row per entry instead of one preference key per entry. See
+    // HistoryRepository.getPendingHistoryDeletions.
     // KUN <--
     // SY <--
 

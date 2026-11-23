@@ -15,8 +15,8 @@ import tachiyomi.core.common.preference.PreferenceStore
  * Drops the retired history tombstone queue once, on upgrade.
  *
  * `__APP_STATE_sync_pending_deleted_history_keys` held one `history` tombstone key per removed
- * entry, kept until the server acknowledged it. The queue lives on the rows now
- * (`history.pending_deletion`), so the set is dead: nothing reads it, and it would otherwise sit in
+ * entry, kept until the server acknowledged it. The queue is a table of its own now
+ * (`pending_history_deletion`), so the set is dead: nothing reads it, and it would otherwise sit in
  * the preference store forever — a "clear all history" on a build that predates r10711 could have
  * left thousands of keys there. The removals it described are not lost, because a removal no server
  * acknowledged is not reconstructible from the set alone (it holds keys, not rows): the next local

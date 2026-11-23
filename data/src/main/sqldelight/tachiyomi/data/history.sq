@@ -7,18 +7,10 @@ CREATE TABLE history(
     read_at INTEGER AS Instant,
     read_duration INTEGER NOT NULL,
     -- KUN -->
-    -- Set on the row the user removed on this device while its `history` tombstone has not reached
-    -- the server yet: the row keeps its identity (the chapter key the tombstone is built from) but
-    -- loses its read date, so every history reader hides it. Cleared by a new local read or by the
-    -- deletions request the server confirmed.
-    --
-    -- The queue is row-scoped, and both foreign keys below cascade: a queued tombstone is lost if
-    -- its chapter or its manga is deleted before the request sends it, and the server then keeps
-    -- the entry. Only a local read of a chapter that still exists is covered by `upsert`, so this
-    -- marker is never the reason a row survives a cascade.
+    -- Retired by 65.sqm: the tombstone queue is `pending_history_deletion`. SQLite cannot drop a
+    -- column at the app's minimum version and both views over this table block a rebuild, so these
+    -- stay unwritten and unread.
     pending_deletion INTEGER NOT NULL DEFAULT 0,
-    -- 0 is "unknown": the row is not queued, or it was queued before the time was recorded. Sent as
-    -- `at` in Unix seconds, for the server to compare with the entry's own `modified_at`.
     removed_at_ms INTEGER NOT NULL DEFAULT 0,
     -- KUN <--
     FOREIGN KEY(manga_id) REFERENCES manga (id)
@@ -29,10 +21,23 @@ CREATE TABLE history(
 
 CREATE INDEX history_manga_id_index ON history(manga_id);
 CREATE INDEX history_read_at_index ON history(read_at);
+
 -- KUN -->
--- Serves the deletions request (paging the queued rows by id) and the stranded-marker sweep. Partial,
--- because the queue is normally empty and every history write would otherwise maintain it.
-CREATE INDEX history_pending_deletion_index ON history(id) WHERE pending_deletion = 1;
+-- The SyncYomi `history` tombstones this device still owes the server. The queue is its own table,
+-- keyed by the parts of the server's key and holding no foreign key, so that the removal outlives
+-- the row: a library prune, a manga delete or a source dropping a chapter must not drop a queued
+-- tombstone, or the deletion never reaches the server.
+--
+-- 0 is "unknown": the removal happened before this build recorded the time. Sent as `at` in Unix
+-- seconds, for the server to compare with the entry's own `modified_at`.
+CREATE TABLE pending_history_deletion(
+    id INTEGER NOT NULL PRIMARY KEY,
+    source_id INTEGER NOT NULL,
+    manga_url TEXT NOT NULL,
+    chapter_url TEXT NOT NULL,
+    removed_at_ms INTEGER NOT NULL,
+    UNIQUE(source_id, manga_url, chapter_url)
+);
 -- KUN <--
 
 getHistoryByMangaId:
@@ -58,66 +63,101 @@ ORDER BY history.manga_id, history.id;
 -- KUN <--
 
 -- KUN -->
--- The rows the SyncYomi v2 deletions request still owes the server, joined to the urls its
--- `history` tombstone key is built from. Paged by row id: the id is the rowid, so a page is a range
--- scan from the cursor instead of a scan of the whole table.
-getPendingHistoryDeletions:
-SELECT
-    history.id,
-    manga.source_id,
-    manga.remote_url AS manga_url,
-    chapter.remote_url AS chapter_url,
-    history.removed_at_ms
+-- Copy the entries of a removal into the queue before their rows are reset: the urls are what the
+-- server keys a history entry by, so they have to be read while the row still knows its chapter.
+--
+-- `:removedAtMs` is 0 when the removal will not be sent, so no time reference outlives its marker.
+--
+-- OR IGNORE, not a refresh: the rows are unique by source, manga and chapter url, and a row that is
+-- still queued has no read date left to remove a second time.
+queuePendingHistoryDeletionsByIds:
+INSERT OR IGNORE INTO pending_history_deletion(source_id, manga_url, chapter_url, removed_at_ms)
+SELECT manga.source_id, manga.remote_url, chapter.remote_url, :removedAtMs
 FROM history
 JOIN chapter ON chapter.id = history.chapter_id
 JOIN manga ON manga.id = history.manga_id
-WHERE history.pending_deletion = 1 AND history.id > :afterId
-ORDER BY history.id
+WHERE history.id IN :historyIds AND history.read_at IS NOT NULL;
+
+queuePendingHistoryDeletionsByMangaIds:
+INSERT OR IGNORE INTO pending_history_deletion(source_id, manga_url, chapter_url, removed_at_ms)
+SELECT manga.source_id, manga.remote_url, chapter.remote_url, :removedAtMs
+FROM history
+JOIN chapter ON chapter.id = history.chapter_id
+JOIN manga ON manga.id = history.manga_id
+WHERE history.manga_id IN :mangaIds AND history.read_at IS NOT NULL;
+
+queueAllPendingHistoryDeletions:
+INSERT OR IGNORE INTO pending_history_deletion(source_id, manga_url, chapter_url, removed_at_ms)
+SELECT manga.source_id, manga.remote_url, chapter.remote_url, :removedAtMs
+FROM history
+JOIN chapter ON chapter.id = history.chapter_id
+JOIN manga ON manga.id = history.manga_id
+WHERE history.read_at IS NOT NULL;
+
+-- Paged by the queue row id: a page is a range scan from the cursor instead of a scan of the whole
+-- table, and "clear all history" can queue a whole library.
+getPendingHistoryDeletions:
+SELECT id, source_id, manga_url, chapter_url, removed_at_ms
+FROM pending_history_deletion
+WHERE id > :afterId
+ORDER BY id
 LIMIT :limit;
 
--- Queue one entry (or a selection) for a server tombstone: the row loses its read date, which is
--- what hides it, and keeps the chapter it is keyed by. Rows that already lost their read date are
--- not touched, so a repeated removal cannot re-queue an entry the user already removed.
---
--- `:queue` is 0 when the configured sync cannot deliver a tombstone (see HistoryTombstoneDelivery):
--- the removal still happens, it just does not leave a marker nothing would ever send.
---
--- `:removedAtMs` is 0 when the removal will not be sent, so no time reference outlives its marker.
-removeHistoryByIds:
-UPDATE history
-SET read_at = NULL,
-    pending_deletion = :queue,
-    removed_at_ms = :removedAtMs
-WHERE id IN :historyIds AND read_at IS NOT NULL;
-
-removeHistoryByMangaIds:
-UPDATE history
-SET read_at = NULL,
-    pending_deletion = :queue,
-    removed_at_ms = :removedAtMs
-WHERE manga_id IN :mangaIds AND read_at IS NOT NULL;
-
--- Clear the queue flag of the rows a deletions response confirmed, leaving the read date alone: a
--- queued row has none.
+-- The server confirmed these tombstones, so their queue rows go: nothing is left to restore or to
+-- send again. The removal itself stands, and its history row stays reset.
 clearPendingHistoryDeletion:
-UPDATE history
-SET pending_deletion = 0,
-    removed_at_ms = 0
-WHERE id IN :historyIds AND pending_deletion = 1;
+DELETE FROM pending_history_deletion
+WHERE id IN :ids;
 
 -- Drop every marker a configuration change stranded (history sync turned off, another service
--- selected, a host that is no longer v2): no request will ever send them, and a marker blocks its
--- row from being restored over and from being cleaned up.
+-- selected, a host that is no longer v2): no request will ever send them.
 clearAllPendingHistoryDeletions:
-UPDATE history
-SET pending_deletion = 0,
-    removed_at_ms = 0
-WHERE pending_deletion = 1;
+DELETE FROM pending_history_deletion;
+
+-- A real read supersedes a removal the server has not been told about yet: the queued tombstone is
+-- dropped instead of being sent over the new read. The key is derived from the chapter row and
+-- matched as a whole, so the lookup is the queue's unique index instead of a scan of a queue that
+-- "clear all history" can fill with a whole library.
+deletePendingHistoryDeletionByChapterId:
+DELETE FROM pending_history_deletion
+WHERE (source_id, manga_url, chapter_url) IN (
+    SELECT manga.source_id, manga.remote_url, chapter.remote_url
+    FROM chapter
+    JOIN manga ON manga.id = chapter.manga_id
+    WHERE chapter.id = :chapterId
+);
+
+-- Whether a removal of that chapter is still queued: a restore's insert branch refuses a payload read
+-- over it for the same reason `setHistoryFromRestore` does, so the answer comes from the same key.
+countPendingHistoryDeletionsByChapterId:
+SELECT count(*)
+FROM pending_history_deletion
+WHERE (source_id, manga_url, chapter_url) IN (
+    SELECT manga.source_id, manga.remote_url, chapter.remote_url
+    FROM chapter
+    JOIN manga ON manga.id = chapter.manga_id
+    WHERE chapter.id = :chapterId
+);
 -- KUN <--
 
 -- KMK -->
 -- Removed unused SY query getHistoryByChapterUrlAndMangaId
 -- KMK <--
+
+-- KUN -->
+-- A removal is a soft delete: the row loses its read date, which is what every history reader shows
+-- as gone. What the server still owes is queued separately, so nothing here depends on the row
+-- surviving.
+removeHistoryByIds:
+UPDATE history
+SET read_at = NULL
+WHERE id IN :historyIds AND read_at IS NOT NULL;
+
+removeHistoryByMangaIds:
+UPDATE history
+SET read_at = NULL
+WHERE manga_id IN :mangaIds AND read_at IS NOT NULL;
+-- KUN <--
 
 -- KMK -->
 resetHistoryByIds:
@@ -133,27 +173,23 @@ WHERE manga_id IN :mangaIds;
 
 -- KUN -->
 -- "Clear all history" is a soft delete like the other two removal paths: every row that still has a
--- read date is reset and, when `:queue` is 1, queued for a `history` tombstone instead of being
--- dropped, so the removal can reach the server — one row per entry instead of one persisted key per
--- entry.
+-- read date is reset, and its tombstone queued, so the removal reaches the server.
 --
 -- The rows stay, so `getReadDuration` keeps counting the time the user spent reading them, exactly
 -- as a per-entry removal already did: the stat is "time read", not "time read on entries the
 -- History tab still lists".
 removeAllHistory:
 UPDATE history
-SET read_at = NULL,
-    pending_deletion = :queue,
-    removed_at_ms = :removedAtMs
+SET read_at = NULL
 WHERE read_at IS NOT NULL;
 -- KUN <--
 
 -- KUN -->
--- "Clear database" drops the rows a removal reset, but a queued row is NULL too: deleting it would
--- throw away a tombstone the server never received.
+-- "Clear database" drops every row a removal reset. The queue is a table of its own, so a reset row
+-- may go even while its tombstone is still queued.
 removeResettedHistory:
 DELETE FROM history
-WHERE read_at IS NULL AND pending_deletion = 0;
+WHERE read_at IS NULL;
 -- KUN <--
 
 upsert:
@@ -164,10 +200,7 @@ WHERE id = :chapterId
 -- KUN -->
 ON CONFLICT(chapter_id) DO UPDATE SET
     read_at = max(coalesce(history.read_at, 0), coalesce(excluded.read_at, 0)),
-    read_duration = read_duration + excluded.read_duration,
-    -- A real read supersedes a removal that has not reached the server yet; the tombstone is dropped.
-    pending_deletion = 0,
-    removed_at_ms = 0;
+    read_duration = read_duration + excluded.read_duration;
 -- KUN <--
 
 -- KUN -->
@@ -175,16 +208,26 @@ ON CONFLICT(chapter_id) DO UPDATE SET
 -- the entry was removed) while read_duration never moves backwards. Matched on chapter_id, never
 -- on the history row id.
 --
--- A queued row is left alone: the user removed it here and the server has not been told yet, so a
--- payload read (or its own tombstone) must not resurrect it or clear the queue flag. Its time is not
--- compared here: the server decides, through the tombstone's own `at`. An inbound history tombstone
--- carries that `at` in whole seconds, so it applies only to a row whose read lands in that second or
--- earlier; a read in a later second keeps the row.
+-- A queued removal is left alone: the user removed it here and the server has not been told yet, so
+-- a payload read (or its own tombstone) must not resurrect it. Its time is not compared here: the
+-- server decides, through the tombstone's own `at`. An inbound history tombstone carries that `at`
+-- in whole seconds, so it applies only to a row whose read lands in that second or earlier; a read
+-- in a later second keeps the row.
 setHistoryFromRestore:
 UPDATE history
 SET read_at = :readAt,
     read_duration = max(read_duration, :readDuration)
-WHERE chapter_id = :chapterId AND pending_deletion = 0;
+WHERE chapter_id = :chapterId
+AND NOT EXISTS (
+    SELECT 1
+    FROM chapter
+    JOIN manga ON manga.id = chapter.manga_id
+    JOIN pending_history_deletion
+    ON pending_history_deletion.source_id = manga.source_id
+    AND pending_history_deletion.manga_url = manga.remote_url
+    AND pending_history_deletion.chapter_url = chapter.remote_url
+    WHERE chapter.id = :chapterId
+);
 -- KUN <--
 
 getReadDuration:

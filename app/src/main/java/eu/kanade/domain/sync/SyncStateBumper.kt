@@ -32,11 +32,11 @@ class SyncStateBumper(
     /**
      * Bumps every manga whose history was reset/tombstoned by the user.
      *
-     * The removal itself travels as a `history` tombstone (the row keeps its identity in
-     * `history.pending_deletion`), but a SyncYomi server older than 1.7.3 still carries the history
-     * section inside the manga payload, and there only a higher manga version makes the uploaded
-     * (removal-less) section win the version-first merge. History sync only: a device that does not
-     * manage the server's history must not upload its copy.
+     * The removal itself travels as a `history` tombstone (queued in `pending_history_deletion`),
+     * but a SyncYomi server older than 1.7.3 still carries the history section inside the manga
+     * payload, and there only a higher manga version makes the uploaded (removal-less) section win
+     * the version-first merge. History sync only: a device that does not manage the server's history
+     * must not upload its copy.
      */
     suspend fun bumpForHistoryRemoval(mangaIds: Collection<Long>) {
         if (mangaIds.isEmpty() || !isEnabled { it.history }) return

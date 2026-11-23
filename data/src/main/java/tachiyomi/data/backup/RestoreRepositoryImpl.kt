@@ -686,11 +686,24 @@ class RestoreRepositoryImpl(
                 dbHistory == null -> {
                     // A tombstone for an entry that never existed locally has nothing to preserve.
                     if (incomingReadAt != null) {
-                        database.historyQueries.upsert(
-                            chapterId = chapterId,
-                            readAt = incomingReadAt,
-                            readDuration = incomingDuration,
-                        )
+                        // KUN -->
+                        // A removal still owed to the server is queued here even with no history row
+                        // in front of it: the queue outlives the row ("clear database" drops reset
+                        // rows, and a source can drop and re-add a chapter). Refuse the payload's
+                        // read exactly as `setHistoryFromRestore` refuses it below, or whether an
+                        // arbitrary restore cancels a pending removal would depend on that row still
+                        // being there. Only a local read cancels a queued removal.
+                        val queued = database.historyQueries
+                            .countPendingHistoryDeletionsByChapterId(chapterId)
+                            .awaitAsOne()
+                        if (queued == 0L) {
+                            database.historyQueries.upsert(
+                                chapterId = chapterId,
+                                readAt = incomingReadAt,
+                                readDuration = incomingDuration,
+                            )
+                        }
+                        // KUN <--
                     }
                 }
                 incomingReadAt == null -> {
