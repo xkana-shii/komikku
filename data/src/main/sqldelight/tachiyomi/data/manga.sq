@@ -158,6 +158,10 @@ SELECT
     state_chapter_last_update, state_chapter_next_update, state_chapter_fetch_interval,
     state_cover_last_modified, state_initialized, last_modified_at, version, is_syncing,
     favorite_modified_at,
+    -- KNS -->
+    user_blacklisted_chapters, user_scanlator_priority, user_scanlator_range_rules,
+    user_smart_merge_override,
+    -- KNS <--
     user_title, user_author, user_artist, user_thumbnail_url, user_description, user_genre, user_status
 FROM manga
 WHERE id IN :ids;

@@ -2,6 +2,7 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import android.content.Context
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
 import eu.kanade.tachiyomi.data.backup.models.BooleanPreferenceValue
@@ -20,9 +21,16 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.category.interactor.GetCategories
+import tachiyomi.domain.category.service.CategoryIdPreferences
+import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.history.service.HistoryPreferences
+import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.upcoming.service.UpcomingPreferences
+import tachiyomi.domain.updates.service.UpdatesPreferences
 
 // KNS: kept apart from the fork's PreferenceRestorerTest; the restorer writes one batch, so the
 // pinned set is returned (null = untouched) and other values reach PreferenceStore.putAll.
@@ -30,10 +38,27 @@ class PreferenceRestorerSyncTest {
 
     private val pinnedKey = SourcePreferences.PINNED_SOURCES_PREF_KEY
 
+    // KNS -->
+    private fun categoryIdPreferences(): CategoryIdPreferences {
+        val inventoryStore = InMemoryPreferenceStore()
+        return CategoryIdPreferences(
+            LibraryPreferences(inventoryStore),
+            DownloadPreferences(inventoryStore),
+            HistoryPreferences(inventoryStore),
+            UpdatesPreferences(inventoryStore),
+            UpcomingPreferences(inventoryStore),
+            ConnectionsPreferences(inventoryStore),
+        )
+    }
+    // KNS <--
+
     private fun restorer(store: PreferenceStore): PreferenceRestorer {
         return PreferenceRestorer(
             context = mockk<Context>(relaxed = true),
             getCategories = mockk<GetCategories>(),
+            // KNS -->
+            categoryIdPreferences = categoryIdPreferences(),
+            // KNS <--
             preferenceStore = store,
         )
     }

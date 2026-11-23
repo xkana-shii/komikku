@@ -36,6 +36,7 @@ class DeleteCategoryTest {
         // that reads a preference back has to give the interactor the very instance it reads
         libraryPreferences: LibraryPreferences = LibraryPreferences(store),
         downloadPreferences: DownloadPreferences = DownloadPreferences(store),
+        connectionsPreferences: ConnectionsPreferences = ConnectionsPreferences(store),
         // KNS <--
     ): DeleteCategory {
         return DeleteCategory(
@@ -50,7 +51,9 @@ class DeleteCategoryTest {
                     historyPreferences = historyPreferences,
                     updatesPreferences = UpdatesPreferences(store),
                     upcomingPreferences = UpcomingPreferences(store),
-                    connectionsPreferences = ConnectionsPreferences(store),
+                    // KNS -->
+                    connectionsPreferences = connectionsPreferences,
+                    // KNS <--
                 ),
             ),
         )
@@ -132,7 +135,7 @@ class DeleteCategoryTest {
         val libraryPreferences = LibraryPreferences(store)
         libraryPreferences.defaultCategory.set(1)
 
-        val result = deleteCategory(HistoryPreferences(store), store = store).await(1L)
+        val result = deleteCategory(HistoryPreferences(store), store = store, libraryPreferences = libraryPreferences).await(1L)
 
         assertTrue(result is DeleteCategory.Result.Success)
         // The reset moved into PruneCategoryReferences; a delete that no longer reaches it would
@@ -167,7 +170,7 @@ class DeleteCategoryTest {
             val repository = mockk<CategoryRepository>(relaxed = true)
             coEvery { repository.updateAllOrders(any()) } throws IllegalStateException("boom")
 
-            val result = deleteCategory(preferences, repository, store).await(1L)
+            val result = deleteCategory(preferences, repository, store, connectionsPreferences = connectionsPreferences).await(1L)
 
             assertTrue(result is DeleteCategory.Result.InternalError)
             // The prune runs before the reorder, so a reorder that blows up still cannot resurrect

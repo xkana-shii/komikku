@@ -4,6 +4,7 @@ import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import eu.kanade.domain.connections.service.ConnectionsPreferences
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -23,6 +24,7 @@ import tachiyomi.domain.category.interactor.RenameCategory
 import tachiyomi.domain.category.interactor.ReorderCategory
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.model.RestoredCategoryHierarchy
+import tachiyomi.domain.category.service.CategoryIdPreferences
 import tachiyomi.domain.category.service.CategoryTombstones
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.history.service.HistoryPreferences
@@ -47,15 +49,18 @@ class CategoryHierarchyTest {
     // KNS --> the deleted uids reach sync through CategoryTombstones (Komi-kun #80) instead of a callback
     private val delete = DeleteCategory(
         repository,
-        LibraryPreferences(preferences),
         CategoryTombstones { deleted += it },
-        // KUN: the id filters are pruned by PruneCategoryReferences (Komi-kun #96)
+        // KUN: the id filters are pruned by PruneCategoryReferences (Komi-kun #96), over the shared
+        // CategoryIdPreferences inventory (Komi-kun #97)
         PruneCategoryReferences(
-            LibraryPreferences(preferences),
-            DownloadPreferences(preferences),
-            HistoryPreferences(preferences),
-            UpdatesPreferences(preferences),
-            UpcomingPreferences(preferences),
+            CategoryIdPreferences(
+                LibraryPreferences(preferences),
+                DownloadPreferences(preferences),
+                HistoryPreferences(preferences),
+                UpdatesPreferences(preferences),
+                UpcomingPreferences(preferences),
+                ConnectionsPreferences(preferences),
+            ),
         ),
     )
     // KNS <--

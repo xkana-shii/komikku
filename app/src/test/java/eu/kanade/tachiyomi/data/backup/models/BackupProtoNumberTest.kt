@@ -26,7 +26,27 @@ class BackupProtoNumberTest {
 
         assertEquals(10000, numbers["customInfoIncluded"])
         assertEquals(10001, numbers["mergedMangaReferencesIncluded"])
+        // KNS --> Komi-kun #80: merge settings at 10002; 600 keeps carrying the merge entries
+        assertEquals(10002, numbers["mergeSettings"])
+        assertEquals(600, numbers["mergedEntries"])
+        // KNS <--
     }
+
+    // KNS -->
+    @Test
+    fun `fork backup fields keep the previous personal fork's proto numbers`() {
+        val manga = protoNumbers(BackupManga.serializer().descriptor).toMap()
+        assertEquals(614, manga["scanlatorPriority"])
+        assertEquals(615, manga["blacklistedChapters"])
+        assertEquals(616, manga["scanlatorRangeRules"])
+        assertEquals(618, manga["smartScanlatorMergeOverride"])
+        assertEquals(620, manga["scanlatorSettingsPresent"])
+
+        val chapter = protoNumbers(BackupChapter.serializer().descriptor).toMap()
+        assertEquals(14, chapter["bookmarkColor"])
+        assertEquals(15, chapter["fillermark"])
+    }
+    // KNS <--
 
     @Test
     fun `the SyncYomi tombstone list stays at the server's field number`() {
@@ -61,7 +81,10 @@ class BackupProtoNumberTest {
 
             val nonFork = numbers.filter { (_, number) -> number !in FORK_BLOCK }
             val unknown = nonFork.filter { (_, number) ->
-                number !in UPSTREAM_NUMBERS && number !in SYNCYOMI_RESERVED
+                number !in UPSTREAM_NUMBERS && number !in SYNCYOMI_RESERVED &&
+                    // KNS -->
+                    number !in KNS_SHIPPED_NUMBERS && number !in KNS_BLOCK
+                // KNS <--
             }
             assertEquals(
                 emptyList<Pair<String, Int>>(),
@@ -178,6 +201,14 @@ class BackupProtoNumberTest {
          * SyncYomi-owned field is not one.
          */
         val SYNCYOMI_RESERVED = 11000..11099
+
+        // KNS -->
+        /** This fork's block for new fields (AGENTS.md "This fork's (KNS) fields"). */
+        val KNS_BLOCK = 20000..20999
+
+        /** Numbers shipped by the previous personal fork; they stay so its backups restore. */
+        val KNS_SHIPPED_NUMBERS: Set<Int> = setOf(14, 15, 114, 614, 615, 616, 618, 620, 901, 902, 903, 904, 905, 906, 907)
+        // KNS <--
     }
 }
 // KUN <--

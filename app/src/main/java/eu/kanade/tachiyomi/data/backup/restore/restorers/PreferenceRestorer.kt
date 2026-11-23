@@ -26,9 +26,7 @@ import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.plusAssign
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.model.Category
-// KUN -->
 import tachiyomi.domain.category.service.CategoryIdPreferences
-// KUN <--
 import tachiyomi.domain.category.service.CategoryTree
 import tachiyomi.domain.library.service.LibraryPreferences
 
