@@ -61,6 +61,15 @@ internal data class ChapterTombstone(
     val chapterUrl: String,
 )
 
+/**
+ * A history tombstone: the chapter it names, plus [atSeconds] — when the deletion happened, in Unix
+ * seconds, or 0 when the server recorded no time (a tombstone written before the field existed).
+ */
+internal data class HistoryDeletion(
+    val chapter: ChapterTombstone,
+    val atSeconds: Long = 0,
+)
+
 /** A category tombstone: `uid:<uid>` or `name:<name>`, whichever identity the deleting device knew. */
 internal data class CategoryTombstone(
     val uid: Long? = null,
@@ -77,7 +86,7 @@ internal data class SavedSearchTombstone(
 internal class DeletionPlan(
     val manga: List<Pair<Long, String>>,
     val chapters: List<ChapterTombstone>,
-    val history: List<ChapterTombstone>,
+    val history: List<HistoryDeletion>,
     val categories: List<CategoryTombstone>,
     val savedSearches: List<SavedSearchTombstone>,
     val skippedKinds: Set<String>,
@@ -129,7 +138,7 @@ internal fun savedSearchKeyOf(key: String): SavedSearchTombstone? {
 internal fun deletionPlan(deletions: List<BackupDeletedItem>): DeletionPlan {
     val manga = mutableListOf<Pair<Long, String>>()
     val chapters = mutableListOf<ChapterTombstone>()
-    val history = mutableListOf<ChapterTombstone>()
+    val history = mutableListOf<HistoryDeletion>()
     val categories = mutableListOf<CategoryTombstone>()
     val savedSearches = mutableListOf<SavedSearchTombstone>()
     val skipped = mutableSetOf<String>()
@@ -138,7 +147,9 @@ internal fun deletionPlan(deletions: List<BackupDeletedItem>): DeletionPlan {
         when (item.kind) {
             TOMBSTONE_MANGA -> mangaKeyOf(item.key)?.let { manga += it } ?: unreadableKey(item)
             TOMBSTONE_CHAPTER -> chapterKeyOf(item.key)?.let { chapters += it } ?: unreadableKey(item)
-            TOMBSTONE_HISTORY -> chapterKeyOf(item.key)?.let { history += it } ?: unreadableKey(item)
+            TOMBSTONE_HISTORY ->
+                chapterKeyOf(item.key)?.let { history += HistoryDeletion(it, item.at) } ?: unreadableKey(item)
+
             TOMBSTONE_CATEGORY -> categoryKeyOf(item.key)?.let { categories += it } ?: unreadableKey(item)
             TOMBSTONE_SAVED_SEARCH -> savedSearchKeyOf(item.key)?.let { savedSearches += it } ?: unreadableKey(item)
             else -> {
@@ -167,6 +178,12 @@ private fun unreadableKey(item: BackupDeletedItem) {
  * its read date, which is what the History tab shows as gone. It is a plain reset, not the queueing
  * removal `RemoveHistory` performs: the removal is already applied on the server, so queueing it
  * here would echo a peer's tombstone straight back as one of ours.
+ *
+ * A tombstone that carries the action time (`at`) only removes a read that lands in that second or
+ * earlier, so a read made in a later second survives the sync. A row already removed
+ * (`read_at = NULL`, and usually queued as our own tombstone) is left alone: there is no read to
+ * compare, its pending marker stays, and the server acknowledges the duplicate tombstone without
+ * applying it.
  *
  * [librarySyncEnabled], [historySyncEnabled], [chaptersEnabled] and [categoriesEnabled] honour the
  * same user settings the snapshot fallback honours: a section the user disabled is not deleted on
@@ -217,12 +234,11 @@ internal suspend fun applyDeletions(
 
     // Chapter and history tombstones both name a chapter, so one chapter read serves both.
     val chapterRowByKey = resolveChapterRows(
-        keys = plan.chapters + plan.history,
+        keys = plan.chapters + plan.history.map { it.chapter },
         localMangaByKey = localMangaByKey,
         chapterRepository = chapterRepository,
     )
     val chapterRows = plan.chapters.distinct().mapNotNull { chapterRowByKey[it] }
-    val historyChapterRows = plan.history.distinct().mapNotNull { chapterRowByKey[it] }
 
     // One history read serves the reset below and the chapter gate: `history.chapter_id` cascades
     // with its chapter row, so a chapter that has one cannot be deleted while history sync is off.
@@ -231,21 +247,21 @@ internal suspend fun applyDeletions(
     // all history" went soft, that is every chapter they ever read — so treating those rows as
     // history would refuse every remote chapter tombstone on a history-disabled device. A reset row
     // is nothing deleting the chapter could destroy.
-    val historyIdByChapterId = if (
+    val historyByChapterId = if (
         chapterRowByKey.isNotEmpty() && (historySyncEnabled || plan.chapters.isNotEmpty())
     ) {
         historyRepository.getHistoryByMangaIds(chapterRowByKey.values.map { it.mangaId }.distinct())
             .values
             .flatten()
             .filter { it.readAt != null }
-            .associate { it.chapterId to it.id }
+            .associateBy { it.chapterId }
     } else {
         emptyMap()
     }
 
     if (chaptersEnabled) {
         val (deletable, keptForHistory) = chapterRows.partition {
-            historySyncEnabled || it.id !in historyIdByChapterId
+            historySyncEnabled || it.id !in historyByChapterId
         }
         if (deletable.isNotEmpty()) {
             logcat(LOG_TAG, LogPriority.DEBUG) { "Deleting ${deletable.size} chapters the delta tombstoned" }
@@ -262,7 +278,19 @@ internal suspend fun applyDeletions(
     }
 
     if (historySyncEnabled) {
-        val historyIds = historyChapterRows.mapNotNull { historyIdByChapterId[it.id] }.distinct()
+        val historyIds = plan.history.mapNotNull { tombstone ->
+            val chapter = chapterRowByKey[tombstone.chapter] ?: return@mapNotNull null
+            // A row without a read date is not in this map: either already removed (probably queued
+            // as our own tombstone, whose marker stays for the server to acknowledge) or not live at
+            // all, so there is no read to protect and nothing to reset.
+            val history = historyByChapterId[chapter.id] ?: return@mapNotNull null
+            val readAt = history.readAt ?: return@mapNotNull null
+            // `at` is Unix seconds, and so is the `modified_at` the server compares: it truncates the
+            // uploaded `read_at` to whole seconds and drops the row when `modified_at <= at`. A read
+            // therefore only outlives the tombstone in a later second.
+            val kept = tombstone.atSeconds > 0 && readAt.toEpochMilliseconds() / 1000 > tombstone.atSeconds
+            if (kept) null else history.id
+        }.distinct()
         if (historyIds.isNotEmpty()) {
             logcat(LOG_TAG, LogPriority.DEBUG) {
                 "Deleting ${historyIds.size} history entries the delta tombstoned"

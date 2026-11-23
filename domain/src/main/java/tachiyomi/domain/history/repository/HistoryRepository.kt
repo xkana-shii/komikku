@@ -23,12 +23,16 @@ data class HistoryChapterEntry(
  * One history row the user removed on this device whose `history` tombstone the server has not
  * confirmed yet, with the urls that tombstone's key is built from (the server keys a history entry
  * by its chapter).
+ *
+ * [removedAtMs] is the removal time in epoch milliseconds, like `read_at`; 0 when unknown. The wire
+ * field derived from it is `at`, in Unix seconds.
  */
 data class PendingHistoryDeletion(
     val historyId: Long,
     val sourceId: Long,
     val mangaUrl: String,
     val chapterUrl: String,
+    val removedAtMs: Long,
 )
 // KUN <--
 
@@ -66,6 +70,9 @@ interface HistoryRepository {
      * marker nothing will send blocks the row from being restored over, keeps it out of "clear
      * database", and pins its chapter against a remote deletion. Rows without a read date are
      * untouched either way.
+     *
+     * A queued removal also records *when* it happened (`history.removed_at_ms`), which the tombstone
+     * sends so the server can refuse it over a later read.
      */
     suspend fun removeHistory(historyIds: List<Long>, queueForSync: Boolean)
 

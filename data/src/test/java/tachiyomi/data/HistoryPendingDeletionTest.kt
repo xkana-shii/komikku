@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import tachiyomi.data.history.HistoryRepositoryImpl
 import tachiyomi.domain.history.model.HistoryUpdate
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
@@ -60,16 +61,24 @@ class HistoryPendingDeletionTest {
             fixture.insertChapter(mangaId = 2L, chapterId = 21L, url = "/n/ch1")
             fixture.insertHistory(mangaId = 2L, chapterId = 21L, historyId = 201L, readAt = 7_000L)
 
+            val before = Clock.System.now().toEpochMilliseconds()
             fixture.repository.removeHistoryByMangaIds(queueForSync = true, mangaIds = listOf(1L))
+            val after = Clock.System.now().toEpochMilliseconds()
 
             // both entries of the manga are queued, not just the latest one the History tab showed
             fixture.readAtOf(101L) shouldBe null
             fixture.readAtOf(102L) shouldBe null
             fixture.pendingDeletionOf(101L) shouldBe 1L
             fixture.pendingDeletionOf(102L) shouldBe 1L
+            // catches a dropped `removed_at_ms` bind in this statement, or a 0 stamped there
+            val firstRemovedAtMs = fixture.removedAtMsOf(101L) ?: 0L
+            val secondRemovedAtMs = fixture.removedAtMsOf(102L) ?: 0L
+            (firstRemovedAtMs in before..after) shouldBe true
+            (secondRemovedAtMs in before..after) shouldBe true
             // the other manga is untouched
             fixture.readAtOf(201L) shouldBe 7_000L
             fixture.pendingDeletionOf(201L) shouldBe 0L
+            fixture.removedAtMsOf(201L) shouldBe 0L
         } finally {
             fixture.close()
         }
@@ -86,15 +95,21 @@ class HistoryPendingDeletionTest {
             // an entry removed by an older build: reset, but never queued for a tombstone
             fixture.insertHistory(mangaId = 1L, chapterId = 12L, historyId = 102L, readAt = null)
 
+            val before = Clock.System.now().toEpochMilliseconds()
             fixture.repository.removeAllHistory(queueForSync = true) shouldBe true
+            val after = Clock.System.now().toEpochMilliseconds()
 
             fixture.readAtOf(101L) shouldBe null
             fixture.pendingDeletionOf(101L) shouldBe 1L
+            // catches a dropped `removed_at_ms` bind in "clear all", which has its own statement
+            val removedAtMs = fixture.removedAtMsOf(101L) ?: 0L
+            (removedAtMs in before..after) shouldBe true
             // the row is still there (a delete would have removed it), so the tombstone can be sent
             fixture.historyIds() shouldBe listOf(101L, 102L)
             // an already-reset row is not retroactively queued: that removal predates the queue and
             // tombstoning it would delete entries the user removed on another protocol
             fixture.pendingDeletionOf(102L) shouldBe 0L
+            fixture.removedAtMsOf(102L) shouldBe 0L
         } finally {
             fixture.close()
         }
@@ -122,6 +137,63 @@ class HistoryPendingDeletionTest {
     }
 
     @Test
+    fun `a queued removal records when it happened`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 1L, sourceId = 7L, url = "/m")
+            fixture.insertChapter(mangaId = 1L, chapterId = 11L, url = "/m/ch1")
+            fixture.insertHistory(mangaId = 1L, chapterId = 11L, historyId = 101L, readAt = 5_000L)
+
+            val before = Clock.System.now().toEpochMilliseconds()
+            fixture.repository.removeHistory(queueForSync = true, historyIds = listOf(101L))
+            val after = Clock.System.now().toEpochMilliseconds()
+
+            // catches the milliseconds/seconds unit slip: a seconds value sits far below `before`
+            val removedAtMs = fixture.removedAtMsOf(101L) ?: 0L
+            (removedAtMs in before..after) shouldBe true
+            // the deletions request must hand that same value to the sync
+            fixture.repository.getPendingHistoryDeletions(limit = 10).single().removedAtMs shouldBe removedAtMs
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `clearing the queue drops the removal time with the marker`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 1L, sourceId = 7L, url = "/m")
+            listOf(11L, 12L).forEachIndexed { index, chapterId ->
+                fixture.insertChapter(mangaId = 1L, chapterId = chapterId, url = "/m/ch$chapterId")
+                fixture.insertHistory(
+                    mangaId = 1L,
+                    chapterId = chapterId,
+                    historyId = 100L + index,
+                    readAt = 5_000L,
+                )
+            }
+            fixture.repository.removeHistory(queueForSync = true, historyIds = listOf(100L, 101L))
+
+            // Asserted before the sweep below: it clears both rows, so an ack that left the time
+            // behind would pass if this waited until after it.
+            fixture.repository.clearPendingHistoryDeletion(listOf(100L))
+            fixture.removedAtMsOf(100L) shouldBe 0L
+            fixture.pendingDeletionOf(101L) shouldBe 1L
+            val stillQueued = fixture.removedAtMsOf(101L) ?: 0L
+            (stillQueued > 0L) shouldBe true
+
+            fixture.repository.clearAllPendingHistoryDeletions()
+
+            fixture.removedAtMsOf(101L) shouldBe 0L
+            // the removals themselves stand: the rows are still hidden
+            fixture.readAtOf(100L) shouldBe null
+            fixture.readAtOf(101L) shouldBe null
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun `reading the chapter again clears the queue flag`(): Unit = runBlocking {
         val fixture = Fixture()
         try {
@@ -141,6 +213,8 @@ class HistoryPendingDeletionTest {
             // a new read supersedes the removal: the row comes back and is no longer a tombstone
             fixture.readAtOf(101L) shouldBe 9_000L
             fixture.pendingDeletionOf(101L) shouldBe 0L
+            // nor does it keep the time of a tombstone it no longer owes
+            fixture.removedAtMsOf(101L) shouldBe 0L
         } finally {
             fixture.close()
         }
@@ -258,6 +332,9 @@ class HistoryPendingDeletionTest {
             fixture.readAtOf(102L) shouldBe null
             fixture.pendingDeletionOf(101L) shouldBe 0L
             fixture.pendingDeletionOf(102L) shouldBe 0L
+            // catches a time reference left behind for a tombstone that will never be built
+            fixture.removedAtMsOf(101L) shouldBe 0L
+            fixture.removedAtMsOf(102L) shouldBe 0L
             fixture.repository.getPendingHistoryDeletions(limit = 10).shouldBeEmpty()
             // an unqueued removal is an ordinary reset row: "clear database" takes it, and a restore
             // payload may write over it again
@@ -384,6 +461,9 @@ class HistoryPendingDeletionTest {
 
         fun pendingDeletionOf(historyId: Long): Long? =
             nullableLongs("SELECT pending_deletion FROM history WHERE id = $historyId").firstOrNull()
+
+        fun removedAtMsOf(historyId: Long): Long? =
+            nullableLongs("SELECT removed_at_ms FROM history WHERE id = $historyId").firstOrNull()
 
         fun readAtOf(historyId: Long): Long? =
             nullableLongs("SELECT read_at FROM history WHERE id = $historyId").firstOrNull()

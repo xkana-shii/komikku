@@ -20,6 +20,7 @@ import tachiyomi.domain.history.repository.HistoryChapterEntry
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.history.repository.PendingHistoryDeletion
 import tachiyomi.domain.manga.model.Manga
+import kotlin.time.Clock
 
 @Inject
 @SingleIn(AppScope::class)
@@ -103,11 +104,21 @@ class HistoryRepositoryImpl(
 
     override suspend fun removeHistory(historyIds: List<Long>, queueForSync: Boolean) {
         try {
+            // KUN -->
+            // Read once, outside the chunk loop, so the chunks of one removal cannot straddle it.
+            val removedAtMs = if (queueForSync) Clock.System.now().toEpochMilliseconds() else 0L
+            // KUN <--
             // one bind variable per id, so a select-all needs chunking to fit SQLite's variable limit;
             // the transaction keeps the chunks all-or-nothing.
             database.transaction {
                 historyIds.chunked(MAX_BOUND_IDS).forEach {
-                    database.historyQueries.removeHistoryByIds(queue = queueForSync.toLong(), historyIds = it)
+                    database.historyQueries.removeHistoryByIds(
+                        // KUN -->
+                        removedAtMs = removedAtMs,
+                        // KUN <--
+                        queue = queueForSync.toLong(),
+                        historyIds = it,
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -117,9 +128,18 @@ class HistoryRepositoryImpl(
 
     override suspend fun removeHistoryByMangaIds(mangaIds: List<Long>, queueForSync: Boolean) {
         try {
+            // KUN -->
+            val removedAtMs = if (queueForSync) Clock.System.now().toEpochMilliseconds() else 0L
+            // KUN <--
             database.transaction {
                 mangaIds.chunked(MAX_BOUND_IDS).forEach {
-                    database.historyQueries.removeHistoryByMangaIds(queue = queueForSync.toLong(), mangaIds = it)
+                    database.historyQueries.removeHistoryByMangaIds(
+                        // KUN -->
+                        removedAtMs = removedAtMs,
+                        // KUN <--
+                        queue = queueForSync.toLong(),
+                        mangaIds = it,
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -133,8 +153,18 @@ class HistoryRepositoryImpl(
             // A soft delete: every row that still has a read date is reset and, when the configured
             // sync can deliver a tombstone, queued — the same removal as the other two paths, over
             // the whole table (the queue lives in the rows, not in a persisted key per entry).
+            //
+            // One full-table UPDATE, and its only caller is a `viewModelScope` (Main) handler, so the
+            // hop belongs here; the other two paths are reached from `appScope` (IO).
             // KUN <--
-            database.historyQueries.removeAllHistory(queue = queueForSync.toLong())
+            withIOContext {
+                database.historyQueries.removeAllHistory(
+                    // KUN -->
+                    removedAtMs = if (queueForSync) Clock.System.now().toEpochMilliseconds() else 0L,
+                    // KUN <--
+                    queue = queueForSync.toLong(),
+                )
+            }
             true
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
@@ -147,12 +177,13 @@ class HistoryRepositoryImpl(
         afterId: Long,
     ): List<PendingHistoryDeletion> {
         return database.historyQueries
-            .getPendingHistoryDeletions(afterId, limit.toLong()) { historyId, sourceId, mangaUrl, chapterUrl ->
+            .getPendingHistoryDeletions(afterId, limit.toLong()) { historyId, sourceId, mangaUrl, chapterUrl, removedAtMs ->
                 PendingHistoryDeletion(
                     historyId = historyId,
                     sourceId = sourceId,
                     mangaUrl = mangaUrl,
                     chapterUrl = chapterUrl,
+                    removedAtMs = removedAtMs,
                 )
             }
             .awaitAsList()

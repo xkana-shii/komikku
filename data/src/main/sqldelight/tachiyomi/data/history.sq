@@ -17,6 +17,9 @@ CREATE TABLE history(
     -- the entry. Only a local read of a chapter that still exists is covered by `upsert`, so this
     -- marker is never the reason a row survives a cascade.
     pending_deletion INTEGER NOT NULL DEFAULT 0,
+    -- 0 is "unknown": the row is not queued, or it was queued before the time was recorded. Sent as
+    -- `at` in Unix seconds, for the server to compare with the entry's own `modified_at`.
+    removed_at_ms INTEGER NOT NULL DEFAULT 0,
     -- KUN <--
     FOREIGN KEY(manga_id) REFERENCES manga (id)
     ON DELETE CASCADE,
@@ -63,7 +66,8 @@ SELECT
     history.id,
     manga.source_id,
     manga.remote_url AS manga_url,
-    chapter.remote_url AS chapter_url
+    chapter.remote_url AS chapter_url,
+    history.removed_at_ms
 FROM history
 JOIN chapter ON chapter.id = history.chapter_id
 JOIN manga ON manga.id = history.manga_id
@@ -77,23 +81,28 @@ LIMIT :limit;
 --
 -- `:queue` is 0 when the configured sync cannot deliver a tombstone (see HistoryTombstoneDelivery):
 -- the removal still happens, it just does not leave a marker nothing would ever send.
+--
+-- `:removedAtMs` is 0 when the removal will not be sent, so no time reference outlives its marker.
 removeHistoryByIds:
 UPDATE history
 SET read_at = NULL,
-    pending_deletion = :queue
+    pending_deletion = :queue,
+    removed_at_ms = :removedAtMs
 WHERE id IN :historyIds AND read_at IS NOT NULL;
 
 removeHistoryByMangaIds:
 UPDATE history
 SET read_at = NULL,
-    pending_deletion = :queue
+    pending_deletion = :queue,
+    removed_at_ms = :removedAtMs
 WHERE manga_id IN :mangaIds AND read_at IS NOT NULL;
 
 -- Clear the queue flag of the rows a deletions response confirmed, leaving the read date alone: a
 -- queued row has none.
 clearPendingHistoryDeletion:
 UPDATE history
-SET pending_deletion = 0
+SET pending_deletion = 0,
+    removed_at_ms = 0
 WHERE id IN :historyIds AND pending_deletion = 1;
 
 -- Drop every marker a configuration change stranded (history sync turned off, another service
@@ -101,7 +110,8 @@ WHERE id IN :historyIds AND pending_deletion = 1;
 -- row from being restored over and from being cleaned up.
 clearAllPendingHistoryDeletions:
 UPDATE history
-SET pending_deletion = 0
+SET pending_deletion = 0,
+    removed_at_ms = 0
 WHERE pending_deletion = 1;
 -- KUN <--
 
@@ -133,7 +143,8 @@ WHERE manga_id IN :mangaIds;
 removeAllHistory:
 UPDATE history
 SET read_at = NULL,
-    pending_deletion = :queue
+    pending_deletion = :queue,
+    removed_at_ms = :removedAtMs
 WHERE read_at IS NOT NULL;
 -- KUN <--
 
@@ -155,7 +166,8 @@ ON CONFLICT(chapter_id) DO UPDATE SET
     read_at = max(coalesce(history.read_at, 0), coalesce(excluded.read_at, 0)),
     read_duration = read_duration + excluded.read_duration,
     -- A real read supersedes a removal that has not reached the server yet; the tombstone is dropped.
-    pending_deletion = 0;
+    pending_deletion = 0,
+    removed_at_ms = 0;
 -- KUN <--
 
 -- KUN -->
@@ -164,10 +176,10 @@ ON CONFLICT(chapter_id) DO UPDATE SET
 -- on the history row id.
 --
 -- A queued row is left alone: the user removed it here and the server has not been told yet, so a
--- payload read (or its own tombstone) must not resurrect it or clear the queue flag. A peer's read
--- that genuinely came after the removal cannot be told apart from one that came before it, because
--- the row keeps no removal time; a removal timestamp would have to ride on `lastRead` to win the
--- server's own merge.
+-- payload read (or its own tombstone) must not resurrect it or clear the queue flag. Its time is not
+-- compared here: the server decides, through the tombstone's own `at`. An inbound history tombstone
+-- carries that `at` in whole seconds, so it applies only to a row whose read lands in that second or
+-- earlier; a read in a later second keeps the row.
 setHistoryFromRestore:
 UPDATE history
 SET read_at = :readAt,

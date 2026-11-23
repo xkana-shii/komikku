@@ -1,0 +1,14 @@
+-- KUN -->
+-- The removal's action time, in epoch milliseconds like `read_at` (`library_removal.removed_at` is
+-- seconds, hence the suffix). Without it the server can only stamp a `history` tombstone at receipt,
+-- so a removal made at t1 and synced at t4 would delete a read made at t2 on another device.
+--
+-- 0 is "unknown": a row that is not queued, or one queued before this build recorded the time.
+ALTER TABLE history ADD COLUMN removed_at_ms INTEGER NOT NULL DEFAULT 0;
+
+-- A queued row keeps a time reference: the migration's own moment, which is earlier than this build
+-- can first send it, so a read that genuinely happens after the upgrade still wins.
+UPDATE history
+SET removed_at_ms = CAST(strftime('%s', 'now') AS INTEGER) * 1000
+WHERE pending_deletion = 1;
+-- KUN <--

@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.network.await
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -507,7 +508,8 @@ class SyncYomiSyncService(
      * of [HISTORY_DELETION_BATCH], so "clear all history" never builds one unbounded request. Each
      * page is cleared only on its own confirmation; a server that answers without applying the
      * `items` shape ends the run, since it would ignore every later page too, and the queue is left
-     * for the next sync.
+     * for the next sync. A history entry also carries when the user removed it (`at`, Unix seconds),
+     * so the server does not have to stamp the deletion at receipt.
      */
     // KUN <--
     // SY -->
@@ -540,8 +542,9 @@ class SyncYomiSyncService(
             val batchMangas = if (firstBatch) mangas else emptySet()
             if (historyRows.isEmpty() && batchChapters.isEmpty() && batchMangas.isEmpty()) return
 
-            val historyKeys = historyDeletionKeys(historyRows)
-            val responseBody = postDeletions(host, apiKey, batchChapters, batchMangas, historyKeys)
+            val tombstones = historyTombstones(historyRows)
+            val historyKeys = tombstones.map { it.key }
+            val responseBody = postDeletions(host, apiKey, batchChapters, batchMangas, tombstones)
                 // A transport failure or a non-2xx status: nothing was confirmed, so every key of
                 // this and every later batch stays pending for the next run.
                 ?: return
@@ -595,7 +598,7 @@ class SyncYomiSyncService(
         apiKey: String,
         chapters: Collection<String>,
         mangas: Collection<String>,
-        histories: Collection<String>,
+        histories: List<HistoryTombstone>,
     ): String? {
         val request = POST(
             url = "$host/api/sync/v2/deletions",
@@ -650,13 +653,37 @@ class SyncYomiSyncService(
  */
 internal const val HISTORY_DELETION_BATCH = 500
 
-/** The `history` tombstone keys of [rows]: the server keys a history entry by its chapter. */
-internal fun historyDeletionKeys(rows: List<PendingHistoryDeletion>): List<String> =
-    rows.map { chapterTombstoneKey(it.sourceId, it.mangaUrl, it.chapterUrl) }
+/**
+ * One `history` tombstone: the key its chapter makes, plus the removal time in Unix seconds — null
+ * when the row does not know it. The server compares it with the entry's own `modified_at`.
+ */
+internal data class HistoryTombstone(val key: String, val removedAtSeconds: Long?)
 
-/** One entry of the SyncYomi v2 deletions request; [key] is a chapter or manga tombstone key. */
+internal fun historyTombstones(rows: List<PendingHistoryDeletion>): List<HistoryTombstone> =
+    rows.map {
+        HistoryTombstone(
+            key = chapterTombstoneKey(it.sourceId, it.mangaUrl, it.chapterUrl),
+            removedAtSeconds = removedAtSeconds(it.removedAtMs),
+        )
+    }
+
+/** The wire unit is Unix seconds; the column is milliseconds and 0 means unknown. */
+internal fun removedAtSeconds(removedAtMs: Long): Long? = (removedAtMs / 1000).takeIf { it > 0 }
+
+/**
+ * One entry of the SyncYomi v2 deletions request; [key] is a chapter or manga tombstone key and [at]
+ * is the action time, which only a `history` entry has.
+ *
+ * `at` is omitted when null — for chapter and manga entries and for an untimed removal — rather than
+ * defaulted to 0, so those request bodies stay byte-identical to the pre-time shape.
+ */
 @Serializable
-internal data class DeletionItem(val kind: String, val key: String)
+internal data class DeletionItem(
+    val kind: String,
+    val key: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val at: Long? = null,
+)
 
 /**
  * The body of `POST /api/sync/v2/deletions`.
@@ -678,10 +705,10 @@ internal data class DeletionRequest(
 internal fun deletionItems(
     chapters: Collection<String>,
     mangas: Collection<String>,
-    histories: Collection<String> = emptyList(),
+    histories: List<HistoryTombstone> = emptyList(),
 ): List<DeletionItem> =
     chapters.map { DeletionItem("chapter", it) } +
-        histories.map { DeletionItem("history", it) } +
+        histories.map { DeletionItem("history", it.key, at = it.removedAtSeconds) } +
         mangas.map { DeletionItem("manga", it) }
 
 /**

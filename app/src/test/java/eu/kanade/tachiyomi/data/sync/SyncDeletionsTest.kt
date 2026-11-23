@@ -47,7 +47,8 @@ import tachiyomi.domain.updates.service.UpdatesPreferences
  */
 class SyncDeletionsTest {
 
-    private fun item(kind: String, key: String, seq: Long = 1) = BackupDeletedItem(kind = kind, key = key, seq = seq)
+    private fun item(kind: String, key: String, seq: Long = 1, at: Long = 0) =
+        BackupDeletedItem(kind = kind, key = key, seq = seq, at = at)
 
     private fun ByteArray.containsSequence(sequence: ByteArray): Boolean =
         indices.any { start -> sequence.indices.all { offset -> getOrNull(start + offset) == sequence[offset] } }
@@ -67,6 +68,19 @@ class SyncDeletionsTest {
         assertTrue(bytes.containsSequence(byteArrayOf(0xC2.toByte(), 0xAF.toByte(), 0x05)))
         val decoded = ProtoBuf.decodeFromByteArray(Backup.serializer(), bytes)
         decoded.deletions shouldBe listOf(BackupDeletedItem(kind = "manga", key = "1|/m", seq = 42))
+    }
+
+    @Test
+    fun `the server's field 4 is the tombstone's action time`() {
+        // Hand-built wire bytes, so the number is pinned against SyncYomi's schema and not against
+        // our own annotation: field 1 (kind) as "history", then `int64 at = 4` = 1234.
+        // (4 shl 3) or 0 is 0x20, and 1234 encodes as the varint 0xD2 0x09.
+        val payload = byteArrayOf(0x0A, 0x07) + "history".toByteArray() + byteArrayOf(0x20, 0xD2.toByte(), 0x09)
+
+        val decoded = ProtoBuf.decodeFromByteArray(BackupDeletedItem.serializer(), payload)
+
+        decoded.kind shouldBe "history"
+        decoded.at shouldBe 1234
     }
 
     @Test
@@ -110,7 +124,7 @@ class SyncDeletionsTest {
                 // only the first separator splits: a url may hold one of its own
                 item("manga", "3|/a|b"),
                 item("chapter", "1|/m\u001f/m/ch1"),
-                item("history", "2|/other\u001f/other/ch"),
+                item("history", "2|/other\u001f/other/ch", at = 1_767_225_600),
                 item("category", "uid:12"),
                 item("category", "name:Reading"),
                 item("saved_search", "q|1"),
@@ -119,7 +133,12 @@ class SyncDeletionsTest {
 
         plan.manga shouldBe listOf(1L to "/m", 3L to "/a|b")
         plan.chapters shouldBe listOf(ChapterTombstone(sourceId = 1, mangaUrl = "/m", chapterUrl = "/m/ch1"))
-        plan.history shouldBe listOf(ChapterTombstone(sourceId = 2, mangaUrl = "/other", chapterUrl = "/other/ch"))
+        plan.history shouldBe listOf(
+            HistoryDeletion(
+                chapter = ChapterTombstone(sourceId = 2, mangaUrl = "/other", chapterUrl = "/other/ch"),
+                atSeconds = 1_767_225_600,
+            ),
+        )
         plan.categories shouldBe listOf(CategoryTombstone(uid = 12), CategoryTombstone(name = "Reading"))
         plan.savedSearches shouldBe listOf(SavedSearchTombstone(name = "q", sourceId = 1))
         plan.skippedKinds shouldBe emptySet()
@@ -239,6 +258,143 @@ class SyncDeletionsTest {
             // a history tombstone removes no chapter and no manga
             fixture.chapterIds() shouldBe listOf(107L, 207L)
             fixture.mangaIds() shouldBe listOf(7L)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a history tombstone older than the local read keeps the row`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            // read at 8001 s, a whole second after the removal the peer sends at 8000 s
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 8_001_000L)
+
+            fixture.apply(
+                deletionPlan(listOf(item("history", "1|/m\u001f/m/ch1", at = 8000))),
+            ) shouldBe emptySet()
+
+            // a read in a later second is one the server declines to delete too, so the row survives
+            fixture.readAtOf(historyId = 1007L) shouldBe 8_001_000L
+            // and a peer's tombstone applied there must not be queued back as one of ours
+            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 0L
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a history tombstone newer than the local read removes the row`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertChapter(mangaId = 7L, chapterId = 207L, url = "/m/ch2", index = 2)
+            fixture.insertChapter(mangaId = 7L, chapterId = 307L, url = "/m/ch3", index = 3)
+            // 7999.5 s, before the removal: read_at is milliseconds, so a comparison that fed those
+            // milliseconds straight against the seconds `at` would keep this row
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 7_999_500L)
+            // half a second into the removal's own second: the server stores the read truncated to
+            // 8000 s and drops the row, so keeping it here would leave a row only this device sees
+            fixture.insertHistory(mangaId = 7L, chapterId = 207L, historyId = 2007L, readAt = 8_000_500L)
+            // exactly on the boundary: the server applies a deletion to `modified_at <= at`
+            fixture.insertHistory(mangaId = 7L, chapterId = 307L, historyId = 3007L, readAt = 8_000_000L)
+
+            fixture.apply(
+                deletionPlan(
+                    listOf(
+                        item("history", "1|/m\u001f/m/ch1", at = 8000),
+                        item("history", "1|/m\u001f/m/ch2", at = 8000),
+                        item("history", "1|/m\u001f/m/ch3", at = 8000),
+                    ),
+                ),
+            ) shouldBe emptySet()
+
+            fixture.readAtOf(historyId = 1007L) shouldBe null
+            fixture.readAtOf(historyId = 2007L) shouldBe null
+            fixture.readAtOf(historyId = 3007L) shouldBe null
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a history tombstone without an action time removes the row`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            // newer than any second a server could have recorded, so only the `at = 0` rule saves it
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 9_000_000L)
+
+            // a server that predates the field sends no time, and a tombstone recorded before it
+            // existed decodes as 0: both keep the unconditional removal
+            fixture.apply(deletionPlan(listOf(item("history", "1|/m\u001f/m/ch1")))) shouldBe emptySet()
+
+            fixture.readAtOf(historyId = 1007L) shouldBe null
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a history tombstone leaves an already queued removal alone`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L)
+            // removed here and queued: the row has no read left to compare
+            fixture.historyRepository.removeHistory(queueForSync = true, historyIds = listOf(1007L))
+            fixture.readAtOf(historyId = 1007L) shouldBe null
+            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 1L
+
+            // the peer's tombstone must not drop the marker: our own removal still has to be delivered
+            fixture.apply(
+                deletionPlan(listOf(item("history", "1|/m\u001f/m/ch1", at = 8_000_000))),
+            ) shouldBe emptySet()
+
+            fixture.readAtOf(historyId = 1007L) shouldBe null
+            fixture.pendingDeletionOf(historyId = 1007L) shouldBe 1L
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun `a mixed page applies only the removals newer than their read`(): Unit = runBlocking {
+        val fixture = Fixture()
+        try {
+            fixture.insertManga(id = 7L, sourceId = 1L, url = "/m")
+            fixture.insertChapter(mangaId = 7L, chapterId = 107L, url = "/m/ch1")
+            fixture.insertChapter(mangaId = 7L, chapterId = 207L, url = "/m/ch2", index = 2)
+            fixture.insertChapter(mangaId = 7L, chapterId = 307L, url = "/m/ch3", index = 3)
+            fixture.insertChapter(mangaId = 7L, chapterId = 407L, url = "/m/ch4", index = 4)
+            // read a second after its tombstone: kept
+            fixture.insertHistory(mangaId = 7L, chapterId = 107L, historyId = 1007L, readAt = 8_001_000L)
+            // read before its tombstone: removed
+            fixture.insertHistory(mangaId = 7L, chapterId = 207L, historyId = 2007L, readAt = 7_000_000L)
+            // no time from the server: removed
+            fixture.insertHistory(mangaId = 7L, chapterId = 307L, historyId = 3007L, readAt = 8_001_000L)
+
+            fixture.apply(
+                deletionPlan(
+                    listOf(
+                        item("history", "1|/m\u001f/m/ch1", at = 8000),
+                        item("history", "1|/m\u001f/m/ch2", at = 8000),
+                        item("history", "1|/m\u001f/m/ch3"),
+                        // a chapter tombstone in the same page is unrelated to the timing rule
+                        item("chapter", "1|/m\u001f/m/ch4"),
+                    ),
+                ),
+            ) shouldBe emptySet()
+
+            fixture.readAtOf(historyId = 1007L) shouldBe 8_001_000L
+            fixture.readAtOf(historyId = 2007L) shouldBe null
+            fixture.readAtOf(historyId = 3007L) shouldBe null
+            fixture.chapterIds() shouldBe listOf(107L, 207L, 307L)
         } finally {
             fixture.close()
         }
